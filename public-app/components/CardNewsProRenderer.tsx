@@ -1508,6 +1508,26 @@ JSON만 출력:
                   aiSuggestingKey={aiSuggestingKey}
                   customFontName={customFontName}
                   customFontDisplayName={customFontDisplayName}
+                  onCustomElementChange={(elId, patch) => {
+                    const els = slides[editingIdx].customElements || [];
+                    updateSlide(editingIdx, { customElements: els.map(el => el.id === elId ? { ...el, ...patch } : el) });
+                  }}
+                  onCustomElementDelete={(elId) => {
+                    const els = slides[editingIdx].customElements || [];
+                    updateSlide(editingIdx, { customElements: els.filter(el => el.id !== elId) });
+                  }}
+                  onAddCustomElement={(type) => {
+                    const existing = slides[editingIdx].customElements || [];
+                    const newEl: SlideCustomElement = {
+                      id: crypto.randomUUID(),
+                      type,
+                      x: 50, y: 50,
+                      w: type === 'text' ? 40 : 30,
+                      h: type === 'text' ? 10 : 20,
+                      ...(type === 'text' ? { text: '텍스트를 입력하세요', fontSize: 24, fontWeight: '500', color: '#333333' } : {}),
+                    };
+                    updateSlide(editingIdx, { customElements: [...existing, newEl] });
+                  }}
                 />
               </div>
             </div>

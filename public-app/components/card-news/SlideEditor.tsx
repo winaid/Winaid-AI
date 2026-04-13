@@ -41,6 +41,9 @@ interface SlideEditorProps {
   aiSuggestingKey: string | null;
   customFontName: string | null;
   customFontDisplayName: string | null;
+  onCustomElementChange?: (elementId: string, patch: Record<string, unknown>) => void;
+  onCustomElementDelete?: (elementId: string) => void;
+  onAddCustomElement?: (type: 'text' | 'image') => void;
 }
 
 export default function SlideEditor({
@@ -59,6 +62,9 @@ export default function SlideEditor({
   aiSuggestingKey,
   customFontName,
   customFontDisplayName,
+  onCustomElementChange,
+  onCustomElementDelete,
+  onAddCustomElement,
 }: SlideEditorProps) {
   const inputCls = 'w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-200';
   const labelCls = 'block text-[10px] font-semibold text-slate-500 mb-0.5';
@@ -1211,6 +1217,91 @@ ${JSON.stringify(slideForContext, null, 2)}
               {customFontName && <optgroup label="내 폰트"><option value="custom">📁 {customFontDisplayName || customFontName}</option></optgroup>}
             </select>
           </ElementAccordion>
+
+          {/* ── 커스텀 추가 요소 (텍스트/이미지) ── */}
+          {slide.customElements && slide.customElements.length > 0 && (
+            <ElementAccordion icon="✨" label={`추가 요소 (${slide.customElements.length})`} defaultOpen={true}>
+              <div className="space-y-4">
+                {slide.customElements.map((el, idx) => (
+                  <div key={el.id} className="border border-slate-200 rounded-xl p-3 bg-slate-50 relative">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="text-xs font-bold text-slate-600 flex items-center gap-1.5">
+                        <span>{el.type === 'text' ? '📝' : '🖼️'}</span>
+                        <span>{el.type === 'text' ? `텍스트 ${idx + 1}` : `이미지 ${idx + 1}`}</span>
+                      </div>
+                      <button type="button"
+                        onClick={() => { if (confirm('이 요소를 삭제할까요?')) onCustomElementDelete?.(el.id); }}
+                        className="text-[10px] font-bold text-red-500 hover:bg-red-50 px-2 py-1 rounded-md"
+                      >🗑 삭제</button>
+                    </div>
+                    {el.type === 'text' && (
+                      <TextElementEditor
+                        value={el.text || ''}
+                        onChange={(v) => onCustomElementChange?.(el.id, { text: v })}
+                        multiline
+                        fontSize={el.fontSize}
+                        fontWeight={el.fontWeight}
+                        fontColor={el.color}
+                        onStyleChange={(key, val) => {
+                          const cleanKey = key
+                            .replace('customFontSize', 'fontSize')
+                            .replace('customFontWeight', 'fontWeight')
+                            .replace('customColor', 'color')
+                            .replace('customFontId', 'fontId')
+                            .replace('customLetterSpacing', 'letterSpacing')
+                            .replace('customLineHeight', 'lineHeight');
+                          onCustomElementChange?.(el.id, { [cleanKey]: val });
+                        }}
+                        prefix="custom"
+                      />
+                    )}
+                    {el.type === 'image' && (
+                      <div className="space-y-2">
+                        {el.imageUrl ? (
+                          <img src={el.imageUrl} alt="" className="w-full h-24 object-cover rounded-lg border border-slate-200" />
+                        ) : (
+                          <div className="w-full h-24 bg-slate-100 border border-dashed border-slate-300 rounded-lg flex items-center justify-center text-xs text-slate-400">이미지 없음</div>
+                        )}
+                        <label className="block w-full">
+                          <input type="file" accept="image/*" className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              const reader = new FileReader();
+                              reader.onload = () => onCustomElementChange?.(el.id, { imageUrl: reader.result as string });
+                              reader.readAsDataURL(file);
+                              e.target.value = '';
+                            }}
+                          />
+                          <span className="block w-full text-center px-3 py-2 text-xs font-bold bg-blue-500 text-white rounded-lg cursor-pointer hover:bg-blue-600">
+                            📷 이미지 {el.imageUrl ? '교체' : '업로드'}
+                          </span>
+                        </label>
+                      </div>
+                    )}
+                    <div className="mt-3 pt-3 border-t border-slate-200 flex items-center gap-3 text-[10px] text-slate-400">
+                      <span>📍 {el.x}%, {el.y}%</span>
+                      <span>📏 {el.w}% × {el.h}%</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </ElementAccordion>
+          )}
+
+          {/* ── 요소 추가 버튼 ── */}
+          {onAddCustomElement && (
+            <div className="flex gap-2 mt-3">
+              <button type="button"
+                onClick={() => onAddCustomElement('text')}
+                className="flex-1 px-3 py-2 text-xs font-bold bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg"
+              >+ 텍스트 추가</button>
+              <button type="button"
+                onClick={() => onAddCustomElement('image')}
+                className="flex-1 px-3 py-2 text-xs font-bold bg-purple-50 text-purple-700 hover:bg-purple-100 rounded-lg"
+              >+ 이미지 추가</button>
+            </div>
+          )}
 
         </div>
       )}
