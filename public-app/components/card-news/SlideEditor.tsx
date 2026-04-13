@@ -686,19 +686,9 @@ ${JSON.stringify(slideForContext, null, 2)}
     </div>
   );
 
-  const isEnriching = aiSuggestingKey === `${slideIdx}:enrich`;
-
-  // 공통 필드: title, subtitle + 🔍 웹 검색 보강 버튼
+  // 공통 필드: title, subtitle (웹 검색 보강 버튼은 각 TextElementEditor 위에 개별 배치)
   const common = (
     <>
-      <button
-        type="button"
-        onClick={onAiEnrich}
-        disabled={isEnriching}
-        className="w-full py-2 bg-green-50 text-green-700 text-[11px] font-bold rounded-lg border border-green-200 hover:bg-green-100 disabled:opacity-50"
-      >
-        {isEnriching ? '🔍 웹 검색 중...' : '🔍 웹 검색으로 내용 보강'}
-      </button>
       <div>
         {fieldLabel('제목', 'title')}
         <textarea value={slide.title} onChange={(e) => onChange({ title: e.target.value })} className={textareaCls} rows={2} />
@@ -984,7 +974,12 @@ ${JSON.stringify(slideForContext, null, 2)}
           <ElementAccordion icon="T" label="본문" defaultOpen={false}>
             <TextElementEditor value={slide.body || ''} onChange={v => onChange({ body: v })} multiline
               fontSize={slide.bodyFontSize} fontColor={slide.bodyColor} lineHeight={slide.bodyLineHeight}
-              onStyleChange={(key, val) => onChange({ [key]: val })} prefix="body" />
+              onStyleChange={(key, val) => onChange({ [key]: val })} prefix="body"
+              onAiSuggest={() => onAiSuggestText('body')}
+              onWebEnrich={onAiEnrich}
+              aiLoading={aiSuggestingKey === `${slideIdx}:body`}
+              enrichLoading={aiSuggestingKey === `${slideIdx}:enrich`}
+            />
           </ElementAccordion>
           {renderCharCount('body', slide.body || '')}
           {renderViolations('body', bodyViolations)}
@@ -1152,7 +1147,12 @@ ${JSON.stringify(slideForContext, null, 2)}
               fontId={slide.titleFontId} fontSize={slide.titleFontSize} fontWeight={slide.titleFontWeight}
               fontColor={slide.titleColor} letterSpacing={slide.titleLetterSpacing}
               lineHeight={slide.titleLineHeight}
-              onStyleChange={(key, val) => onChange({ [key]: val })} prefix="title" />
+              onStyleChange={(key, val) => onChange({ [key]: val })} prefix="title"
+              onAiSuggest={() => onAiSuggestText('title')}
+              onWebEnrich={onAiEnrich}
+              aiLoading={aiSuggestingKey === `${slideIdx}:title`}
+              enrichLoading={aiSuggestingKey === `${slideIdx}:enrich`}
+            />
           </ElementAccordion>
           {renderCharCount('title', slide.title || '')}
           {renderViolations('title', titleViolations)}
@@ -1216,7 +1216,12 @@ ${JSON.stringify(slideForContext, null, 2)}
               fontId={slide.subtitleFontId} fontSize={slide.subtitleFontSize} fontWeight={slide.subtitleFontWeight}
               fontColor={slide.subtitleColor} letterSpacing={slide.subtitleLetterSpacing}
               lineHeight={slide.subtitleLineHeight}
-              onStyleChange={(key, val) => onChange({ [key]: val })} prefix="subtitle" />
+              onStyleChange={(key, val) => onChange({ [key]: val })} prefix="subtitle"
+              onAiSuggest={() => onAiSuggestText('subtitle')}
+              onWebEnrich={onAiEnrich}
+              aiLoading={aiSuggestingKey === `${slideIdx}:subtitle`}
+              enrichLoading={aiSuggestingKey === `${slideIdx}:enrich`}
+            />
           </ElementAccordion>
           {renderCharCount('subtitle', slide.subtitle || '')}
           {renderViolations('subtitle', subtitleViolations)}
