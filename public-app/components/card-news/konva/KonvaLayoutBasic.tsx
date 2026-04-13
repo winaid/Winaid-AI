@@ -55,7 +55,7 @@ export function renderCover(...args: LayoutRenderArgs): React.ReactNode {
           id="text-subtitle" text={slide.subtitle}
           x={w / 2} y={subtitleY} width={w * 0.8} fontSize={slide.subtitleFontSize || 22}
           fontStyle="normal" fill={slide.subtitleColor || theme.subtitleColor}
-          align="center" offsetX={w * 0.8 / 2}
+          align={slide.subtitleAlign || 'center'} offsetX={w * 0.8 / 2}
           selectedId={selectedId} onSelect={setSelectedId}
           onDragEnd={(x, y) => onChange({ subtitlePosition: { x: Math.round(x / w * 100), y: Math.round(y / h * 100) } })}
           onTextChange={t => onChange({ subtitle: t })}
@@ -66,7 +66,7 @@ export function renderCover(...args: LayoutRenderArgs): React.ReactNode {
         <EditableText
           id="text-body" text={slide.body}
           x={w / 2} y={h * 0.72} width={w * 0.8} fontSize={20}
-          fill={theme.bodyColor} align="center" offsetX={w * 0.8 / 2}
+          fill={theme.bodyColor} align={slide.bodyAlign || 'center'} offsetX={w * 0.8 / 2}
           selectedId={selectedId} onSelect={setSelectedId}
           onDragEnd={() => {}} onTextChange={t => onChange({ body: t })}
           readOnly={readOnly} cardWidth={w} cardHeight={h} onSnapGuides={snapCb}
@@ -96,7 +96,7 @@ export function renderInfo(...args: LayoutRenderArgs): React.ReactNode {
           <EditableText
             id="text-body" text={slide.body}
             x={80} y={bodyY + 25} width={w - 160} fontSize={20}
-            fill={theme.bodyColor} align="left" offsetX={0}
+            fill={theme.bodyColor} align={slide.bodyAlign || 'left'} offsetX={0}
             selectedId={selectedId} onSelect={setSelectedId}
             onDragEnd={() => {}} onTextChange={t => onChange({ body: t })}
           />

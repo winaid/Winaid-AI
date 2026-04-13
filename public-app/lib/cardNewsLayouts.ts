@@ -195,6 +195,8 @@ export interface SlideData {
 
   // 정렬
   titleAlign?: 'left' | 'center' | 'right';
+  subtitleAlign?: 'left' | 'center' | 'right';
+  bodyAlign?: 'left' | 'center' | 'right';
   contentAlignV?: 'top' | 'center' | 'bottom';
   textShadow?: boolean;
   bgColor?: string;

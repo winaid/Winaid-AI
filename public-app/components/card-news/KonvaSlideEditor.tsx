@@ -116,8 +116,14 @@ export default function KonvaSlideEditor({
     onSlideChange({ elementSizes: { ...existing, [id]: { w: wPct, h: hPct } } });
   };
 
-  // ── 도형 변경 ──
-  const canChangeShape = !!(selectedId && !selectedId.startsWith('text-') && !readOnly);
+  // ── 도형 변경 (text/image 아닌 도형 요소일 때) ──
+  const isTextSelected = !!(selectedId && selectedId.startsWith('text-'));
+  const isCustomText = !!(selectedId?.startsWith('custom-') && (() => {
+    const elId = selectedId.replace('custom-', '');
+    return slide.customElements?.find(el => el.id === elId)?.type === 'text';
+  })());
+  const canAlign = !!((isTextSelected || isCustomText) && !readOnly);
+  const canChangeShape = !!(selectedId && !selectedId.startsWith('text-') && !isCustomText && !readOnly);
   const currentShape = selectedId ? (slide.elementShapes?.[selectedId] || 'rounded') : 'rounded';
   const handleShapeChange = (shape: string) => {
     if (!selectedId) return;
@@ -125,6 +131,32 @@ export default function KonvaSlideEditor({
     onSlideChange({
       elementShapes: { ...existing, [selectedId]: shape as NonNullable<SlideData['elementShapes']>[string] },
     });
+  };
+
+  // ── 텍스트 정렬 ──
+  const getCurrentAlign = (): 'left' | 'center' | 'right' => {
+    if (selectedId === 'text-title') return slide.titleAlign || 'center';
+    if (selectedId === 'text-subtitle') return slide.subtitleAlign || 'center';
+    if (selectedId === 'text-body') return slide.bodyAlign || 'center';
+    if (selectedId?.startsWith('custom-')) {
+      const elId = selectedId.replace('custom-', '');
+      const el = slide.customElements?.find(e => e.id === elId);
+      return el?.align || 'left';
+    }
+    return 'center';
+  };
+  const currentAlign = getCurrentAlign();
+  const handleAlignChange = (align: 'left' | 'center' | 'right') => {
+    if (!selectedId) return;
+    if (selectedId === 'text-title') { onSlideChange({ titleAlign: align }); return; }
+    if (selectedId === 'text-subtitle') { onSlideChange({ subtitleAlign: align }); return; }
+    if (selectedId === 'text-body') { onSlideChange({ bodyAlign: align }); return; }
+    if (selectedId.startsWith('custom-')) {
+      const elId = selectedId.replace('custom-', '');
+      onSlideChange({
+        customElements: (slide.customElements || []).map(el => el.id === elId ? { ...el, align } : el),
+      });
+    }
   };
 
   // ── 선택 노드의 화면 좌표 (툴바 위치용) ──
@@ -209,7 +241,36 @@ export default function KonvaSlideEditor({
       borderRadius: '16px', overflow: 'visible',
       boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
     }}>
-      {/* 정렬 툴바 UI는 제거됨 — alignElement 함수는 추후 단축키/다른 UI에서 재사용 가능하도록 유지 */}
+      {/* 텍스트 정렬 툴바 — 텍스트 요소 선택 시 */}
+      {canAlign && selectedNodeRect && (
+        <div style={{
+          position: 'fixed',
+          top: Math.max(8, selectedNodeRect.y - 46),
+          left: selectedNodeRect.x + selectedNodeRect.width / 2,
+          transform: 'translateX(-50%)',
+          zIndex: 100,
+          display: 'flex', alignItems: 'center', gap: '2px',
+          background: 'white', borderRadius: '8px',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.15)', padding: '4px',
+        }}>
+          {[
+            { id: 'left' as const, icon: '◧', label: '왼쪽' },
+            { id: 'center' as const, icon: '▤', label: '가운데' },
+            { id: 'right' as const, icon: '◨', label: '오른쪽' },
+          ].map(a => (
+            <button key={a.id} type="button"
+              onClick={(e) => { e.stopPropagation(); handleAlignChange(a.id); }}
+              title={a.label}
+              style={{
+                width: 32, height: 32, fontSize: '16px', fontWeight: 700,
+                background: currentAlign === a.id ? '#3B82F6' : '#F1F5F9',
+                color: currentAlign === a.id ? 'white' : '#374151',
+                border: 'none', borderRadius: '4px', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>{a.icon}</button>
+          ))}
+        </div>
+      )}
 
       {/* 도형 변경 팝업 — 선택 요소 위 플로팅 (text가 아닐 때) */}
       {canChangeShape && selectedNodeRect && (
