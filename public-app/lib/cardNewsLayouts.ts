@@ -242,6 +242,8 @@ export interface SlideData {
   // 범용 위치/크기 맵 (도형/카드 요소의 배치 편집 결과)
   elementPositions?: Record<string, { x: number; y: number }>;
   elementSizes?: Record<string, { w: number; h: number }>;
+  // 요소별 도형 모양 오버라이드
+  elementShapes?: Record<string, 'rounded' | 'pill' | 'sharp' | 'diamond' | 'hexagon' | 'circle' | 'outlined'>;
 }
 
 /** 사용자가 자유롭게 추가한 텍스트/이미지 요소 */

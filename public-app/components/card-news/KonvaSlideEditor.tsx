@@ -93,6 +93,61 @@ export default function KonvaSlideEditor({
     }
   };
 
+  // ── Transformer 리사이즈 → SlideData 저장 ──
+  const saveElementSize = (id: string, width: number, height: number) => {
+    const wPct = Math.round(width / cardWidth * 100);
+    const hPct = Math.round(height / cardHeight * 100);
+    const sizeKey = id === 'text-title' ? 'titleSize'
+      : id === 'text-subtitle' ? 'subtitleSize'
+      : id === 'text-body' ? 'bodySize' : null;
+    if (sizeKey) {
+      onSlideChange({ [sizeKey]: { w: wPct, h: hPct } });
+      return;
+    }
+    if (id.startsWith('custom-')) {
+      const elId = id.replace('custom-', '');
+      const existing = slide.customElements || [];
+      onSlideChange({
+        customElements: existing.map(el => el.id === elId ? { ...el, w: wPct, h: hPct } : el),
+      });
+      return;
+    }
+    const existing = slide.elementSizes || {};
+    onSlideChange({ elementSizes: { ...existing, [id]: { w: wPct, h: hPct } } });
+  };
+
+  // ── 도형 변경 ──
+  const canChangeShape = !!(selectedId && !selectedId.startsWith('text-') && !readOnly);
+  const currentShape = selectedId ? (slide.elementShapes?.[selectedId] || 'rounded') : 'rounded';
+  const handleShapeChange = (shape: string) => {
+    if (!selectedId) return;
+    const existing = slide.elementShapes || {};
+    onSlideChange({
+      elementShapes: { ...existing, [selectedId]: shape as NonNullable<SlideData['elementShapes']>[string] },
+    });
+  };
+
+  // ── 선택 노드의 화면 좌표 (툴바 위치용) ──
+  const [selectedNodeRect, setSelectedNodeRect] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  useEffect(() => {
+    if (!selectedId || readOnly) { setSelectedNodeRect(null); return; }
+    const raf = requestAnimationFrame(() => {
+      const stage = stageRef.current;
+      if (!stage) return;
+      const node = stage.findOne(`#${selectedId}`);
+      if (!node) { setSelectedNodeRect(null); return; }
+      const rect = node.getClientRect({ relativeTo: stage });
+      const stageBox = stage.container().getBoundingClientRect();
+      setSelectedNodeRect({
+        x: stageBox.left + rect.x * stage.scaleX(),
+        y: stageBox.top + rect.y * stage.scaleY(),
+        width: rect.width * stage.scaleX(),
+        height: rect.height * stage.scaleY(),
+      });
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [selectedId, slide, readOnly, scale]);
+
   // ── 정렬 버튼 ──
   type HAlign = 'left' | 'center' | 'right';
   type VAlign = 'top' | 'middle' | 'bottom';
@@ -155,6 +210,64 @@ export default function KonvaSlideEditor({
       boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
     }}>
       {/* 정렬 툴바 UI는 제거됨 — alignElement 함수는 추후 단축키/다른 UI에서 재사용 가능하도록 유지 */}
+
+      {/* 도형 변경 팝업 — 선택 요소 위 플로팅 (text가 아닐 때) */}
+      {canChangeShape && selectedNodeRect && (
+        <div style={{
+          position: 'fixed',
+          top: Math.max(8, selectedNodeRect.y - 46),
+          left: selectedNodeRect.x + selectedNodeRect.width / 2,
+          transform: 'translateX(-50%)',
+          zIndex: 100,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '2px',
+          background: 'white',
+          borderRadius: '8px',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+          padding: '4px',
+        }}>
+          {[
+            { id: 'rounded', label: '□' },
+            { id: 'pill', label: '⬭' },
+            { id: 'circle', label: '○' },
+            { id: 'diamond', label: '◇' },
+            { id: 'hexagon', label: '⬡' },
+            { id: 'sharp', label: '▢' },
+            { id: 'outlined', label: '▯' },
+          ].map(s => (
+            <button key={s.id} type="button"
+              onClick={(e) => { e.stopPropagation(); handleShapeChange(s.id); }}
+              title={s.id}
+              style={{
+                width: 30, height: 30, fontSize: '16px', fontWeight: 700,
+                background: currentShape === s.id ? '#3B82F6' : '#F1F5F9',
+                color: currentShape === s.id ? 'white' : '#374151',
+                border: 'none', borderRadius: '4px', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
+            >{s.label}</button>
+          ))}
+          {selectedId?.startsWith('custom-') && (
+            <>
+              <div style={{ width: 1, height: 20, background: '#E2E8F0', margin: '0 4px' }} />
+              <button type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const elId = selectedId.replace('custom-', '');
+                  onSlideChange({ customElements: (slide.customElements || []).filter(el => el.id !== elId) });
+                  setSelectedId(null);
+                }}
+                style={{
+                  padding: '6px 10px', fontSize: '11px', fontWeight: 700,
+                  background: '#EF4444', color: 'white',
+                  border: 'none', borderRadius: '4px', cursor: 'pointer',
+                }}
+              >🗑</button>
+            </>
+          )}
+        </div>
+      )}
       <Stage
         ref={stageRef}
         width={displayWidth}
@@ -175,11 +288,33 @@ export default function KonvaSlideEditor({
             <Transformer
               ref={transformerRef}
               boundBoxFunc={(oldBox, newBox) => {
-                if (newBox.width < 50 || newBox.height < 20) return oldBox;
+                if (newBox.width < 30 || newBox.height < 20) return oldBox;
                 return newBox;
               }}
-              enabledAnchors={selectedId?.startsWith('text-') ? [] : undefined}
+              enabledAnchors={
+                selectedId?.startsWith('text-')
+                  ? ['middle-left', 'middle-right']  // 텍스트: 좌우만 (width만 조절, 높이 auto)
+                  : undefined                        // 나머지: 8방향 전부
+              }
+              keepRatio={false}
               rotateEnabled={false}
+              onTransformEnd={(e) => {
+                const node = e.target;
+                const id = node.id() || selectedId;
+                if (!id) return;
+                const scaleX = node.scaleX();
+                const scaleY = node.scaleY();
+                const newWidth = Math.max(30, node.width() * scaleX);
+                const newHeight = Math.max(20, (node.height?.() || 0) * scaleY);
+                // scale 리셋 + width/height로 반영
+                node.scaleX(1);
+                node.scaleY(1);
+                node.width(newWidth);
+                if (!id.startsWith('text-')) {
+                  node.height(newHeight);
+                }
+                saveElementSize(id, newWidth, newHeight);
+              }}
             />
           )}
         </Layer>

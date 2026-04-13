@@ -165,13 +165,20 @@ export function renderDataHighlight(...args: LayoutRenderArgs): React.ReactNode 
         const valueFill = isPlaceholder
           ? 'rgba(150,150,150,0.6)'
           : (vColor ?? (dp.highlight ? theme.accentColor : theme.titleColor));
+        const shapeId = `datapoint-${i}`;
+        const shape = slide.elementShapes?.[shapeId] || 'rounded';
+        // 도형별 cornerRadius 결정
+        const corner = shape === 'pill' || shape === 'circle' ? Math.min(cell.w, cell.h) / 2
+          : shape === 'sharp' || shape === 'diamond' || shape === 'hexagon' ? 0
+          : 24;
+        const isOutlined = shape === 'outlined';
         return (
           <React.Fragment key={i}>
-            <Rect x={cell.x} y={cell.y} width={cell.w} height={cell.h}
-              fill={dp.highlight ? `${theme.accentColor}15` : (theme.cardBgColor || 'rgba(0,0,0,0.04)')}
-              cornerRadius={24}
-              stroke={dp.highlight ? theme.accentColor : 'rgba(0,0,0,0.08)'}
-              strokeWidth={dp.highlight ? 2 : 1}
+            <Rect id={shapeId} x={cell.x} y={cell.y} width={cell.w} height={cell.h}
+              fill={isOutlined ? 'transparent' : (dp.highlight ? `${theme.accentColor}15` : (theme.cardBgColor || 'rgba(0,0,0,0.04)'))}
+              cornerRadius={corner}
+              stroke={isOutlined ? theme.accentColor : (dp.highlight ? theme.accentColor : 'rgba(0,0,0,0.08)')}
+              strokeWidth={isOutlined ? 3 : (dp.highlight ? 2 : 1)}
               opacity={isPlaceholder ? 0.4 : 1}
               dash={isPlaceholder ? [8, 6] : undefined} />
             <Text x={cell.x + cell.w / 2} y={cell.y + cell.h * 0.3}
