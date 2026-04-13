@@ -155,16 +155,32 @@ export function EditableText({
     textNode.hide();
     const stageBox = stage.container().getBoundingClientRect();
     const absPos = textNode.getAbsolutePosition();
+    const scaleX = stage.scaleX();
+    const scaleY = stage.scaleY();
+
+    // ── 폭 계산 ──
+    // getTextWidth() 는 Konva 내부 좌표 (scale 무관). DOM px 변환 시 * scaleX.
+    // 초기 폭: 실제 텍스트 폭 + fontSize*2 여유, 최소 120px (내부 좌표) *scaleX, 상한 width*scaleX
+    const innerMaxW = width;
+    const innerTextW = textNode.getTextWidth();
+    const innerPadding = fontSize * 2;
+    const innerInitialW = Math.max(120, Math.min(innerTextW + innerPadding, innerMaxW));
+    const domInitialW = innerInitialW * scaleX;
+    const domMaxW = innerMaxW * scaleX;
+    const domMinH = fontSize * 1.6 * scaleY;
 
     const textarea = document.createElement('textarea');
     document.body.appendChild(textarea);
     textarea.value = text;
     Object.assign(textarea.style, {
       position: 'absolute',
-      left: `${stageBox.left + absPos.x * stage.scaleX()}px`,
-      top: `${stageBox.top + absPos.y * stage.scaleY()}px`,
-      width: `${width * stage.scaleX()}px`,
-      fontSize: `${fontSize * stage.scaleY()}px`,
+      left: `${stageBox.left + absPos.x * scaleX}px`,
+      top: `${stageBox.top + absPos.y * scaleY}px`,
+      width: `${domInitialW}px`,
+      maxWidth: `${domMaxW}px`,
+      minHeight: `${domMinH}px`,
+      height: `${domMinH}px`,
+      fontSize: `${fontSize * scaleY}px`,
       fontWeight: fontStyle === 'bold' ? '700' : '400',
       fontFamily: resolvedFontFamily,
       color: '#1e293b',
@@ -179,8 +195,31 @@ export function EditableText({
       zIndex: '9999',
       boxSizing: 'border-box',
       boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+      overflow: 'hidden',
+      whiteSpace: 'pre-wrap',
+      wordBreak: 'break-word',
     });
     textarea.focus();
+
+    // auto-grow: 상한까지 폭 확장, 상한 도달 시 줄바꿈으로 높이만 확장
+    const autoGrow = () => {
+      // 폭: 1줄일 때 contents 폭을 맞춘다. 측정을 위해 임시로 width auto 설정
+      const atMaxW = textarea.clientWidth >= domMaxW - 1;
+      if (!atMaxW) {
+        // whiteSpace: nowrap 임시 적용 → scrollWidth = 한 줄 필요 폭
+        const prevWhite = textarea.style.whiteSpace;
+        textarea.style.whiteSpace = 'nowrap';
+        const neededW = textarea.scrollWidth + 4; // border 보정
+        textarea.style.whiteSpace = prevWhite;
+        const targetW = Math.min(Math.max(domInitialW, neededW), domMaxW);
+        textarea.style.width = `${targetW}px`;
+      }
+      // 높이: scrollHeight 기반
+      textarea.style.height = 'auto';
+      textarea.style.height = `${Math.max(domMinH, textarea.scrollHeight)}px`;
+    };
+    autoGrow();
+    textarea.addEventListener('input', autoGrow);
 
     const cleanup = () => {
       if (!document.body.contains(textarea)) return;
@@ -196,7 +235,7 @@ export function EditableText({
         textarea.blur();
       }
     });
-  }, [text, width, fontSize, fontStyle, fontFamily, fill, align, onTextChange]);
+  }, [text, width, fontSize, fontStyle, resolvedFontFamily, align, onTextChange]);
 
   return (
     <Text

@@ -255,6 +255,53 @@ export async function generateSlideImage(
   return null;
 }
 
+/** suggestSlideText 추가 맥락 옵션 (모두 선택). backward compatible. */
+export interface SuggestSlideTextOptions {
+  /** 병원명 — theme.hospitalName */
+  hospitalName?: string;
+  /** 진료과 — 예: "치과", "성형외과" */
+  hospitalDept?: string;
+  /** 브랜드 톤 — 예: "따뜻하고 신뢰감 있는" */
+  brandTone?: string;
+  /** 카드뉴스 전체 주제. 생략 시 allSlides[0].title 사용. */
+  topic?: string;
+}
+
+/** layout 별 톤 힌트 — Gemini 에 프롬프트로 주입 */
+const LAYOUT_TONE_HINT: Record<string, string> = {
+  cover: '호기심을 끄는 훅. 클릭 욕구 유발하되 과장 금지.',
+  closing: '정리·공감·부드러운 마무리. 행동 유도 명령형("~하세요") 금지.',
+  info: '정보 전달 중심. 명확하고 담백하게.',
+  quote: '감정 공감 어조. 환자·보호자 시점 공감.',
+  warning: '경각심은 있으되 공포 유발·과장 금지. 객관적 사실 중심.',
+  checklist: '체크 리스트 제목답게 간결·행동 지향.',
+  steps: '단계 흐름이 느껴지는 순차적 어조.',
+  comparison: '중립적 비교. 한쪽 우월 뉘앙스 금지.',
+  'data-highlight': '수치가 돋보이는 훅. 과장 없이 담담하게.',
+  timeline: '시간 흐름 강조. 회복 과정의 현실적 기대치.',
+  'before-after': '변화 강조 금지(의료법). 과정·관리 중심.',
+  qna: '자주 묻는 질문 톤. 친절하고 간결.',
+  'pros-cons': '장점·주의점 균형. 단정 금지.',
+  'price-table': '가격 범위만. "최저가/할인" 금지.',
+  'icon-grid': '항목이 병렬적으로 보이는 리스트 톤.',
+  'numbered-list': '순서 있는 리스트 톤.',
+};
+
+/** field 별 few-shot 예시 — 좋은 예(✅) / 나쁜 예(❌ + 이유) */
+const FEW_SHOT: Record<'title' | 'subtitle' | 'body', string> = {
+  title: `[참고 예시]
+✅ "잇몸 관리, 3개월이 분기점" — 구체 수치 + 행동 시점
+✅ "임플란트 전 꼭 확인할 3가지" — 숫자로 호기심 유발
+❌ "국내 최고의 임플란트 기술" — "최고" 최상급 (의료법 제56조)
+❌ "100% 안전한 완치 보장" — "100%/완치/보장" 단정 3건`,
+  subtitle: `[참고 예시]
+✅ "치주염 초기 신호 4가지" — 카테고리 + 숫자
+❌ "가장 뛰어난 치료 효과" — "가장/뛰어난" 비교·단정`,
+  body: `[참고 예시]
+✅ "치주염은 초기 잇몸 출혈로 시작됩니다. 3개월 주기 스케일링으로 진행 속도를 늦출 수 있으며, 개인차가 있습니다." — 수치 + 가능성 + 개인차
+❌ "반드시 완치되는 획기적 치료로 부작용도 없습니다." — "반드시/완치/획기적/부작용 없는" 금지어 4건`,
+};
+
 /**
  * AI 텍스트 필드 추천.
  *
@@ -271,24 +318,67 @@ export async function suggestSlideText(
   slide: SlideData,
   field: 'title' | 'subtitle' | 'body',
   allSlides: SlideData[],
+  options?: SuggestSlideTextOptions,
 ): Promise<string | null> {
-  const context = `카드뉴스 슬라이드 ${slide.index}장 (레이아웃: ${slide.layout})
-현재 제목: ${slide.title}
-현재 부제: ${slide.subtitle || ''}
-현재 본문: ${slide.body || ''}
-전체 주제: ${allSlides[0]?.title || ''}`;
+  // ── 전·후 슬라이드 ±2개 요약 ──
+  const currentIdx = allSlides.findIndex(s => s.id === slide.id);
+  const idx = currentIdx >= 0 ? currentIdx : (slide.index - 1);
+  const nearbyRange = (start: number, end: number) =>
+    allSlides.slice(Math.max(0, start), Math.min(allSlides.length, end))
+      .filter(s => s.id !== slide.id)
+      .map(s => `  ${s.index}장 (${s.layout}): "${s.title}"${s.subtitle ? ` — ${s.subtitle}` : ''}`)
+      .join('\n');
+  const beforeSummary = nearbyRange(idx - 2, idx);
+  const afterSummary = nearbyRange(idx + 1, idx + 3);
+  const topicValue = options?.topic || allSlides[0]?.title || '';
+  const allTitlesList = allSlides
+    .map(s => `  ${s.index}장: "${s.title}"`)
+    .join('\n');
+
+  // ── 병원 정보 블록 ──
+  const hospitalLines: string[] = [];
+  if (options?.hospitalName) hospitalLines.push(`병원: ${options.hospitalName}`);
+  if (options?.hospitalDept) hospitalLines.push(`진료과: ${options.hospitalDept}`);
+  if (options?.brandTone) hospitalLines.push(`브랜드 톤: ${options.brandTone}`);
+  const hospitalBlock = hospitalLines.length > 0
+    ? `\n[브랜드 컨텍스트]\n${hospitalLines.join('\n')}\n`
+    : '';
+
+  const layoutHint = LAYOUT_TONE_HINT[slide.layout] || '';
+
+  // ── 전체 컨텍스트 블록 ──
+  const context = `[카드뉴스 전체 주제]
+${topicValue}
+
+[전체 슬라이드 구성]
+${allTitlesList}
+${hospitalBlock}
+[현재 슬라이드 ${slide.index}장 — 레이아웃: ${slide.layout}]
+제목: ${slide.title}
+부제: ${slide.subtitle || ''}
+본문: ${slide.body || ''}
+${layoutHint ? `\n[이 레이아웃의 톤]\n${layoutHint}` : ''}
+${beforeSummary ? `\n[이전 슬라이드 맥락]\n${beforeSummary}` : ''}
+${afterSummary ? `\n[이후 슬라이드 맥락]\n${afterSummary}` : ''}`;
+
   const prompts: Record<string, string> = {
-    title: '위 카드뉴스 슬라이드의 제목을 더 매력적으로 다시 써줘. 20자 이내. 제목 한 줄만 출력. 따옴표·설명 금지.',
-    subtitle: '위 슬라이드의 부제를 써줘. 25자 이내. 부제 한 줄만 출력. 따옴표·설명 금지.',
-    body: '위 슬라이드의 본문을 구체적 수치 포함해 다시 써줘. 3문장 이내. 본문만 출력. 따옴표·설명 금지.',
+    title: '위 맥락에 맞는 제목을 새로 써라. 20자 이내. 제목 한 줄만 출력. 따옴표·설명 금지.',
+    subtitle: '위 맥락에 맞는 부제를 써라. 25자 이내. 부제 한 줄만 출력. 따옴표·설명 금지.',
+    body: '위 맥락에 맞는 본문을 써라. 2~3문장. 구체 수치·범위·가능성("~할 수 있습니다") 포함. 본문만 출력. 따옴표·설명 금지.',
   };
-  const outputFormatRule = 'JSON/배열/따옴표/콤마/설명/마크다운 금지. 순수 한 줄 텍스트만.';
+  const outputFormatRule = 'JSON/배열/따옴표/콤마/설명/마크다운 금지. 순수 한 줄(또는 본문은 2~3문장) 텍스트만.';
+
   const systemInstruction = `${getMedicalLawPromptBlock('brief')}
 
-카드뉴스 콘텐츠 전문가. 요청한 필드 값만 반환. 의료광고법 준수. 최상급/단정 표현 금지.`;
-  const maxLen = field === 'body' ? 150 : 40;
+카드뉴스 콘텐츠 전문가. 요청한 필드 값만 반환. 의료광고법 준수. 최상급/단정 표현 금지.
 
-  /** 한 번의 Gemini 호출 + 파이프라인 실행. 성공 시 filtered 문자열, 실패 시 { filtered, leftovers } */
+${FEW_SHOT[field]}`;
+
+  const maxLen = field === 'body' ? 200 : 40;
+  const temperature = field === 'body' ? 0.75 : 0.85;
+  const maxOutputTokens = field === 'body' ? 300 : 80;
+
+  /** 한 번의 Gemini 호출 + 파이프라인 실행. */
   const runOnce = async (extraPrefix: string): Promise<{ filtered: string; leftovers: string[] } | null> => {
     const promptBody = `${extraPrefix}${context}\n\n${prompts[field]}\n\n${outputFormatRule}`;
     const res = await fetch('/api/gemini', {
@@ -298,8 +388,8 @@ export async function suggestSlideText(
         prompt: promptBody,
         systemInstruction,
         model: 'gemini-3.1-pro-preview',
-        temperature: 0.8,
-        maxOutputTokens: 200,
+        temperature,
+        maxOutputTokens,
       }),
     });
     const data = await res.json() as { text?: string };

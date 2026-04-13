@@ -649,7 +649,10 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
     if (!slides[idx]) return;
     setAiSuggestingKey(`${idx}:${field}`);
     try {
-      const result = await suggestSlideText(slides[idx], field, slides);
+      const result = await suggestSlideText(slides[idx], field, slides, {
+        hospitalName: theme.hospitalName,
+        // hospitalDept/brandTone/topic 은 추후 설정 UI 로 확장.
+      });
       if (result) {
         updateSlide(idx, { [field]: result } as Partial<SlideData>);
       } else {
