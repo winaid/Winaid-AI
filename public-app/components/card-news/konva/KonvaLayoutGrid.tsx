@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Rect, Text, Circle } from 'react-konva';
-import { EditableText, renderTitleBlock, layoutVerticalItems, layoutGrid, isItemPlaceholder, PLACEHOLDER_STYLE, type LayoutRenderArgs } from './KonvaHelpers';
+import { EditableText, renderTitleBlock, layoutVerticalItems, layoutGrid, isItemPlaceholder, PLACEHOLDER_STYLE, EDITING_MAX_WIDTH, type LayoutRenderArgs } from './KonvaHelpers';
 import type { SlideData } from '../../../lib/cardNewsLayouts';
 
 /** elementShapes 기반 cornerRadius */
@@ -260,6 +260,7 @@ export function renderBeforeAfter(...args: LayoutRenderArgs): React.ReactNode {
           selectedId={selectedId} onSelect={setSelectedId}
           onDragEnd={() => {}}
           onTextChange={t => { const a = [...beforeItems]; a[i] = t.replace(/^•\s*/, ''); onChange({ beforeItems: a }); }}
+          editingMaxWidth={EDITING_MAX_WIDTH.ITEM}
         />
       ))}
 
@@ -284,6 +285,7 @@ export function renderBeforeAfter(...args: LayoutRenderArgs): React.ReactNode {
           selectedId={selectedId} onSelect={setSelectedId}
           onDragEnd={() => {}}
           onTextChange={t => { const a = [...afterItems]; a[i] = t.replace(/^✓\s*/, ''); onChange({ afterItems: a }); }}
+          editingMaxWidth={EDITING_MAX_WIDTH.ITEM}
         />
       ))}
     </>
@@ -383,6 +385,7 @@ export function renderProsCons(...args: LayoutRenderArgs): React.ReactNode {
           selectedId={selectedId} onSelect={setSelectedId}
           onDragEnd={() => {}}
           onTextChange={t => { const a = [...pros]; a[i] = t.replace(/^○\s*/, ''); onChange({ pros: a }); }}
+          editingMaxWidth={EDITING_MAX_WIDTH.ITEM}
         />
       ))}
 
@@ -403,6 +406,7 @@ export function renderProsCons(...args: LayoutRenderArgs): React.ReactNode {
           selectedId={selectedId} onSelect={setSelectedId}
           onDragEnd={() => {}}
           onTextChange={t => { const a = [...cons]; a[i] = t.replace(/^✕\s*/, ''); onChange({ cons: a }); }}
+          editingMaxWidth={EDITING_MAX_WIDTH.ITEM}
         />
       ))}
     </>

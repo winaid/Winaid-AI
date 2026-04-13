@@ -17,6 +17,20 @@ export function getKonvaFontFamily(fallback = 'Pretendard Variable, sans-serif')
 
 export type ShapeType = 'rounded' | 'pill' | 'sharp' | 'diamond' | 'hexagon' | 'circle' | 'outlined';
 
+/**
+ * 편집 박스(더블클릭 시 뜨는 DOM textarea) 폭 상한.
+ * 모달 폭 650px 기준 시각 계층을 확보하기 위한 DOM px 절대 상한.
+ * - TITLE: 기본값. 메인 타이틀·짧은 라벨·아이콘 카드 제목 등
+ * - DESC : 긴 설명 성격. 타임라인/번호리스트 desc, 인용 본문, 정보/마무리 body
+ * - ITEM : 짧은 리스트 항목. 체크리스트·단계·비교·장단점·경고 등
+ * 각 EditableText 는 `editingMaxWidth` prop 으로 override 가능하다.
+ */
+export const EDITING_MAX_WIDTH = {
+  TITLE: 420,
+  DESC: 500,
+  ITEM: 380,
+} as const;
+
 /** 배열 항목이 placeholder(빈 값/기본 텍스트)인지 판단 */
 export function isItemPlaceholder(text?: string): boolean {
   if (!text || !text.trim()) return true;
@@ -121,6 +135,12 @@ export interface EditableTextProps {
   cardWidth?: number;
   cardHeight?: number;
   onSnapGuides?: (guides: { vertical?: number; horizontal?: number }) => void;
+  /**
+   * 편집(더블클릭) 시 DOM textarea 의 절대 상한 폭(px).
+   * 미지정 시 `EDITING_MAX_WIDTH.TITLE` (420). 필드 성격(설명/항목/제목)
+   * 에 맞춰 `EDITING_MAX_WIDTH.DESC` / `.ITEM` 을 전달.
+   */
+  editingMaxWidth?: number;
 }
 
 export type LayoutRenderArgs = [
@@ -142,6 +162,7 @@ export function EditableText({
   id, text, x, y, width, fontSize, fontStyle = 'normal', fill, align = 'left',
   offsetX, fontFamily, lineHeight = 1.3, selectedId, onSelect, onDragEnd, onTextChange,
   readOnly = false, cardWidth = 1080, cardHeight = 1080, onSnapGuides,
+  editingMaxWidth,
 }: EditableTextProps) {
   const textRef = useRef<Konva.Text>(null);
   const resolvedFontFamily = fontFamily || getKonvaFontFamily();
@@ -162,14 +183,15 @@ export function EditableText({
     // getTextWidth() 는 Konva 내부 좌표 (scale 무관). DOM px 변환 시 * scaleX.
     // 초기 폭: 실제 텍스트 폭 + fontSize*2 여유, 최소 120px (내부 좌표) *scaleX, 상한 width*scaleX
     // 편집 UX 용 절대 상한 — width prop 이 크더라도(메인 타이틀 w*0.85 등)
-    // 편집 박스는 모달 폭 650px 의 ~65% 이하로 제한하여 카드보다 작은 시각 계층 확보.
-    const HARD_DOM_MAXW = 420;
+    // 편집 박스는 모달 폭 650px 대비 시각 계층 확보를 위해 DOM 절대 상한 적용.
+    // `editingMaxWidth` prop 으로 필드 성격별 override(기본 420 / desc 500 / item 380).
+    const effectiveMaxW = editingMaxWidth ?? EDITING_MAX_WIDTH.TITLE;
     const innerMaxW = width;
     const innerTextW = textNode.getTextWidth();
     const innerPadding = fontSize * 2;
     const innerInitialW = Math.max(120, Math.min(innerTextW + innerPadding, innerMaxW));
-    const domInitialW = Math.min(innerInitialW * scaleX, HARD_DOM_MAXW);
-    const domMaxW = Math.min(innerMaxW * scaleX, HARD_DOM_MAXW);
+    const domInitialW = Math.min(innerInitialW * scaleX, effectiveMaxW);
+    const domMaxW = Math.min(innerMaxW * scaleX, effectiveMaxW);
     const domMinH = fontSize * 1.6 * scaleY;
 
     const textarea = document.createElement('textarea');
@@ -238,7 +260,7 @@ export function EditableText({
         textarea.blur();
       }
     });
-  }, [text, width, fontSize, fontStyle, resolvedFontFamily, align, onTextChange]);
+  }, [text, width, fontSize, fontStyle, resolvedFontFamily, align, onTextChange, editingMaxWidth]);
 
   return (
     <Text

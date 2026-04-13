@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Rect, Text, Circle } from 'react-konva';
-import { EditableText, renderTitleBlock, layoutVerticalItems, isItemPlaceholder, PLACEHOLDER_STYLE, type LayoutRenderArgs } from './KonvaHelpers';
+import { EditableText, renderTitleBlock, layoutVerticalItems, isItemPlaceholder, PLACEHOLDER_STYLE, EDITING_MAX_WIDTH, type LayoutRenderArgs } from './KonvaHelpers';
 import type { SlideData } from '../../../lib/cardNewsLayouts';
 
 /** elementShapes 기반으로 cornerRadius 계산 — 각 레이아웃의 default 모양 유지 */
@@ -57,6 +57,7 @@ export function renderChecklist(...args: LayoutRenderArgs): React.ReactNode {
               selectedId={selectedId} onSelect={setSelectedId}
               onDragEnd={() => {}}
               onTextChange={t => { const a = [...items]; a[i] = t; onChange({ checkItems: a }); }}
+              editingMaxWidth={EDITING_MAX_WIDTH.ITEM}
             />
           </React.Fragment>
         );
@@ -102,6 +103,7 @@ export function renderSteps(...args: LayoutRenderArgs): React.ReactNode {
               selectedId={selectedId} onSelect={setSelectedId}
               onDragEnd={() => {}}
               onTextChange={t => { const a = [...items]; a[i] = { ...a[i], label: t }; onChange({ steps: a }); }}
+              editingMaxWidth={EDITING_MAX_WIDTH.ITEM}
             />
             {step.desc && (
               <EditableText
@@ -168,6 +170,7 @@ export function renderWarning(...args: LayoutRenderArgs): React.ReactNode {
               selectedId={selectedId} onSelect={setSelectedId}
               onDragEnd={() => {}}
               onTextChange={t => { const a = [...items]; a[i] = t; onChange({ warningItems: a }); }}
+              editingMaxWidth={EDITING_MAX_WIDTH.ITEM}
             />
           </React.Fragment>
         );
@@ -217,6 +220,7 @@ export function renderNumberedList(...args: LayoutRenderArgs): React.ReactNode {
                 selectedId={selectedId} onSelect={setSelectedId}
                 onDragEnd={() => {}}
                 onTextChange={t => { const a = [...items]; a[i] = { ...a[i], desc: t }; onChange({ numberedItems: a }); }}
+                editingMaxWidth={EDITING_MAX_WIDTH.DESC}
               />
             )}
           </React.Fragment>
@@ -267,6 +271,7 @@ export function renderTimeline(...args: LayoutRenderArgs): React.ReactNode {
                 selectedId={selectedId} onSelect={setSelectedId}
                 onDragEnd={() => {}}
                 onTextChange={t => { const a = [...items]; a[i] = { ...a[i], desc: t }; onChange({ timelineItems: a }); }}
+                editingMaxWidth={EDITING_MAX_WIDTH.DESC}
               />
             )}
           </React.Fragment>

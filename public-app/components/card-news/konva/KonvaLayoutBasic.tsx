@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Rect, Text } from 'react-konva';
-import { EditableText, EditableShape, renderTitleBlock, type LayoutRenderArgs } from './KonvaHelpers';
+import { EditableText, EditableShape, renderTitleBlock, EDITING_MAX_WIDTH, type LayoutRenderArgs } from './KonvaHelpers';
 import type { SlideData } from '../../../lib/cardNewsLayouts';
 
 function shapeRadius(slide: SlideData, id: string, defaultCorner: number, w: number, h: number): number {
@@ -70,6 +70,7 @@ export function renderCover(...args: LayoutRenderArgs): React.ReactNode {
           selectedId={selectedId} onSelect={setSelectedId}
           onDragEnd={() => {}} onTextChange={t => onChange({ body: t })}
           readOnly={readOnly} cardWidth={w} cardHeight={h} onSnapGuides={snapCb}
+          editingMaxWidth={EDITING_MAX_WIDTH.DESC}
         />
       )}
     </>
@@ -99,6 +100,7 @@ export function renderInfo(...args: LayoutRenderArgs): React.ReactNode {
             fill={theme.bodyColor} align={slide.bodyAlign || 'left'} offsetX={0}
             selectedId={selectedId} onSelect={setSelectedId}
             onDragEnd={() => {}} onTextChange={t => onChange({ body: t })}
+            editingMaxWidth={EDITING_MAX_WIDTH.DESC}
           />
         </>
       )}
@@ -122,6 +124,7 @@ export function renderQuote(...args: LayoutRenderArgs): React.ReactNode {
         fontStyle="bold" fill={theme.titleColor} align="center" offsetX={w * 0.75 / 2}
         selectedId={selectedId} onSelect={setSelectedId}
         onDragEnd={() => {}} onTextChange={t => onChange({ quoteText: t })}
+        editingMaxWidth={EDITING_MAX_WIDTH.DESC}
       />
       {slide.quoteAuthor && (
         <EditableText
