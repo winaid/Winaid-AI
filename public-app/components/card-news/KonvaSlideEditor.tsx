@@ -4,7 +4,7 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { Stage, Layer, Rect, Transformer, Line } from 'react-konva';
 import type Konva from 'konva';
 import type { SlideData, CardNewsTheme } from '../../lib/cardNewsLayouts';
-import { BackgroundImage, type LayoutRenderArgs } from './konva/KonvaHelpers';
+import { BackgroundImage, renderCustomElements, type LayoutRenderArgs } from './konva/KonvaHelpers';
 import { renderCover, renderInfo, renderQuote } from './konva/KonvaLayoutBasic';
 import { renderChecklist, renderSteps, renderWarning, renderNumberedList, renderTimeline } from './konva/KonvaLayoutList';
 import { renderComparison, renderIconGrid, renderDataHighlight, renderBeforeAfter, renderQna, renderProsCons, renderPriceTable } from './konva/KonvaLayoutGrid';
@@ -345,6 +345,8 @@ export default function KonvaSlideEditor({
             <BackgroundImage src={slide.imageUrl} width={cardWidth} height={cardHeight} />
           )}
           {renderContent()}
+          {/* 커스텀 요소 (사용자 추가) — 레이아웃 위에 오버레이 */}
+          {renderCustomElements(slide, cardWidth, cardHeight, selectedId, setSelectedId, onSlideChange, readOnly)}
           {!readOnly && (
             <Transformer
               ref={transformerRef}

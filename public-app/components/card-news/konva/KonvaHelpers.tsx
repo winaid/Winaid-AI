@@ -407,3 +407,117 @@ export function renderTitleBlock(
 
   return { element, bottomY };
 }
+
+// ── 커스텀 요소 (사용자 추가 텍스트/이미지) ──
+
+/** 커스텀 이미지 요소 — 비동기 로딩 */
+function CustomImageElement({
+  id, src, x, y, width, height, readOnly, onSelect, onDragEnd,
+}: {
+  id: string; src: string;
+  x: number; y: number; width: number; height: number;
+  readOnly: boolean;
+  onSelect: (id: string | null) => void;
+  onDragEnd: (x: number, y: number) => void;
+}) {
+  const [image, setImage] = useState<HTMLImageElement | null>(null);
+  useEffect(() => {
+    const img = new window.Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => setImage(img);
+    img.src = src;
+  }, [src]);
+  if (!image) return null;
+  return (
+    <KonvaImage
+      id={id}
+      image={image}
+      x={x} y={y}
+      width={width} height={height}
+      cornerRadius={8}
+      draggable={!readOnly}
+      listening={!readOnly}
+      onClick={readOnly ? undefined : () => onSelect(id)}
+      onTap={readOnly ? undefined : () => onSelect(id)}
+      onDragEnd={readOnly ? undefined : (e) => onDragEnd(e.target.x(), e.target.y())}
+    />
+  );
+}
+
+/** 커스텀 요소(사용자 추가 텍스트/이미지) 전체 렌더 */
+export function renderCustomElements(
+  slide: import('../../../lib/cardNewsLayouts').SlideData,
+  w: number,
+  h: number,
+  selectedId: string | null,
+  setSelectedId: (id: string | null) => void,
+  onSlideChange: (patch: Partial<import('../../../lib/cardNewsLayouts').SlideData>) => void,
+  readOnly: boolean,
+): React.ReactNode {
+  if (!slide.customElements?.length) return null;
+  return slide.customElements.map((el) => {
+    const id = `custom-${el.id}`;
+    const elW = w * el.w / 100;
+    const elH = h * el.h / 100;
+    const x = w * el.x / 100 - elW / 2;
+    const y = h * el.y / 100 - elH / 2;
+
+    const handleMove = (newX: number, newY: number) => {
+      const centerX = newX + elW / 2;
+      const centerY = newY + elH / 2;
+      onSlideChange({
+        customElements: (slide.customElements || []).map(c =>
+          c.id === el.id
+            ? { ...c, x: Math.round(centerX / w * 100), y: Math.round(centerY / h * 100) }
+            : c
+        ),
+      });
+    };
+
+    if (el.type === 'text') {
+      return (
+        <EditableText
+          key={id}
+          id={id}
+          text={el.text || '텍스트'}
+          x={x + elW / 2}
+          y={y + elH / 2 - (el.fontSize || 24) / 2}
+          width={elW}
+          fontSize={el.fontSize || 24}
+          fontStyle={Number(el.fontWeight || '500') >= 700 ? 'bold' : 'normal'}
+          fill={el.color || '#333333'}
+          align={el.align || 'left'}
+          offsetX={elW / 2}
+          selectedId={selectedId}
+          onSelect={setSelectedId}
+          readOnly={readOnly}
+          cardWidth={w} cardHeight={h}
+          onDragEnd={(nx, ny) => handleMove(nx - elW / 2, ny - elH / 2)}
+          onTextChange={(newText) => {
+            onSlideChange({
+              customElements: (slide.customElements || []).map(c =>
+                c.id === el.id ? { ...c, text: newText } : c
+              ),
+            });
+          }}
+        />
+      );
+    }
+
+    if (el.type === 'image' && el.imageUrl) {
+      return (
+        <CustomImageElement
+          key={id}
+          id={id}
+          src={el.imageUrl}
+          x={x} y={y}
+          width={elW} height={elH}
+          readOnly={readOnly}
+          onSelect={setSelectedId}
+          onDragEnd={handleMove}
+        />
+      );
+    }
+    return null;
+  });
+}

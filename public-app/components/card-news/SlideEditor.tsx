@@ -1157,32 +1157,6 @@ ${JSON.stringify(slideForContext, null, 2)}
           {renderCharCount('title', slide.title || '')}
           {renderViolations('title', titleViolations)}
 
-          {/* 텍스트 정렬 */}
-          <div className="flex gap-3">
-            <div className="flex-1">
-              <p className="text-[10px] text-slate-400 mb-1">가로 정렬</p>
-              <div className="flex gap-1">
-                {([['left', '좌'], ['center', '중앙'], ['right', '우']] as const).map(([v, l]) => (
-                  <button key={v} type="button" onClick={() => onChange({ titleAlign: v })}
-                    className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg border transition-all ${
-                      (slide.titleAlign || 'left') === v ? 'bg-blue-500 text-white border-blue-500' : 'bg-white text-slate-500 border-slate-200 hover:border-blue-300'
-                    }`}>{l}</button>
-                ))}
-              </div>
-            </div>
-            <div className="flex-1">
-              <p className="text-[10px] text-slate-400 mb-1">세로 정렬</p>
-              <div className="flex gap-1">
-                {([['top', '상'], ['center', '중앙'], ['bottom', '하']] as const).map(([v, l]) => (
-                  <button key={v} type="button" onClick={() => onChange({ contentAlignV: v })}
-                    className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg border transition-all ${
-                      (slide.contentAlignV || 'center') === v ? 'bg-blue-500 text-white border-blue-500' : 'bg-white text-slate-500 border-slate-200 hover:border-blue-300'
-                    }`}>{l}</button>
-                ))}
-              </div>
-            </div>
-          </div>
-
           {/* 슬라이드 배경색 */}
           <div>
             <p className="text-[10px] text-slate-400 mb-1">배경색</p>
