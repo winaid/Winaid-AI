@@ -7,7 +7,7 @@ import { EditableText, EditableShape, renderTitleBlock, type LayoutRenderArgs } 
 // ── Cover / Closing ──
 
 export function renderCover(...args: LayoutRenderArgs): React.ReactNode {
-  const [slide, theme, w, h, selectedId, setSelectedId, onChange, readOnly] = args;
+  const [slide, theme, w, h, selectedId, setSelectedId, onChange, readOnly, snapCb] = args;
   const titleX = slide.titlePosition?.x ? (w * slide.titlePosition.x / 100) : w / 2;
   const titleY = slide.titlePosition?.y ? (h * slide.titlePosition.y / 100) : h * 0.38;
   const subtitleY = slide.subtitlePosition?.y ? (h * slide.subtitlePosition.y / 100) : h * 0.58;
@@ -39,6 +39,7 @@ export function renderCover(...args: LayoutRenderArgs): React.ReactNode {
         selectedId={selectedId} onSelect={setSelectedId}
         onDragEnd={(x, y) => onChange({ titlePosition: { x: Math.round(x / w * 100), y: Math.round(y / h * 100) } })}
         onTextChange={t => onChange({ title: t })}
+        readOnly={readOnly} cardWidth={w} cardHeight={h} onSnapGuides={snapCb}
       />
       {slide.subtitle && (
         <EditableText
@@ -49,6 +50,7 @@ export function renderCover(...args: LayoutRenderArgs): React.ReactNode {
           selectedId={selectedId} onSelect={setSelectedId}
           onDragEnd={(x, y) => onChange({ subtitlePosition: { x: Math.round(x / w * 100), y: Math.round(y / h * 100) } })}
           onTextChange={t => onChange({ subtitle: t })}
+          readOnly={readOnly} cardWidth={w} cardHeight={h} onSnapGuides={snapCb}
         />
       )}
       {slide.body && (
@@ -58,6 +60,7 @@ export function renderCover(...args: LayoutRenderArgs): React.ReactNode {
           fill={theme.bodyColor} align="center" offsetX={w * 0.8 / 2}
           selectedId={selectedId} onSelect={setSelectedId}
           onDragEnd={() => {}} onTextChange={t => onChange({ body: t })}
+          readOnly={readOnly} cardWidth={w} cardHeight={h} onSnapGuides={snapCb}
         />
       )}
     </>

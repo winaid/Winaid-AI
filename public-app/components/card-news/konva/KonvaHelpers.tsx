@@ -24,6 +24,9 @@ export interface EditableTextProps {
   onDragEnd: (x: number, y: number) => void;
   onTextChange: (text: string) => void;
   readOnly?: boolean;
+  cardWidth?: number;
+  cardHeight?: number;
+  onSnapGuides?: (guides: { vertical?: number; horizontal?: number }) => void;
 }
 
 export type LayoutRenderArgs = [
@@ -35,6 +38,7 @@ export type LayoutRenderArgs = [
   setSelectedId: (id: string | null) => void,
   onChange: (patch: Partial<import('../../../lib/cardNewsLayouts').SlideData>) => void,
   readOnly?: boolean,
+  onSnapGuides?: (guides: { vertical?: number; horizontal?: number }) => void,
 ];
 
 // ── EditableText ──
@@ -42,7 +46,7 @@ export type LayoutRenderArgs = [
 export function EditableText({
   id, text, x, y, width, fontSize, fontStyle = 'normal', fill, align = 'left',
   offsetX, fontFamily, lineHeight = 1.3, selectedId, onSelect, onDragEnd, onTextChange,
-  readOnly = false,
+  readOnly = false, cardWidth = 1080, cardHeight = 1080, onSnapGuides,
 }: EditableTextProps) {
   const textRef = useRef<Konva.Text>(null);
 
@@ -119,7 +123,31 @@ export function EditableText({
       onTap={readOnly ? undefined : () => onSelect(id)}
       onDblClick={readOnly ? undefined : handleDblClick}
       onDblTap={readOnly ? undefined : handleDblClick}
-      onDragEnd={readOnly ? undefined : (e) => onDragEnd(e.target.x(), e.target.y())}
+      onDragMove={readOnly ? undefined : (e) => {
+        const node = e.target as Konva.Text;
+        const nodeW = node.width();
+        const nodeH = node.height();
+        const ox = (offsetX || 0);
+        const centerX = node.x() - ox + nodeW / 2;
+        const centerY = node.y() + nodeH / 2;
+        const cardCx = cardWidth / 2;
+        const cardCy = cardHeight / 2;
+        const THRESHOLD = 8;
+        const guides: { vertical?: number; horizontal?: number } = {};
+        if (Math.abs(centerX - cardCx) < THRESHOLD) {
+          node.x(cardCx - nodeW / 2 + ox);
+          guides.vertical = cardCx;
+        }
+        if (Math.abs(centerY - cardCy) < THRESHOLD) {
+          node.y(cardCy - nodeH / 2);
+          guides.horizontal = cardCy;
+        }
+        onSnapGuides?.(guides);
+      }}
+      onDragEnd={readOnly ? undefined : (e) => {
+        onSnapGuides?.({});
+        onDragEnd(e.target.x(), e.target.y());
+      }}
       onMouseEnter={readOnly ? undefined : (e) => { const c = e.target.getStage()?.container(); if (c) c.style.cursor = 'grab'; }}
       onMouseLeave={readOnly ? undefined : (e) => { const c = e.target.getStage()?.container(); if (c) c.style.cursor = 'default'; }}
     />
@@ -240,7 +268,7 @@ export function renderTitleBlock(
   args: LayoutRenderArgs,
   opts: { alignCenter?: boolean; startY?: number } = {},
 ): { element: React.ReactNode; bottomY: number } {
-  const [slide, theme, w, h, selectedId, setSelectedId, onChange, ro] = args;
+  const [slide, theme, w, h, selectedId, setSelectedId, onChange, ro, snapCb] = args;
   const { alignCenter = false, startY = 60 } = opts;
   const ax = alignCenter ? w / 2 - 30 : 60;
   const tx = alignCenter ? w / 2 : 60;
@@ -273,6 +301,7 @@ export function renderTitleBlock(
         onDragEnd={(x, y) => onChange({ titlePosition: { x: Math.round(x / w * 100), y: Math.round(y / h * 100) } })}
         onTextChange={t => onChange({ title: t })}
         readOnly={ro}
+        cardWidth={w} cardHeight={h} onSnapGuides={snapCb}
       />
       {slide.subtitle && (() => {
         bottomY = startY + titleFs + 60;
@@ -285,6 +314,7 @@ export function renderTitleBlock(
             selectedId={selectedId} onSelect={setSelectedId}
             onDragEnd={(x, y) => onChange({ subtitlePosition: { x: Math.round(x / w * 100), y: Math.round(y / h * 100) } })}
             onTextChange={t => onChange({ subtitle: t })}
+            cardWidth={w} cardHeight={h} onSnapGuides={snapCb}
             readOnly={ro}
           />
         );

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { Stage, Layer, Rect, Transformer } from 'react-konva';
+import { Stage, Layer, Rect, Transformer, Line } from 'react-konva';
 import type Konva from 'konva';
 import type { SlideData, CardNewsTheme } from '../../lib/cardNewsLayouts';
 import { BackgroundImage, type LayoutRenderArgs } from './konva/KonvaHelpers';
@@ -32,6 +32,7 @@ export default function KonvaSlideEditor({
   const transformerRef = useRef<Konva.Transformer>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [snapGuides, setSnapGuides] = useState<{ vertical?: number; horizontal?: number }>({});
 
   useEffect(() => setMounted(true), []);
 
@@ -68,7 +69,7 @@ export default function KonvaSlideEditor({
   const bgColor = slide.bgColor || theme.backgroundColor || '#1B2A4A';
 
   // 레이아웃 분기
-  const args: LayoutRenderArgs = [slide, theme, cardWidth, cardHeight, selectedId, setSelectedId, onSlideChange, readOnly];
+  const args: LayoutRenderArgs = [slide, theme, cardWidth, cardHeight, selectedId, setSelectedId, onSlideChange, readOnly, setSnapGuides];
 
   const renderContent = () => {
     switch (slide.layout) {
@@ -92,14 +93,88 @@ export default function KonvaSlideEditor({
     }
   };
 
+  // ── 정렬 버튼 ──
+  type HAlign = 'left' | 'center' | 'right';
+  type VAlign = 'top' | 'middle' | 'bottom';
+  const alignElement = (hAlign?: HAlign, vAlign?: VAlign) => {
+    if (!selectedId || !stageRef.current) return;
+    const node = stageRef.current.findOne(`#${selectedId}`);
+    if (!node) return;
+    const nodeW = node.width() * node.scaleX();
+    const nodeH = node.height() * node.scaleY();
+    const offsetX = (node as Konva.Text).offsetX?.() || 0;
+    const offsetY = (node as Konva.Text).offsetY?.() || 0;
+    let xPct: number | undefined;
+    let yPct: number | undefined;
+    if (hAlign === 'left') {
+      node.x(offsetX);
+      xPct = Math.round(nodeW / 2 / cardWidth * 100);
+    } else if (hAlign === 'center') {
+      node.x(cardWidth / 2 - nodeW / 2 + offsetX);
+      xPct = 50;
+    } else if (hAlign === 'right') {
+      node.x(cardWidth - nodeW + offsetX);
+      xPct = Math.round((cardWidth - nodeW / 2) / cardWidth * 100);
+    }
+    if (vAlign === 'top') {
+      node.y(offsetY);
+      yPct = Math.round(nodeH / 2 / cardHeight * 100);
+    } else if (vAlign === 'middle') {
+      node.y(cardHeight / 2 - nodeH / 2 + offsetY);
+      yPct = 50;
+    } else if (vAlign === 'bottom') {
+      node.y(cardHeight - nodeH + offsetY);
+      yPct = Math.round((cardHeight - nodeH / 2) / cardHeight * 100);
+    }
+    node.getLayer()?.batchDraw();
+    // SlideData 저장 (title/subtitle만 현재 지원)
+    const posKey = selectedId === 'text-title' ? 'titlePosition'
+      : selectedId === 'text-subtitle' ? 'subtitlePosition' : null;
+    if (posKey) {
+      const cur = (slide as unknown as Record<string, { x: number; y: number } | undefined>)[posKey];
+      onSlideChange({
+        [posKey]: { x: xPct ?? cur?.x ?? 50, y: yPct ?? cur?.y ?? 50 },
+      });
+    }
+  };
+
+  const alignBtn: React.CSSProperties = {
+    width: 28, height: 28, fontSize: '14px', fontWeight: 700,
+    background: '#F1F5F9', color: '#374151', border: 'none',
+    borderRadius: '4px', cursor: 'pointer',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+  };
+
   if (!mounted) return null;
 
   return (
     <div style={{
+      position: 'relative',
       width: displayWidth, height: displayHeight,
-      borderRadius: '16px', overflow: 'hidden',
+      borderRadius: '16px', overflow: 'visible',
       boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
     }}>
+      {/* 정렬 툴바 — 선택 시 상단 오버레이 */}
+      {selectedId && !readOnly && (
+        <div style={{
+          position: 'absolute', top: -48, left: '50%',
+          transform: 'translateX(-50%)', zIndex: 60,
+          display: 'flex', alignItems: 'center', gap: '2px',
+          background: 'white', borderRadius: '8px',
+          boxShadow: '0 2px 12px rgba(0,0,0,0.15)', padding: '4px',
+        }}>
+          <button type="button" onClick={() => alignElement('left')} title="왼쪽" style={alignBtn}>◧</button>
+          <button type="button" onClick={() => alignElement('center')} title="가로 가운데" style={alignBtn}>▤</button>
+          <button type="button" onClick={() => alignElement('right')} title="오른쪽" style={alignBtn}>◨</button>
+          <div style={{ width: 1, height: 20, background: '#E2E8F0', margin: '0 2px' }} />
+          <button type="button" onClick={() => alignElement(undefined, 'top')} title="위쪽" style={alignBtn}>▔</button>
+          <button type="button" onClick={() => alignElement(undefined, 'middle')} title="세로 가운데" style={alignBtn}>━</button>
+          <button type="button" onClick={() => alignElement(undefined, 'bottom')} title="아래쪽" style={alignBtn}>▁</button>
+          <div style={{ width: 1, height: 20, background: '#E2E8F0', margin: '0 2px' }} />
+          <button type="button" onClick={() => alignElement('center', 'middle')} title="정중앙"
+            style={{ ...alignBtn, background: '#EF4444', color: 'white' }}>⊕</button>
+        </div>
+      )}
       <Stage
         ref={stageRef}
         width={displayWidth}
@@ -128,6 +203,23 @@ export default function KonvaSlideEditor({
             />
           )}
         </Layer>
+        {/* 스냅 가이드라인 — 최상위 Layer, 이벤트 비활성 */}
+        {!readOnly && (snapGuides.vertical !== undefined || snapGuides.horizontal !== undefined) && (
+          <Layer listening={false}>
+            {snapGuides.vertical !== undefined && (
+              <Line
+                points={[snapGuides.vertical, 0, snapGuides.vertical, cardHeight]}
+                stroke="#EF4444" strokeWidth={1.5} dash={[6, 4]}
+              />
+            )}
+            {snapGuides.horizontal !== undefined && (
+              <Line
+                points={[0, snapGuides.horizontal, cardWidth, snapGuides.horizontal]}
+                stroke="#EF4444" strokeWidth={1.5} dash={[6, 4]}
+              />
+            )}
+          </Layer>
+        )}
       </Stage>
     </div>
   );
