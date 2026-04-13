@@ -6,6 +6,19 @@ import type Konva from 'konva';
 
 export type ShapeType = 'rounded' | 'pill' | 'sharp' | 'diamond' | 'hexagon' | 'circle' | 'outlined';
 
+/** 배열 항목이 placeholder(빈 값/기본 텍스트)인지 판단 */
+export function isItemPlaceholder(text?: string): boolean {
+  if (!text || !text.trim()) return true;
+  return /^(항목|설명|단계|주의사항|질문을 입력|답변|시술|텍스트를 입력|제목|부제|새 텍스트|00$|00%)/.test(text.trim());
+}
+
+/** placeholder 시각 스타일 상수 */
+export const PLACEHOLDER_STYLE = {
+  opacity: 0.4,
+  dash: [8, 6] as number[],
+  textOpacity: 0.5,
+} as const;
+
 /** 요소 배경 도형 — 도형 종류에 따라 Rect/Circle/RegularPolygon/Line 반환 */
 export function renderShapeBackground(opts: {
   shape: ShapeType;

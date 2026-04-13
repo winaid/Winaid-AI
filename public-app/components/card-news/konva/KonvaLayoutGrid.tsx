@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Rect, Text, Circle } from 'react-konva';
-import { EditableText, renderTitleBlock, layoutVerticalItems, layoutGrid, type LayoutRenderArgs } from './KonvaHelpers';
+import { EditableText, renderTitleBlock, layoutVerticalItems, layoutGrid, isItemPlaceholder, PLACEHOLDER_STYLE, type LayoutRenderArgs } from './KonvaHelpers';
 import type { SlideData } from '../../../lib/cardNewsLayouts';
 
 /** elementShapes 기반 cornerRadius */
@@ -111,11 +111,20 @@ export function renderIconGrid(...args: LayoutRenderArgs): React.ReactNode {
         if (!cell) return null;
         return (
           <React.Fragment key={i}>
-            <Rect id={`icon-card-${i}`} x={cell.x} y={cell.y} width={cell.w} height={cell.h}
-              fill="#fff"
-              cornerRadius={shapeRadius(slide, `icon-card-${i}`, 20, cell.w, cell.h)}
-              shadowBlur={12} shadowOpacity={0.08}
-              shadowColor="#000" shadowOffsetY={4} />
+            {(() => {
+              const isEmpty = isItemPlaceholder(item.title) && isItemPlaceholder(item.desc);
+              return (
+                <Rect id={`icon-card-${i}`} x={cell.x} y={cell.y} width={cell.w} height={cell.h}
+                  fill="#fff"
+                  cornerRadius={shapeRadius(slide, `icon-card-${i}`, 20, cell.w, cell.h)}
+                  shadowBlur={isEmpty ? 0 : 12} shadowOpacity={0.08}
+                  shadowColor="#000" shadowOffsetY={4}
+                  opacity={isEmpty ? PLACEHOLDER_STYLE.opacity : 1}
+                  stroke={isEmpty ? theme.accentColor : undefined}
+                  strokeWidth={isEmpty ? 1.5 : 0}
+                  dash={isEmpty ? PLACEHOLDER_STYLE.dash : undefined} />
+              );
+            })()}
             <Text x={cell.x + cell.w / 2 - 28} y={cell.y + cell.h * 0.15}
               text={item.emoji} fontSize={48} width={56} align="center"
               fontFamily="Pretendard Variable, sans-serif" />
@@ -290,9 +299,18 @@ export function renderQna(...args: LayoutRenderArgs): React.ReactNode {
         if (!p) return null;
         return (
           <React.Fragment key={i}>
-            <Rect id={`qa-${i}`} x={50} y={p.y} width={w - 100} height={p.height}
-              fill={theme.cardBgColor || 'rgba(0,0,0,0.04)'}
-              cornerRadius={shapeRadius(slide, `qa-${i}`, 18, w - 100, p.height)} />
+            {(() => {
+              const isEmpty = isItemPlaceholder(qa.q) && isItemPlaceholder(qa.a);
+              return (
+                <Rect id={`qa-${i}`} x={50} y={p.y} width={w - 100} height={p.height}
+                  fill={theme.cardBgColor || 'rgba(0,0,0,0.04)'}
+                  cornerRadius={shapeRadius(slide, `qa-${i}`, 18, w - 100, p.height)}
+                  opacity={isEmpty ? PLACEHOLDER_STYLE.opacity : 1}
+                  stroke={isEmpty ? theme.accentColor : undefined}
+                  strokeWidth={isEmpty ? 1.5 : 0}
+                  dash={isEmpty ? PLACEHOLDER_STYLE.dash : undefined} />
+              );
+            })()}
             {/* Q badge */}
             <Rect x={70} y={p.y + 14} width={40} height={40}
               fill={theme.accentColor} cornerRadius={12} />

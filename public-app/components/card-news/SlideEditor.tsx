@@ -157,6 +157,7 @@ export default function SlideEditor({
   const [cardChatMessages, setCardChatMessages] = useState<CardChatMessage[]>([]);
   const [cardChatInput, setCardChatInput] = useState('');
   const [cardChatLoading, setCardChatLoading] = useState(false);
+  const [keepBackground, setKeepBackground] = useState(true);
 
   // 이미지 소스 3탭
   const [imageTab, setImageTab] = useState<'pexels' | 'pixabay' | 'ai'>('pexels');
@@ -466,7 +467,8 @@ ${JSON.stringify(slideForContext, null, 2)}
 "제목 크게" → titleFontSize: 64, titleFontWeight: "900"
 
 ⚠️ 레이아웃 변경이 필요하면 layout 필드도 바꾸고 해당 레이아웃의 필드들을 채워줘.
-⚠️ "화려하게/부드럽게/차분하게" 같은 분위기 요청은 반드시 bgColor/bgGradient/titleColor 등 스타일 필드를 함께 수정.
+⚠️ "화려하게/부드럽게/차분하게" 같은 분위기 요청은 반드시 titleColor/titleFontSize/titleFontWeight 등 스타일 필드를 함께 수정.${keepBackground ? `
+⚠️ 배경 보호 모드: bgColor/bgGradient/imageUrl/imagePosition/coverTemplateId는 절대 수정하지 마세요.` : ''}
 ⚠️ JSON 객체 하나만. 배열 금지. 설명 안에 JSON 금지.
 ⚠️ 의료광고법 준수: "완치/100%/최첨단/완벽/획기적/유일/국내 최초/1위" 금지.
 ⚠️ 구체적 수치는 범위로("80~120만원", "3~6개월").`,
@@ -499,7 +501,16 @@ ${JSON.stringify(slideForContext, null, 2)}
             if (start === -1 || end === -1) throw new Error('no braces');
             parsed = JSON.parse(cleaned.slice(start, end + 1)) as Partial<SlideData>;
           }
-          // layout 포함 모든 필드 머지 (이미지 필드는 보존)
+          // 배경 보호: keepBackground=true면 배경/이미지 관련 필드 제거
+          if (keepBackground) {
+            const parsedMut = parsed as Record<string, unknown>;
+            delete parsedMut.bgColor;
+            delete parsedMut.bgGradient;
+            delete parsedMut.imageUrl;
+            delete parsedMut.imagePosition;
+            delete parsedMut.coverTemplateId;
+          }
+          // layout 포함 모든 필드 머지 (이미지 필드는 보존 — keepBackground=true면 위에서 삭제됨)
           onChange({
             ...parsed,
             index: slide.index,
@@ -600,6 +611,18 @@ ${JSON.stringify(slideForContext, null, 2)}
               전송
             </button>
           </div>
+          {/* 배경 보호 토글 */}
+          <label className="flex items-center gap-2 mt-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={keepBackground}
+              onChange={(e) => setKeepBackground(e.target.checked)}
+              className="w-3.5 h-3.5 accent-purple-500"
+            />
+            <span className="text-[10px] text-slate-500 font-medium">
+              🎨 배경 유지 (현재 배경색/이미지 변경 안 함)
+            </span>
+          </label>
         </div>
       )}
     </div>

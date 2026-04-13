@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Rect, Text, Circle } from 'react-konva';
-import { EditableText, renderTitleBlock, layoutVerticalItems, type LayoutRenderArgs } from './KonvaHelpers';
+import { EditableText, renderTitleBlock, layoutVerticalItems, isItemPlaceholder, PLACEHOLDER_STYLE, type LayoutRenderArgs } from './KonvaHelpers';
 import type { SlideData } from '../../../lib/cardNewsLayouts';
 
 /** elementShapes 기반으로 cornerRadius 계산 — 각 레이아웃의 default 모양 유지 */
@@ -34,9 +34,18 @@ export function renderChecklist(...args: LayoutRenderArgs): React.ReactNode {
         if (!p) return null;
         return (
           <React.Fragment key={i}>
-            <Rect id={`check-${i}`} x={50} y={p.y} width={w - 100} height={p.height}
-              fill={theme.cardBgColor || 'rgba(0,0,0,0.04)'}
-              cornerRadius={shapeRadius(slide, `check-${i}`, 999, w - 100, p.height)} />
+            {(() => {
+              const isEmpty = isItemPlaceholder(item);
+              return (
+                <Rect id={`check-${i}`} x={50} y={p.y} width={w - 100} height={p.height}
+                  fill={theme.cardBgColor || 'rgba(0,0,0,0.04)'}
+                  cornerRadius={shapeRadius(slide, `check-${i}`, 999, w - 100, p.height)}
+                  opacity={isEmpty ? PLACEHOLDER_STYLE.opacity : 1}
+                  stroke={isEmpty ? theme.accentColor : undefined}
+                  strokeWidth={isEmpty ? 1.5 : 0}
+                  dash={isEmpty ? PLACEHOLDER_STYLE.dash : undefined} />
+              );
+            })()}
             <Text x={75} y={p.y + p.height / 2 - 14} text={slide.checkIcon || '✓'}
               fontSize={24} fill={theme.accentColor} fontStyle="bold"
               fontFamily="Pretendard Variable, sans-serif" />
@@ -143,7 +152,11 @@ export function renderWarning(...args: LayoutRenderArgs): React.ReactNode {
             <Rect x={50} y={p.y} width={w - 100} height={p.height}
               fill="rgba(239,68,68,0.14)"
               id={`warning-${i}`}
-              cornerRadius={shapeRadius(slide, `warning-${i}`, 16, w - 100, p.height)} />
+              cornerRadius={shapeRadius(slide, `warning-${i}`, 16, w - 100, p.height)}
+              opacity={isItemPlaceholder(item) ? PLACEHOLDER_STYLE.opacity : 1}
+              stroke={isItemPlaceholder(item) ? '#EF4444' : undefined}
+              strokeWidth={isItemPlaceholder(item) ? 1.5 : 0}
+              dash={isItemPlaceholder(item) ? PLACEHOLDER_STYLE.dash : undefined} />
             <Rect x={50} y={p.y} width={6} height={p.height} fill="#F87171"
               cornerRadius={[16, 0, 0, 16]} />
             <Text x={80} y={p.y + p.height / 2 - 12} text="❗" fontSize={24} fill="#F87171"
