@@ -67,17 +67,18 @@ export function EditableText({
       fontSize: `${fontSize * stage.scaleY()}px`,
       fontWeight: fontStyle === 'bold' ? '700' : '400',
       fontFamily: fontFamily || 'inherit',
-      color: fill,
+      color: '#1e293b',
+      background: '#ffffff',
       border: '2px solid #3B82F6',
-      borderRadius: '4px',
-      padding: '4px',
-      background: 'rgba(255,255,255,0.95)',
+      borderRadius: '6px',
+      padding: '8px 12px',
       outline: 'none',
       resize: 'none',
       lineHeight: '1.3',
       textAlign: align,
       zIndex: '9999',
       boxSizing: 'border-box',
+      boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
     });
     textarea.focus();
 
@@ -121,6 +122,52 @@ export function EditableText({
       onDragEnd={readOnly ? undefined : (e) => onDragEnd(e.target.x(), e.target.y())}
       onMouseEnter={readOnly ? undefined : (e) => { const c = e.target.getStage()?.container(); if (c) c.style.cursor = 'grab'; }}
       onMouseLeave={readOnly ? undefined : (e) => { const c = e.target.getStage()?.container(); if (c) c.style.cursor = 'default'; }}
+    />
+  );
+}
+
+// ── EditableShape (accent bar, VS 뱃지 등 도형용) ──
+
+interface EditableShapeProps {
+  id: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  fill: string;
+  cornerRadius?: number | number[];
+  selectedId?: string | null;
+  onSelect?: (id: string | null) => void;
+  onDragEnd?: (x: number, y: number) => void;
+  readOnly?: boolean;
+}
+
+export function EditableShape({
+  id, x, y, width, height, fill, cornerRadius = 0,
+  onSelect, onDragEnd, readOnly = false,
+}: EditableShapeProps) {
+  return (
+    <Rect
+      id={id}
+      x={x}
+      y={y}
+      width={width}
+      height={height}
+      fill={fill}
+      cornerRadius={cornerRadius as number}
+      draggable={!readOnly}
+      listening={!readOnly}
+      onClick={readOnly ? undefined : () => onSelect?.(id)}
+      onTap={readOnly ? undefined : () => onSelect?.(id)}
+      onDragEnd={readOnly ? undefined : (e) => onDragEnd?.(e.target.x(), e.target.y())}
+      onMouseEnter={readOnly ? undefined : (e) => {
+        const c = e.target.getStage()?.container();
+        if (c) c.style.cursor = 'grab';
+      }}
+      onMouseLeave={readOnly ? undefined : (e) => {
+        const c = e.target.getStage()?.container();
+        if (c) c.style.cursor = 'default';
+      }}
     />
   );
 }
@@ -193,7 +240,7 @@ export function renderTitleBlock(
   args: LayoutRenderArgs,
   opts: { alignCenter?: boolean; startY?: number } = {},
 ): { element: React.ReactNode; bottomY: number } {
-  const [slide, theme, w, , selectedId, setSelectedId, onChange, ro] = args;
+  const [slide, theme, w, h, selectedId, setSelectedId, onChange, ro] = args;
   const { alignCenter = false, startY = 60 } = opts;
   const ax = alignCenter ? w / 2 - 30 : 60;
   const tx = alignCenter ? w / 2 : 60;
@@ -202,15 +249,28 @@ export function renderTitleBlock(
 
   let bottomY = startY + titleFs + 20;
 
+  // accent bar 위치 저장 반영
+  const accentPos = slide.elementPositions?.['accent-bar'];
+  const accentX = accentPos ? (w * accentPos.x / 100) : ax;
+  const accentY = accentPos ? (h * accentPos.y / 100) : startY;
+
   const element = (
     <>
-      <Rect x={ax} y={startY} width={60} height={4} fill={theme.accentColor} cornerRadius={2} />
+      <EditableShape
+        id="shape-accent-bar" x={accentX} y={accentY} width={60} height={4}
+        fill={theme.accentColor} cornerRadius={2}
+        selectedId={selectedId} onSelect={setSelectedId} readOnly={ro}
+        onDragEnd={(nx, ny) => {
+          const existing = slide.elementPositions || {};
+          onChange({ elementPositions: { ...existing, 'accent-bar': { x: Math.round(nx / w * 100), y: Math.round(ny / h * 100) } } });
+        }}
+      />
       <EditableText
         id="text-title" text={slide.title || '제목'}
         x={tx} y={startY + 20} width={w * 0.85} fontSize={titleFs}
         fontStyle="bold" fill={theme.titleColor} align={alignCenter ? 'center' : 'left'} offsetX={offsetX}
         selectedId={selectedId} onSelect={setSelectedId}
-        onDragEnd={(x, y) => onChange({ titlePosition: { x: Math.round(x / w * 100), y: Math.round(y / args[3] * 100) } })}
+        onDragEnd={(x, y) => onChange({ titlePosition: { x: Math.round(x / w * 100), y: Math.round(y / h * 100) } })}
         onTextChange={t => onChange({ title: t })}
         readOnly={ro}
       />
@@ -223,7 +283,7 @@ export function renderTitleBlock(
             fontStyle="normal" fill={theme.subtitleColor} align={alignCenter ? 'center' : 'left'}
             offsetX={alignCenter ? w * 0.8 / 2 : 0}
             selectedId={selectedId} onSelect={setSelectedId}
-            onDragEnd={(x, y) => onChange({ subtitlePosition: { x: Math.round(x / w * 100), y: Math.round(y / args[3] * 100) } })}
+            onDragEnd={(x, y) => onChange({ subtitlePosition: { x: Math.round(x / w * 100), y: Math.round(y / h * 100) } })}
             onTextChange={t => onChange({ subtitle: t })}
             readOnly={ro}
           />

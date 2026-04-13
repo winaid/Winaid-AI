@@ -2,21 +2,33 @@
 
 import React from 'react';
 import { Rect, Text } from 'react-konva';
-import { EditableText, renderTitleBlock, type LayoutRenderArgs } from './KonvaHelpers';
+import { EditableText, EditableShape, renderTitleBlock, type LayoutRenderArgs } from './KonvaHelpers';
 
 // ── Cover / Closing ──
 
 export function renderCover(...args: LayoutRenderArgs): React.ReactNode {
-  const [slide, theme, w, h, selectedId, setSelectedId, onChange] = args;
+  const [slide, theme, w, h, selectedId, setSelectedId, onChange, readOnly] = args;
   const titleX = slide.titlePosition?.x ? (w * slide.titlePosition.x / 100) : w / 2;
   const titleY = slide.titlePosition?.y ? (h * slide.titlePosition.y / 100) : h * 0.38;
   const subtitleY = slide.subtitlePosition?.y ? (h * slide.subtitlePosition.y / 100) : h * 0.58;
   const titleW = w * 0.85;
 
+  // accent bar — elementPositions에 저장된 위치 반영
+  const accentPos = slide.elementPositions?.['accent-bar'];
+  const accentX = accentPos ? (w * accentPos.x / 100) : (w / 2 - 36);
+  const accentY = accentPos ? (h * accentPos.y / 100) : (titleY - 50);
+
   return (
     <>
-      <Rect x={w / 2 - 36} y={titleY - 50} width={72} height={5}
-        fill={theme.accentColor} cornerRadius={3} />
+      <EditableShape
+        id="shape-accent-bar" x={accentX} y={accentY} width={72} height={5}
+        fill={theme.accentColor} cornerRadius={3}
+        selectedId={selectedId} onSelect={setSelectedId} readOnly={readOnly}
+        onDragEnd={(nx, ny) => {
+          const existing = slide.elementPositions || {};
+          onChange({ elementPositions: { ...existing, 'accent-bar': { x: Math.round(nx / w * 100), y: Math.round(ny / h * 100) } } });
+        }}
+      />
       <EditableText
         id="text-title" text={slide.title || '제목을 입력하세요'}
         x={titleX} y={titleY} width={titleW}

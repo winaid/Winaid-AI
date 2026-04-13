@@ -1085,69 +1085,26 @@ visual: (배경 비주얼 묘사)
     setProgress(`이미지 생성 중... (0/${cards.length}장)`);
 
     try {
-      // ═══ Phase 1: 카드 1 생성 (스타일 기준) ═══
-      setProgress(`이미지 생성 중... (1/${cards.length}장) — 스타일 기준 설정`);
-      const firstCard = cards[0];
-      let firstImageUrl = await generateCardImage(firstCard.imagePrompt, firstCard.index);
-      if (!firstImageUrl) {
-        setProgress('카드 1 재시도 중...');
-        firstImageUrl = await generateCardImage(firstCard.imagePrompt, firstCard.index);
-      }
-      if (!firstImageUrl) {
-        setError('첫 번째 카드 이미지 생성에 실패했습니다. 다시 시도해주세요.');
-        return;
-      }
+      // ═══ 완전 병렬화: 모든 카드를 동시에 생성 ═══
+      // 스타일 일관성은 프롬프트에 공통 스타일 블록을 prepend해서 보장.
+      const commonStyle = `[공통 스타일 — 모든 슬라이드에 동일 적용]
+- 일관된 색상 팔레트: ${proTheme.accentColor} + 중성 톤
+- 일러스트 스타일: 프리미엄 미니멀 플랫 일러스트
+- 배경: 부드러운 그라디언트, 중앙 텍스트 공간 비워둠
+- 조명: 밝고 깨끗, 전문적
+- 일관성: 모든 슬라이드가 같은 시리즈처럼 보여야 함
 
-      // ═══ Phase 2: 카드 1 스타일 분석 ═══
-      setProgress('스타일 분석 중... (일관성 향상)');
-      let styleSheet = '1장과 동일한 배경색, 레이아웃, 일러스트 스타일을 사용하세요.';
-      try {
-        const styleRes = await fetch('/api/gemini', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            prompt: `아래 카드뉴스 1장의 프롬프트를 보고 디자인 스타일을 추출해주세요.
-
-[1장 프롬프트]
-${firstCard.imagePrompt}
-
-아래 형식으로만 출력:
-BACKGROUND: (배경색/그라데이션)
-ILLUSTRATION_STYLE: (일러스트 스타일 키워드 5개)
-LAYOUT: (텍스트/일러스트 배치)
-DECORATIVE: (장식 요소)`,
-            model: 'gemini-3.1-flash-lite-preview',
-            temperature: 0.2,
-            maxOutputTokens: 300,
-            thinkingLevel: 'none',
-          }),
-        });
-        const styleData = await styleRes.json();
-        if (styleData.text) styleSheet = styleData.text.trim();
-      } catch { /* 스타일 분석 실패 시 기본 텍스트 사용 */ }
-
-      // ═══ Phase 3: 카드 2~N 순차 생성 (체인 참조) ═══
-      const imageResults: { index: number; url: string | null }[] = [
-        { index: firstCard.index, url: firstImageUrl },
-      ];
-      let prevImageUrl = firstImageUrl;
-
-      for (let i = 1; i < cards.length; i++) {
-        const card = cards[i];
-        setProgress(`이미지 생성 중... (${i + 1}/${cards.length}장)`);
-
-        const consistencyBlock = `[🔒 스타일 시트 — 1장에서 추출. 절대 변경 금지]\n${styleSheet}\n\n[⚠️ 위 스타일을 100% 동일하게 적용하세요.]`;
-        const enrichedPrompt = `${consistencyBlock}\n\n${card.imagePrompt}`;
-
-        let url = await generateCardImage(enrichedPrompt, card.index, prevImageUrl);
-        if (!url) {
-          setProgress(`카드 ${i + 1} 재시도 중...`);
-          url = await generateCardImage(enrichedPrompt, card.index, firstImageUrl);
-        }
-
-        imageResults.push({ index: card.index, url });
-        if (url) prevImageUrl = url;
-      }
+`;
+      let completed = 0;
+      const runOne = async (card: typeof cards[number]) => {
+        const prompt = commonStyle + card.imagePrompt;
+        let url = await generateCardImage(prompt, card.index);
+        if (!url) url = await generateCardImage(prompt, card.index); // 1회 재시도
+        completed++;
+        setProgress(`이미지 생성 중... (${completed}/${cards.length}장)`);
+        return { index: card.index, url };
+      };
+      const imageResults = await Promise.all(cards.map(runOne));
 
       const finalCards = cards.map(card => {
         const result = imageResults.find(r => r.index === card.index);
