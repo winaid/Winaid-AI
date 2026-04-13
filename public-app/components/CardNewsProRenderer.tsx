@@ -645,15 +645,26 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
     reader.readAsDataURL(file);
   };
 
+  // AI 추천 재클릭 다양성 — slideId-field 키로 최근 5개 결과 누적 (anchoring 완화)
+  // useRef 로 관리하여 렌더 없이 값만 갱신.
+  const aiAttemptsRef = useRef<Map<string, string[]>>(new Map());
+
   const handleAiSuggestText = async (idx: number, field: 'title' | 'subtitle' | 'body') => {
     if (!slides[idx]) return;
+    const slideId = slides[idx].id;
+    const attemptsKey = `${slideId}:${field}`;
+    const recentAttempts = aiAttemptsRef.current.get(attemptsKey) || [];
     setAiSuggestingKey(`${idx}:${field}`);
     try {
       const result = await suggestSlideText(slides[idx], field, slides, {
         hospitalName: theme.hospitalName,
+        recentAttempts,
         // hospitalDept/brandTone/topic 은 추후 설정 UI 로 확장.
       });
       if (result) {
+        // 성공 → attempts 에 append (최대 5개 유지, FIFO)
+        const nextAttempts = [...recentAttempts, result].slice(-5);
+        aiAttemptsRef.current.set(attemptsKey, nextAttempts);
         updateSlide(idx, { [field]: result } as Partial<SlideData>);
       } else {
         // suggestSlideText 가 null 반환 = 의료광고법 재검증 2회 실패.

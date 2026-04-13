@@ -265,7 +265,19 @@ export interface SuggestSlideTextOptions {
   brandTone?: string;
   /** 카드뉴스 전체 주제. 생략 시 allSlides[0].title 사용. */
   topic?: string;
+  /** 재클릭 다양성 — 이전에 이미 보여준 최근 문구들 (최대 5개). 중복 회피용. */
+  recentAttempts?: string[];
 }
+
+/** 추천 각도 — 매 호출마다 무작위 1개 선택해 prompt 앞에 주입 (anchoring 완화) */
+const SUGGEST_ANGLES: string[] = [
+  '구체 수치(몇 주/몇 %/몇 회 등)를 포함해',
+  '독자의 호기심을 자극하는 질문형으로',
+  '시점(초기·중기·1주차 등)을 강조해',
+  '비교·대비 구조(A는 X, B는 Y)로',
+  '감정 공감(걱정/안심/궁금함 등)을 건드려',
+  '숫자 리스트 어감(3가지/5단계)으로',
+];
 
 /** layout 별 톤 힌트 — Gemini 에 프롬프트로 주입 */
 const LAYOUT_TONE_HINT: Record<string, string> = {
@@ -346,6 +358,36 @@ export async function suggestSlideText(
 
   const layoutHint = LAYOUT_TONE_HINT[slide.layout] || '';
 
+  // ── 같은 필드의 기존 값 + recentAttempts 를 avoid 리스트로 분리 ──
+  // 기존 값을 context 에 "제목: XXX" 로 노출하면 모델이 anchoring 됨.
+  // 따라서 같은 필드 값은 context 에서 빼고 [이미 시도한 문구] 블록으로 이동.
+  const currentFieldValue = field === 'title' ? slide.title
+    : field === 'subtitle' ? (slide.subtitle || '')
+    : (slide.body || '');
+  const avoidRaw: string[] = [];
+  if (currentFieldValue && currentFieldValue.trim()) avoidRaw.push(currentFieldValue.trim());
+  if (options?.recentAttempts) {
+    for (const s of options.recentAttempts) {
+      if (s && s.trim() && !avoidRaw.includes(s.trim())) avoidRaw.push(s.trim());
+    }
+  }
+  const avoidList = avoidRaw.slice(0, 6); // 최대 6개 (현재 + 최근 5)
+  const avoidBlock = avoidList.length > 0
+    ? `\n[이미 시도한 문구 — 이와 중복/유사 금지 · 완전히 다른 각도로 써라]\n${avoidList.map(s => `- "${s}"`).join('\n')}`
+    : '';
+
+  // 같은 필드는 숨기고, 다른 필드들은 참고용으로 유지
+  const otherFieldsLines: string[] = [];
+  if (field !== 'title' && slide.title) otherFieldsLines.push(`제목: ${slide.title}`);
+  if (field !== 'subtitle' && slide.subtitle) otherFieldsLines.push(`부제: ${slide.subtitle}`);
+  if (field !== 'body' && slide.body) otherFieldsLines.push(`본문: ${slide.body}`);
+  const otherFieldsBlock = otherFieldsLines.length > 0
+    ? `\n[함께 존재하는 다른 필드 — 참고만]\n${otherFieldsLines.join('\n')}`
+    : '';
+
+  // ── 각도 무작위 ──
+  const angle = SUGGEST_ANGLES[Math.floor(Math.random() * SUGGEST_ANGLES.length)];
+
   // ── 전체 컨텍스트 블록 ──
   const context = `[카드뉴스 전체 주제]
 ${topicValue}
@@ -353,13 +395,12 @@ ${topicValue}
 [전체 슬라이드 구성]
 ${allTitlesList}
 ${hospitalBlock}
-[현재 슬라이드 ${slide.index}장 — 레이아웃: ${slide.layout}]
-제목: ${slide.title}
-부제: ${slide.subtitle || ''}
-본문: ${slide.body || ''}
+[현재 슬라이드 ${slide.index}장 — 레이아웃: ${slide.layout}]${otherFieldsBlock}
 ${layoutHint ? `\n[이 레이아웃의 톤]\n${layoutHint}` : ''}
 ${beforeSummary ? `\n[이전 슬라이드 맥락]\n${beforeSummary}` : ''}
-${afterSummary ? `\n[이후 슬라이드 맥락]\n${afterSummary}` : ''}`;
+${afterSummary ? `\n[이후 슬라이드 맥락]\n${afterSummary}` : ''}${avoidBlock}
+
+[이번 톤: ${angle}]`;
 
   const prompts: Record<string, string> = {
     title: '위 맥락에 맞는 제목을 새로 써라. 20자 이내. 제목 한 줄만 출력. 따옴표·설명 금지.',
@@ -375,7 +416,9 @@ ${afterSummary ? `\n[이후 슬라이드 맥락]\n${afterSummary}` : ''}`;
 ${FEW_SHOT[field]}`;
 
   const maxLen = field === 'body' ? 200 : 40;
-  const temperature = field === 'body' ? 0.75 : 0.85;
+  // 상향: title/subtitle 0.95, body 0.85 — anchoring 완화 + 각도 다양성 확보
+  const temperature = field === 'body' ? 0.85 : 0.95;
+  const topP = 0.95;
   const maxOutputTokens = field === 'body' ? 300 : 80;
 
   /** 한 번의 Gemini 호출 + 파이프라인 실행. */
@@ -389,6 +432,7 @@ ${FEW_SHOT[field]}`;
         systemInstruction,
         model: 'gemini-3.1-pro-preview',
         temperature,
+        topP,
         maxOutputTokens,
       }),
     });
