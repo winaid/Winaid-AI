@@ -21,6 +21,7 @@ import {
 } from '../lib/fontStorage';
 import SlideEditor from './card-news/SlideEditor';
 import { useSlideRenderer } from './card-news/SlideRenderers';
+import { toast, ToastContainer } from './Toast';
 import VideoPlayer from './video-edit/VideoPlayer';
 
 const KonvaSlideEditor = dynamic(() => import('./card-news/KonvaSlideEditor'), { ssr: false });
@@ -649,8 +650,17 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
     setAiSuggestingKey(`${idx}:${field}`);
     try {
       const result = await suggestSlideText(slides[idx], field, slides);
-      if (result) updateSlide(idx, { [field]: result } as Partial<SlideData>);
-    } catch (err) { console.warn('[CARD_NEWS_PRO] AI 추천 실패', err); }
+      if (result) {
+        updateSlide(idx, { [field]: result } as Partial<SlideData>);
+      } else {
+        // suggestSlideText 가 null 반환 = 의료광고법 재검증 2회 실패.
+        // 기존 필드 값은 그대로 유지하고 사용자에게 안내.
+        toast.warning('AI가 의료광고법에 맞는 문구를 생성하지 못했습니다. 직접 수정해 주세요.');
+      }
+    } catch (err) {
+      console.warn('[CARD_NEWS_PRO] AI 추천 실패', err);
+      toast.error('AI 추천 중 오류가 발생했습니다.');
+    }
     finally { setAiSuggestingKey(null); }
   };
 
@@ -878,6 +888,8 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
 
   return (
     <div className="space-y-4 pb-24">
+      {/* 토스트 알림 — AI 추천 실패 등 사용자 안내용 */}
+      <ToastContainer />
       {/* 히스토리/저장 툴바 — 우측 상단 고정 (편집 모달 열려 있을 땐 숨김: 모달 상단에 중복됨) */}
       {editingIdx === null && (
       <div className="fixed top-4 right-4 z-40 flex items-center gap-1 bg-white rounded-xl shadow-lg border border-slate-200 px-2 py-1.5">

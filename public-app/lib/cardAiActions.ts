@@ -4,6 +4,36 @@
  */
 import type { SlideData, SlideLayoutType, SlideComparisonColumn } from './cardNewsLayouts';
 import { SLIDE_IMAGE_STYLES } from './cardNewsLayouts';
+import { getMedicalLawPromptBlock, detectForbiddenWords } from './medicalLawRules';
+import { applyContentFilters } from './medicalLawFilter';
+
+/**
+ * Gemini 응답을 "출력 가능한 순수 한 줄 텍스트"로 정리.
+ * 마크다운 코드펜스, 양끝 구두점/따옴표/JSON 기호, 내부 불릿/헤더,
+ * 연속 공백을 제거하고 길이 캡을 적용한다.
+ *
+ * filterOutputArtifacts 전 단계 — JSON/따옴표 쓰레기만 씻고,
+ * AI 말투·금지어 처리는 applyContentFilters 에 맡긴다.
+ */
+function sanitizeAiText(raw: string, opts?: { maxLen?: number }): string {
+  let t = raw;
+  // 1) 마크다운 코드펜스 제거
+  t = t.replace(/```[a-z]*\n?|```/gi, '');
+  // 2) 양끝 구두점/따옴표/JSON 기호 반복 제거 (고정점까지, 최대 5회)
+  for (let i = 0; i < 5; i++) {
+    const prev = t;
+    t = t.trim().replace(/^[\s"'`,;:\[\]{}()]+|[\s"'`,;:\[\]{}()]+$/g, '');
+    if (t === prev) break;
+  }
+  // 3) 내부 불릿/헤더 제거 (줄 시작의 - * # 들)
+  t = t.replace(/^[-*#]+\s+/gm, '');
+  // 4) 연속 공백/줄바꿈 → 단일 공백
+  t = t.replace(/\s+/g, ' ').trim();
+  // 5) 길이 캡
+  const max = opts?.maxLen ?? 200;
+  if (t.length > max) t = t.slice(0, max).trim();
+  return t;
+}
 
 /**
  * 레이아웃 변경 시 새 레이아웃에 맞는 기본값을 채운 SlideData 반환.
@@ -225,7 +255,18 @@ export async function generateSlideImage(
   return null;
 }
 
-/** AI 텍스트 필드 추천. 반환: 추천 텍스트 또는 null */
+/**
+ * AI 텍스트 필드 추천.
+ *
+ * 파이프라인:
+ *   Gemini 호출 → sanitizeAiText(JSON/따옴표/마크다운 제거 + 길이 캡)
+ *     → applyContentFilters(의료광고법 자동 치환 + AI 말투 정리)
+ *     → detectForbiddenWords(잔존 금지어 검사)
+ *     → 남으면 금지어 명시 prepend 로 재시도 1회 (같은 파이프라인)
+ *     → 2회차도 남으면 null 반환 (호출부에서 toast)
+ *
+ * 반환: 추천 텍스트 또는 null
+ */
 export async function suggestSlideText(
   slide: SlideData,
   field: 'title' | 'subtitle' | 'body',
@@ -241,22 +282,56 @@ export async function suggestSlideText(
     subtitle: '위 슬라이드의 부제를 써줘. 25자 이내. 부제 한 줄만 출력. 따옴표·설명 금지.',
     body: '위 슬라이드의 본문을 구체적 수치 포함해 다시 써줘. 3문장 이내. 본문만 출력. 따옴표·설명 금지.',
   };
-  const res = await fetch('/api/gemini', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      prompt: `${context}\n\n${prompts[field]}`,
-      systemInstruction: '카드뉴스 콘텐츠 전문가. 요청한 필드 값만 반환. 의료광고법 준수. 최상급/단정 표현 금지.',
-      model: 'gemini-3.1-pro-preview',
-      temperature: 0.8,
-      maxOutputTokens: 200,
-    }),
-  });
-  const data = await res.json() as { text?: string };
-  if (data.text) {
-    const cleaned = data.text.replace(/^["'`]+|["'`]+$/g, '').trim();
-    if (cleaned) return cleaned;
-  }
+  const outputFormatRule = 'JSON/배열/따옴표/콤마/설명/마크다운 금지. 순수 한 줄 텍스트만.';
+  const systemInstruction = `${getMedicalLawPromptBlock('brief')}
+
+카드뉴스 콘텐츠 전문가. 요청한 필드 값만 반환. 의료광고법 준수. 최상급/단정 표현 금지.`;
+  const maxLen = field === 'body' ? 150 : 40;
+
+  /** 한 번의 Gemini 호출 + 파이프라인 실행. 성공 시 filtered 문자열, 실패 시 { filtered, leftovers } */
+  const runOnce = async (extraPrefix: string): Promise<{ filtered: string; leftovers: string[] } | null> => {
+    const promptBody = `${extraPrefix}${context}\n\n${prompts[field]}\n\n${outputFormatRule}`;
+    const res = await fetch('/api/gemini', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prompt: promptBody,
+        systemInstruction,
+        model: 'gemini-3.1-pro-preview',
+        temperature: 0.8,
+        maxOutputTokens: 200,
+      }),
+    });
+    const data = await res.json() as { text?: string };
+    if (!data.text) return null;
+    const sanitized = sanitizeAiText(data.text, { maxLen });
+    if (!sanitized) return null;
+    const { filtered } = applyContentFilters(sanitized);
+    const found = detectForbiddenWords(filtered);
+    if (process.env.NODE_ENV !== 'production') {
+      // eslint-disable-next-line no-console
+      console.debug('[CARD_AI] suggestSlideText pipeline', {
+        raw: data.text,
+        sanitized,
+        filtered,
+        leftovers: found.map(f => f.word),
+      });
+    }
+    return { filtered, leftovers: found.map(f => f.word) };
+  };
+
+  // 1회차
+  const first = await runOnce('');
+  if (!first) return null;
+  if (first.leftovers.length === 0) return first.filtered;
+
+  // 재시도 — 금지어 명시 prepend
+  const retryPrefix = `⚠️ 이전 응답에 금지어 [${first.leftovers.join(', ')}]이 포함됐다. 절대 사용 금지. 완전히 다른 표현으로 다시.\n\n`;
+  const second = await runOnce(retryPrefix);
+  if (!second) return null;
+  if (second.leftovers.length === 0) return second.filtered;
+
+  // 2회차도 실패 — 호출부에서 toast 표시
   return null;
 }
 
@@ -312,7 +387,8 @@ ${slideDetail}
   });
   const data = await res.json() as { text?: string };
   if (data.text) {
-    const cleaned = data.text.replace(/^["'`]+|["'`]+$/g, '').replace(/\n/g, ' ').replace(/```/g, '').trim();
+    // 영문 프롬프트는 의료광고법 재검증 미적용 — sanitize 로 파싱만 정리.
+    const cleaned = sanitizeAiText(data.text, { maxLen: 500 });
     if (cleaned) return cleaned;
   }
   return null;
