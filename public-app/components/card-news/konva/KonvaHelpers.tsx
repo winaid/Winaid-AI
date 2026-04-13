@@ -161,12 +161,15 @@ export function EditableText({
     // ── 폭 계산 ──
     // getTextWidth() 는 Konva 내부 좌표 (scale 무관). DOM px 변환 시 * scaleX.
     // 초기 폭: 실제 텍스트 폭 + fontSize*2 여유, 최소 120px (내부 좌표) *scaleX, 상한 width*scaleX
+    // 편집 UX 용 절대 상한 — width prop 이 크더라도(메인 타이틀 w*0.85 등)
+    // 편집 박스는 모달 폭 650px 의 ~65% 이하로 제한하여 카드보다 작은 시각 계층 확보.
+    const HARD_DOM_MAXW = 420;
     const innerMaxW = width;
     const innerTextW = textNode.getTextWidth();
     const innerPadding = fontSize * 2;
     const innerInitialW = Math.max(120, Math.min(innerTextW + innerPadding, innerMaxW));
-    const domInitialW = innerInitialW * scaleX;
-    const domMaxW = innerMaxW * scaleX;
+    const domInitialW = Math.min(innerInitialW * scaleX, HARD_DOM_MAXW);
+    const domMaxW = Math.min(innerMaxW * scaleX, HARD_DOM_MAXW);
     const domMinH = fontSize * 1.6 * scaleY;
 
     const textarea = document.createElement('textarea');

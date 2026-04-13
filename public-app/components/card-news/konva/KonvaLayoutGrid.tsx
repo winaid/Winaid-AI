@@ -93,7 +93,14 @@ export function renderIconGrid(...args: LayoutRenderArgs): React.ReactNode {
   const items = slide.icons || [];
   const cols = Math.min(Math.max(items.length, 1), 4) <= 2 ? 2 : items.length <= 4 ? 2 : 3;
   const rows = Math.ceil(items.length / cols);
-  const grid = layoutGrid(cols, rows, 50, bottomY + 20, w - 100, h - bottomY - 80, 18);
+  // 카드 높이 합리화 — 콘텐츠(emoji 48 + title 20 + desc 14) 대비 과도한
+  // 여백 방지. availH 중 필요한 만큼만 쓰고 남는 상단 공간은 offset 으로 흡수.
+  const MAX_CELL_H = 260;
+  const GAP = 18;
+  const availH = h - bottomY - 80;
+  const idealGridH = Math.min(availH, MAX_CELL_H * rows + GAP * Math.max(0, rows - 1));
+  const gridTopOffset = Math.max(0, (availH - idealGridH) / 2);
+  const grid = layoutGrid(cols, rows, 50, bottomY + 20 + gridTopOffset, w - 100, idealGridH, GAP);
   const tFs = slide.itemTitleFontSize ?? 20;
   const tColor = slide.itemTitleColor ?? theme.titleColor;
   const tWeight = slide.itemTitleFontWeight;
