@@ -7,7 +7,7 @@ import { LAYOUT_LABELS, CARD_FONTS, FONT_CATEGORIES, generateSlideId } from '../
 import { buildLayoutDefaults, fillLayoutContent, generateSlideImage, suggestSlideText, suggestImagePrompt, enrichSlide, suggestComparison } from '../lib/cardAiActions';
 import type { CardTemplate } from '../lib/cardTemplateService';
 import { ensureGoogleFontLoaded, resolveSlideFontFamily } from '../lib/cardStyleUtils';
-import { captureAllSlidesAsBlobs, downloadKonvaStageAsPng, downloadKonvaStageAsJpg, downloadKonvaStagesAsZip, downloadKonvaStagesAsPdf } from '../lib/cardDownloadUtils';
+import { captureAllKonvaStagesAsBlobs, downloadKonvaStageAsPng, downloadKonvaStageAsJpg, downloadKonvaStagesAsZip, downloadKonvaStagesAsPdf } from '../lib/cardDownloadUtils';
 import type Konva from 'konva';
 import { saveVideoToStorage, generateVideoFileName } from '../lib/videoStorage';
 import { savePost } from '../lib/postStorage';
@@ -771,10 +771,22 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
     setShortsProgress('슬라이드를 캡처하고 있습니다...');
 
     try {
-      // 1) 슬라이드 → PNG Blob 배열 (slides 순서대로)
-      const imageBlobs = await captureAllSlidesAsBlobs(
-        getOrderedCardElements(),
-        slides.length,
+      // 1) 슬라이드 → PNG Blob 배열 (Konva Stage 기반, slides 순서대로)
+      //    elementShapes/customElements/로고/커스텀 폰트 전부 반영된 결과.
+      let stages = slides.map(s => konvaStageRefs.current.get(s.id) ?? null);
+      // 초기 마운트 직후 더블클릭 방어: rAF 1회 대기 후 재확인
+      if (stages.some(s => s === null)) {
+        await new Promise<void>(r => requestAnimationFrame(() => r()));
+        stages = slides.map(s => konvaStageRefs.current.get(s.id) ?? null);
+      }
+      if (stages.some(s => s === null)) {
+        alert('프리뷰가 준비되지 않았습니다. 잠시 후 다시 시도해 주세요.');
+        setShortsConverting(false);
+        setShortsProgress('');
+        return;
+      }
+      const imageBlobs = await captureAllKonvaStagesAsBlobs(
+        stages,
         cardWidth,
         cardHeight,
       );

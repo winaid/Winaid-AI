@@ -7,6 +7,8 @@
  * html2canvas로 DOM 노드를 풀사이즈 캡처.
  * 미리보기 영역은 transform:scale()로 축소되어 있으므로,
  * cloneNode로 복제 → transform 제거 → 화면 밖 임시 컨테이너에서 캡처.
+ *
+ * @deprecated 쇼츠 파이프라인이 Konva 기반으로 전환됨. 커밋 2에서 html2canvas와 함께 제거 예정.
  */
 export async function captureNodeAsCanvas(
   sourceEl: HTMLElement,
@@ -54,6 +56,9 @@ export async function captureNodeAsCanvas(
 /**
  * 모든 카드를 PNG Blob 배열로 캡처 — 카드뉴스 → 쇼츠 변환 전용.
  * 일반 다운로드(PNG/JPG/ZIP/PDF)는 Konva 네이티브 함수 사용.
+ *
+ * @deprecated 쇼츠 파이프라인이 Konva 기반(captureAllKonvaStagesAsBlobs)으로
+ * 전환됨. 커밋 2에서 html2canvas와 함께 제거 예정.
  */
 export async function captureAllSlidesAsBlobs(
   cardRefs: (HTMLElement | null)[],
@@ -145,6 +150,53 @@ export function downloadKonvaStageAsJpg(
   a.href = dataUrl;
   a.download = filename || `card-${index + 1}.jpg`;
   a.click();
+}
+
+/**
+ * 모든 Konva Stage를 풀사이즈 PNG Blob 배열로 캡처 — 쇼츠 변환 전용.
+ * - Stage는 스케일된 displayWidth로 마운트되어 있으므로 pixelRatio로 보정.
+ * - 결과는 1080×1080(또는 cardWidth×cardHeight) PNG.
+ * - 하나라도 null이면 에러 throw — 호출부에서 사용자 안내 후 중단.
+ */
+export async function captureAllKonvaStagesAsBlobs(
+  stages: (Konva.Stage | null)[],
+  cardWidth: number,
+  cardHeight: number,
+): Promise<Blob[]> {
+  // 폰트 로드 대기 (Konva Text 는 document.fonts에서 해석)
+  if (typeof document !== 'undefined' && 'fonts' in document) {
+    try { await (document as Document & { fonts: { ready: Promise<FontFaceSet> } }).fonts.ready; } catch { /* best-effort */ }
+  }
+
+  const blobs: Blob[] = [];
+  for (let i = 0; i < stages.length; i++) {
+    const stage = stages[i];
+    if (!stage) {
+      throw new Error(`쇼츠 캡처 실패 — 슬라이드 ${i + 1}의 Konva Stage가 준비되지 않았습니다.`);
+    }
+    // 표시 크기 기준으로 pixelRatio 계산 → cardWidth 해상도 PNG 보장
+    const stageW = stage.width();
+    const pixelRatio = stageW > 0 ? cardWidth / stageW : 1;
+    const dataUrl = stage.toDataURL({ pixelRatio, mimeType: 'image/png' });
+
+    // dataURL → Blob 변환
+    const res = await fetch(dataUrl);
+    const blob = await res.blob();
+    blobs.push(blob);
+
+    // 개발 모드에서 첫 프레임 해상도 검증
+    if (i === 0 && process.env.NODE_ENV !== 'production') {
+      const img = await new Promise<HTMLImageElement>((resolve) => {
+        const el = new Image();
+        el.onload = () => resolve(el);
+        el.onerror = () => resolve(el);
+        el.src = dataUrl;
+      });
+      // eslint-disable-next-line no-console
+      console.log(`[shorts] first frame: ${img.naturalWidth}x${img.naturalHeight} (expected ${cardWidth}x${cardHeight})`);
+    }
+  }
+  return blobs;
 }
 
 /** 모든 Konva Stage를 ZIP으로 다운로드 */
