@@ -268,7 +268,7 @@ export default function CardNewsPage() {
   const [keywords, setKeywords] = useState('');
   const [hospitalName, setHospitalName] = useState('');
   const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
-  const [logoEnabled, setLogoEnabled] = useState(false);
+  const [logoEnabled, setLogoEnabled] = useState(true);
   const [logoOpacity, setLogoOpacity] = useState(100);
   const logoInputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
@@ -1153,7 +1153,7 @@ visual: (배경 비주얼 묘사)
 
   // ── 초기 로드: 프롬프트 히스토리 + 참고 이미지 ──
   useEffect(() => {
-    try { const sl = localStorage.getItem('hospital-logo-dataurl'); if (sl) { setLogoDataUrl(sl); setProTheme(prev => ({ ...prev, hospitalLogo: sl })); } } catch {}
+    try { const sl = localStorage.getItem('hospital-logo-dataurl'); if (sl) { setLogoDataUrl(sl); setLogoEnabled(true); setProTheme(prev => ({ ...prev, hospitalLogo: sl })); } } catch {}
     try {
       const saved = localStorage.getItem(CARD_PROMPT_HISTORY_KEY);
       if (saved) setPromptHistory(JSON.parse(saved));
