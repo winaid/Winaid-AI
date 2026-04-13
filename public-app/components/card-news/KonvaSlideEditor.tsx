@@ -311,6 +311,9 @@ export default function KonvaSlideEditor({
             <button key={s.id} type="button"
               onClick={(e) => { e.stopPropagation(); handleShapeChange(s.id); }}
               title={s.id}
+              data-testid={`shape-btn-${s.id}`}
+              aria-pressed={currentShape === s.id ? 'true' : 'false'}
+              aria-label={`도형: ${s.id}`}
               style={{
                 width: 30, height: 30, fontSize: '16px', fontWeight: 700,
                 background: currentShape === s.id ? '#3B82F6' : '#F1F5F9',
