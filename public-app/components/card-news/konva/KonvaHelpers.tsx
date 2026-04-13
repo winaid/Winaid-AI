@@ -1,8 +1,78 @@
 'use client';
 
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { Text, Image as KonvaImage, Rect } from 'react-konva';
+import { Text, Image as KonvaImage, Rect, Circle, RegularPolygon, Line as KonvaLine } from 'react-konva';
 import type Konva from 'konva';
+
+export type ShapeType = 'rounded' | 'pill' | 'sharp' | 'diamond' | 'hexagon' | 'circle' | 'outlined';
+
+/** 요소 배경 도형 — 도형 종류에 따라 Rect/Circle/RegularPolygon/Line 반환 */
+export function renderShapeBackground(opts: {
+  shape: ShapeType;
+  x: number; y: number;
+  width: number; height: number;
+  fill?: string;
+  stroke?: string;
+  strokeWidth?: number;
+  opacity?: number;
+}): React.ReactNode {
+  const { shape, x, y, width, height, fill = 'rgba(0,0,0,0.04)', stroke, strokeWidth, opacity = 1 } = opts;
+  const minSide = Math.min(width, height);
+
+  if (shape === 'circle') {
+    return (
+      <Circle
+        x={x + width / 2}
+        y={y + height / 2}
+        radius={minSide / 2}
+        fill={fill} stroke={stroke} strokeWidth={strokeWidth} opacity={opacity}
+      />
+    );
+  }
+  if (shape === 'diamond') {
+    // RegularPolygon: 4각형 회전
+    return (
+      <RegularPolygon
+        x={x + width / 2}
+        y={y + height / 2}
+        sides={4}
+        radius={minSide / 2}
+        fill={fill} stroke={stroke} strokeWidth={strokeWidth} opacity={opacity}
+      />
+    );
+  }
+  if (shape === 'hexagon') {
+    return (
+      <RegularPolygon
+        x={x + width / 2}
+        y={y + height / 2}
+        sides={6}
+        radius={minSide / 2}
+        fill={fill} stroke={stroke} strokeWidth={strokeWidth} opacity={opacity}
+      />
+    );
+  }
+  if (shape === 'outlined') {
+    return (
+      <Rect
+        x={x} y={y} width={width} height={height}
+        fill="transparent"
+        stroke={stroke || fill} strokeWidth={(strokeWidth ?? 0) + 2}
+        cornerRadius={12} opacity={opacity}
+      />
+    );
+  }
+  // rounded / pill / sharp
+  const corner = shape === 'pill' ? minSide / 2 : shape === 'sharp' ? 0 : 18;
+  return (
+    <Rect
+      x={x} y={y} width={width} height={height}
+      fill={fill} stroke={stroke} strokeWidth={strokeWidth}
+      cornerRadius={corner} opacity={opacity}
+    />
+  );
+}
+void KonvaLine;
 
 // ── 타입 ──
 
