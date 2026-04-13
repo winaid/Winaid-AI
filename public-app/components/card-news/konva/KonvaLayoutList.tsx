@@ -11,6 +11,10 @@ export function renderChecklist(...args: LayoutRenderArgs): React.ReactNode {
   const { element: titleBlock, bottomY } = renderTitleBlock(args);
   const items = slide.checkItems || [];
   const positions = layoutVerticalItems(items.length, bottomY + 20, h - bottomY - 80);
+  // 공통 항목 스타일
+  const itemFs = slide.itemTitleFontSize ?? 20;
+  const itemWeight = slide.itemTitleFontWeight;
+  const itemColor = slide.itemTitleColor ?? theme.titleColor;
 
   return (
     <>
@@ -27,8 +31,9 @@ export function renderChecklist(...args: LayoutRenderArgs): React.ReactNode {
               fontFamily="Pretendard Variable, sans-serif" />
             <EditableText
               id={`text-check-${i}`} text={item}
-              x={115} y={p.y + p.height / 2 - 12} width={w - 220} fontSize={20}
-              fill={theme.titleColor} offsetX={0}
+              x={115} y={p.y + p.height / 2 - 12} width={w - 220} fontSize={itemFs}
+              fontStyle={itemWeight && Number(itemWeight) >= 700 ? 'bold' : 'normal'}
+              fill={itemColor} offsetX={0}
               selectedId={selectedId} onSelect={setSelectedId}
               onDragEnd={() => {}}
               onTextChange={t => { const a = [...items]; a[i] = t; onChange({ checkItems: a }); }}
@@ -47,6 +52,12 @@ export function renderSteps(...args: LayoutRenderArgs): React.ReactNode {
   const { element: titleBlock, bottomY } = renderTitleBlock(args, { alignCenter: true });
   const items = slide.steps || [];
   const positions = layoutVerticalItems(items.length, bottomY + 20, h - bottomY - 80);
+  const tFs = slide.itemTitleFontSize ?? 22;
+  const tColor = slide.itemTitleColor ?? theme.titleColor;
+  const tWeight = slide.itemTitleFontWeight;
+  const dFs = slide.itemDescFontSize ?? 16;
+  const dColor = slide.itemDescColor ?? theme.bodyColor;
+  const dWeight = slide.itemDescFontWeight;
 
   return (
     <>
@@ -65,8 +76,8 @@ export function renderSteps(...args: LayoutRenderArgs): React.ReactNode {
               fontFamily="Pretendard Variable, sans-serif" />
             <EditableText
               id={`text-step-label-${i}`} text={step.label}
-              x={150} y={p.y + (step.desc ? p.height * 0.25 : p.height / 2 - 12)} width={w - 250} fontSize={22}
-              fontStyle="bold" fill={theme.titleColor} offsetX={0}
+              x={150} y={p.y + (step.desc ? p.height * 0.25 : p.height / 2 - 12)} width={w - 250} fontSize={tFs}
+              fontStyle={tWeight && Number(tWeight) < 700 ? 'normal' : 'bold'} fill={tColor} offsetX={0}
               selectedId={selectedId} onSelect={setSelectedId}
               onDragEnd={() => {}}
               onTextChange={t => { const a = [...items]; a[i] = { ...a[i], label: t }; onChange({ steps: a }); }}
@@ -74,8 +85,9 @@ export function renderSteps(...args: LayoutRenderArgs): React.ReactNode {
             {step.desc && (
               <EditableText
                 id={`text-step-desc-${i}`} text={step.desc}
-                x={150} y={p.y + p.height * 0.55} width={w - 250} fontSize={16}
-                fill={theme.bodyColor} offsetX={0}
+                x={150} y={p.y + p.height * 0.55} width={w - 250} fontSize={dFs}
+                fontStyle={dWeight && Number(dWeight) >= 700 ? 'bold' : 'normal'}
+                fill={dColor} offsetX={0}
                 selectedId={selectedId} onSelect={setSelectedId}
                 onDragEnd={() => {}}
                 onTextChange={t => { const a = [...items]; a[i] = { ...a[i], desc: t }; onChange({ steps: a }); }}

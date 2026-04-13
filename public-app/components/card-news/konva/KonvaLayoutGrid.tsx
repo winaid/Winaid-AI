@@ -84,6 +84,12 @@ export function renderIconGrid(...args: LayoutRenderArgs): React.ReactNode {
   const cols = Math.min(Math.max(items.length, 1), 4) <= 2 ? 2 : items.length <= 4 ? 2 : 3;
   const rows = Math.ceil(items.length / cols);
   const grid = layoutGrid(cols, rows, 50, bottomY + 20, w - 100, h - bottomY - 80, 18);
+  const tFs = slide.itemTitleFontSize ?? 20;
+  const tColor = slide.itemTitleColor ?? theme.titleColor;
+  const tWeight = slide.itemTitleFontWeight;
+  const dFs = slide.itemDescFontSize ?? 14;
+  const dColor = slide.itemDescColor ?? (theme.bodyColor || '#666');
+  const dWeight = slide.itemDescFontWeight;
 
   return (
     <>
@@ -103,8 +109,9 @@ export function renderIconGrid(...args: LayoutRenderArgs): React.ReactNode {
               fontFamily="Pretendard Variable, sans-serif" />
             <EditableText
               id={`text-icon-title-${i}`} text={item.title}
-              x={cell.x + cell.w / 2} y={cell.y + cell.h * 0.5} width={cell.w - 30} fontSize={20}
-              fontStyle="bold" fill={theme.titleColor} align="center" offsetX={(cell.w - 30) / 2}
+              x={cell.x + cell.w / 2} y={cell.y + cell.h * 0.5} width={cell.w - 30} fontSize={tFs}
+              fontStyle={tWeight && Number(tWeight) < 700 ? 'normal' : 'bold'} fill={tColor}
+              align="center" offsetX={(cell.w - 30) / 2}
               selectedId={selectedId} onSelect={setSelectedId}
               onDragEnd={() => {}}
               onTextChange={t => { const a = [...items]; a[i] = { ...a[i], title: t }; onChange({ icons: a }); }}
@@ -112,8 +119,9 @@ export function renderIconGrid(...args: LayoutRenderArgs): React.ReactNode {
             {item.desc && (
               <EditableText
                 id={`text-icon-desc-${i}`} text={item.desc}
-                x={cell.x + cell.w / 2} y={cell.y + cell.h * 0.7} width={cell.w - 30} fontSize={14}
-                fill={theme.bodyColor || '#666'} align="center" offsetX={(cell.w - 30) / 2}
+                x={cell.x + cell.w / 2} y={cell.y + cell.h * 0.7} width={cell.w - 30} fontSize={dFs}
+                fontStyle={dWeight && Number(dWeight) >= 700 ? 'bold' : 'normal'}
+                fill={dColor} align="center" offsetX={(cell.w - 30) / 2}
                 selectedId={selectedId} onSelect={setSelectedId}
                 onDragEnd={() => {}}
                 onTextChange={t => { const a = [...items]; a[i] = { ...a[i], desc: t }; onChange({ icons: a }); }}
@@ -137,6 +145,13 @@ export function renderDataHighlight(...args: LayoutRenderArgs): React.ReactNode 
   const points = valid.length > 0 ? valid : rawPoints;
   const cols = Math.min(Math.max(points.length, 1), 3);
   const grid = layoutGrid(cols, 1, 50, bottomY + 40, w - 100, h - bottomY - 120, 24);
+  // 공통 스타일
+  const vFs = slide.itemValueFontSize ?? 42;
+  const vColor = slide.itemValueColor;
+  const vWeight = slide.itemValueFontWeight;
+  const dFs = slide.itemDescFontSize ?? 16;
+  const dColor = slide.itemDescColor ?? theme.bodyColor;
+  const dWeight = slide.itemDescFontWeight;
 
   return (
     <>
@@ -147,6 +162,9 @@ export function renderDataHighlight(...args: LayoutRenderArgs): React.ReactNode 
         const hasValue = !!(dp.value?.trim());
         const displayValue = hasValue ? dp.value : '00';
         const isPlaceholder = !hasValue;
+        const valueFill = isPlaceholder
+          ? 'rgba(150,150,150,0.6)'
+          : (vColor ?? (dp.highlight ? theme.accentColor : theme.titleColor));
         return (
           <React.Fragment key={i}>
             <Rect x={cell.x} y={cell.y} width={cell.w} height={cell.h}
@@ -157,14 +175,16 @@ export function renderDataHighlight(...args: LayoutRenderArgs): React.ReactNode 
               opacity={isPlaceholder ? 0.4 : 1}
               dash={isPlaceholder ? [8, 6] : undefined} />
             <Text x={cell.x + cell.w / 2} y={cell.y + cell.h * 0.3}
-              text={displayValue} fontSize={42} fontStyle="bold"
-              fill={isPlaceholder ? 'rgba(150,150,150,0.6)' : (dp.highlight ? theme.accentColor : theme.titleColor)}
+              text={displayValue} fontSize={vFs}
+              fontStyle={vWeight && Number(vWeight) < 700 ? 'normal' : 'bold'}
+              fill={valueFill}
               width={cell.w - 20} align="center" offsetX={(cell.w - 20) / 2}
               fontFamily="Pretendard Variable, sans-serif" />
             <EditableText
               id={`text-dp-label-${i}`} text={dp.label || '설명을 입력하세요'}
-              x={cell.x + cell.w / 2} y={cell.y + cell.h * 0.65} width={cell.w - 30} fontSize={16}
-              fill={isPlaceholder ? 'rgba(150,150,150,0.5)' : theme.bodyColor} align="center" offsetX={(cell.w - 30) / 2}
+              x={cell.x + cell.w / 2} y={cell.y + cell.h * 0.65} width={cell.w - 30} fontSize={dFs}
+              fontStyle={dWeight && Number(dWeight) >= 700 ? 'bold' : 'normal'}
+              fill={isPlaceholder ? 'rgba(150,150,150,0.5)' : dColor} align="center" offsetX={(cell.w - 30) / 2}
               selectedId={selectedId} onSelect={setSelectedId}
               onDragEnd={() => {}}
               onTextChange={t => { const a = [...(slide.dataPoints || [])]; a[i] = { ...a[i], label: t }; onChange({ dataPoints: a }); }}

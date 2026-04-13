@@ -221,6 +221,21 @@ export interface SlideData {
   hospitalFontId?: string;
   hospitalLogoSize?: number;
 
+  // 배열 항목 공통 스타일 (icon-grid/steps/checklist/dataPoints/qna 등)
+  itemTitleFontSize?: number;
+  itemTitleFontWeight?: string;
+  itemTitleColor?: string;
+  itemTitleFontId?: string;
+  itemDescFontSize?: number;
+  itemDescFontWeight?: string;
+  itemDescColor?: string;
+  itemDescFontId?: string;
+  // dataPoint value (큰 숫자) 전용
+  itemValueFontSize?: number;
+  itemValueFontWeight?: string;
+  itemValueColor?: string;
+  itemValueFontId?: string;
+
   // 커스텀 요소 (사용자 추가 텍스트/이미지)
   customElements?: SlideCustomElement[];
 

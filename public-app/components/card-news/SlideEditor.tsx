@@ -46,6 +46,85 @@ interface SlideEditorProps {
   onAddCustomElement?: (type: 'text' | 'image') => void;
 }
 
+/** 배열 항목의 공통 스타일 편집 UI (제목/설명/값) */
+function ArrayItemStyleEditor({
+  slide, onChange,
+  hasTitle = true, hasDesc = true, hasValue = false,
+}: {
+  slide: SlideData;
+  onChange: (patch: Partial<SlideData>) => void;
+  hasTitle?: boolean; hasDesc?: boolean; hasValue?: boolean;
+}) {
+  return (
+    <div className="mt-4 pt-3 border-t border-slate-200 space-y-3">
+      <p className="text-[10px] text-slate-400 font-semibold">✨ 전체 항목 스타일</p>
+      {hasValue && (
+        <div>
+          <p className="text-[10px] text-slate-500 mb-1">수치 (큰 숫자)</p>
+          <TextElementEditor
+            value="" onChange={() => {}}
+            fontId={slide.itemValueFontId}
+            fontSize={slide.itemValueFontSize}
+            fontWeight={slide.itemValueFontWeight}
+            fontColor={slide.itemValueColor}
+            onStyleChange={(key, val) => {
+              const clean = key
+                .replace('itemFontSize', 'itemValueFontSize')
+                .replace('itemFontWeight', 'itemValueFontWeight')
+                .replace('itemColor', 'itemValueColor')
+                .replace('itemFontId', 'itemValueFontId');
+              onChange({ [clean]: val } as Partial<SlideData>);
+            }}
+            prefix="item" valueOnly
+          />
+        </div>
+      )}
+      {hasTitle && (
+        <div>
+          <p className="text-[10px] text-slate-500 mb-1">제목 (항목)</p>
+          <TextElementEditor
+            value="" onChange={() => {}}
+            fontId={slide.itemTitleFontId}
+            fontSize={slide.itemTitleFontSize}
+            fontWeight={slide.itemTitleFontWeight}
+            fontColor={slide.itemTitleColor}
+            onStyleChange={(key, val) => {
+              const clean = key
+                .replace('itemFontSize', 'itemTitleFontSize')
+                .replace('itemFontWeight', 'itemTitleFontWeight')
+                .replace('itemColor', 'itemTitleColor')
+                .replace('itemFontId', 'itemTitleFontId');
+              onChange({ [clean]: val } as Partial<SlideData>);
+            }}
+            prefix="item" valueOnly
+          />
+        </div>
+      )}
+      {hasDesc && (
+        <div>
+          <p className="text-[10px] text-slate-500 mb-1">설명 (항목)</p>
+          <TextElementEditor
+            value="" onChange={() => {}}
+            fontId={slide.itemDescFontId}
+            fontSize={slide.itemDescFontSize}
+            fontWeight={slide.itemDescFontWeight}
+            fontColor={slide.itemDescColor}
+            onStyleChange={(key, val) => {
+              const clean = key
+                .replace('itemFontSize', 'itemDescFontSize')
+                .replace('itemFontWeight', 'itemDescFontWeight')
+                .replace('itemColor', 'itemDescColor')
+                .replace('itemFontId', 'itemDescFontId');
+              onChange({ [clean]: val } as Partial<SlideData>);
+            }}
+            prefix="item" valueOnly
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function SlideEditor({
   slide,
   slideIdx,
@@ -944,6 +1023,7 @@ ${JSON.stringify(slideForContext, null, 2)}
               </div>
             ))}
           </div>
+          <ArrayItemStyleEditor slide={slide} onChange={onChange} hasTitle hasDesc />
         </ElementAccordion>
       );
     }
@@ -962,6 +1042,7 @@ ${JSON.stringify(slideForContext, null, 2)}
               </div>
             ))}
           </div>
+          <ArrayItemStyleEditor slide={slide} onChange={onChange} hasTitle hasDesc />
         </ElementAccordion>
       );
     }
@@ -975,6 +1056,7 @@ ${JSON.stringify(slideForContext, null, 2)}
               <input key={i} type="text" value={c} onChange={(e) => updateCheck(i, e.target.value)} className={inputCls} />
             ))}
           </div>
+          <ArrayItemStyleEditor slide={slide} onChange={onChange} hasTitle hasDesc={false} />
         </ElementAccordion>
       );
     }
@@ -993,6 +1075,7 @@ ${JSON.stringify(slideForContext, null, 2)}
               </div>
             ))}
           </div>
+          <ArrayItemStyleEditor slide={slide} onChange={onChange} hasValue hasTitle={false} hasDesc />
         </ElementAccordion>
       );
     }

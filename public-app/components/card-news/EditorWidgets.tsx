@@ -176,12 +176,13 @@ export function ElementAccordion({ icon, label, defaultOpen = false, children }:
 }
 
 export function TextElementEditor({ value, onChange, multiline, fontId, fontSize, fontWeight, fontColor,
-  letterSpacing, lineHeight, onStyleChange, prefix = 'title',
+  letterSpacing, lineHeight, onStyleChange, prefix = 'title', valueOnly = false,
 }: {
   value: string; onChange: (v: string) => void; multiline?: boolean;
   fontId?: string; fontSize?: number; fontWeight?: string; fontColor?: string;
   letterSpacing?: number; lineHeight?: number;
   onStyleChange: (key: string, val: string | number | undefined) => void; prefix?: string;
+  valueOnly?: boolean;
 }) {
   return (
     <div className="space-y-3">
@@ -190,14 +191,14 @@ export function TextElementEditor({ value, onChange, multiline, fontId, fontSize
         <p className="text-[10px] text-slate-400 mb-1">폰트</p>
         <FontPicker value={fontId || 'pretendard'} onChange={id => onStyleChange(`${prefix}FontId`, id)} />
       </div>
-      {/* 텍스트 입력 */}
-      {multiline ? (
+      {/* 텍스트 입력 — valueOnly면 숨김 (스타일만 편집) */}
+      {!valueOnly && (multiline ? (
         <textarea value={value || ''} onChange={e => onChange(e.target.value)}
           className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg resize-none focus:outline-none focus:border-blue-400" rows={3} />
       ) : (
         <input type="text" value={value || ''} onChange={e => onChange(e.target.value)}
           className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-blue-400" />
-      )}
+      ))}
 
       {/* 크기 + 빠른 선택 */}
       <div>
