@@ -1719,7 +1719,6 @@ visual: (배경 비주얼 묘사)
                   className={`px-2 py-1 rounded-md font-bold ${slideCount === n ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-500'}`}>{n}</button>
               ))}
             </div>
-            <div className="flex-1" />
             <button type="button" onClick={openDesignModal}
               disabled={
                 isGenerating
@@ -1728,7 +1727,7 @@ visual: (배경 비주얼 묘사)
                   : sourceContent.trim().length < 100)
               }
               data-testid="cta-generate-card-news"
-              className="px-8 py-3 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 disabled:opacity-50 shadow-lg shadow-blue-200 transition-all">
+              className="ml-auto px-8 py-3 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 disabled:opacity-50 shadow-lg shadow-blue-200 transition-all">
               {isGenerating ? '생성 중...' : '✨ 카드뉴스 생성'}
             </button>
           </div>
@@ -1778,90 +1777,6 @@ visual: (배경 비주얼 묘사)
                   )}
                 </div>
               </div>
-            </div>
-          </details>
-
-          {/* 영감 이미지 (접기) — 분위기/색감을 카드뉴스에 자동 반영 */}
-          <details className="text-sm text-slate-500 bg-slate-50 rounded-xl px-5 py-3 mt-2">
-            <summary className="cursor-pointer hover:text-slate-700 font-semibold">
-              ✨ 영감 이미지 <span className="text-[10px] text-slate-400 font-normal">(선택 — 분위기/색감 참고)</span>
-            </summary>
-            <div className="pt-4 pb-2 space-y-3">
-              <p className="text-xs text-slate-500 leading-relaxed">
-                참고 이미지를 올리면 AI 가 분위기·색감·비주얼 키워드를 분석해서 팔레트를 자동 적용하고 카드뉴스 생성 시 같은 스타일을 반영합니다.
-                <br />
-                <span className="text-slate-400">
-                  ⓘ 브랜드 프리셋이 있다면 그 위에 1회성으로 덮어쓰며, 이미지를 삭제하면 프리셋으로 복귀합니다.
-                </span>
-              </p>
-
-              {!referenceImage ? (
-                <button
-                  type="button"
-                  onClick={() => referenceInputRef.current?.click()}
-                  className="flex items-center justify-center w-full h-24 border-2 border-dashed border-slate-300 rounded-xl text-xs text-slate-400 hover:border-blue-400 hover:text-blue-500 hover:bg-blue-50 transition-all"
-                >
-                  + 클릭하여 영감 이미지 업로드
-                </button>
-              ) : (
-                <div className="flex gap-3">
-                  <div className="relative flex-shrink-0">
-                    <img
-                      src={referenceImage}
-                      alt="영감 이미지"
-                      className="w-32 h-32 object-cover rounded-xl border border-slate-200"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleRemoveReferenceImage}
-                      aria-label="영감 이미지 삭제"
-                      className="absolute -top-1.5 -right-1.5 w-6 h-6 bg-red-500 text-white rounded-full text-[11px] flex items-center justify-center shadow-sm hover:bg-red-600"
-                    >
-                      ✕
-                    </button>
-                    {referenceLoading && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-xl">
-                        <span className="text-white text-[11px] font-semibold">분석 중...</span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    {referenceAnalysis && (
-                      <>
-                        <p className="text-xs text-slate-700 leading-relaxed">
-                          {referenceAnalysis.description}
-                        </p>
-                        <div className="mt-2 flex items-center gap-1.5">
-                          {Object.entries(referenceAnalysis.palette).map(([key, color]) => (
-                            <div
-                              key={key}
-                              className="w-6 h-6 rounded-full border border-slate-200 shadow-sm"
-                              style={{ backgroundColor: color }}
-                              title={`${key}: ${color}`}
-                            />
-                          ))}
-                        </div>
-                        <p className="mt-1.5 text-[10px] text-slate-400">
-                          분위기: <span className="text-slate-500 font-mono">{referenceAnalysis.mood}</span>
-                        </p>
-                      </>
-                    )}
-                    {!referenceAnalysis && !referenceLoading && referenceError && (
-                      <p className="text-xs text-red-500">{referenceError}</p>
-                    )}
-                    {!referenceAnalysis && referenceLoading && (
-                      <p className="text-xs text-slate-400">이미지 스타일을 분석하고 있어요…</p>
-                    )}
-                  </div>
-                </div>
-              )}
-              <input
-                ref={referenceInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleReferenceImageUpload}
-              />
             </div>
           </details>
 
