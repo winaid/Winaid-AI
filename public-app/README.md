@@ -23,7 +23,7 @@
 - **스타일링**: Tailwind CSS 4
 - **DB/인증**: Supabase (PostgreSQL + Auth + Storage)
 - **AI**: Google Gemini API (멀티키 로테이션)
-- **카드뉴스 에디터**: fabric.js 7 · jspdf · html2canvas · jszip
+- **카드뉴스 에디터**: react-konva 19 + konva 10 (네이티브 캔버스) · jspdf · jszip
 - **영상 처리**: video-processor (별도 Railway 서버, FFmpeg + auto-editor)
 - **E2E 테스트**: Playwright 1.58
 - **배포**: Vercel

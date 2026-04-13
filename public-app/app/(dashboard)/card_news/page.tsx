@@ -12,7 +12,6 @@ import CardTemplateManager from '../../../components/CardTemplateManager';
 import BrandPresetEditor from '../../../components/card-news/BrandPresetEditor';
 import { brandPresetToTheme } from '../../../lib/brandPreset';
 import { getBrandPreset } from '../../../lib/styleService';
-import CardNewsRenderer from '../../../components/CardNewsRenderer';
 import CardNewsProRenderer from '../../../components/CardNewsProRenderer';
 import { DEFAULT_THEME, COVER_TEMPLATES, CARD_FONTS, FONT_CATEGORIES, type DesignPresetStyle, parseProSlidesJson, ensureSlideIds, generateSlideId, type SlideData as ProSlideData, type CardNewsTheme, type SlideLayoutType, type CoverTemplate } from '../../../lib/cardNewsLayouts';
 import { buildLayoutDefaults, analyzeInspirationImage, type InspirationAnalysis } from '../../../lib/cardAiActions';
