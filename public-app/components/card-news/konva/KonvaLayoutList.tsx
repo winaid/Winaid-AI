@@ -2,17 +2,7 @@
 
 import React from 'react';
 import { Rect, Text, Circle } from 'react-konva';
-import { EditableText, renderTitleBlock, layoutVerticalItems, isItemPlaceholder, PLACEHOLDER_STYLE, EDITING_MAX_WIDTH, type LayoutRenderArgs } from './KonvaHelpers';
-import type { SlideData } from '../../../lib/cardNewsLayouts';
-
-/** elementShapes 기반으로 cornerRadius 계산 — 각 레이아웃의 default 모양 유지 */
-function shapeRadius(slide: SlideData, id: string, defaultCorner: number, w: number, h: number): number {
-  const shape = slide.elementShapes?.[id];
-  if (!shape) return defaultCorner;
-  if (shape === 'pill' || shape === 'circle') return Math.min(w, h) / 2;
-  if (shape === 'sharp' || shape === 'diamond' || shape === 'hexagon') return 0;
-  return 18;
-}
+import { EditableText, renderTitleBlock, layoutVerticalItems, isItemPlaceholder, PLACEHOLDER_STYLE, EDITING_MAX_WIDTH, ShapedBackground, type LayoutRenderArgs } from './KonvaHelpers';
 
 // ── Checklist ──
 
@@ -37,13 +27,18 @@ export function renderChecklist(...args: LayoutRenderArgs): React.ReactNode {
             {(() => {
               const isEmpty = isItemPlaceholder(item);
               return (
-                <Rect id={`check-${i}`} x={50} y={p.y} width={w - 100} height={p.height}
+                <ShapedBackground
+                  id={`check-${i}`}
+                  x={50} y={p.y} w={w - 100} h={p.height}
+                  shape={slide.elementShapes?.[`check-${i}`]}
+                  defaultCorner={999}
                   fill={theme.cardBgColor || 'rgba(0,0,0,0.04)'}
-                  cornerRadius={shapeRadius(slide, `check-${i}`, 999, w - 100, p.height)}
+                  accentColor={theme.accentColor}
                   opacity={isEmpty ? PLACEHOLDER_STYLE.opacity : 1}
                   stroke={isEmpty ? theme.accentColor : undefined}
                   strokeWidth={isEmpty ? 1.5 : 0}
-                  dash={isEmpty ? PLACEHOLDER_STYLE.dash : undefined} />
+                  dash={isEmpty ? PLACEHOLDER_STYLE.dash : undefined}
+                />
               );
             })()}
             <Text x={75} y={p.y + p.height / 2 - 14} text={slide.checkIcon || '✓'}
@@ -88,9 +83,14 @@ export function renderSteps(...args: LayoutRenderArgs): React.ReactNode {
         if (!p) return null;
         return (
           <React.Fragment key={i}>
-            <Rect id={`step-${i}`} x={50} y={p.y} width={w - 100} height={p.height}
+            <ShapedBackground
+              id={`step-${i}`}
+              x={50} y={p.y} w={w - 100} h={p.height}
+              shape={slide.elementShapes?.[`step-${i}`]}
+              defaultCorner={20}
               fill={theme.cardBgColor || 'rgba(0,0,0,0.04)'}
-              cornerRadius={shapeRadius(slide, `step-${i}`, 20, w - 100, p.height)} />
+              accentColor={theme.accentColor}
+            />
             <Circle x={100} y={p.y + p.height / 2} radius={28}
               fill={theme.accentColor} />
             <Text x={100} y={p.y + p.height / 2 - 14} text={String(i + 1)}
@@ -151,14 +151,18 @@ export function renderWarning(...args: LayoutRenderArgs): React.ReactNode {
         if (!p) return null;
         return (
           <React.Fragment key={i}>
-            <Rect x={50} y={p.y} width={w - 100} height={p.height}
-              fill="rgba(239,68,68,0.14)"
+            <ShapedBackground
               id={`warning-${i}`}
-              cornerRadius={shapeRadius(slide, `warning-${i}`, 16, w - 100, p.height)}
+              x={50} y={p.y} w={w - 100} h={p.height}
+              shape={slide.elementShapes?.[`warning-${i}`]}
+              defaultCorner={16}
+              fill="rgba(239,68,68,0.14)"
+              accentColor="#EF4444"
               opacity={isItemPlaceholder(item) ? PLACEHOLDER_STYLE.opacity : 1}
               stroke={isItemPlaceholder(item) ? '#EF4444' : undefined}
               strokeWidth={isItemPlaceholder(item) ? 1.5 : 0}
-              dash={isItemPlaceholder(item) ? PLACEHOLDER_STYLE.dash : undefined} />
+              dash={isItemPlaceholder(item) ? PLACEHOLDER_STYLE.dash : undefined}
+            />
             <Rect x={50} y={p.y} width={6} height={p.height} fill="#F87171"
               cornerRadius={[16, 0, 0, 16]} />
             <Text x={80} y={p.y + p.height / 2 - 12} text="❗" fontSize={24} fill="#F87171"
@@ -196,9 +200,14 @@ export function renderNumberedList(...args: LayoutRenderArgs): React.ReactNode {
         const num = item.num || String(i + 1).padStart(2, '0');
         return (
           <React.Fragment key={i}>
-            <Rect id={`numbered-${i}`} x={50} y={p.y} width={w - 100} height={p.height}
+            <ShapedBackground
+              id={`numbered-${i}`}
+              x={50} y={p.y} w={w - 100} h={p.height}
+              shape={slide.elementShapes?.[`numbered-${i}`]}
+              defaultCorner={18}
               fill={theme.cardBgColor || 'rgba(0,0,0,0.04)'}
-              cornerRadius={shapeRadius(slide, `numbered-${i}`, 18, w - 100, p.height)} />
+              accentColor={theme.accentColor}
+            />
             <Rect x={70} y={p.y + p.height / 2 - 28} width={56} height={56}
               fill={theme.accentColor} cornerRadius={16} />
             <Text x={70} y={p.y + p.height / 2 - 14} text={num}

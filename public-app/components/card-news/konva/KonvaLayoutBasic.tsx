@@ -2,16 +2,7 @@
 
 import React from 'react';
 import { Rect, Text } from 'react-konva';
-import { EditableText, EditableShape, renderTitleBlock, EDITING_MAX_WIDTH, type LayoutRenderArgs } from './KonvaHelpers';
-import type { SlideData } from '../../../lib/cardNewsLayouts';
-
-function shapeRadius(slide: SlideData, id: string, defaultCorner: number, w: number, h: number): number {
-  const shape = slide.elementShapes?.[id];
-  if (!shape) return defaultCorner;
-  if (shape === 'pill' || shape === 'circle') return Math.min(w, h) / 2;
-  if (shape === 'sharp' || shape === 'diamond' || shape === 'hexagon') return 0;
-  return 18;
-}
+import { EditableText, EditableShape, renderTitleBlock, EDITING_MAX_WIDTH, ShapedBackground, type LayoutRenderArgs } from './KonvaHelpers';
 
 // ── Cover / Closing ──
 
@@ -89,9 +80,14 @@ export function renderInfo(...args: LayoutRenderArgs): React.ReactNode {
       {titleBlock}
       {slide.body && (
         <>
-          <Rect id="body-card" x={50} y={bodyY} width={w - 100} height={h * 0.4}
+          <ShapedBackground
+            id="body-card"
+            x={50} y={bodyY} w={w - 100} h={h * 0.4}
+            shape={slide.elementShapes?.['body-card']}
+            defaultCorner={18}
             fill={theme.cardBgColor || 'rgba(0,0,0,0.04)'}
-            cornerRadius={shapeRadius(slide, 'body-card', 18, w - 100, h * 0.4)} />
+            accentColor={theme.accentColor}
+          />
           <Rect x={50} y={bodyY} width={5} height={h * 0.4}
             fill={theme.accentColor} />
           <EditableText

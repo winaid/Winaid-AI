@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { Text, Image as KonvaImage, Rect, Circle, RegularPolygon, Line as KonvaLine } from 'react-konva';
+import { Text, Image as KonvaImage, Rect, Circle, Ellipse, RegularPolygon, Line as KonvaLine } from 'react-konva';
 import type Konva from 'konva';
 
 /**
@@ -44,69 +44,197 @@ export const PLACEHOLDER_STYLE = {
   textOpacity: 0.5,
 } as const;
 
-/** 요소 배경 도형 — 도형 종류에 따라 Rect/Circle/RegularPolygon/Line 반환 */
-export function renderShapeBackground(opts: {
-  shape: ShapeType;
+/**
+ * 요소 배경 도형 — shape 종류별로 Rect/Circle/Ellipse/RegularPolygon 중
+ * 적절한 Konva 노드를 렌더링한다. 기존 `shapeRadius`(숫자만 반환)는
+ * cornerRadius 만 제어 가능해 diamond/hexagon/circle/outlined 가 제대로
+ * 렌더되지 않았음. 이 컴포넌트로 일원화하여 팝업에서 선택한 도형이 실제로
+ * 반영되도록 한다.
+ *
+ * 동작:
+ * - `shape` 미지정 → Rect + `defaultCorner` (기존 호출부와 100% 호환)
+ * - `'rounded'` → Rect cornerRadius=18
+ * - `'pill'` → Rect cornerRadius=min(w,h)/2
+ * - `'sharp'` → Rect cornerRadius=0
+ * - `'outlined'` → Rect fill='transparent' + stroke (accentColor fallback),
+ *                  cornerRadius=defaultCorner(레이아웃 시각 정체성 보존)
+ * - `'circle'` → 종횡비 |w-h|/max<0.15 면 Circle, 아니면 Ellipse
+ * - `'diamond'` → RegularPolygon sides=4 (rotation 기본 0 → 위가 뾰족)
+ * - `'hexagon'` → RegularPolygon sides=6
+ *
+ * 배경/placeholder 스타일(shadow/opacity/stroke/dash)은 선택된 노드에
+ * 동일하게 전달된다.
+ */
+export interface ShapedBackgroundProps {
+  id: string;
   x: number; y: number;
-  width: number; height: number;
+  w: number; h: number;
+  shape?: ShapeType;
+  defaultCorner?: number;
   fill?: string;
   stroke?: string;
   strokeWidth?: number;
   opacity?: number;
-}): React.ReactNode {
-  const { shape, x, y, width, height, fill = 'rgba(0,0,0,0.04)', stroke, strokeWidth, opacity = 1 } = opts;
-  const minSide = Math.min(width, height);
+  shadowBlur?: number;
+  shadowOpacity?: number;
+  shadowColor?: string;
+  shadowOffsetY?: number;
+  dash?: number[];
+  /** outlined 일 때 stroke 미지정 시 fallback 색상 */
+  accentColor?: string;
+}
 
-  if (shape === 'circle') {
+export function ShapedBackground({
+  id, x, y, w, h,
+  shape,
+  defaultCorner = 18,
+  fill,
+  stroke,
+  strokeWidth,
+  opacity,
+  shadowBlur,
+  shadowOpacity,
+  shadowColor,
+  shadowOffsetY,
+  dash,
+  accentColor,
+}: ShapedBackgroundProps): React.ReactElement {
+  // Konva 노드에 공통 적용되는 시각 속성
+  const shared = {
+    opacity,
+    shadowBlur,
+    shadowOpacity,
+    shadowColor,
+    shadowOffsetY,
+    dash,
+  };
+
+  // shape 미지정 — 레이아웃 기본 Rect + defaultCorner (기존 호출부 호환)
+  if (!shape) {
     return (
-      <Circle
-        x={x + width / 2}
-        y={y + height / 2}
-        radius={minSide / 2}
-        fill={fill} stroke={stroke} strokeWidth={strokeWidth} opacity={opacity}
+      <Rect
+        id={id} x={x} y={y} width={w} height={h}
+        fill={fill}
+        cornerRadius={defaultCorner}
+        stroke={stroke} strokeWidth={strokeWidth}
+        {...shared}
       />
     );
   }
-  if (shape === 'diamond') {
-    // RegularPolygon: 4각형 회전
-    return (
-      <RegularPolygon
-        x={x + width / 2}
-        y={y + height / 2}
-        sides={4}
-        radius={minSide / 2}
-        fill={fill} stroke={stroke} strokeWidth={strokeWidth} opacity={opacity}
-      />
-    );
-  }
-  if (shape === 'hexagon') {
-    return (
-      <RegularPolygon
-        x={x + width / 2}
-        y={y + height / 2}
-        sides={6}
-        radius={minSide / 2}
-        fill={fill} stroke={stroke} strokeWidth={strokeWidth} opacity={opacity}
-      />
-    );
-  }
+
   if (shape === 'outlined') {
     return (
       <Rect
-        x={x} y={y} width={width} height={height}
+        id={id} x={x} y={y} width={w} height={h}
         fill="transparent"
-        stroke={stroke || fill} strokeWidth={(strokeWidth ?? 0) + 2}
-        cornerRadius={12} opacity={opacity}
+        cornerRadius={defaultCorner}
+        stroke={stroke ?? accentColor ?? 'rgba(0,0,0,0.4)'}
+        strokeWidth={strokeWidth ?? 2}
+        {...shared}
       />
     );
   }
-  // rounded / pill / sharp
-  const corner = shape === 'pill' ? minSide / 2 : shape === 'sharp' ? 0 : 18;
+
+  if (shape === 'rounded') {
+    return (
+      <Rect
+        id={id} x={x} y={y} width={w} height={h}
+        fill={fill}
+        cornerRadius={18}
+        stroke={stroke} strokeWidth={strokeWidth}
+        {...shared}
+      />
+    );
+  }
+
+  if (shape === 'pill') {
+    return (
+      <Rect
+        id={id} x={x} y={y} width={w} height={h}
+        fill={fill}
+        cornerRadius={Math.min(w, h) / 2}
+        stroke={stroke} strokeWidth={strokeWidth}
+        {...shared}
+      />
+    );
+  }
+
+  if (shape === 'sharp') {
+    return (
+      <Rect
+        id={id} x={x} y={y} width={w} height={h}
+        fill={fill}
+        cornerRadius={0}
+        stroke={stroke} strokeWidth={strokeWidth}
+        {...shared}
+      />
+    );
+  }
+
+  if (shape === 'circle') {
+    // 종횡비가 15% 이내면 Circle, 아니면 Ellipse 로 자동 전환
+    const isSquareLike = Math.abs(w - h) / Math.max(w, h) < 0.15;
+    const cx = x + w / 2;
+    const cy = y + h / 2;
+    if (isSquareLike) {
+      return (
+        <Circle
+          id={id} x={cx} y={cy} radius={Math.min(w, h) / 2}
+          fill={fill}
+          stroke={stroke} strokeWidth={strokeWidth}
+          {...shared}
+        />
+      );
+    }
+    return (
+      <Ellipse
+        id={id} x={cx} y={cy} radiusX={w / 2} radiusY={h / 2}
+        fill={fill}
+        stroke={stroke} strokeWidth={strokeWidth}
+        {...shared}
+      />
+    );
+  }
+
+  if (shape === 'diamond') {
+    // NOTE: spec 에선 rotation=45 였으나 Konva RegularPolygon 은 첫 정점이
+    // -π/2(top) 에서 시작. sides=4, rotation=0 이 이미 다이아몬드(위 뾰족),
+    // rotation=45 는 오히려 평평한 사각형이 되어버린다. 따라서 rotation 생략.
+    return (
+      <RegularPolygon
+        id={id}
+        x={x + w / 2} y={y + h / 2}
+        sides={4}
+        radius={Math.min(w, h) / 2}
+        fill={fill}
+        stroke={stroke} strokeWidth={strokeWidth}
+        {...shared}
+      />
+    );
+  }
+
+  if (shape === 'hexagon') {
+    return (
+      <RegularPolygon
+        id={id}
+        x={x + w / 2} y={y + h / 2}
+        sides={6}
+        radius={Math.min(w, h) / 2}
+        fill={fill}
+        stroke={stroke} strokeWidth={strokeWidth}
+        {...shared}
+      />
+    );
+  }
+
+  // 이론상 도달 불가 — 타입 안전 fallback
   return (
     <Rect
-      x={x} y={y} width={width} height={height}
-      fill={fill} stroke={stroke} strokeWidth={strokeWidth}
-      cornerRadius={corner} opacity={opacity}
+      id={id} x={x} y={y} width={w} height={h}
+      fill={fill}
+      cornerRadius={defaultCorner}
+      stroke={stroke} strokeWidth={strokeWidth}
+      {...shared}
     />
   );
 }

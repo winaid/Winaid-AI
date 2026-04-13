@@ -2,17 +2,7 @@
 
 import React from 'react';
 import { Rect, Text, Circle } from 'react-konva';
-import { EditableText, renderTitleBlock, layoutVerticalItems, layoutGrid, isItemPlaceholder, PLACEHOLDER_STYLE, EDITING_MAX_WIDTH, type LayoutRenderArgs } from './KonvaHelpers';
-import type { SlideData } from '../../../lib/cardNewsLayouts';
-
-/** elementShapes 기반 cornerRadius */
-function shapeRadius(slide: SlideData, id: string, defaultCorner: number, w: number, h: number): number {
-  const shape = slide.elementShapes?.[id];
-  if (!shape) return defaultCorner;
-  if (shape === 'pill' || shape === 'circle') return Math.min(w, h) / 2;
-  if (shape === 'sharp' || shape === 'diamond' || shape === 'hexagon') return 0;
-  return 18;
-}
+import { EditableText, renderTitleBlock, layoutVerticalItems, layoutGrid, isItemPlaceholder, PLACEHOLDER_STYLE, EDITING_MAX_WIDTH, ShapedBackground, type LayoutRenderArgs } from './KonvaHelpers';
 
 // ── Comparison ──
 
@@ -121,15 +111,22 @@ export function renderIconGrid(...args: LayoutRenderArgs): React.ReactNode {
             {(() => {
               const isEmpty = isItemPlaceholder(item.title) && isItemPlaceholder(item.desc);
               return (
-                <Rect id={`icon-card-${i}`} x={cell.x} y={cell.y} width={cell.w} height={cell.h}
+                <ShapedBackground
+                  id={`icon-card-${i}`}
+                  x={cell.x} y={cell.y} w={cell.w} h={cell.h}
+                  shape={slide.elementShapes?.[`icon-card-${i}`]}
+                  defaultCorner={20}
                   fill="#fff"
-                  cornerRadius={shapeRadius(slide, `icon-card-${i}`, 20, cell.w, cell.h)}
-                  shadowBlur={isEmpty ? 0 : 12} shadowOpacity={0.08}
-                  shadowColor="#000" shadowOffsetY={4}
+                  accentColor={theme.accentColor}
+                  shadowBlur={isEmpty ? 0 : 12}
+                  shadowOpacity={0.08}
+                  shadowColor="#000"
+                  shadowOffsetY={4}
                   opacity={isEmpty ? PLACEHOLDER_STYLE.opacity : 1}
                   stroke={isEmpty ? theme.accentColor : undefined}
                   strokeWidth={isEmpty ? 1.5 : 0}
-                  dash={isEmpty ? PLACEHOLDER_STYLE.dash : undefined} />
+                  dash={isEmpty ? PLACEHOLDER_STYLE.dash : undefined}
+                />
               );
             })()}
             <Text x={cell.x + cell.w / 2 - 28} y={cell.y + cell.h * 0.15}
@@ -194,21 +191,23 @@ export function renderDataHighlight(...args: LayoutRenderArgs): React.ReactNode 
           ? 'rgba(150,150,150,0.6)'
           : (vColor ?? (dp.highlight ? theme.accentColor : theme.titleColor));
         const shapeId = `datapoint-${i}`;
-        const shape = slide.elementShapes?.[shapeId] || 'rounded';
-        // 도형별 cornerRadius 결정
-        const corner = shape === 'pill' || shape === 'circle' ? Math.min(cell.w, cell.h) / 2
-          : shape === 'sharp' || shape === 'diamond' || shape === 'hexagon' ? 0
-          : 24;
+        const shape = slide.elementShapes?.[shapeId];
         const isOutlined = shape === 'outlined';
+        // data-highlight 는 기본 둥근 모서리 24, highlight 항목은 accent 테두리 강조
         return (
           <React.Fragment key={i}>
-            <Rect id={shapeId} x={cell.x} y={cell.y} width={cell.w} height={cell.h}
-              fill={isOutlined ? 'transparent' : (dp.highlight ? `${theme.accentColor}15` : (theme.cardBgColor || 'rgba(0,0,0,0.04)'))}
-              cornerRadius={corner}
+            <ShapedBackground
+              id={shapeId}
+              x={cell.x} y={cell.y} w={cell.w} h={cell.h}
+              shape={shape}
+              defaultCorner={24}
+              fill={isOutlined ? undefined : (dp.highlight ? `${theme.accentColor}15` : (theme.cardBgColor || 'rgba(0,0,0,0.04)'))}
+              accentColor={theme.accentColor}
               stroke={isOutlined ? theme.accentColor : (dp.highlight ? theme.accentColor : 'rgba(0,0,0,0.08)')}
               strokeWidth={isOutlined ? 3 : (dp.highlight ? 2 : 1)}
               opacity={isPlaceholder ? 0.4 : 1}
-              dash={isPlaceholder ? [8, 6] : undefined} />
+              dash={isPlaceholder ? [8, 6] : undefined}
+            />
             <Text x={cell.x + cell.w / 2} y={cell.y + cell.h * 0.3}
               text={displayValue} fontSize={vFs}
               fontStyle={vWeight && Number(vWeight) < 700 ? 'normal' : 'bold'}
@@ -311,13 +310,18 @@ export function renderQna(...args: LayoutRenderArgs): React.ReactNode {
             {(() => {
               const isEmpty = isItemPlaceholder(qa.q) && isItemPlaceholder(qa.a);
               return (
-                <Rect id={`qa-${i}`} x={50} y={p.y} width={w - 100} height={p.height}
+                <ShapedBackground
+                  id={`qa-${i}`}
+                  x={50} y={p.y} w={w - 100} h={p.height}
+                  shape={slide.elementShapes?.[`qa-${i}`]}
+                  defaultCorner={18}
                   fill={theme.cardBgColor || 'rgba(0,0,0,0.04)'}
-                  cornerRadius={shapeRadius(slide, `qa-${i}`, 18, w - 100, p.height)}
+                  accentColor={theme.accentColor}
                   opacity={isEmpty ? PLACEHOLDER_STYLE.opacity : 1}
                   stroke={isEmpty ? theme.accentColor : undefined}
                   strokeWidth={isEmpty ? 1.5 : 0}
-                  dash={isEmpty ? PLACEHOLDER_STYLE.dash : undefined} />
+                  dash={isEmpty ? PLACEHOLDER_STYLE.dash : undefined}
+                />
               );
             })()}
             {/* Q badge */}
