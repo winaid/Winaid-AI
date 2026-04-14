@@ -57,7 +57,9 @@ export async function POST(request: NextRequest) {
   // 4) 병원 스타일 블록 (있으면 cache 블록으로 합쳐짐)
   let hospitalStyleBlock: string | null = null;
   const hospitalName = body.hospitalName || req.hospitalName;
-  if (hospitalName) {
+  // 우선순위 4-A 정책: stylePromptText 가 있으면 빌더에서 hospitalStyleBlock 은 버려지므로,
+  // DB/네트워크 왕복 자체를 스킵해 비용 절약. 캐시 키 영향 없음 (조회를 안 함).
+  if (hospitalName && !req.stylePromptText?.trim()) {
     try {
       hospitalStyleBlock = await getHospitalStylePrompt(hospitalName);
     } catch (err) {
@@ -71,6 +73,9 @@ export async function POST(request: NextRequest) {
       hasBlock: !!hospitalStyleBlock,
       blockLength: hospitalStyleBlock ? hospitalStyleBlock.length : 0,
       preview: hospitalStyleBlock ? hospitalStyleBlock.slice(0, 300) : null,
+      // 4-A 정책 가시성: hospitalName 입력은 있으나 stylePromptText 우선으로 무시되는 케이스
+      policy_skipped: !!req.stylePromptText?.trim() && !!hospitalName,
+      stylePromptText_len: req.stylePromptText?.length ?? 0,
     });
   }
 
