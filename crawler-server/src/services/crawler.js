@@ -341,11 +341,14 @@ async function fetchPostData(blogId, logNo) {
       const thumbnail = imgMatch ? imgMatch[1] : '';
 
       // 본문: se-text-paragraph 추출 (네이버 스마트에디터)
-      const paragraphPattern = /<[^>]*class="[^"]*se-text-paragraph[^"]*"[^>]*>([\s\S]*?)<\/[^>]+>/g;
+      // NOTE: 기존 regex 는 closing 을 `</[^>]+>` 로 잡아 nested <span> 의 첫 닫기에서 끝났음.
+      //       `<(p|div) ... class="...se-text-paragraph...">...</\1>` 로 태그 일치 강제 + nested 허용.
+      //       capture group: [1]=태그명, [2]=본문
+      const paragraphPattern = /<(p|div)[^>]*class="[^"]*se-text-paragraph[^"]*"[^>]*>([\s\S]*?)<\/\1>/g;
       const paragraphs = [];
       let match;
       while ((match = paragraphPattern.exec(html)) !== null) {
-        const text = match[1]
+        const text = match[2]
           .replace(/<[^>]+>/g, ' ')
           .replace(/&nbsp;/g, ' ')
           .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'")
