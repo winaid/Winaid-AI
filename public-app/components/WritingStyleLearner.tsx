@@ -304,7 +304,7 @@ ${sampleText}
         id: `style_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         name: styleName,
         description: (result.description as string) || '',
-        sampleText: textInput.substring(0, 500),
+        sampleText: textInput.substring(0, 5000),
         analyzedStyle: {
           tone: (result.tone as string) || '',
           sentenceEndings: (result.sentenceEndings as string[]) || [],
