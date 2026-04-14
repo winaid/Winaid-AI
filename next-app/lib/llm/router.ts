@@ -27,6 +27,11 @@ interface RouteDefinition {
 }
 
 const DEFAULT_ROUTING: Record<LLMTaskKind, RouteDefinition> = {
+  // ── Phase 2A v3: 통합 초안 + Opus 검수 ──
+  blog_unified:         { provider: 'claude', model: 'claude-sonnet-4-6',         batchPreferred: false },
+  blog_unified_section: { provider: 'claude', model: 'claude-sonnet-4-6',         batchPreferred: false },
+  blog_review:          { provider: 'claude', model: 'claude-opus-4-6',           batchPreferred: false },
+  // ── 레거시 (deprecated — blog_unified 로 통합됨. 호환성만 유지) ──
   blog_draft:         { provider: 'claude', model: 'claude-haiku-4-5-20251001', batchPreferred: false },
   blog_section_regen: { provider: 'claude', model: 'claude-haiku-4-5-20251001', batchPreferred: false },
   blog_polish:        { provider: 'claude', model: 'claude-haiku-4-5-20251001', batchPreferred: false },
@@ -45,6 +50,11 @@ const DEFAULT_ROUTING: Record<LLMTaskKind, RouteDefinition> = {
 
 /** Claude 전역 비활성 시 떨어질 Gemini 모델 */
 const GEMINI_FALLBACK_MODEL: Record<LLMTaskKind, string> = {
+  // ── Phase 2A v3 ──
+  blog_unified:         'gemini-3.1-pro-preview',
+  blog_unified_section: 'gemini-3.1-pro-preview',
+  blog_review:          'gemini-3.1-pro-preview',
+  // ── 레거시 ──
   blog_draft:         'gemini-3.1-flash-lite-preview',
   blog_section_regen: 'gemini-3.1-flash-lite-preview',
   blog_polish:        'gemini-3.1-flash-lite-preview',
@@ -70,6 +80,9 @@ function assertNever(x: never): never {
 }
 function exhaustiveCheck(task: LLMTaskKind): void {
   switch (task) {
+    case 'blog_unified':
+    case 'blog_unified_section':
+    case 'blog_review':
     case 'blog_draft':
     case 'blog_section_regen':
     case 'blog_polish':
