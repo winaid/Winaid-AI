@@ -4,6 +4,7 @@ import { useState, useEffect, createContext, useContext } from 'react';
 import { useAuthGuard } from '../../hooks/useAuthGuard';
 import { Sidebar } from '../../components/Sidebar';
 import { MobileHeader } from '../../components/MobileHeader';
+import HelpChatWidget from '../../components/HelpChatWidget';
 import { getCredits, type CreditInfo } from '../../lib/creditService';
 import { initGuestCredits } from '../../lib/guestCredits';
 
@@ -72,6 +73,7 @@ export default function AppLayout({
             {children}
           </main>
         </div>
+        <HelpChatWidget />
       </div>
     </CreditContext.Provider>
   );
