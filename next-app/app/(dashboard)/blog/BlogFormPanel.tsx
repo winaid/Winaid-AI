@@ -597,6 +597,12 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
                 selectedStyleId={learnedStyleId}
                 contentType="blog"
               />
+              {/* 학습 말투 ↔ 병원 DB 프로파일 충돌 시 우선순위 안내 (우선순위 4-A 정책) */}
+              {learnedStyleId && hospitalName && (
+                <div className="mt-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 text-[11px] text-amber-800 leading-snug">
+                  🎓 학습 말투 적용 중 — 병원 DB 프로파일은 무시됩니다
+                </div>
+              )}
               {/* 화자/어조 (학습된 말투 적용 시 숨김 — old 동일) */}
               {!learnedStyleId && (
                 <div className="grid grid-cols-2 gap-2">

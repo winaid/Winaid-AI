@@ -1024,7 +1024,10 @@ export function buildBlogPromptV3(
   systemBlocks.push({ type: 'text', text: profileBlockText, cacheable: true, cacheTtl: '5m' });
 
   // 병원 스타일 블록 (학습된 말투) — opts.hospitalStyleBlock
-  if (opts.hospitalStyleBlock) {
+  // 정책: stylePromptText(클라 학습 말투) 가 있으면 hospitalStyleBlock(DB 프로파일) 은 스킵.
+  // 두 소스가 동시에 주입되면 모델이 어느 말투를 따를지 흔들리므로, 사용자의 명시적 선택인
+  // 학습 말투가 우선한다. UI 에서도 동일 시점에 충돌 안내 배지를 띄운다.
+  if (opts.hospitalStyleBlock && !req.stylePromptText?.trim()) {
     const hsb = opts.hospitalStyleBlock;
     const text = typeof hsb === 'string'
       ? hsb
