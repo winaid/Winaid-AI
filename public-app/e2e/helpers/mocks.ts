@@ -44,6 +44,47 @@ export async function setupCommonMocks(page: Page): Promise<void> {
     });
   });
 
+  // ── Phase 2A v4: 블로그 V3 엔드포인트 ──
+  await page.route('**/api/generate/blog', async route => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        text: '<h2>Mock Blog Title</h2><p>안전한 샘플 본문입니다.</p>[IMG_1 alt="mock"]',
+        violations: [],
+        usage: { inputTokens: 100, outputTokens: 200, cacheReadTokens: 0, cacheWriteTokens: 0, costUsd: 0, isBatch: false },
+        model: 'claude-sonnet-4-6',
+      }),
+    });
+  });
+
+  await page.route('**/api/generate/blog/review', async route => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        verdict: 'pass',
+        issues: [],
+        revisedHtml: null,
+        summaryNote: 'mock pass',
+        usage: { inputTokens: 50, outputTokens: 80, cacheReadTokens: 0, cacheWriteTokens: 0, costUsd: 0, isBatch: false },
+        model: 'claude-opus-4-6',
+      }),
+    });
+  });
+
+  await page.route('**/api/generate/blog/section', async route => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        text: '<h3>mock section</h3><p>재작성된 섹션입니다.</p>',
+        usage: { inputTokens: 30, outputTokens: 50, cacheReadTokens: 0, cacheWriteTokens: 0, costUsd: 0, isBatch: false },
+        model: 'claude-sonnet-4-6',
+      }),
+    });
+  });
+
   // 이미지 생성
   await page.route('**/api/image', async route => {
     await route.fulfill({
@@ -138,4 +179,32 @@ export async function injectCardNewsDraft(page: Page, opts: {
 export function guestUrl(path: string): string {
   const sep = path.includes('?') ? '&' : '?';
   return `${path}${sep}guest=1`;
+}
+
+/**
+ * Phase 2A v4: 검수에서 minor_fix 결과를 반환하도록 /api/generate/blog/review 재오버라이드.
+ * setupCommonMocks 이후에 호출하면 review endpoint 만 교체됨.
+ */
+export async function mockBlogReviewMinorFix(page: Page): Promise<void> {
+  await page.unroute('**/api/generate/blog/review');
+  await page.route('**/api/generate/blog/review', async route => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        verdict: 'minor_fix',
+        issues: [{
+          category: 'medical_law',
+          severity: 'low',
+          originalQuote: '최고의 효과',
+          problem: '최상급 표현',
+          suggestion: '"높은 수준의" 로 교정',
+        }],
+        revisedHtml: '<h2>Mock Blog Title</h2><p>높은 수준의 효과로 교정된 샘플 본문입니다.</p>[IMG_1 alt="mock"]',
+        summaryNote: 'mock minor_fix',
+        usage: { inputTokens: 50, outputTokens: 80, cacheReadTokens: 0, cacheWriteTokens: 0, costUsd: 0, isBatch: false },
+        model: 'claude-opus-4-6',
+      }),
+    });
+  });
 }

@@ -14,27 +14,31 @@
 export type LLMProvider = 'gemini' | 'claude';
 
 export type LLMTaskKind =
-  // 블로그 5단계 + 최종
+  // ── 블로그 V3 (Phase 2A v3 — Sonnet 통합 초안 + Opus 검수) ──
+  | 'blog_unified'           // Sonnet 4.6: 초안+SEO+의료법 1회 통합
+  | 'blog_unified_section'   // Sonnet 4.6: 섹션 재생성
+  | 'blog_review'            // Opus 4.6: 감수 (JSON 출력)
+  // ── 블로그 레거시 (deprecated — Phase 2A v3 에서 blog_unified 로 통합. 호환성만 유지) ──
   | 'blog_draft'
   | 'blog_section_regen'
   | 'blog_polish'
   | 'blog_seo'
   | 'blog_lawcheck'
   | 'blog_final'
-  // 보도자료
+  // ── 보도자료 ──
   | 'press'
-  // 리파인 (실시간 UX)
+  // ── 리파인 (실시간 UX) ──
   | 'refine_auto'
   | 'refine_chat'
-  // 카드뉴스
+  // ── 카드뉴스 ──
   | 'card_news'
-  // 말투 학습
+  // ── 말투 학습 ──
   | 'style_learn'
-  // 크롤링 글 채점
+  // ── 크롤링 글 채점 ──
   | 'score_crawled_post'
-  // 랜딩 챗봇 (실시간 UX)
+  // ── 랜딩 챗봇 (실시간 UX) ──
   | 'landing_chat'
-  // Gemini googleSearch 강제용 — Claude로 넘어가지 않음
+  // ── Gemini googleSearch 강제용 — Claude로 넘어가지 않음 ──
   | 'search_ground';
 
 export interface CacheableBlock {

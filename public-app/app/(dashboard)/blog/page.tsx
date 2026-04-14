@@ -159,6 +159,18 @@ function BlogForm() {
   const [chatInput, setChatInput] = useState('');
   const [settingsToast, setSettingsToast] = useState('');
 
+  // ── Phase 2A v4: 파이프라인 state ──
+  const [pipelineStep, setPipelineStep] = useState<'idle' | 'drafting' | 'reviewing_and_images' | 'done' | 'error'>('idle');
+  const [reviewResult, setReviewResult] = useState<{
+    verdict: 'pass' | 'minor_fix' | 'major_fix';
+    issues: Array<{ category: string; severity: string; originalQuote?: string; problem?: string; suggestion?: string }>;
+    revisedHtml: string | null;
+    summaryNote: string;
+    warning?: string;
+  } | null>(null);
+  const [originalHtml, setOriginalHtml] = useState<string | null>(null);
+  const [showDiff, setShowDiff] = useState(false);
+
   const handleSaveSettings = useCallback(() => {
     const s = { category, hospitalName, selectedHospitalAddress, homepageUrl, textLength, imageCount, imageAspectRatio, imageStyle, audienceMode, persona, tone, writingStyle, medicalLawMode, includeFaq, faqCount, includeHospitalIntro, customSubheadings };
     localStorage.setItem('winaid_blog_settings', JSON.stringify(s));
@@ -848,205 +860,97 @@ JSON 형식으로 응답해주세요.`;
       console.info(`[BLOG] customSubheadings="${request.customSubheadings.substring(0, 100)}..."`);
     }
 
+    // ── Phase 2A v4: pipeline state 초기화 ──
+    setPipelineStep('drafting');
+    setReviewResult(null);
+    setOriginalHtml(null);
+    setShowDiff(false);
+
     try {
-      const { systemInstruction, prompt } = buildBlogPrompt(request);
-      console.info(`[BLOG] 프롬프트 조립 완료 — system: ${systemInstruction.length}자, prompt: ${prompt.length}자`);
-
-      // ── 병렬 실행: 경쟁 블로그 분석 + 말투 로드 (서로 독립적) ──
-      console.info(`[BLOG] 경쟁 분석 + 말투 로드 병렬 시작`);
-
-      const competitorPromise = keywords.trim() ? (async () => {
-        try {
-          const competitorRes = await fetch('/api/gemini', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              prompt: `너는 네이버 블로그 SEO 분석 전문가다.
-"${keywords.trim()}" 키워드로 네이버 블로그 상위 1~5위 글의 공통 구조를 분석해줘.
-
-Google Search에서 "site:blog.naver.com ${keywords.trim()}" 로 검색하여 실제 네이버 블로그 상위 글을 찾고, 실제 데이터를 기반으로 답변해.
-추측하지 마라. 검색 결과에서 확인된 정보만 포함해. 검색 결과가 없으면 해당 필드를 빈 값으로 두어라.
-
-JSON으로만 답변. 설명 없이.
-
-{
-  "title": "상위 1위 블로그의 실제 제목 (또는 가장 흔한 제목 패턴)",
-  "charCount": 상위 글 평균 글자수(숫자),
-  "subtitleCount": 상위 글 평균 소제목 수(숫자),
-  "subtitles": ["상위 글에서 공통으로 다루는 소제목 패턴 5~7개"],
-  "imageCount": 상위 글 평균 이미지 수(숫자),
-  "keyAngles": ["상위 글들이 공통으로 다루는 핵심 관점 3~5개"],
-  "missingAngles": ["상위 글들이 빠뜨리고 있는 관점 2~3개 — 차별화 기회"]
-}`,
-              model: 'gemini-3.1-flash-lite-preview',
-              temperature: 0.3,
-              responseType: 'json',
-              googleSearch: true,
-              timeout: 15000,
-              thinkingLevel: 'none',
-            }),
-          });
-          if (!competitorRes.ok) return '';
-          const cData = await competitorRes.json() as { text?: string };
-          if (!cData.text) return '';
-          let cText = cData.text;
-          const cJsonMatch = cText.match(/```(?:json)?\s*([\s\S]*?)```/);
-          if (cJsonMatch) cText = cJsonMatch[1];
-          const c = JSON.parse(cText.trim()) as {
-            title?: string; charCount?: number; subtitleCount?: number;
-            subtitles?: string[]; imageCount?: number; keyAngles?: string[];
-            missingAngles?: string[];
-          };
-          const subs = c.subtitles || [];
-          const missing = c.missingAngles || [];
-          return `
-[경쟁 블로그 분석 결과 — 실제 네이버 상위 글 기반]
-"${keywords.trim()}" 상위 블로그 구조:
-- 제목 패턴: ${c.title || '미분석'}
-- 평균 글자 수: ${c.charCount || 0}자
-- 평균 소제목 수: ${subs.length}개
-- 평균 이미지 수: ${c.imageCount || 0}개
-${subs.length > 0 ? `- 공통 소제목: ${subs.join(' / ')}` : ''}
-
-[작성 전략 — 상위 글을 넘어서야 함]
-1. 분량: 경쟁 글(${c.charCount || 0}자) 이상 확보
-2. 깊이: 경쟁 글이 다루는 내용은 "더 구체적 수치/메커니즘"으로 차별화
-3. 차별화 앵글: 경쟁 글이 빠뜨린 관점을 1~2개 추가
-${missing.length > 0 ? `   → 경쟁 글이 놓친 관점: ${missing.join(', ')}` : '   → 후보: 자가 관리법, 연령대별 차이, 비용/기간 현실 정보, 잘못 알려진 상식'}
-4. 경쟁 글이 나열형이면 → "독자 상황별 분기"나 "흔한 오해" 앵글로 차별화
-5. 경쟁 글이 감성 위주면 → 구체적 숫자/메커니즘으로 차별화
-`;
-        } catch (e) {
-          console.warn(`[BLOG] 경쟁 분석 실패 (무시):`, e);
-          return '';
-        }
-      })() : Promise.resolve('');
-
-      const stylePromise = (async () => {
-        if (learnedStyleId) {
-          const learnedStyle = getStyleById(learnedStyleId);
-          if (learnedStyle) {
-            return `\n\n[🎓🎓🎓 학습된 말투 적용 - 최우선 적용! 🎓🎓🎓]\n${getStylePromptForGeneration(learnedStyle)}\n\n⚠️ 위 학습된 말투를 반드시 적용하세요!\n- 문장 끝 패턴을 정확히 따라하세요\n- 자주 사용하는 표현을 자연스럽게 활용하세요\n- 전체적인 어조와 분위기를 일관되게 유지하세요`;
-          }
-        } else if (hospitalName) {
-          try {
-            const sp = await getHospitalStylePrompt(hospitalName);
-            if (sp) return `\n\n[병원 블로그 학습 말투 - 반드시 적용]\n${sp}`;
-          } catch { /* 프로파일 없으면 기본 */ }
-        }
-        return '';
-      })();
-
-      // 두 작업 동시 완료 대기
-      const [competitorInstruction, styleInstruction] = await Promise.all([competitorPromise, stylePromise]);
-
-      console.info(`[BLOG] 병렬 완료 — 경쟁: ${competitorInstruction ? competitorInstruction.length + '자' : '없음'}, 말투: ${styleInstruction ? styleInstruction.length + '자' : '없음'}`);
-
-      // 말투는 system instruction에 (글쓰기 규칙), 경쟁 분석은 prompt에 (참고 정보)
-      let finalSystemInstruction = systemInstruction;
-      if (styleInstruction) finalSystemInstruction += styleInstruction;
-
-      let finalPrompt = prompt;
-      if (competitorInstruction) finalPrompt += `\n\n${competitorInstruction}`;
-
-      console.info(`[BLOG] 최종 프롬프트 길이: ${finalPrompt.length}자 (system: ${finalSystemInstruction.length}자)`);
-      console.info(`[BLOG] Gemini 호출 시작 — model=gemini-3.1-pro-preview, temp=0.85`);
-
-      // ═══ 스트리밍 모드로 Gemini 호출 ═══
-      // 토큰 예산: 충분히 넉넉하게 (글 길이는 프롬프트에서 제한)
-      const dynamicMaxTokens = 65536;
-      const res = await fetch('/api/gemini', {
+      // ═══ v4: Sonnet 4.6 통합 초안 (서버에서 프롬프트 조립 + callLLM) ═══
+      console.info(`[BLOG] [V4] Sonnet 4.6 통합 초안 요청`);
+      const draftRes = await fetch('/api/generate/blog', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt: finalPrompt,
-          systemInstruction: finalSystemInstruction,
-          model: 'gemini-3.1-pro-preview',
-          temperature: 0.85,
-          maxOutputTokens: dynamicMaxTokens,
-          stream: true,
+          request,
+          hospitalName: hospitalName || undefined,
+          userId: creditCtx.userId || null,
         }),
       });
 
-      if (!res.ok) {
-        let errMsg = `서버 오류 (${res.status})`;
-        try { const errData = await res.json(); errMsg = errData.error || errData.details || errMsg; } catch {}
-        console.error(`[BLOG] ❌ 생성 실패: ${errMsg}`);
+      if (!draftRes.ok) {
+        let errMsg = `서버 오류 (${draftRes.status})`;
+        try { const errData = await draftRes.json(); errMsg = errData.error || errData.details || errMsg; } catch {}
+        console.error(`[BLOG] ❌ 초안 실패: ${errMsg}`);
         setError(errMsg);
         setIsGenerating(false);
         setDisplayStage(0);
+        setPipelineStep('error');
         return;
       }
 
-      // ── 스트리밍 수신 ──
-      const reader = res.body!.getReader();
-      const decoder = new TextDecoder();
-      let fullText = '';
-      let imagePromptsExtracted = false;
+      const draftJson = await draftRes.json() as {
+        text?: string;
+        violations?: string[];
+        usage?: unknown;
+        model?: string;
+      };
+      const fullText = draftJson.text || '';
+      const draftViolations = draftJson.violations || [];
+      console.info(`[BLOG] [V4] Sonnet 초안 완료 — ${fullText.length}자, 감지 violations ${draftViolations.length}개 (model=${draftJson.model || '?'})`);
+      setOriginalHtml(fullText);
+
+      // [IMG_N alt="..."] 마커에서 이미지 프롬프트 추출 (V3 는 ---IMAGE_PROMPTS--- 블록 사용 안 함)
       const imagePrompts: string[] = [];
+      for (let i = 1; i <= imageCount; i++) {
+        const m = fullText.match(new RegExp(`\\[IMG_${i}(?:\\s+alt="([^"]*)")?[^\\]]*\\]`));
+        const alt = m?.[1]?.trim() || '';
+        imagePrompts.push(alt || `${topic.trim()} ${request.category}`);
+      }
+      console.info(`[BLOG] [V4] 이미지 프롬프트 추출: ${imagePrompts.length}개`);
+
+      // ═══ Opus 검수 + 이미지 생성 병렬 실행 ═══
+      setPipelineStep('reviewing_and_images');
+      setDisplayStage(2);
+
+      const reviewPromise = fetch('/api/generate/blog/review', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          draftHtml: fullText,
+          category: request.category,
+          hospitalName: hospitalName || undefined,
+          ruleFilterViolations: draftViolations,
+          userId: creditCtx.userId || null,
+        }),
+      }).then(r => r.json()).catch((err: unknown) => ({
+        verdict: 'pass' as const,
+        issues: [] as Array<{ category: string; severity: string; problem?: string; suggestion?: string }>,
+        revisedHtml: null as string | null,
+        summaryNote: 'review_fetch_failed_passthrough',
+        warning: (err as Error).message,
+      }));
+
+      // 이미지 즉시 병렬 생성 (review 와 동시에)
       let imageResultsPromise: Promise<{ index: number; url: string | null }[]> | null = null;
-      let lastRenderTime = 0;
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        fullText += decoder.decode(value, { stream: true });
-
-        // IMAGE_PROMPTS 조기 추출 (BLOG_START 감지 시)
-        if (!imagePromptsExtracted && fullText.includes('---BLOG_START---')) {
-          const beforeBlog = fullText.split('---BLOG_START---')[0];
-          const imgMarker = '---IMAGE_PROMPTS---';
-          const imgMarkerIdx = beforeBlog.indexOf(imgMarker);
-          if (imgMarkerIdx !== -1) {
-            const afterMarker = beforeBlog.substring(imgMarkerIdx + imgMarker.length).trim();
-            afterMarker.split('\n').forEach(line => {
-              const trimmed = line.replace(/^\d+[\.\)]\s*/, '').replace(/^[-•]\s*/, '').trim();
-              if (trimmed && trimmed.length > 10 && !trimmed.startsWith('---') && !trimmed.startsWith('{')) {
-                imagePrompts.push(trimmed);
-              }
-            });
-            console.info(`[BLOG] 🎯 이미지 프롬프트 조기 추출: ${imagePrompts.length}개`);
-          }
-          imagePromptsExtracted = true;
-
-          // 이미지 즉시 병렬 생성 시작 (본문 스트리밍과 동시에!)
-          if (imagePrompts.length > 0 && imageCount > 0 && !imageResultsPromise) {
-            setDisplayStage(3);
-            console.info(`[BLOG] 🚀 이미지 생성 즉시 시작 (텍스트 스트리밍 중)`);
-            const prompts = imagePrompts.slice(0, imageCount);
-            imageResultsPromise = Promise.all(
-              prompts.map((p, i) => {
-                const index = i + 1;
-                return fetch('/api/image', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ prompt: p, aspectRatio: imageAspectRatio, mode: 'blog' as const }),
-                }).then(r => r.ok ? r.json() : null)
-                  .then(d => ({ index, url: d?.imageDataUrl || null }))
-                  .catch(() => ({ index, url: null as string | null }));
-              })
-            );
-          }
-        }
-
-        // 본문 실시간 렌더링 (300ms 디바운스)
-        const now = Date.now();
-        if (now - lastRenderTime > 300 && fullText.includes('---BLOG_START---')) {
-          let blogPart = fullText.split('---BLOG_START---').slice(1).join('---BLOG_START---');
-          const scoresIdx = blogPart.indexOf('---SCORES---');
-          if (scoresIdx !== -1) blogPart = blogPart.substring(0, scoresIdx);
-          blogPart = blogPart.replace(/^```html?\s*\n?/i, '').replace(/\n?```\s*$/, '').trim();
-          if (blogPart) {
-            // 스트리밍 중 [IMG_N ...] 마커를 로딩 표시로 교체
-            const previewHtml = blogPart.replace(/\[IMG_\d+[^\]]*\]/g, '<div style="text-align:center;padding:16px 0;color:#94a3b8;font-size:13px;">🖼️ 이미지 생성 대기 중...</div>');
-            setGeneratedContent(previewHtml);
-            setDisplayStage(2);
-            lastRenderTime = now;
-          }
-        }
+      if (imagePrompts.length > 0 && imageCount > 0) {
+        setDisplayStage(3);
+        imageResultsPromise = Promise.all(
+          imagePrompts.slice(0, imageCount).map((p, i) => {
+            const index = i + 1;
+            return fetch('/api/image', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ prompt: p, aspectRatio: imageAspectRatio, mode: 'blog' as const }),
+            }).then(r => r.ok ? r.json() : null)
+              .then(d => ({ index, url: (d?.imageDataUrl as string | undefined) || null }))
+              .catch(() => ({ index, url: null as string | null }));
+          })
+        );
       }
 
-      console.info(`[BLOG] Gemini 스트리밍 완료 — 전체 ${fullText.length}자`);
+      // v4: 경쟁 분석 / 말투 로드 병렬 단계 스킵 — 서버가 담당
 
       // ── 최종 파싱 ──
       let blogText = fullText;
@@ -1326,6 +1230,51 @@ ${missing.length > 0 ? `   → 경쟁 글이 놓친 관점: ${missing.join(', ')
         blogText = finalHtml;
       }
 
+      // ═══ Phase 2A v4: Opus 감수 결과 적용 ═══
+      try {
+        const review = await reviewPromise as {
+          verdict: 'pass' | 'minor_fix' | 'major_fix';
+          issues: Array<{ category: string; severity: string; originalQuote?: string; problem?: string; suggestion?: string }>;
+          revisedHtml: string | null;
+          summaryNote: string;
+          warning?: string;
+        };
+        console.info(`[BLOG] [V4] Opus 검수 완료 — verdict=${review.verdict}, issues=${review.issues?.length || 0}, summary="${(review.summaryNote || '').slice(0, 80)}"`);
+        setReviewResult(review);
+
+        if (review.revisedHtml && typeof review.revisedHtml === 'string' && review.revisedHtml.length > 100) {
+          // revisedHtml 의 [IMG_N] 마커를 현재 finalHtml 에서 얻은 이미지 URL 로 재주입
+          let revisedWithImages = review.revisedHtml;
+          const imgResults = imageResultsPromise ? await imageResultsPromise : [];
+          for (const img of imgResults) {
+            const markerPattern = new RegExp(`\\[IMG_${img.index}(?:\\s+alt="([^"]*)")?[^\\]]*\\]`, 'gi');
+            if (img.url) {
+              revisedWithImages = revisedWithImages.replace(markerPattern, (_m, altText) => {
+                const alt = altText || `blog image ${img.index}`;
+                return `<div class="content-image-wrapper"><img src="${img.url}" alt="${alt}" data-image-index="${img.index}" style="max-width:100%;height:auto;border-radius:12px;" /></div>`;
+              });
+            } else {
+              revisedWithImages = revisedWithImages.replace(markerPattern, '');
+            }
+          }
+          revisedWithImages = revisedWithImages.replace(/\[IMG_\d+[^\]]*\]\n*/g, '');
+          setGeneratedContent(revisedWithImages);
+          blogText = revisedWithImages;
+          console.info(`[BLOG] [V4] revisedHtml 적용 완료`);
+        } else {
+          console.info(`[BLOG] [V4] revisedHtml 없음 — 원본 유지`);
+        }
+      } catch (revErr) {
+        console.warn('[BLOG] [V4] review 처리 실패 — 원본 유지:', revErr);
+        setReviewResult({
+          verdict: 'pass',
+          issues: [],
+          revisedHtml: null,
+          summaryNote: 'review_handler_exception_passthrough',
+        });
+      }
+      setPipelineStep('done');
+
       // ── fact_check 기본값 설정 (old legacyBlogGeneration.ts:1713-1740 동일) ──
       // Gemini가 ---SCORES--- 블록을 반환하지 않았거나 필드가 빠진 경우 기본값으로 보완
       {
@@ -1390,23 +1339,21 @@ ${missing.length > 0 ? `   → 경쟁 글이 놓친 관점: ${missing.join(', ')
         console.warn(`[BLOG] 저장 실패: Supabase 연결 불가`, saveErr);
         setSaveStatus('저장 실패: Supabase 연결 불가');
       }
-      // ── 생성 성공 → 크레딧 차감 (실패 시 크레딧 보존) ──
-      if (creditCtx.creditInfo) {
-        if (creditCtx.userId) {
-          const creditResult = await blogUseCredit(creditCtx.userId);
-          if (creditResult.success) {
-            creditCtx.setCreditInfo({ credits: creditResult.remaining, totalUsed: (creditCtx.creditInfo.totalUsed || 0) + 1 });
-            console.info(`[BLOG] ✅ 크레딧 차감 완료 (잔여: ${creditResult.remaining})`);
-          } else {
-            console.warn(`[BLOG] ⚠️ 크레딧 차감 실패 (글은 정상 생성됨)`);
-          }
-        } else {
-          const next = consumeGuestCredit();
-          if (next) creditCtx.setCreditInfo({ credits: next.credits, totalUsed: next.totalUsed });
-        }
+      // ── v4: 로그인 사용자의 크레딧은 서버(/api/generate/blog)가 차감한다. ──
+      // 게스트는 클라이언트 localStorage 카운터만 감소.
+      if (!creditCtx.userId && creditCtx.creditInfo) {
+        const next = consumeGuestCredit();
+        if (next) creditCtx.setCreditInfo({ credits: next.credits, totalUsed: next.totalUsed });
+      } else if (creditCtx.userId && creditCtx.creditInfo) {
+        // 서버 차감 반영 — 잔여는 서버 응답이 아닌 로컬 감산으로 즉시 UI 업데이트.
+        // (다음 getCredits 조회 시 서버 실제값으로 재동기화됨)
+        creditCtx.setCreditInfo({
+          credits: Math.max(0, creditCtx.creditInfo.credits - 2), // blog(1) + review(1)
+          totalUsed: (creditCtx.creditInfo.totalUsed || 0) + 2,
+        });
       }
 
-      console.info(`[BLOG] ========== 블로그 생성 완료 ==========`);
+      console.info(`[BLOG] ========== 블로그 생성 완료 (v4) ==========`);
     } catch (err: unknown) {
       const { message, retryable } = classifyError(err);
       console.error(`[BLOG] ❌ 생성 실패: ${message}`, err);
@@ -1631,33 +1578,20 @@ Output ONLY the prompt. No explanation.`,
     try {
       const sectionTitle = section.type === 'intro' ? '도입부' : section.title;
 
-      // 원본 글 생성 시 사용한 설정값으로 프롬프트 구성
-      const { buildSectionRegeneratePrompt } = await import('../../../lib/blogPrompt');
-      const { systemInstruction: sysPrompt, prompt: userPrompt } = buildSectionRegeneratePrompt({
-        sectionTitle,
-        sectionHtml: section.html,
-        sectionType: section.type,
-        fullContext: generatedContent.substring(0, 3000),
-        category,
-        persona,
-        tone,
-        audienceMode,
-        writingStyle,
-        keywords,
-        disease,
-        medicalLawMode,
-      });
-
-      const res = await fetch('/api/gemini', {
+      // v4: /api/generate/blog/section (Sonnet + server-side regex 필터) 로 교체
+      const res = await fetch('/api/generate/blog/section', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt: userPrompt,
-          systemInstruction: sysPrompt,
-          model: 'gemini-3.1-pro-preview',
-          temperature: 0.85,
-          maxOutputTokens: 32768,
-          timeout: 60000,
+          input: {
+            currentSection: section.html,
+            sectionIndex: section.index,
+            fullBlogContent: generatedContent,
+            category,
+            keywords,
+            medicalLawMode,
+          },
+          userId: creditCtx.userId || null,
         }),
       });
 
@@ -1672,12 +1606,7 @@ Output ONLY the prompt. No explanation.`,
       if (!newSectionHtml.includes('<')) {
         throw new Error('유효한 HTML이 반환되지 않았습니다');
       }
-
-      // 의료광고법 금지어 자동 대체
-      const { applyContentFilters } = await import('../../../lib/medicalLawFilter');
-      const { filtered, replacedCount, foundTerms } = applyContentFilters(newSectionHtml);
-      newSectionHtml = filtered;
-      if (replacedCount > 0) console.info(`[BLOG_REGEN] 의료법 자동 대체: ${replacedCount}건 — ${foundTerms.join(', ')}`);
+      // 서버에서 이미 applyContentFilters 적용됨 — 추가 치환 불필요.
 
       const updatedHtml = replaceSectionHtml(
         generatedContent,
@@ -1715,8 +1644,92 @@ Output ONLY the prompt. No explanation.`,
   const inputCls = "w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all";
   const labelCls = "block text-xs font-semibold text-slate-500 mb-1.5";
 
+  // ── v4: 검수 뱃지 렌더러 (간결 버전, 상세 diff 는 접이식) ──
+  const renderReviewBadge = () => {
+    if (!reviewResult) return null;
+    const cfg = reviewResult.summaryNote === 'parse_failed_passthrough' || reviewResult.summaryNote === 'review_fetch_failed_passthrough' || reviewResult.summaryNote === 'review_handler_exception_passthrough' || reviewResult.summaryNote === 'review_call_failed_passthrough'
+      ? { bg: 'bg-slate-100', fg: 'text-slate-600', border: 'border-slate-200', label: '검수 건너뜀 — 원본 유지' }
+      : reviewResult.verdict === 'pass'
+        ? { bg: 'bg-emerald-50', fg: 'text-emerald-700', border: 'border-emerald-200', label: '검수 통과 ✅' }
+        : reviewResult.verdict === 'minor_fix'
+          ? { bg: 'bg-amber-50', fg: 'text-amber-700', border: 'border-amber-200', label: `경미한 수정 반영됨 (${reviewResult.issues?.length || 0}건)` }
+          : { bg: 'bg-orange-50', fg: 'text-orange-700', border: 'border-orange-200', label: `주요 수정 반영됨 (${reviewResult.issues?.length || 0}건)` };
+    return (
+      <div className={`w-full rounded-xl border ${cfg.border} ${cfg.bg} px-4 py-3 text-sm ${cfg.fg} flex items-start justify-between gap-3`}>
+        <div className="flex flex-col gap-1 min-w-0 flex-1">
+          <div className="font-medium">{cfg.label}</div>
+          {reviewResult.summaryNote && !reviewResult.summaryNote.includes('passthrough') ? (
+            <div className="text-xs opacity-80 line-clamp-2">{reviewResult.summaryNote}</div>
+          ) : null}
+        </div>
+        {originalHtml && reviewResult.revisedHtml ? (
+          <button
+            type="button"
+            onClick={() => setShowDiff(v => !v)}
+            className={`shrink-0 rounded-lg border ${cfg.border} bg-white/70 px-2.5 py-1 text-xs font-medium hover:bg-white`}
+          >
+            {showDiff ? '비교 닫기' : '원본 vs 검수본'}
+          </button>
+        ) : null}
+      </div>
+    );
+  };
+
+  const renderReviewDiff = () => {
+    if (!showDiff || !originalHtml || !reviewResult?.revisedHtml) return null;
+    return (
+      <div className="w-full rounded-xl border border-slate-200 bg-white p-4 text-xs text-slate-600 space-y-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <div className="mb-2 font-semibold text-slate-800">원본 (Sonnet)</div>
+            <div className="max-h-64 overflow-y-auto whitespace-pre-wrap rounded border border-slate-100 p-2 text-[11px]">
+              {originalHtml.slice(0, 4000)}
+            </div>
+          </div>
+          <div>
+            <div className="mb-2 font-semibold text-slate-800">검수본 (Opus)</div>
+            <div className="max-h-64 overflow-y-auto whitespace-pre-wrap rounded border border-amber-100 p-2 text-[11px]">
+              {reviewResult.revisedHtml.slice(0, 4000)}
+            </div>
+          </div>
+        </div>
+        {reviewResult.issues && reviewResult.issues.length > 0 ? (
+          <div>
+            <div className="mb-2 font-semibold text-slate-800">감지된 이슈 ({reviewResult.issues.length}건)</div>
+            <table className="w-full text-[11px]">
+              <thead>
+                <tr className="border-b border-slate-200 text-left text-slate-500">
+                  <th className="py-1 pr-2">카테고리</th>
+                  <th className="py-1 pr-2">심각도</th>
+                  <th className="py-1 pr-2">문제</th>
+                  <th className="py-1">제안</th>
+                </tr>
+              </thead>
+              <tbody>
+                {reviewResult.issues.map((iss, i) => (
+                  <tr key={i} className="border-b border-slate-100 align-top">
+                    <td className="py-1 pr-2">{iss.category}</td>
+                    <td className="py-1 pr-2">{iss.severity}</td>
+                    <td className="py-1 pr-2">{iss.problem || '-'}</td>
+                    <td className="py-1">{iss.suggestion || '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
+      </div>
+    );
+  };
+
   return (
     <div className="flex flex-col lg:flex-row gap-5 lg:items-start p-5">
+      {reviewResult && pipelineStep === 'done' ? (
+        <div className="order-first w-full lg:w-auto lg:flex-1 flex flex-col gap-3">
+          {renderReviewBadge()}
+          {renderReviewDiff()}
+        </div>
+      ) : null}
       {/* ── 입력 폼 — BlogFormPanel 컴포넌트로 분리 ── */}
       <BlogFormPanel
         topic={topic} blogTitle={blogTitle} keywords={keywords} keywordDensity={keywordDensity} disease={disease} category={category}
