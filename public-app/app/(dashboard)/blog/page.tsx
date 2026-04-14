@@ -160,16 +160,8 @@ function BlogForm() {
   const [settingsToast, setSettingsToast] = useState('');
 
   // ── Phase 2A v4: 파이프라인 state ──
+  // Phase 2D Tier 2-A+: verdict/diff UI 제거. review 호출 결과는 내부 본문 교체에만 사용 (로컬 변수).
   const [pipelineStep, setPipelineStep] = useState<'idle' | 'drafting' | 'reviewing_and_images' | 'done' | 'error'>('idle');
-  const [reviewResult, setReviewResult] = useState<{
-    verdict: 'pass' | 'minor_fix' | 'major_fix';
-    issues: Array<{ category: string; severity: string; originalQuote?: string; problem?: string; suggestion?: string }>;
-    revisedHtml: string | null;
-    summaryNote: string;
-    warning?: string;
-  } | null>(null);
-  const [originalHtml, setOriginalHtml] = useState<string | null>(null);
-  const [showDiff, setShowDiff] = useState(false);
 
   const handleSaveSettings = useCallback(() => {
     const s = { category, hospitalName, selectedHospitalAddress, homepageUrl, textLength, imageCount, imageAspectRatio, imageStyle, audienceMode, persona, tone, writingStyle, medicalLawMode, includeFaq, faqCount, includeHospitalIntro, customSubheadings };
@@ -862,9 +854,6 @@ JSON 형식으로 응답해주세요.`;
 
     // ── Phase 2A v4: pipeline state 초기화 ──
     setPipelineStep('drafting');
-    setReviewResult(null);
-    setOriginalHtml(null);
-    setShowDiff(false);
 
     try {
       // ═══ v4: Sonnet 4.6 통합 초안 (서버에서 프롬프트 조립 + callLLM) ═══
@@ -899,7 +888,6 @@ JSON 형식으로 응답해주세요.`;
       const fullText = draftJson.text || '';
       const draftViolations = draftJson.violations || [];
       console.info(`[BLOG] [V4] Sonnet 초안 완료 — ${fullText.length}자, 감지 violations ${draftViolations.length}개 (model=${draftJson.model || '?'})`);
-      setOriginalHtml(fullText);
 
       // [IMG_N alt="..."] 마커에서 이미지 프롬프트 추출 (V3 는 ---IMAGE_PROMPTS--- 블록 사용 안 함)
       const imagePrompts: string[] = [];
@@ -1240,7 +1228,6 @@ JSON 형식으로 응답해주세요.`;
           warning?: string;
         };
         console.info(`[BLOG] [V4] Opus 검수 완료 — verdict=${review.verdict}, issues=${review.issues?.length || 0}, summary="${(review.summaryNote || '').slice(0, 80)}"`);
-        setReviewResult(review);
 
         if (review.revisedHtml && typeof review.revisedHtml === 'string' && review.revisedHtml.length > 100) {
           // revisedHtml 의 [IMG_N] 마커를 현재 finalHtml 에서 얻은 이미지 URL 로 재주입
@@ -1266,12 +1253,6 @@ JSON 형식으로 응답해주세요.`;
         }
       } catch (revErr) {
         console.warn('[BLOG] [V4] review 처리 실패 — 원본 유지:', revErr);
-        setReviewResult({
-          verdict: 'pass',
-          issues: [],
-          revisedHtml: null,
-          summaryNote: 'review_handler_exception_passthrough',
-        });
       }
       setPipelineStep('done');
 
@@ -1644,92 +1625,9 @@ Output ONLY the prompt. No explanation.`,
   const inputCls = "w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all";
   const labelCls = "block text-xs font-semibold text-slate-500 mb-1.5";
 
-  // ── v4: 검수 뱃지 렌더러 (간결 버전, 상세 diff 는 접이식) ──
-  const renderReviewBadge = () => {
-    if (!reviewResult) return null;
-    const cfg = reviewResult.summaryNote === 'parse_failed_passthrough' || reviewResult.summaryNote === 'review_fetch_failed_passthrough' || reviewResult.summaryNote === 'review_handler_exception_passthrough' || reviewResult.summaryNote === 'review_call_failed_passthrough'
-      ? { bg: 'bg-slate-100', fg: 'text-slate-600', border: 'border-slate-200', label: '검수 건너뜀 — 원본 유지' }
-      : reviewResult.verdict === 'pass'
-        ? { bg: 'bg-emerald-50', fg: 'text-emerald-700', border: 'border-emerald-200', label: '검수 통과 ✅' }
-        : reviewResult.verdict === 'minor_fix'
-          ? { bg: 'bg-amber-50', fg: 'text-amber-700', border: 'border-amber-200', label: `경미한 수정 반영됨 (${reviewResult.issues?.length || 0}건)` }
-          : { bg: 'bg-orange-50', fg: 'text-orange-700', border: 'border-orange-200', label: `주요 수정 반영됨 (${reviewResult.issues?.length || 0}건)` };
-    return (
-      <div className={`w-full rounded-xl border ${cfg.border} ${cfg.bg} px-4 py-3 text-sm ${cfg.fg} flex items-start justify-between gap-3`}>
-        <div className="flex flex-col gap-1 min-w-0 flex-1">
-          <div className="font-medium">{cfg.label}</div>
-          {reviewResult.summaryNote && !reviewResult.summaryNote.includes('passthrough') ? (
-            <div className="text-xs opacity-80 line-clamp-2">{reviewResult.summaryNote}</div>
-          ) : null}
-        </div>
-        {originalHtml && reviewResult.revisedHtml ? (
-          <button
-            type="button"
-            onClick={() => setShowDiff(v => !v)}
-            className={`shrink-0 rounded-lg border ${cfg.border} bg-white/70 px-2.5 py-1 text-xs font-medium hover:bg-white`}
-          >
-            {showDiff ? '비교 닫기' : '원본 vs 검수본'}
-          </button>
-        ) : null}
-      </div>
-    );
-  };
-
-  const renderReviewDiff = () => {
-    if (!showDiff || !originalHtml || !reviewResult?.revisedHtml) return null;
-    return (
-      <div className="w-full rounded-xl border border-slate-200 bg-white p-4 text-xs text-slate-600 space-y-3">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <div className="mb-2 font-semibold text-slate-800">원본 (Sonnet)</div>
-            <div className="max-h-64 overflow-y-auto whitespace-pre-wrap rounded border border-slate-100 p-2 text-[11px]">
-              {originalHtml.slice(0, 4000)}
-            </div>
-          </div>
-          <div>
-            <div className="mb-2 font-semibold text-slate-800">검수본 (Opus)</div>
-            <div className="max-h-64 overflow-y-auto whitespace-pre-wrap rounded border border-amber-100 p-2 text-[11px]">
-              {reviewResult.revisedHtml.slice(0, 4000)}
-            </div>
-          </div>
-        </div>
-        {reviewResult.issues && reviewResult.issues.length > 0 ? (
-          <div>
-            <div className="mb-2 font-semibold text-slate-800">감지된 이슈 ({reviewResult.issues.length}건)</div>
-            <table className="w-full text-[11px]">
-              <thead>
-                <tr className="border-b border-slate-200 text-left text-slate-500">
-                  <th className="py-1 pr-2">카테고리</th>
-                  <th className="py-1 pr-2">심각도</th>
-                  <th className="py-1 pr-2">문제</th>
-                  <th className="py-1">제안</th>
-                </tr>
-              </thead>
-              <tbody>
-                {reviewResult.issues.map((iss, i) => (
-                  <tr key={i} className="border-b border-slate-100 align-top">
-                    <td className="py-1 pr-2">{iss.category}</td>
-                    <td className="py-1 pr-2">{iss.severity}</td>
-                    <td className="py-1 pr-2">{iss.problem || '-'}</td>
-                    <td className="py-1">{iss.suggestion || '-'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : null}
-      </div>
-    );
-  };
 
   return (
     <div className="flex flex-col lg:flex-row gap-5 lg:items-start p-5">
-      {reviewResult && pipelineStep === 'done' ? (
-        <div className="order-first w-full lg:w-auto lg:flex-1 flex flex-col gap-3">
-          {renderReviewBadge()}
-          {renderReviewDiff()}
-        </div>
-      ) : null}
       {/* ── 입력 폼 — BlogFormPanel 컴포넌트로 분리 ── */}
       <BlogFormPanel
         topic={topic} blogTitle={blogTitle} keywords={keywords} keywordDensity={keywordDensity} disease={disease} category={category}
