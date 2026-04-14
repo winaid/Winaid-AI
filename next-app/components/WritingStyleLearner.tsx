@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { buildStylePrompt } from '../lib/styleService';
-import type { LearnedWritingStyle } from '../lib/styleService';
+import type { LearnedWritingStyle, AnalyzedStyle } from '../lib/styleService';
 
 export type { LearnedWritingStyle };
 
@@ -237,6 +237,7 @@ ${sampleText}
 2. 업종 공통 블로그 말투로 평준화 금지 — 이 병원만의 차별점에 집중
 3. 실제 상담실/진료실 대화 기준 — "이 문장이 실제로 사용될 수 있는가?"
 4. 의료 콘텐츠 특화 — 시술/치료 설명 방식, 환자 불안 대응, 신뢰 구축 패턴도 분석
+5. 단락 통계는 원문의 줄바꿈(\\n, \\n\\n)을 기준으로 실제로 세어라. 추측 금지.
 
 [분석 예시 — 참고용]
 - tone 예시: "환자에게 옆집 언니처럼 친근하게 말하되, 의학적 설명은 정확한 용어를 쓰며 권위를 유지함"
@@ -268,6 +269,14 @@ ${sampleText}
   "oneLineSummary": "이 병원 문체를 한 줄로 정의",
   "goodExamples": ["⚠️ 반드시 원문에서 그대로 복사-붙여넣기! 한 글자도 바꾸지 마세요. 이 병원다운 문장 5~8개를 원문에서 정확히 인용"],
   "badExamples": ["이 병원답지 않은 문장 예시 5개 — 이렇게 쓰면 안 됨"],
+  "paragraphStats": {
+    "avgSentencesPerParagraph": 0,
+    "avgCharsPerParagraph": 0,
+    "lineBreakStyle": "dense | airy | mixed",
+    "doubleBreakFrequency": "low | medium | high",
+    "paragraphLengthPattern": "단락 길이 리듬 서술 (예: 짧게 2개 → 길게 1개 → 짧은 마무리)"
+  },
+  "representativeParagraphs": ["원문에서 그대로 복사한 단락 3개, 줄바꿈(\\n, \\n\\n) 포함, 각 200~500자"],
   "description": "이 말투를 한 줄로 설명",
   "stylePrompt": "AI가 이 말투로 글을 쓸 때 반드시 지켜야 할 핵심 지침 (150-250자, 구체적 행동 지침)"
 }`;
@@ -318,6 +327,8 @@ ${sampleText}
           oneLineSummary: result.oneLineSummary as string,
           goodExamples: result.goodExamples as string[],
           badExamples: result.badExamples as string[],
+          representativeParagraphs: result.representativeParagraphs as string[],
+          paragraphStats: result.paragraphStats as AnalyzedStyle['paragraphStats'],
         },
         stylePrompt: (result.stylePrompt as string) || '',
         createdAt: new Date().toISOString(),
