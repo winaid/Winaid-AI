@@ -1022,6 +1022,17 @@ export function buildBlogPromptV3(
     }
   }
 
+  // 클라이언트 직렬화 학습 말투 — req.stylePromptText (우선순위 1)
+  // hospitalStyleBlock(DB 프로파일) 과 공존. 정체성/톤 지시 대비 최우선임을 prefix 로 명시.
+  if (req.stylePromptText && req.stylePromptText.trim()) {
+    systemBlocks.push({
+      type: 'text',
+      text: `⚠️ 아래 학습된 말투/화자 설정이 최우선이며, 다른 정체성/톤 지시보다 우선한다.\n\n${req.stylePromptText}`,
+      cacheable: true,
+      cacheTtl: '5m',
+    });
+  }
+
   // ── 변동 지시 블록 (cacheable=false) ──
   const targetLength = req.textLength || 1500;
   const targetImageCount = req.imageCount ?? 0;
