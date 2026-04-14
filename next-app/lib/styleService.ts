@@ -30,6 +30,15 @@ export interface AnalyzedStyle {
   oneLineSummary?: string;
   goodExamples?: string[];
   badExamples?: string[];
+  // ── Phase 2D Tier 2-A: 줄바꿈·단락 리듬 학습 ──
+  paragraphStats?: {
+    avgSentencesPerParagraph: number;
+    avgCharsPerParagraph: number;
+    lineBreakStyle: 'dense' | 'airy' | 'mixed';
+    doubleBreakFrequency: 'low' | 'medium' | 'high';
+    paragraphLengthPattern: string;
+  };
+  representativeParagraphs?: string[];
 }
 
 export interface LearnedWritingStyle {
@@ -365,7 +374,20 @@ export async function crawlAndLearnHospitalStyle(
 
   // 2단계: 합치기 + Gemini 분석
   onProgress?.(`총 ${allPosts.length}개 글 수집 완료. 말투 분석 중...`);
-  const combinedText = allPosts.map(p => p.content).join('\n\n---\n\n').slice(0, 8000);
+  // 줄바꿈/단락 리듬 분석을 위해 '---' 구분자 대신 가벼운 마커만 쓰고, 단락 경계 \n\n 를 보존한다.
+  const combinedText = (() => {
+    const joined = allPosts
+      .map((p, idx) => `[글 #${idx + 1}]\n${p.content}`)
+      .join('\n\n');
+    if (joined.length <= 8000) return joined;
+    const hardCut = joined.slice(0, 8000);
+    // 가장 가까운 단락 경계(\n\n)에서 자른다. 못 찾으면 마지막 줄바꿈, 그것도 없으면 hardCut 그대로.
+    const lastDoubleBreak = hardCut.lastIndexOf('\n\n');
+    if (lastDoubleBreak >= 6000) return hardCut.slice(0, lastDoubleBreak);
+    const lastBreak = hardCut.lastIndexOf('\n');
+    if (lastBreak >= 7000) return hardCut.slice(0, lastBreak);
+    return hardCut;
+  })();
   const analyzedStyle = await analyzeWritingStyleViaApi(combinedText, hospitalName);
 
   // 3단계: Supabase 저장
@@ -540,6 +562,23 @@ ${sampleText.substring(0, 6000)}
    - AI가 쓴 듯한 균일한 설명체
    - 의미 없이 반복되는 '~입니다', '~필요합니다' 나열
 
+8. 단락·줄바꿈 리듬 (paragraphStats + representativeParagraphs)
+   - 단락(빈 줄 \n\n 로 구분된 덩어리) 단위로 분석.
+   - avgSentencesPerParagraph: 단락당 평균 문장 수를 정수/소수로 계산.
+   - avgCharsPerParagraph: 단락당 평균 글자 수 (공백 포함).
+   - lineBreakStyle:
+       "dense" = 문장 사이 \n 으로 줄 자주 바꿈 (빈 줄은 적음, 숨가쁜 리듬)
+       "airy"  = 빈 줄 \n\n 를 자주 넣어 여백이 큼
+       "mixed" = 위 두 패턴이 섞임
+   - doubleBreakFrequency: 빈 줄(\n\n) 의 등장 빈도
+       "low" = 10문장당 1회 미만, "medium" = 3~10문장당 1회, "high" = 3문장 이하마다 1회
+   - paragraphLengthPattern: 전체 글 구조의 단락 길이 리듬을 한국어로 서술.
+       예: "짧은 단락(1~2문장) 2개로 훅 → 긴 단락(4~5문장) 1개로 설명 → 짧은 마무리"
+   - representativeParagraphs: 이 병원 말투의 리듬을 가장 잘 보여주는 단락 3개를 원문 그대로 복사.
+       각 단락은 200~500자. 단락 내부의 \n 과 \n\n 을 그대로 보존해서 복사.
+       의료광고법 위반(최고, 완치, 100%, 성공률 99% 등) 단락은 피하고 자연 서술 단락 우선 선택.
+       요약/축약 금지. 한 글자도 수정 금지.
+
 [출력 형식]
 반드시 아래 JSON으로만 답변. 설명 텍스트 없이 JSON만 출력.
 {
@@ -564,6 +603,14 @@ ${sampleText.substring(0, 6000)}
   "oneLineSummary": "이 병원 문체를 한 줄로 정의",
   "goodExamples": ["⚠️ CRITICAL: 원문에서 문장을 그대로 복사-붙여넣기 하세요. 한 글자도 바꾸지 마세요. 새로 만들면 분석 실패입니다. 원문에서 이 병원의 톤이 가장 잘 드러나는 대표 문장 8~10개를 정확히 인용"],
   "badExamples": ["이 병원답지 않은 문장 예시 5개 — AI가 흔히 쓰는 범용 문장으로 직접 작성. 원문에 없는 문장이어야 함"],
+  "paragraphStats": {
+    "avgSentencesPerParagraph": 0,
+    "avgCharsPerParagraph": 0,
+    "lineBreakStyle": "dense | airy | mixed",
+    "doubleBreakFrequency": "low | medium | high",
+    "paragraphLengthPattern": "단락 길이 리듬 서술 (예: 짧게 2개 → 길게 1개 → 짧은 마무리)"
+  },
+  "representativeParagraphs": ["원문에서 그대로 복사한 단락 3개, 줄바꿈(\\n, \\n\\n) 포함, 각 200~500자"],
   "description": "이 말투를 한 줄로 설명 (화자 캐릭터 + 독자 관계 + 설득 구조 포함)",
   "stylePrompt": "AI가 이 말투로 글을 쓸 때 반드시 지켜야 할 핵심 지침 (150-250자, 화자 태도 + 설명 흐름 + 의료 설명 방식 + 금지 패턴)"
 }`;
@@ -624,6 +671,23 @@ ${sampleText.substring(0, 6000)}
       oneLineSummary: result.oneLineSummary as string,
       goodExamples: result.goodExamples as string[],
       badExamples: result.badExamples as string[],
+      // ── Phase 2D Tier 2-A: 단락/줄바꿈 메트릭 ──
+      paragraphStats: (result.paragraphStats as {
+        avgSentencesPerParagraph?: number;
+        avgCharsPerParagraph?: number;
+        lineBreakStyle?: 'dense' | 'airy' | 'mixed';
+        doubleBreakFrequency?: 'low' | 'medium' | 'high';
+        paragraphLengthPattern?: string;
+      } | undefined) ? {
+        avgSentencesPerParagraph: Number((result.paragraphStats as { avgSentencesPerParagraph?: number }).avgSentencesPerParagraph) || 0,
+        avgCharsPerParagraph: Number((result.paragraphStats as { avgCharsPerParagraph?: number }).avgCharsPerParagraph) || 0,
+        lineBreakStyle: ((result.paragraphStats as { lineBreakStyle?: string }).lineBreakStyle as 'dense' | 'airy' | 'mixed') || 'mixed',
+        doubleBreakFrequency: ((result.paragraphStats as { doubleBreakFrequency?: string }).doubleBreakFrequency as 'low' | 'medium' | 'high') || 'medium',
+        paragraphLengthPattern: String((result.paragraphStats as { paragraphLengthPattern?: string }).paragraphLengthPattern || ''),
+      } : undefined,
+      representativeParagraphs: Array.isArray(result.representativeParagraphs)
+        ? (result.representativeParagraphs as unknown[]).filter((x): x is string => typeof x === 'string').slice(0, 3)
+        : undefined,
     },
     stylePrompt: (result.stylePrompt as string) || '',
     createdAt: new Date().toISOString(),
@@ -1163,7 +1227,19 @@ export async function crawlAndScoreAllHospitals(
     if (includeStyle && allContents.length > 0) {
       onProgress?.(`${name} 말투 분석 중...`, index, total);
       try {
-        const combinedText = allContents.join('\n\n---\n\n').slice(0, 8000);
+        // Phase 2D Tier 2-A: 단락 경계 보존
+        const combinedText = (() => {
+          const joined = allContents
+            .map((c, idx) => `[글 #${idx + 1}]\n${c}`)
+            .join('\n\n');
+          if (joined.length <= 8000) return joined;
+          const hardCut = joined.slice(0, 8000);
+          const lastDoubleBreak = hardCut.lastIndexOf('\n\n');
+          if (lastDoubleBreak >= 6000) return hardCut.slice(0, lastDoubleBreak);
+          const lastBreak = hardCut.lastIndexOf('\n');
+          if (lastBreak >= 7000) return hardCut.slice(0, lastBreak);
+          return hardCut;
+        })();
         analyzedStyle = await analyzeWritingStyleViaApi(combinedText, name);
       } catch {
         onProgress?.(`${name} 말투 분석 실패 (채점은 완료)`, index, total);
@@ -1181,7 +1257,11 @@ export async function crawlAndScoreAllHospitals(
       };
       if (analyzedStyle) {
         profileData.style_profile = analyzedStyle;
-        profileData.raw_sample_text = allContents.join('\n\n---\n\n').slice(0, 10000);
+        // Phase 2D Tier 2-A: 단락 경계 보존 (DB 저장용 raw sample)
+        profileData.raw_sample_text = allContents
+          .map((c, idx) => `[글 #${idx + 1}]\n${c}`)
+          .join('\n\n')
+          .slice(0, 10000);
       }
       await (supabase.from('hospital_style_profiles') as any).upsert(
         profileData,
