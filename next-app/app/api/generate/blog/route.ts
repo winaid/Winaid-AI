@@ -57,6 +57,15 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  if (process.env.LLM_DEBUG_STYLE === '1') {
+    console.log('[generate/blog][style-debug]', {
+      hospitalName: hospitalName || null,
+      hasBlock: !!hospitalStyleBlock,
+      blockLength: hospitalStyleBlock ? hospitalStyleBlock.length : 0,
+      preview: hospitalStyleBlock ? hospitalStyleBlock.slice(0, 300) : null,
+    });
+  }
+
   const { systemBlocks, userPrompt } = buildBlogPromptV3(req, { hospitalStyleBlock });
 
   try {

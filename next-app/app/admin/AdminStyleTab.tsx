@@ -572,9 +572,12 @@ export default function AdminStyleTab(props: AdminStyleTabProps) {
 
                                                     {/* 본문 (편집 가능) */}
                                                     <div>
-                                                      <p className="text-[10px] text-slate-500 mb-1 font-medium">본문 {post.corrected_content ? '(수정본)' : ''}</p>
+                                                      <p className="text-[10px] text-slate-500 mb-1 font-medium">
+                                                        본문 {post.corrected_content ? '(수정본)' : ''} · {(post.corrected_content ?? post.content ?? '').length.toLocaleString()}자
+                                                      </p>
                                                       <textarea
-                                                        className="w-full text-[11px] text-slate-600 bg-white border border-slate-200 rounded-lg p-2 max-h-48 resize-y focus:outline-none focus:border-violet-400"
+                                                        className="w-full text-[11px] text-slate-600 bg-white border border-slate-200 rounded-lg p-2 min-h-48 max-h-[600px] resize-y focus:outline-none focus:border-violet-400"
+                                                        style={{ minHeight: '12rem' }}
                                                         value={currentContent}
                                                         onChange={e => setEditingContent(prev => ({ ...prev, [post.id]: e.target.value }))}
                                                         rows={6}
