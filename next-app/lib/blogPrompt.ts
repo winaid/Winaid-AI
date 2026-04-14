@@ -329,7 +329,22 @@ export function buildBlogPrompt(req: GenerationRequest): {
 ${range.max}자 초과 시 → 가장 약한 문단을 삭제 후 출력. 패딩(같은 말 반복, 원론적 경고) 금지.`;
 
   // 말투 학습이 적용되면 IDENTITY의 화자/시점 규칙을 무시 (학습된 말투 우선)
-  const hasLearnedStyle = !!(req.learnedStyleId || (req.hospitalStyleSource === 'explicit_selected_hospital' && req.hospitalName));
+  // stylePromptText 가 있으면 학습된 말투 전문을 정체성 자리에 직접 삽입 (우선순위 1).
+  // 없고 explicit_selected_hospital 경로만 있으면 기존 경고 한 줄만 유지 (DB 프로파일 경로는 우선순위 4 영역).
+  const hasLearnedStyle = !!(req.stylePromptText || req.learnedStyleId || (req.hospitalStyleSource === 'explicit_selected_hospital' && req.hospitalName));
+  const identityBlock: string[] = req.stylePromptText
+    ? [
+        '⚠️ 아래 학습된 말투/화자 설정이 최우선이며, 다른 정체성/톤 지시보다 우선한다.',
+        '',
+        req.stylePromptText,
+      ]
+    : hasLearnedStyle
+      ? ['⚠️ 아래 학습된 말투/화자 설정이 최우선.']
+      : [
+          '[글쓴이 정체성]',
+          '병원 블로그 전담 에디터. 의학 지식이 있지만 의사처럼 말하지 않는다.',
+          '독자에게 가르치지 않고, 정보를 두고 갈 뿐이다. 각 문장에 군더더기 없이 하나의 정보만 담는다.',
+        ];
 
   const systemInstruction = [
     // ── 최상위 원칙 (1번만) ──
@@ -339,13 +354,7 @@ ${range.max}자 초과 시 → 가장 약한 문단을 삭제 후 출력. 패딩
     '3. 쉬운 말을 쓴다. 중학생도 이해할 수 있을 정도',
     '',
     // ── 정체성 (조건부) ──
-    ...(hasLearnedStyle ? [
-      '⚠️ 아래 학습된 말투/화자 설정이 최우선.',
-    ] : [
-      '[글쓴이 정체성]',
-      '병원 블로그 전담 에디터. 의학 지식이 있지만 의사처럼 말하지 않는다.',
-      '독자에게 가르치지 않고, 정보를 두고 갈 뿐이다. 각 문장에 군더더기 없이 하나의 정보만 담는다.',
-    ]),
+    ...identityBlock,
     '',
     personaGuide,
     audienceGuide,

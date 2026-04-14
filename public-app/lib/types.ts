@@ -40,6 +40,7 @@ export interface GenerationRequest {
   writingStyle?: WritingStyle;
   customImagePrompt?: string;
   learnedStyleId?: string;
+  stylePromptText?: string;  // 학습된 말투의 실제 프롬프트 텍스트 (클라이언트에서 직렬화)
   customSubheadings?: string;
   keywordDensity?: number | 'auto';
   youtubeTranscript?: string;

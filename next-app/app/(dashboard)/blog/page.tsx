@@ -737,6 +737,10 @@ JSON 형식으로 응답해주세요.`;
       return;
     }
 
+    // 학습된 말투 → 프롬프트 텍스트로 직렬화 (LLM 시스템 프롬프트의 정체성 자리에 바로 투입)
+    const learned = learnedStyleId ? getStyleById(learnedStyleId) : null;
+    const stylePromptText = learned ? getStylePromptForGeneration(learned) : undefined;
+
     const request: GenerationRequest = {
       category,
       topic: topic.trim(),
@@ -752,6 +756,8 @@ JSON 형식으로 응답해주세요.`;
       imageCount,
       cssTheme,
       writingStyle,
+      learnedStyleId,
+      stylePromptText,
       keywordDensity,
       youtubeTranscript: youtubeTranscript || undefined,
       clinicalContext: clinicalContext || undefined,
