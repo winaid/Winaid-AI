@@ -51,6 +51,7 @@ export interface HospitalStyleProfile {
   style_profile?: LearnedWritingStyle | null;
   raw_sample_text?: string;
   last_crawled_at?: string;
+  updated_at?: string;
 }
 
 // ── Supabase CRUD ──
@@ -222,25 +223,70 @@ ${deepBlock}${bannedBlock}
 
 // ── 콘텐츠 생성 시 말투 프롬프트 조회 (DB에서) ──
 
-const styleProfileCache: Record<string, HospitalStyleProfile | null> = {};
+// ── style profile 캐시 ──
+// 전략: 60초 TTL + hospital_style_profiles.updated_at 기반 무효화.
+// 테스트 환경(NODE_ENV='test')에서는 TTL 을 0으로 강제하여 매번 DB 조회.
+// 관리자가 재학습/채점하면 invalidateStyleCache() 로 즉시 무효화 가능.
+interface StyleCacheEntry {
+  profile: HospitalStyleProfile | null;
+  fetchedAt: number;        // Date.now() 값
+  updatedAt: string | null; // DB 의 updated_at (ISO)
+}
+
+const STYLE_CACHE_TTL_MS = process.env.NODE_ENV === 'test' ? 0 : 60_000;
+const styleProfileCache = new Map<string, StyleCacheEntry>();
+
+/**
+ * 병원 말투 프로파일 캐시를 무효화한다.
+ * - hospitalName 지정: 해당 병원만 제거
+ * - 미지정: 전체 flush
+ * crawlAndLearnHospitalStyle / scoreCrawledPost / 관리자 교정 후 호출.
+ */
+export function invalidateStyleCache(hospitalName?: string): void {
+  if (!hospitalName) {
+    styleProfileCache.clear();
+    return;
+  }
+  styleProfileCache.delete(hospitalName);
+}
+
+async function fetchStyleProfile(hospitalName: string): Promise<StyleCacheEntry> {
+  if (!supabase) {
+    return { profile: null, fetchedAt: Date.now(), updatedAt: null };
+  }
+  const { data, error } = await supabase
+    .from('hospital_style_profiles')
+    .select('style_profile, raw_sample_text, updated_at')
+    .eq('hospital_name', hospitalName)
+    .limit(1);
+  if (error || !data || data.length === 0) {
+    return { profile: null, fetchedAt: Date.now(), updatedAt: null };
+  }
+  const row = data[0] as HospitalStyleProfile & { updated_at?: string | null };
+  return {
+    profile: row,
+    fetchedAt: Date.now(),
+    updatedAt: row.updated_at ?? null,
+  };
+}
 
 export async function getHospitalStylePrompt(hospitalName: string): Promise<string | null> {
   if (!supabase || !hospitalName) return null;
 
-  if (!(hospitalName in styleProfileCache)) {
-    const { data, error } = await supabase
-      .from('hospital_style_profiles')
-      .select('style_profile, raw_sample_text')
-      .eq('hospital_name', hospitalName)
-      .limit(1);
-    if (error || !data || data.length === 0) {
-      styleProfileCache[hospitalName] = null;
-    } else {
-      styleProfileCache[hospitalName] = data[0] as HospitalStyleProfile;
-    }
+  const now = Date.now();
+  const cached = styleProfileCache.get(hospitalName);
+
+  let entry: StyleCacheEntry;
+  if (cached && (now - cached.fetchedAt) < STYLE_CACHE_TTL_MS) {
+    // TTL 내: 그대로 사용
+    entry = cached;
+  } else {
+    // TTL 만료 또는 미존재: DB 재조회
+    entry = await fetchStyleProfile(hospitalName);
+    styleProfileCache.set(hospitalName, entry);
   }
 
-  const profile = styleProfileCache[hospitalName];
+  const profile = entry.profile;
   if (!profile?.style_profile) return null;
 
   const style = profile.style_profile as LearnedWritingStyle;
@@ -412,6 +458,8 @@ export async function crawlAndLearnHospitalStyle(
       },
       { onConflict: 'hospital_name' },
     );
+    // Phase 2C: 재학습 완료 — 해당 병원의 캐시 무효화
+    invalidateStyleCache(hospitalName);
 
     // 개별 글 저장 + 순위 체크
     for (let pi = 0; pi < allPosts.length; pi++) {
@@ -911,6 +959,8 @@ export async function updateCrawledPostScore(id: string, score: CrawledPostScore
       scored_at: new Date().toISOString(),
     })
     .eq('id', id);
+  // Phase 2C: 글 단건 재채점 — hospitalName 이 인자에 없어 전체 flush 로 보수 처리
+  invalidateStyleCache();
 }
 
 export async function updateCrawledPostContent(id: string, correctedContent: string): Promise<void> {
@@ -919,6 +969,8 @@ export async function updateCrawledPostContent(id: string, correctedContent: str
     .from('hospital_crawled_posts')
     .update({ corrected_content: correctedContent })
     .eq('id', id);
+  // Phase 2C: 글 내용 교정 — hospitalName 이 인자에 없어 전체 flush 로 보수 처리
+  invalidateStyleCache();
 }
 
 /** 크롤링 글 단건 저장/upsert (root saveCrawledPost 이식) */
@@ -992,6 +1044,8 @@ export async function deleteAllCrawledPosts(
     return { deleted: 0, error: error.message };
   }
   const count = Array.isArray(data) ? data.length : 0;
+  // Phase 2C: 병원 크롤링 글 전량 삭제 후 캐시 무효화
+  invalidateStyleCache(hospitalName);
   return { deleted: count };
 }
 
@@ -1010,6 +1064,8 @@ export async function deleteHospitalStyleProfile(
     console.warn('말투 프로파일 삭제 실패:', error.message);
     return { success: false, error: error.message };
   }
+  // Phase 2C: 말투 프로파일 삭제 후 캐시 무효화
+  invalidateStyleCache(hospitalName);
   return { success: true };
 }
 
@@ -1194,6 +1250,8 @@ export async function crawlAndScoreAllHospitals(
         profileData,
         { onConflict: 'hospital_name' },
       );
+      // Phase 2C: 일괄 재학습 — 해당 병원의 캐시 무효화
+      invalidateStyleCache(name);
     }
 
     onProgress?.(`${name} 완료 (${totalPostsForHospital}개 글${analyzedStyle ? ' + 말투 분석' : ''})`, index, total);
