@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { CATEGORIES, PERSONAS, TONES } from '../../../lib/constants';
 import { ContentCategory, type GenerationRequest, type AudienceMode, type ImageStyle, type WritingStyle, type CssTheme, type TrendingItem, type SeoTitleItem, type SeoReport } from '../../../lib/types';
@@ -1553,6 +1553,13 @@ Output ONLY the prompt. No explanation.`,
     }
   }, [selectedImgIndex, regenPrompt, supabase]);
 
+  // 섹션 재생성용 학습 말투 직렬화 — handleSubmit 과 동일한 경로. learnedStyleId 변경 시에만 재계산.
+  // (handleSubmit 은 호출 시점 인라인 직렬화 유지 — 우선순위 4 통합 대기)
+  const sectionLearnedStylePrompt = useMemo(() => {
+    const learned = learnedStyleId ? getStyleById(learnedStyleId) : null;
+    return learned ? getStylePromptForGeneration(learned) : undefined;
+  }, [learnedStyleId]);
+
   // ── 소제목 재생성 — 원본 설정값 + 진료과 전문성 + 의료법 필터 적용 ──
   const handleSectionRegenerate = useCallback(async (sectionIndex: number) => {
     const section = blogSections.find(s => s.index === sectionIndex);
@@ -1577,6 +1584,7 @@ Output ONLY the prompt. No explanation.`,
             category,
             keywords,
             medicalLawMode,
+            stylePromptText: sectionLearnedStylePrompt,
           },
           userId: creditCtx.userId || null,
         }),
@@ -1615,7 +1623,7 @@ Output ONLY the prompt. No explanation.`,
     } finally {
       setRegeneratingSection(null);
     }
-  }, [blogSections, generatedContent, regeneratingSection, category, persona, tone, audienceMode, writingStyle, keywords, disease, medicalLawMode]);
+  }, [blogSections, generatedContent, regeneratingSection, category, persona, tone, audienceMode, writingStyle, keywords, disease, medicalLawMode, sectionLearnedStylePrompt]);
 
   // ── Word / PDF 다운로드 ──
   const handleDownloadWord = useCallback(async () => {

@@ -825,6 +825,7 @@ interface SectionRegenerateInput {
   keywords: string;
   disease?: string;
   medicalLawMode: 'strict' | 'relaxed';
+  stylePromptText?: string;
 }
 
 export function buildSectionRegeneratePrompt(input: SectionRegenerateInput): {
@@ -846,12 +847,23 @@ export function buildSectionRegeneratePrompt(input: SectionRegenerateInput): {
   const medLawNote = getMedicalLawPromptBlock(input.medicalLawMode !== 'relaxed');
   const categoryGuide = CATEGORY_DEPTH_GUIDES[input.category] || '';
 
+  // 학습된 말투가 있으면 최상위 원칙 바로 다음에 삽입 (V2 메인의 identityBlock 패턴과 동일 취지).
+  const learnedStyleLines = input.stylePromptText && input.stylePromptText.trim()
+    ? [
+        '⚠️ 아래 학습된 말투/화자 설정이 최우선이며, 다른 정체성/톤 지시보다 우선한다.',
+        '',
+        input.stylePromptText,
+        '',
+      ]
+    : [];
+
   const systemInstruction = [
     '[최상위 원칙] 쉽고 짧게 직접 말한다',
     '1. 짧게 쓴다. 한 문장 50자 이내 권장',
     '2. 직접 말한다. 돌려 말하지 않는다',
     '3. 쉬운 말을 쓴다',
     '',
+    ...learnedStyleLines,
     personaGuide,
     audienceGuide,
     `글의 어조: ${toneGuide}`,
@@ -1326,6 +1338,7 @@ export interface SectionRegenerateInputV3 {
   category?: string;
   keywords?: string;
   medicalLawMode?: 'strict' | 'relaxed';
+  stylePromptText?: string;
 }
 
 const SECTION_PERSONA_V3 = `[역할]
@@ -1373,6 +1386,17 @@ export function buildBlogSectionPromptV3(
 
   if (input.category && CATEGORY_DEPTH_GUIDES[input.category]) {
     systemBlocks.push({ type: 'text', text: CATEGORY_DEPTH_GUIDES[input.category], cacheable: true, cacheTtl: '5m' });
+  }
+
+  // 클라이언트 직렬화 학습 말투 — input.stylePromptText (V3 메인과 동일 패턴)
+  // 섹션 재생성 시에도 학습된 말투/화자 설정을 유지하기 위해 주입. 변동 블록 앞에 위치.
+  if (input.stylePromptText && input.stylePromptText.trim()) {
+    systemBlocks.push({
+      type: 'text',
+      text: `⚠️ 아래 학습된 말투/화자 설정이 최우선이며, 다른 정체성/톤 지시보다 우선한다.\n\n${input.stylePromptText}`,
+      cacheable: true,
+      cacheTtl: '5m',
+    });
   }
 
   const safeKeywords = sanitizePromptInput(input.keywords, 300);
