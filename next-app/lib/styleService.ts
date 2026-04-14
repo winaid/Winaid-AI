@@ -527,6 +527,65 @@ export async function crawlAndLearnHospitalStyle(
   return { posts: allPosts };
 }
 
+// ── 분석 결과(JSON) → LearnedWritingStyle 매핑 헬퍼 ──
+// 저장 객체 빌드의 3중 중복을 단일 소스로 수렴. robust 가공(Number 강제 + Array.isArray
+// + slice(0,3) + enum default) 채택 — 4-B 조사 보고 기준. 분석 프롬프트 자체는 호출자가
+// 각자 보유(UI 수동 vs 크롤러 묶음이 의도된 분기로 판정됨).
+export function createLearnedWritingStyle(
+  result: Record<string, unknown>,
+  rawSampleText: string,
+  styleName: string,
+): LearnedWritingStyle {
+  return {
+    id: `style_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    name: styleName,
+    description: (result.description as string) || '',
+    sampleText: rawSampleText.substring(0, 5000),
+    analyzedStyle: {
+      tone: (result.tone as string) || '',
+      sentenceEndings: (result.sentenceEndings as string[]) || [],
+      vocabulary: (result.vocabulary as string[]) || [],
+      structure: (result.structure as string) || '',
+      emotionLevel: (result.emotionLevel as 'low' | 'medium' | 'high') || 'medium',
+      formalityLevel: (result.formalityLevel as 'casual' | 'neutral' | 'formal') || 'neutral',
+      speakerIdentity: result.speakerIdentity as string,
+      readerDistance: result.readerDistance as string,
+      sentenceRhythm: result.sentenceRhythm as string,
+      paragraphFlow: result.paragraphFlow as string,
+      persuasionStyle: result.persuasionStyle as string,
+      medicalTermLevel: result.medicalTermLevel as string,
+      procedureExplainStyle: result.procedureExplainStyle as string,
+      trustBuildingPattern: result.trustBuildingPattern as string,
+      ctaStyle: result.ctaStyle as string,
+      anxietyHandling: result.anxietyHandling as string,
+      uniqueExpressions: result.uniqueExpressions as string[],
+      bannedGenericStyle: result.bannedGenericStyle as string[],
+      oneLineSummary: result.oneLineSummary as string,
+      goodExamples: result.goodExamples as string[],
+      badExamples: result.badExamples as string[],
+      // ── Phase 2D Tier 2-A: 단락/줄바꿈 메트릭 (robust) ──
+      paragraphStats: (result.paragraphStats as {
+        avgSentencesPerParagraph?: number;
+        avgCharsPerParagraph?: number;
+        lineBreakStyle?: 'dense' | 'airy' | 'mixed';
+        doubleBreakFrequency?: 'low' | 'medium' | 'high';
+        paragraphLengthPattern?: string;
+      } | undefined) ? {
+        avgSentencesPerParagraph: Number((result.paragraphStats as { avgSentencesPerParagraph?: number }).avgSentencesPerParagraph) || 0,
+        avgCharsPerParagraph: Number((result.paragraphStats as { avgCharsPerParagraph?: number }).avgCharsPerParagraph) || 0,
+        lineBreakStyle: ((result.paragraphStats as { lineBreakStyle?: string }).lineBreakStyle as 'dense' | 'airy' | 'mixed') || 'mixed',
+        doubleBreakFrequency: ((result.paragraphStats as { doubleBreakFrequency?: string }).doubleBreakFrequency as 'low' | 'medium' | 'high') || 'medium',
+        paragraphLengthPattern: String((result.paragraphStats as { paragraphLengthPattern?: string }).paragraphLengthPattern || ''),
+      } : undefined,
+      representativeParagraphs: Array.isArray(result.representativeParagraphs)
+        ? (result.representativeParagraphs as unknown[]).filter((x): x is string => typeof x === 'string').slice(0, 3)
+        : undefined,
+    },
+    stylePrompt: (result.stylePrompt as string) || '',
+    createdAt: new Date().toISOString(),
+  };
+}
+
 // ── Gemini 분석 (next-app /api/gemini 경유) ──
 
 async function analyzeWritingStyleViaApi(
@@ -684,54 +743,7 @@ ${sampleText.substring(0, 6000)}
     throw new Error('말투 분석 결과 파싱 실패');
   }
 
-  return {
-    id: `style_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-    name: styleName,
-    description: (result.description as string) || '',
-    sampleText: sampleText.substring(0, 5000),
-    analyzedStyle: {
-      tone: (result.tone as string) || '',
-      sentenceEndings: (result.sentenceEndings as string[]) || [],
-      vocabulary: (result.vocabulary as string[]) || [],
-      structure: (result.structure as string) || '',
-      emotionLevel: (result.emotionLevel as 'low' | 'medium' | 'high') || 'medium',
-      formalityLevel: (result.formalityLevel as 'casual' | 'neutral' | 'formal') || 'neutral',
-      speakerIdentity: result.speakerIdentity as string,
-      readerDistance: result.readerDistance as string,
-      sentenceRhythm: result.sentenceRhythm as string,
-      paragraphFlow: result.paragraphFlow as string,
-      persuasionStyle: result.persuasionStyle as string,
-      medicalTermLevel: result.medicalTermLevel as string,
-      procedureExplainStyle: result.procedureExplainStyle as string,
-      trustBuildingPattern: result.trustBuildingPattern as string,
-      ctaStyle: result.ctaStyle as string,
-      anxietyHandling: result.anxietyHandling as string,
-      uniqueExpressions: result.uniqueExpressions as string[],
-      bannedGenericStyle: result.bannedGenericStyle as string[],
-      oneLineSummary: result.oneLineSummary as string,
-      goodExamples: result.goodExamples as string[],
-      badExamples: result.badExamples as string[],
-      // ── Phase 2D Tier 2-A: 단락/줄바꿈 메트릭 ──
-      paragraphStats: (result.paragraphStats as {
-        avgSentencesPerParagraph?: number;
-        avgCharsPerParagraph?: number;
-        lineBreakStyle?: 'dense' | 'airy' | 'mixed';
-        doubleBreakFrequency?: 'low' | 'medium' | 'high';
-        paragraphLengthPattern?: string;
-      } | undefined) ? {
-        avgSentencesPerParagraph: Number((result.paragraphStats as { avgSentencesPerParagraph?: number }).avgSentencesPerParagraph) || 0,
-        avgCharsPerParagraph: Number((result.paragraphStats as { avgCharsPerParagraph?: number }).avgCharsPerParagraph) || 0,
-        lineBreakStyle: ((result.paragraphStats as { lineBreakStyle?: string }).lineBreakStyle as 'dense' | 'airy' | 'mixed') || 'mixed',
-        doubleBreakFrequency: ((result.paragraphStats as { doubleBreakFrequency?: string }).doubleBreakFrequency as 'low' | 'medium' | 'high') || 'medium',
-        paragraphLengthPattern: String((result.paragraphStats as { paragraphLengthPattern?: string }).paragraphLengthPattern || ''),
-      } : undefined,
-      representativeParagraphs: Array.isArray(result.representativeParagraphs)
-        ? (result.representativeParagraphs as unknown[]).filter((x): x is string => typeof x === 'string').slice(0, 3)
-        : undefined,
-    },
-    stylePrompt: (result.stylePrompt as string) || '',
-    createdAt: new Date().toISOString(),
-  };
+  return createLearnedWritingStyle(result, sampleText, styleName);
 }
 
 // ── 채점 (scoring) — root writingStyleService.scoreCrawledPost 이식 ──

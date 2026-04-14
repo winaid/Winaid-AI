@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { buildStylePrompt } from '../lib/styleService';
-import type { LearnedWritingStyle, AnalyzedStyle } from '../lib/styleService';
+import { buildStylePrompt, createLearnedWritingStyle } from '../lib/styleService';
+import type { LearnedWritingStyle } from '../lib/styleService';
 
 export type { LearnedWritingStyle };
 
@@ -300,39 +300,7 @@ ${sampleText}
       if (jsonMatch) text = jsonMatch[1];
       const result = JSON.parse(text.trim()) as Record<string, unknown>;
 
-      const newStyle: LearnedWritingStyle = {
-        id: `style_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        name: styleName,
-        description: (result.description as string) || '',
-        sampleText: textInput.substring(0, 5000),
-        analyzedStyle: {
-          tone: (result.tone as string) || '',
-          sentenceEndings: (result.sentenceEndings as string[]) || [],
-          vocabulary: (result.vocabulary as string[]) || [],
-          structure: (result.structure as string) || '',
-          emotionLevel: (result.emotionLevel as 'low' | 'medium' | 'high') || 'medium',
-          formalityLevel: (result.formalityLevel as 'casual' | 'neutral' | 'formal') || 'neutral',
-          speakerIdentity: result.speakerIdentity as string,
-          readerDistance: result.readerDistance as string,
-          sentenceRhythm: result.sentenceRhythm as string,
-          paragraphFlow: result.paragraphFlow as string,
-          persuasionStyle: result.persuasionStyle as string,
-          medicalTermLevel: result.medicalTermLevel as string,
-          procedureExplainStyle: result.procedureExplainStyle as string,
-          trustBuildingPattern: result.trustBuildingPattern as string,
-          ctaStyle: result.ctaStyle as string,
-          anxietyHandling: result.anxietyHandling as string,
-          uniqueExpressions: result.uniqueExpressions as string[],
-          bannedGenericStyle: result.bannedGenericStyle as string[],
-          oneLineSummary: result.oneLineSummary as string,
-          goodExamples: result.goodExamples as string[],
-          badExamples: result.badExamples as string[],
-          representativeParagraphs: result.representativeParagraphs as string[],
-          paragraphStats: result.paragraphStats as AnalyzedStyle['paragraphStats'],
-        },
-        stylePrompt: (result.stylePrompt as string) || '',
-        createdAt: new Date().toISOString(),
-      };
+      const newStyle = createLearnedWritingStyle(result, textInput, styleName);
 
       setAnalyzeProgress('프로파일 저장 중...');
       const newStyles = [...savedStyles, newStyle];
