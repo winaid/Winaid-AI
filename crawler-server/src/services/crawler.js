@@ -579,7 +579,7 @@ async function crawlHospitalBlogPosts(blogUrl, maxPosts = 10) {
           }
           results.push({
             url: `https://blog.naver.com/${blogId}/${logNo}`,
-            content: postData.content.slice(0, 3000),
+            content: postData.content.slice(0, 30000),  // 말투 학습 재료 확보. 기존 3000 → 30000 (네이버 블로그 최대 본문 커버)
             title: postData.title || '',
             publishedAt: publishedAtISO,
             summary: postData.content.substring(0, 200).replace(/\n/g, ' ').trim(),
@@ -598,7 +598,7 @@ async function crawlHospitalBlogPosts(blogUrl, maxPosts = 10) {
             }
             results.push({
               url: `https://blog.naver.com/${blogId}/${logNo}`,
-              content: postData.content.slice(0, 3000),
+              content: postData.content.slice(0, 30000),  // 말투 학습 재료 확보. 기존 3000 → 30000
               title: postData.title || '',
               publishedAt: publishedAtISO,
               summary: postData.content.substring(0, 200).replace(/\n/g, ' ').trim(),
