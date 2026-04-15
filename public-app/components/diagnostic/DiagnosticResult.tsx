@@ -109,8 +109,15 @@ export default function DiagnosticResult({ result }: DiagnosticResultProps) {
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <h3 className="text-sm font-bold text-slate-700 mb-3">로딩 성능 (Core Web Vitals)</h3>
             {result.performance === null ? (
-              <div className="text-sm text-slate-500 bg-slate-50 rounded-xl px-4 py-6 text-center">
-                PageSpeed Insights 를 측정할 수 없었습니다. <span className="text-slate-400">(API 미동작 또는 키 누락)</span>
+              <div className="text-sm text-slate-600 bg-slate-50 rounded-xl px-4 py-5 space-y-1.5">
+                <p className="font-semibold">PageSpeed Insights 측정 결과를 받지 못했습니다.</p>
+                <p className="text-[12px] text-slate-500 leading-relaxed">
+                  · 서버 환경변수 <code className="px-1 py-0.5 rounded bg-white text-slate-700 text-[11px]">PAGESPEED_API_KEY</code> 가 설정되어 있는지 확인해주세요
+                  (Google 정책상 무키 호출은 일일 쿼터가 0입니다).<br />
+                  · 키가 있는데도 실패하면 Google Cloud Console 에서 <em>PageSpeed Insights API</em> 가
+                  활성화되어 있는지 확인하세요.<br />
+                  · 측정 시간이 40초를 넘어가면 서버 로그(<code className="px-1 py-0.5 rounded bg-white text-slate-700 text-[11px]">[psi]</code>)에 사유가 기록됩니다.
+                </p>
               </div>
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
