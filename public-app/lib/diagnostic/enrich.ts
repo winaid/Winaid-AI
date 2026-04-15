@@ -117,7 +117,10 @@ const NARRATIVE_SYSTEM = `당신은 한국 병원 마케팅 전문가입니다. 
 - executor 분류 (반드시 셋 중 하나):
   - "ai": AI 가 혼자 끝낼 수 있는 것. 예) 블로그 초안 작성, 스키마 JSON 생성, 메타 description 초안, 이미지 alt 텍스트 작성
   - "human": 사람이 꼭 해야 하는 것. 예) GMB/네이버 플레이스 등록, CDN 계약, 실제 배포, 진료시간 직접 확인
-  - "hybrid": AI 초안 + 사람 검수/발행. 예) 블로그 10편 작성·업로드, 의료진 소개 문구 작성 후 홈페이지 업로드`;
+  - "hybrid": AI 초안 + 사람 검수/발행. 예) 블로그 10편 작성·업로드, 의료진 소개 문구 작성 후 홈페이지 업로드
+
+## 항목 id 참고
+- 항목 id 예시: own_domain, specialist_mentioned/doctor_in_text, platform_dependency, news_mentions, owned_channels_diversity, blog_searchable, dentist_schema, faq_structure 등 — categoryRecommendations 키는 카테고리 id(security_tech 등) 기준이고, 조치 문장은 위 항목 의미를 반영해 이 병원 맥락으로 풀어쓰세요.`;
 
 interface NarrativeArgs {
   meta: SiteMeta | null;

@@ -25,7 +25,7 @@ const ACTION_META: Record<string, ActionMeta> = {
   [LABELS.psi]: { impact: 'high', difficulty: 'hard', timeframe: '1개월', actionText: '이미지 WebP 전환, 지연 로딩, 코드 분할로 Core Web Vitals 개선' },
 
   // ② site_structure
-  [LABELS.own_domain]: { impact: 'high', difficulty: 'medium', timeframe: '2주', actionText: '독립 도메인 확보 후 DNS 전환 (플랫폼 서브도메인 탈피)' },
+  [LABELS.own_domain]: { impact: 'high', difficulty: 'hard', timeframe: '1개월', actionText: '자체 도메인 홈페이지 개설로 플랫폼 의존 구조 탈피 (모두닥/하이닥/blog.naver 는 AEO 가산점 거의 없음)' },
   [LABELS.has_doctor_page]: { impact: 'high', difficulty: 'medium', timeframe: '1주', actionText: '의료진 소개 페이지 제작 (이름·전공·경력·사진)' },
   [LABELS.has_treatment_page]: { impact: 'high', difficulty: 'medium', timeframe: '1주', actionText: '진료 안내 페이지 제작 — 시술을 카테고리로 정리' },
   [LABELS.has_service_details]: { impact: 'medium', difficulty: 'hard', timeframe: '2주', actionText: '주요 시술별 상세 페이지 제작 (설명·대상·과정·기간)' },
@@ -46,7 +46,7 @@ const ACTION_META: Record<string, ActionMeta> = {
   [LABELS.title_opt]: { impact: 'high', difficulty: 'easy', timeframe: '즉시', actionText: '<title> 에 지역명(구/동) + 업종(치과/의원)을 함께 넣기' },
   [LABELS.meta_desc]: { impact: 'high', difficulty: 'easy', timeframe: '즉시', actionText: 'meta description 을 50~160자로 작성 (검색 스니펫 제어)' },
   [LABELS.alt_ratio]: { impact: 'medium', difficulty: 'easy', timeframe: '즉시', actionText: '모든 의미 있는 <img> 에 alt 텍스트 추가 (장식 이미지는 alt="")' },
-  [LABELS.doctor_in_text]: { impact: 'medium', difficulty: 'medium', timeframe: '1주', actionText: '본문에 의료진 이름·전문 분야·진료 철학 서술' },
+  [LABELS.doctor_in_text]: { impact: 'high', difficulty: 'easy', timeframe: '즉시', actionText: '의료진 소개에 "전문의" 타이틀·전문과(구강외과 전문의·치주과 전문의 등) 명시' },
   [LABELS.word_count]: { impact: 'medium', difficulty: 'medium', timeframe: '1주', actionText: '핵심 페이지 본문을 500자 이상으로 확장' },
 
   // ⑤ external_channels
@@ -56,6 +56,8 @@ const ACTION_META: Record<string, ActionMeta> = {
   [LABELS.youtube]: { impact: 'medium', difficulty: 'hard', timeframe: '1개월', actionText: '병원 유튜브 채널 운영 (진료 안내·의료진 소개)' },
   [LABELS.instagram]: { impact: 'low', difficulty: 'easy', timeframe: '즉시', actionText: 'Instagram 계정 홈페이지 푸터/연락처에 연결' },
   [LABELS.sameas_schema]: { impact: 'medium', difficulty: 'medium', timeframe: '1주', actionText: 'Organization/LocalBusiness 스키마의 sameAs 배열에 SNS/플레이스 URL 추가' },
+  [LABELS.news_mentions]: { impact: 'medium', difficulty: 'hard', timeframe: '1개월', actionText: '지역 건강 칼럼·의료 전문지에 기고 또는 취재 기사 1~2건 확보 (외부 인용 경로 구축)' },
+  [LABELS.owned_channels_diversity]: { impact: 'high', difficulty: 'medium', timeframe: '1주', actionText: '네이버 플레이스·Google 비즈니스 프로필·카카오채널 중 최소 3개 등록' },
 
   // ⑥ aeo_geo
   [LABELS.faq_structure]: { impact: 'high', difficulty: 'medium', timeframe: '1주', actionText: '페이지 내 FAQ 섹션 + FAQPage 스키마 동시 적용' },
@@ -63,6 +65,7 @@ const ACTION_META: Record<string, ActionMeta> = {
   [LABELS.contact_text]: { impact: 'medium', difficulty: 'easy', timeframe: '즉시', actionText: '대표 전화번호를 헤더/푸터에 항상 노출' },
   [LABELS.address_text]: { impact: 'medium', difficulty: 'easy', timeframe: '즉시', actionText: '한국 표준 주소(시/도 + 구/군 + 동/로)를 푸터에 명시' },
   [LABELS.hours_text]: { impact: 'medium', difficulty: 'easy', timeframe: '즉시', actionText: '진료시간·점심시간·휴진일 표시' },
+  [LABELS.blog_searchable]: { impact: 'high', difficulty: 'easy', timeframe: '즉시', actionText: '네이버 블로그 관리자 > 관리 > 기본설정에서 "전체공개 + 외부 검색허용" 스위치 켜기' },
 };
 
 const DIFFICULTY_ORDER: Record<'easy' | 'medium' | 'hard', number> = { easy: 0, medium: 1, hard: 2 };

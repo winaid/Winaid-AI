@@ -47,12 +47,15 @@ export const LABELS = {
   youtube: 'YouTube 채널',
   instagram: 'Instagram',
   sameas_schema: '구조화 데이터 sameAs',
+  news_mentions: '언론·건강칼럼 인용',
+  owned_channels_diversity: '공식 채널 다양성',
   // ⑥ aeo_geo
   faq_structure: 'FAQ 구조',
   services_named: '시술명 언급',
   contact_text: '연락처 노출',
   address_text: '주소 노출',
   hours_text: '영업시간 노출',
+  blog_searchable: '블로그 외부 검색 허용',
 } as const;
 
 export type LabelKey = keyof typeof LABELS;
@@ -60,9 +63,9 @@ export type LabelKey = keyof typeof LABELS;
 const WEIGHTS: Record<string, number> = {
   security_tech: 15,
   site_structure: 25,
-  structured_data: 15,
+  structured_data: 12,
   content_quality: 25,
-  external_channels: 10,
+  external_channels: 13,
   aeo_geo: 10,
 };
 
@@ -74,7 +77,7 @@ const RECOMMENDATIONS: Record<string, string> = {
   [LABELS.robots]: 'robots.txt 를 사이트 루트(/robots.txt)에 배치하고 Sitemap: 디렉티브를 포함하세요.',
   [LABELS.sitemap]: '/sitemap.xml 또는 /sitemap_index.xml 을 생성하고 Search Console/네이버 서치어드바이저에 제출하세요.',
   [LABELS.psi]: '이미지 최적화(WebP), 지연 로딩, 코드 분할로 Core Web Vitals 를 개선하세요.',
-  [LABELS.own_domain]: '독립 도메인(example.com)을 확보하세요. 플랫폼 서브도메인은 AI 크롤링에 불리합니다.',
+  [LABELS.own_domain]: '자체 도메인(example.com) 홈페이지를 확보하세요. 모두닥/하이닥/blog.naver 등 플랫폼 페이지는 AI 검색 가산점이 거의 없습니다.',
   [LABELS.has_doctor_page]: '의료진 소개 페이지를 만들고 이름·전공·경력을 명시하세요.',
   [LABELS.has_treatment_page]: '진료/치료 안내 페이지를 만들어 시술을 카테고리로 정리하세요.',
   [LABELS.has_service_details]: '주요 시술마다 개별 상세 페이지를 만들고 설명·대상·과정을 포함하세요.',
@@ -91,7 +94,7 @@ const RECOMMENDATIONS: Record<string, string> = {
   [LABELS.title_opt]: '<title> 에 지역명(구/동/지역)과 업종(치과/의원/병원)을 모두 포함하세요.',
   [LABELS.meta_desc]: 'meta description 을 50-160자로 작성해 검색 스니펫을 제어하세요.',
   [LABELS.alt_ratio]: '모든 의미 있는 <img> 에 alt 텍스트를 추가하세요 (장식 이미지는 alt="").',
-  [LABELS.doctor_in_text]: '본문에 의료진 이름·전문 분야·진료 철학을 서술하세요.',
+  [LABELS.doctor_in_text]: '의료진 소개에 "전문의" 타이틀과 전문과(구강외과 전문의, 치주과 전문의 등)를 명시하세요.',
   [LABELS.word_count]: '핵심 페이지 본문을 500자 이상으로 작성하세요.',
   [LABELS.naver]: '네이버 플레이스 등록 후 홈페이지에서 외부 링크로 연결하세요.',
   [LABELS.google]: 'Google 비즈니스 프로필을 설정하고 홈페이지에 연결하세요.',
@@ -99,11 +102,14 @@ const RECOMMENDATIONS: Record<string, string> = {
   [LABELS.youtube]: '병원 유튜브 채널을 만들어 진료 안내/의료진 소개 영상을 올리세요.',
   [LABELS.instagram]: 'Instagram 계정을 홈페이지 푸터/연락처에 연결하세요.',
   [LABELS.sameas_schema]: 'Organization/LocalBusiness 스키마의 sameAs 배열에 SNS/플레이스 URL 을 넣으세요.',
+  [LABELS.news_mentions]: '지역 건강 칼럼·의료 전문지에 기고 또는 취재 기사 1~2건 확보해 외부 인용 경로를 만드세요.',
+  [LABELS.owned_channels_diversity]: '네이버 플레이스·Google 비즈니스 프로필·카카오채널 중 최소 3개 이상 개설해 공식 채널 다양성을 확보하세요.',
   [LABELS.faq_structure]: '페이지 내 FAQ 섹션을 구성하고 FAQPage 스키마로 마크업하세요.',
   [LABELS.services_named]: '시술명을 본문과 네비게이션에 명시적으로 노출하세요.',
   [LABELS.contact_text]: '대표 전화번호를 헤더/푸터에 항상 노출하세요.',
   [LABELS.address_text]: '한국 표준 주소(시/도 + 구/군 + 동/로)를 푸터에 명시하세요.',
   [LABELS.hours_text]: '진료시간·점심시간·휴진일을 명확히 표시하세요.',
+  [LABELS.blog_searchable]: '네이버 블로그 관리자 > 관리 > 기본설정에서 "전체공개 + 외부 검색허용" 설정을 켜세요.',
 };
 
 // ── 헬퍼 ───────────────────────────────────────────────────
@@ -219,19 +225,48 @@ function scoreSecurityTech(crawl: CrawlResult, psi: PsiResult | null, hasRobotsT
 
 // ── ② site_structure ──────────────────────────────────────
 
-const PLATFORM_SUBDOMAINS = /(?:^|\.)(blog\.naver\.com|tistory\.com|wixsite\.com|cafe24\.com|modoo\.at|imweb\.me|goorm\.io|weebly\.com|strikingly\.com)$/i;
+const PLATFORM_SUBDOMAINS = /(?:^|\.)(blog\.naver\.com|tistory\.com|wixsite\.com|cafe24\.com|modoo\.at|imweb\.me|goorm\.io|weebly\.com|strikingly\.com|modoodoc\.com|haidoc\.co\.kr|ddocdoc\.com|medius\.me)$/i;
+
+/** 의료 플랫폼 외부 URL 패턴 — externalLinks 중 이 비중이 높으면 의존도 판정 */
+const PLATFORM_DEPENDENCY_URL = /(modoodoc\.com|haidoc\.co\.kr|ddocdoc\.com|medius\.me|blog\.naver\.com)/i;
+
+/** 언론·건강 칼럼 도메인 — news_mentions 판정 */
+const NEWS_DOMAIN = /(news\.naver\.com|news\.daum\.net|yna\.co\.kr|newsis\.com|hankookilbo\.com|chosun\.com|joongang\.co\.kr|hani\.co\.kr|donga\.com|khan\.co\.kr|ohmynews\.com|edaily\.co\.kr|mk\.co\.kr|fnnews\.co\.kr|mt\.co\.kr|asiae\.co\.kr|dailymedi\.com|dentalnews\.or\.kr|doctorsnews\.co\.kr|mdtoday\.co\.kr|monews\.co\.kr|healthcare\.co\.kr|hidoc\.co\.kr|kormedi\.com|medicaltimes\.com)/i;
+
+/** 전문의 타이틀 — specialist_mentioned 판정 */
+const SPECIALIST_TITLE = /구강외과\s*전문의|구강악안면외과\s*전문의|치주과\s*전문의|보존과\s*전문의|교정과\s*전문의|소아치과\s*전문의|통합치의학과\s*전문의|보철과\s*전문의|치과보철과\s*전문의|피부과\s*전문의|성형외과\s*전문의|정형외과\s*전문의|내과\s*전문의|이비인후과\s*전문의|가정의학과\s*전문의|안과\s*전문의/;
+
+/** 네이버 블로그 URL — blog_searchable 판정용 휴리스틱 */
+const NAVER_BLOG_URL = /(?:^|\/\/)(?:m\.)?blog\.naver\.com\//i;
 
 function scoreSiteStructure(crawl: CrawlResult): CategoryScore {
   const items: CategoryItem[] = [];
 
-  let ownDomain = false;
+  // ── own_domain 3단계 판정 (25점) ──
+  // pass: 자체 도메인 / warning: 플랫폼 서브도메인이지만 외부링크 플랫폼 의존 < 80%
+  // fail: 플랫폼 서브도메인 + 외부링크 플랫폼 의존 80%+
+  let ownDomainHost = '';
+  let isPlatform = false;
   try {
     const u = new URL(crawl.finalUrl);
-    ownDomain = !PLATFORM_SUBDOMAINS.test(u.hostname);
-  } catch { ownDomain = true; }
-  items.push(ownDomain
-    ? makeItem(LABELS.own_domain, 20, 20, 'pass', '독립 도메인 사용 중.')
-    : makeItem(LABELS.own_domain, 20, 0, 'fail', '플랫폼 서브도메인 — AI 노출에 불리.'));
+    ownDomainHost = u.hostname;
+    isPlatform = PLATFORM_SUBDOMAINS.test(u.hostname);
+  } catch { /* ownDomainHost='' → pass 처리 */ }
+
+  if (!isPlatform) {
+    items.push(makeItem(LABELS.own_domain, 25, 25, 'pass', `자체 도메인 사용 중 (${ownDomainHost || 'unknown'}).`));
+  } else {
+    const ext = crawl.externalLinks;
+    const platformHits = ext.filter(l => PLATFORM_DEPENDENCY_URL.test(l.href)).length;
+    const ratio = ext.length > 0 ? platformHits / ext.length : 0;
+    if (ratio >= 0.8 || ext.length === 0) {
+      items.push(makeItem(LABELS.own_domain, 25, 0, 'fail',
+        `플랫폼 서브도메인 + 외부 링크의 ${Math.round(ratio * 100)}% 가 의료 플랫폼(모두닥/하이닥 등) 의존 — AI 검색에 가장 불리.`, ownDomainHost));
+    } else {
+      items.push(makeItem(LABELS.own_domain, 25, 10, 'warning',
+        `플랫폼 서브도메인 사용 중 (자체 채널 일부 존재) — 자체 도메인으로 이전 권장.`, ownDomainHost));
+    }
+  }
 
   const docRegex = /의료진|원장|doctor|medical-team|staff/i;
   items.push(crawl.hasDoctorInfo || hasInternalLinkMatch(crawl, docRegex)
@@ -245,8 +280,8 @@ function scoreSiteStructure(crawl: CrawlResult): CategoryScore {
 
   const svcCount = crawl.detectedServices.length;
   items.push(svcCount >= 2
-    ? makeItem(LABELS.has_service_details, 15, 15, 'pass', `시술명 ${svcCount}개 감지.`, String(svcCount))
-    : makeItem(LABELS.has_service_details, 15, 0, 'fail', `시술명 ${svcCount}개만 감지 — 상세 부족.`, String(svcCount)));
+    ? makeItem(LABELS.has_service_details, 10, 10, 'pass', `시술명 ${svcCount}개 감지.`, String(svcCount))
+    : makeItem(LABELS.has_service_details, 10, 0, 'fail', `시술명 ${svcCount}개만 감지 — 상세 부족.`, String(svcCount)));
 
   const locRegex = /오시는|위치|location|찾아오|map|contact/i;
   items.push(hasInternalLinkMatch(crawl, locRegex) || crawl.hasMap
@@ -336,18 +371,25 @@ function scoreContentQuality(crawl: CrawlResult): CategoryScore {
   }
 
   if (crawl.totalImages === 0) {
-    items.push(makeItem(LABELS.alt_ratio, 15, 0, 'unknown', '이미지 없음 — 측정 불가.', '0'));
+    items.push(makeItem(LABELS.alt_ratio, 10, 0, 'unknown', '이미지 없음 — 측정 불가.', '0'));
   } else {
     const ratio = (crawl.totalImages - crawl.imagesWithoutAlt) / crawl.totalImages;
     const pct = Math.round(ratio * 100);
-    if (ratio >= 0.8) items.push(makeItem(LABELS.alt_ratio, 15, 15, 'pass', `alt 비율 ${pct}%.`, `${pct}%`));
-    else if (ratio >= 0.5) items.push(makeItem(LABELS.alt_ratio, 15, 8, 'warning', `alt 비율 ${pct}% — 80% 권장.`, `${pct}%`));
-    else items.push(makeItem(LABELS.alt_ratio, 15, 0, 'fail', `alt 비율 ${pct}% — 다수 이미지 alt 누락.`, `${pct}%`));
+    if (ratio >= 0.8) items.push(makeItem(LABELS.alt_ratio, 10, 10, 'pass', `alt 비율 ${pct}%.`, `${pct}%`));
+    else if (ratio >= 0.5) items.push(makeItem(LABELS.alt_ratio, 10, 5, 'warning', `alt 비율 ${pct}% — 80% 권장.`, `${pct}%`));
+    else items.push(makeItem(LABELS.alt_ratio, 10, 0, 'fail', `alt 비율 ${pct}% — 다수 이미지 alt 누락.`, `${pct}%`));
   }
 
-  items.push(crawl.hasDoctorInfo
-    ? makeItem(LABELS.doctor_in_text, 15, 15, 'pass', '본문에 의료진 관련 키워드 감지.')
-    : makeItem(LABELS.doctor_in_text, 15, 0, 'fail', '본문에 의료진 정보 부족.'));
+  // ── doctor_in_text 3단계 판정 (20점) ──
+  // pass: 전문의 + 전문과 타이틀 명시 / warning: 의료진 키워드만 / fail: 없음
+  const hasSpecialist = SPECIALIST_TITLE.test(crawl.textContent);
+  if (hasSpecialist) {
+    items.push(makeItem(LABELS.doctor_in_text, 20, 20, 'pass', '본문에 전문의 + 전문과 타이틀 명시 — AI 가 의료 권위 인식 가능.'));
+  } else if (crawl.hasDoctorInfo) {
+    items.push(makeItem(LABELS.doctor_in_text, 20, 10, 'warning', '의료진 키워드는 있지만 "전문의" 타이틀·전문과 명시 부족.'));
+  } else {
+    items.push(makeItem(LABELS.doctor_in_text, 20, 0, 'fail', '본문에 의료진·전문의 정보 부족.'));
+  }
 
   items.push(crawl.wordCount >= 500
     ? makeItem(LABELS.word_count, 10, 10, 'pass', `본문 ${crawl.wordCount}자.`, String(crawl.wordCount))
@@ -362,29 +404,45 @@ function scoreExternalChannels(crawl: CrawlResult): CategoryScore {
   const items: CategoryItem[] = [];
   const haystack = externalLinksHaystack(crawl);
   const sameAs = collectSameAs(crawl.schemaMarkup).join(' ').toLowerCase();
-  const all = `${haystack} ${sameAs}`;
 
   const checks: Array<{ key: LabelKey; points: number; re: RegExp }> = [
-    { key: 'naver', points: 20, re: /place\.map\.naver|blog\.naver|naver\.me|m\.place\.naver/i },
-    { key: 'google', points: 20, re: /maps\.google|goo\.gl\/maps|g\.co\/kgs|business\.google/i },
-    { key: 'kakao', points: 15, re: /pf\.kakao|kakao\.com\/_|kko\.to/i },
-    { key: 'youtube', points: 15, re: /youtube\.com\/@|youtu\.be/i },
-    { key: 'instagram', points: 10, re: /instagram\.com\//i },
+    { key: 'naver', points: 12, re: /place\.map\.naver|blog\.naver|naver\.me|m\.place\.naver/i },
+    { key: 'google', points: 12, re: /maps\.google|goo\.gl\/maps|g\.co\/kgs|business\.google/i },
+    { key: 'kakao', points: 10, re: /pf\.kakao|kakao\.com\/_|kko\.to/i },
+    { key: 'youtube', points: 10, re: /youtube\.com\/@|youtu\.be/i },
+    { key: 'instagram', points: 8, re: /instagram\.com\//i },
   ];
 
+  let channelPassCount = 0;
   for (const c of checks) {
     if (c.re.test(haystack)) {
       items.push(makeItem(LABELS[c.key], c.points, c.points, 'pass', `외부 링크에서 감지됨.`));
+      channelPassCount++;
     } else {
       items.push(makeItem(LABELS[c.key], c.points, 0, 'fail', `외부 링크에서 감지 안 됨.`));
     }
   }
 
-  // sameAs 에 위 5개 채널 중 하나라도 포함되면 통과
+  // sameAs (13점)
   const anyChannelRe = /place\.map\.naver|blog\.naver|naver\.me|maps\.google|goo\.gl\/maps|business\.google|pf\.kakao|kakao\.com\/_|youtube\.com|instagram\.com/i;
   items.push(anyChannelRe.test(sameAs)
-    ? makeItem(LABELS.sameas_schema, 20, 20, 'pass', '스키마 sameAs 에 채널 URL 포함.')
-    : makeItem(LABELS.sameas_schema, 20, 0, 'fail', '스키마 sameAs 미설정.'));
+    ? makeItem(LABELS.sameas_schema, 13, 13, 'pass', '스키마 sameAs 에 채널 URL 포함.')
+    : makeItem(LABELS.sameas_schema, 13, 0, 'fail', '스키마 sameAs 미설정.'));
+
+  // ── news_mentions (15점) — 언론·건강 칼럼 인용 ──
+  const newsHit = crawl.externalLinks.filter(l => NEWS_DOMAIN.test(l.href)).length;
+  items.push(newsHit > 0
+    ? makeItem(LABELS.news_mentions, 15, 15, 'pass', `언론/건강칼럼 링크 ${newsHit}건 감지 — 외부 인용 경로 확보.`, String(newsHit))
+    : makeItem(LABELS.news_mentions, 15, 0, 'fail', '언론·건강칼럼 인용 없음 — AI 가 외부 출처로 참조할 근거 부족.'));
+
+  // ── owned_channels_diversity (20점) — 공식 채널 다양성 ──
+  if (channelPassCount >= 3) {
+    items.push(makeItem(LABELS.owned_channels_diversity, 20, 20, 'pass', `공식 채널 ${channelPassCount}개 확보 — 다양성 우수.`, `${channelPassCount}/5`));
+  } else if (channelPassCount >= 1) {
+    items.push(makeItem(LABELS.owned_channels_diversity, 20, 10, 'warning', `공식 채널 ${channelPassCount}개 — 3개 이상 권장.`, `${channelPassCount}/5`));
+  } else {
+    items.push(makeItem(LABELS.owned_channels_diversity, 20, 0, 'fail', '공식 채널 0개 — 네이버 플레이스/GBP/카카오 등록 필요.', '0/5'));
+  }
 
   return toCategoryScore('external_channels', '외부 채널 연결', items);
 }
@@ -396,24 +454,35 @@ function scoreAeoGeo(crawl: CrawlResult): CategoryScore {
   const hasFaqSchema = crawl.schemaTypes.some(t => t.toLowerCase() === 'faqpage');
 
   items.push(crawl.hasFAQ || hasFaqSchema
-    ? makeItem(LABELS.faq_structure, 25, 25, 'pass', 'FAQ 구조 감지됨.')
-    : makeItem(LABELS.faq_structure, 25, 0, 'fail', 'FAQ 구조 없음.'));
+    ? makeItem(LABELS.faq_structure, 22, 22, 'pass', 'FAQ 구조 감지됨.')
+    : makeItem(LABELS.faq_structure, 22, 0, 'fail', 'FAQ 구조 없음.'));
 
   items.push(crawl.detectedServices.length >= 1
-    ? makeItem(LABELS.services_named, 25, 25, 'pass', `시술명 ${crawl.detectedServices.length}개 감지.`)
-    : makeItem(LABELS.services_named, 25, 0, 'fail', '시술명 언급 없음.'));
+    ? makeItem(LABELS.services_named, 22, 22, 'pass', `시술명 ${crawl.detectedServices.length}개 감지.`)
+    : makeItem(LABELS.services_named, 22, 0, 'fail', '시술명 언급 없음.'));
 
   items.push(crawl.hasContactInfo
-    ? makeItem(LABELS.contact_text, 15, 15, 'pass', '연락처 텍스트 감지됨.')
-    : makeItem(LABELS.contact_text, 15, 0, 'fail', '연락처 텍스트 없음.'));
+    ? makeItem(LABELS.contact_text, 13, 13, 'pass', '연락처 텍스트 감지됨.')
+    : makeItem(LABELS.contact_text, 13, 0, 'fail', '연락처 텍스트 없음.'));
 
   items.push(crawl.hasAddress
-    ? makeItem(LABELS.address_text, 15, 15, 'pass', '주소 텍스트 감지됨.')
-    : makeItem(LABELS.address_text, 15, 0, 'fail', '주소 텍스트 없음.'));
+    ? makeItem(LABELS.address_text, 13, 13, 'pass', '주소 텍스트 감지됨.')
+    : makeItem(LABELS.address_text, 13, 0, 'fail', '주소 텍스트 없음.'));
 
   items.push(crawl.hasBusinessHours
-    ? makeItem(LABELS.hours_text, 20, 20, 'pass', '영업시간 텍스트 감지됨.')
-    : makeItem(LABELS.hours_text, 20, 0, 'fail', '영업시간 텍스트 없음.'));
+    ? makeItem(LABELS.hours_text, 18, 18, 'pass', '영업시간 텍스트 감지됨.')
+    : makeItem(LABELS.hours_text, 18, 0, 'fail', '영업시간 텍스트 없음.'));
+
+  // ── blog_searchable (12점, 기본 unknown — 크롤러로 정확 검증 불가) ──
+  // 네이버 블로그 URL 감지 시 "수동 확인 필요" detail 로 안내
+  const hasNaverBlog = crawl.externalLinks.some(l => NAVER_BLOG_URL.test(l.href));
+  items.push(makeItem(
+    LABELS.blog_searchable, 12, 0, 'unknown',
+    hasNaverBlog
+      ? '네이버 블로그 감지됨. 관리자 페이지에서 "전체공개 + 외부 검색허용" 설정 직접 확인 필요 (크롤러로 측정 불가).'
+      : '네이버 블로그 링크가 없어 외부 검색 허용 설정을 점검할 수 없습니다.',
+    hasNaverBlog ? '수동 확인 필요' : '대상 없음',
+  ));
 
   return toCategoryScore('aeo_geo', 'AEO/GEO 특화', items);
 }
