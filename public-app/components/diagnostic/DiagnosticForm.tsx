@@ -41,10 +41,6 @@ export default function DiagnosticForm({ onSubmit, disabled }: DiagnosticFormPro
             {disabled ? '진단 중...' : '진단 시작'}
           </button>
         </div>
-        <p className="mt-2.5 text-[11px] text-slate-400 leading-relaxed">
-          · http:// 또는 https:// 를 생략해도 자동으로 처리됩니다.<br />
-          · 크롤링 비용 관리를 위해 분당 3회로 제한됩니다.
-        </p>
       </div>
     </form>
   );
