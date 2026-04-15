@@ -22,7 +22,7 @@ import type {
 } from './types';
 import { callLLM } from '../llm';
 
-const AI_PLATFORMS: AIPlatform[] = ['ChatGPT', 'Gemini', 'Perplexity', 'Copilot'];
+const AI_PLATFORMS: AIPlatform[] = ['ChatGPT', 'Gemini'];
 
 // ── 공통 JSON 파서 ──────────────────────────────────────────
 
@@ -171,10 +171,8 @@ ${JSON.stringify(actionDigest, null, 2)}
 {
   "heroSummary": "3~4문장 — AI 검색 노출 관점에서 이 병원의 현재 위치·강점·가장 시급한 과제",
   "aiNarratives": {
-    "ChatGPT":     "4~5문장 — 평가기준·현재상태숫자·왜노출X·우선조치1~2",
-    "Gemini":      "4~5문장 — 위 구조 동일",
-    "Perplexity":  "4~5문장",
-    "Copilot":     "4~5문장"
+    "ChatGPT": "4~5문장 — 평가기준·현재상태숫자·왜노출X·우선조치1~2",
+    "Gemini":  "4~5문장 — 위 구조 동일"
   },
   "categoryRecommendations": {
     ${args.categories.map(c => `"${c.id}": ["2~3문장 bullet (왜 문제·구체 조치·누가/어디서), 2~3개"]`).join(',\n    ')}

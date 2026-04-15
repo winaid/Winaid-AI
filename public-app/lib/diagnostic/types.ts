@@ -111,7 +111,7 @@ export interface CategoryScore {
   recommendations: string[];
 }
 
-export type AIPlatform = 'ChatGPT' | 'Gemini' | 'Perplexity' | 'Copilot';
+export type AIPlatform = 'ChatGPT' | 'Gemini';
 
 export interface AIVisibility {
   platform: AIPlatform;

@@ -15,8 +15,6 @@ const LIKELIHOOD_META: Record<AIVisibility['likelihood'], { label: string; color
 const PLATFORM_META: Record<AIVisibility['platform'], { emoji: string }> = {
   ChatGPT: { emoji: '💬' },
   Gemini: { emoji: '✨' },
-  Perplexity: { emoji: '🔎' },
-  Copilot: { emoji: '🧭' },
 };
 
 export default function AIVisibilityCard({ visibility }: AIVisibilityCardProps) {

@@ -50,28 +50,6 @@ const RULES: Rule[] = [
       return { score, reason, likelihood: l };
     },
   },
-  {
-    platform: 'Perplexity',
-    compute: (cats) => {
-      const s1 = scoreOf(cats, 'content_quality');
-      const s2 = scoreOf(cats, 'external_channels');
-      const score = Math.round((s1 + s2) / 2);
-      const l = bucket(score, 60, 35);
-      const reason = `Perplexity 는 인용 가능한 본문과 외부 채널을 출처로 활용합니다. 콘텐츠 품질 ${s1}점, 외부 채널 ${s2}점의 평균 ${score}점으로 노출 가능성은 ${likelihoodLabel(l)}입니다.`;
-      return { score, reason, likelihood: l };
-    },
-  },
-  {
-    platform: 'Copilot',
-    compute: (cats) => {
-      const s1 = scoreOf(cats, 'security_tech');
-      const s2 = scoreOf(cats, 'structured_data');
-      const score = Math.round((s1 + s2) / 2);
-      const l = bucket(score, 60, 35);
-      const reason = `Copilot(Bing 기반) 은 보안·기술 기반과 구조화 데이터를 우선 평가합니다. 보안·기술 ${s1}점, 구조화 데이터 ${s2}점의 평균 ${score}점으로 노출 가능성은 ${likelihoodLabel(l)}입니다.`;
-      return { score, reason, likelihood: l };
-    },
-  },
 ];
 
 export function predictAIVisibility(categories: CategoryScore[]): AIVisibility[] {
