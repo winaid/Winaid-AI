@@ -79,6 +79,7 @@ function classifyCrawlError(e: unknown): { code: ErrCode; status: number; messag
 }
 
 export async function POST(request: NextRequest) {
+  try {
   // 1) rate limit — 외부 사이트 크롤링이 비싸므로 분당 3회
   const gate = gateGuestRequest(request, 3);
   if (!gate.ok) {
@@ -164,4 +165,12 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.json(enriched);
+  } catch (e) {
+    // 최상위 안전망 — 어떤 예외든 JSON UNKNOWN 응답으로 변환.
+    // 기존 세부 try/catch 가 못 잡은 케이스(LLM throw, scoring 예외 등) 보호.
+    const name = (e as Error)?.name || 'Error';
+    const msg = (e as Error)?.message || 'unknown';
+    console.warn(`[diagnostic] unhandled exception: ${name} - ${msg.slice(0, 300)}`);
+    return err('UNKNOWN', `진단 중 예상치 못한 오류가 발생했습니다 (${name}).`, 500);
+  }
 }

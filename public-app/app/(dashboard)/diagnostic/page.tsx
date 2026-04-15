@@ -137,7 +137,32 @@ export default function DiagnosticPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url }),
       });
-      const data = (await res.json()) as DiagnosticResponse | (DiagnosticErrorResponse & { message?: string });
+      const contentType = res.headers.get('content-type') || '';
+
+      // Next.js / Vercel 기본 HTML 500/타임아웃 응답 방어 — JSON 아니면 텍스트로 받아 graceful 처리
+      if (!contentType.includes('application/json')) {
+        const text = await res.text().catch(() => '');
+        const preview = text.slice(0, 150).replace(/\s+/g, ' ').trim();
+        console.warn(`[diagnostic] non-JSON response (${res.status}):`, preview);
+        setError({
+          code: 'UNKNOWN',
+          message: '서버가 예상 외 형식으로 응답했습니다. 사이트가 너무 느리거나 일시적 오류일 수 있습니다. 잠시 후 다시 시도해주세요.',
+        });
+        setStatus('error');
+        return;
+      }
+
+      let data: DiagnosticResponse | (DiagnosticErrorResponse & { message?: string });
+      try {
+        data = (await res.json()) as DiagnosticResponse | (DiagnosticErrorResponse & { message?: string });
+      } catch {
+        setError({
+          code: 'UNKNOWN',
+          message: '서버 응답을 해석할 수 없습니다. 잠시 후 다시 시도해주세요.',
+        });
+        setStatus('error');
+        return;
+      }
 
       if (!res.ok || !('success' in data) || data.success !== true) {
         const err = data as DiagnosticErrorResponse & { message?: string };
