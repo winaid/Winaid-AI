@@ -17,9 +17,10 @@ import { fetchPsi } from '../../../lib/diagnostic/psi';
 import { scoreCategories, computeOverallScore } from '../../../lib/diagnostic/scoring';
 import { predictAIVisibility } from '../../../lib/diagnostic/aiVisibility';
 import { buildActionPlan } from '../../../lib/diagnostic/actionPlan';
+import { enrichDiagnostic } from '../../../lib/diagnostic/enrich';
 import type { DiagnosticResponse, DiagnosticErrorResponse } from '../../../lib/diagnostic/types';
 
-export const maxDuration = 45;
+export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
 
 interface Body { url?: string }
@@ -122,8 +123,8 @@ export async function POST(request: NextRequest) {
   const aiVisibility = predictAIVisibility(categories);
   const priorityActions = buildActionPlan(categories);
 
-  // 10) 응답 조립
-  const response: DiagnosticResponse = {
+  // 10) 응답 조립 (base)
+  const base: DiagnosticResponse = {
     success: true,
     url: normalizedUrl,
     analyzedAt: new Date().toISOString(),
@@ -142,5 +143,7 @@ export async function POST(request: NextRequest) {
     },
   };
 
-  return NextResponse.json(response);
+  // 11) LLM 맞춤 해설 overlay (단계 5-A) — 실패 시 base 그대로 반환
+  const enriched = await enrichDiagnostic(base, crawl);
+  return NextResponse.json(enriched);
 }

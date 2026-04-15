@@ -45,6 +45,8 @@ const DEFAULT_ROUTING: Record<LLMTaskKind, RouteDefinition> = {
   style_learn:        { provider: 'claude', model: 'claude-sonnet-4-6',         batchPreferred: true  },
   score_crawled_post: { provider: 'claude', model: 'claude-haiku-4-5-20251001', batchPreferred: true  },
   landing_chat:       { provider: 'gemini', model: 'gemini-3.1-flash-lite-preview', batchPreferred: false },
+  diagnostic_extract: { provider: 'gemini', model: 'gemini-3.1-flash-lite-preview', batchPreferred: false },
+  diagnostic_narrative: { provider: 'claude', model: 'claude-sonnet-4-6',         batchPreferred: false },
   search_ground:      { provider: 'gemini', model: 'gemini-3.1-pro-preview',    batchPreferred: false },
 };
 
@@ -68,6 +70,8 @@ const GEMINI_FALLBACK_MODEL: Record<LLMTaskKind, string> = {
   style_learn:        'gemini-3.1-pro-preview',
   score_crawled_post: 'gemini-3.1-flash-lite-preview',
   landing_chat:       'gemini-3.1-flash-lite-preview',
+  diagnostic_extract: 'gemini-3.1-flash-lite-preview',
+  diagnostic_narrative: 'gemini-3.1-pro-preview',
   search_ground:      'gemini-3.1-pro-preview',
 };
 
@@ -96,6 +100,8 @@ function exhaustiveCheck(task: LLMTaskKind): void {
     case 'style_learn':
     case 'score_crawled_post':
     case 'landing_chat':
+    case 'diagnostic_extract':
+    case 'diagnostic_narrative':
     case 'search_ground':
       return;
     default:

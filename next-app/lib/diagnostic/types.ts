@@ -152,6 +152,33 @@ export interface DiagnosticResponse {
   priorityActions: ActionItem[];
 
   crawlMeta: CrawlMeta;
+
+  // ── 단계 5-A: LLM 기반 맞춤 해설 (optional — LLM 실패 시 전부 undefined, base 동작 유지) ──
+  /** AI 검색 노출 관점 3~4문장 — 히어로 카드용 */
+  heroSummary?: string;
+  /** 이 병원 요약 2문장 — Gemini 추출 */
+  siteSummary?: string;
+  /** 플랫폼별 맞춤 해설 — AIVisibility.reason 을 대체/보완 */
+  aiNarratives?: Partial<Record<AIPlatform, string>>;
+}
+
+// ── 단계 5-A: LLM 추출·생성 중간 타입 ───────────────────────────
+
+/** Gemini 가 crawl 결과에서 추출하는 병원 메타 */
+export interface SiteMeta {
+  siteSummary: string;
+  detectedStrengths: string[];
+  detectedGaps: string[];
+}
+
+/** Sonnet 이 기본 진단 + SiteMeta 를 받아 만드는 맞춤 해설 묶음 */
+export interface Narratives {
+  heroSummary: string;
+  aiNarratives: Partial<Record<AIPlatform, string>>;
+  /** key 는 CategoryScore.id (security_tech / site_structure / ...) */
+  categoryRecommendations: Record<string, string[]>;
+  /** key 는 priorityActions 배열의 인덱스 문자열 ("0", "1", ...) — action 문구 교체용 */
+  actionTexts: Record<string, string>;
 }
 
 export interface DiagnosticErrorResponse {

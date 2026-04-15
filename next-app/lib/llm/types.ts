@@ -38,6 +38,9 @@ export type LLMTaskKind =
   | 'score_crawled_post'
   // ── 랜딩 챗봇 (실시간 UX) ──
   | 'landing_chat'
+  // ── AEO/GEO 진단 도구 (Gemini 추출 + Sonnet 해설) ──
+  | 'diagnostic_extract'
+  | 'diagnostic_narrative'
   // ── Gemini googleSearch 강제용 — Claude로 넘어가지 않음 ──
   | 'search_ground';
 
