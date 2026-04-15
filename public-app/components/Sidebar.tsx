@@ -33,6 +33,7 @@ const videoItems: { id: ContentTab; label: string; icon: string; href: string }[
 ];
 
 const extraItems: { label: string; icon: string; href: string }[] = [
+  { label: 'AEO/GEO 진단', icon: '🔍', href: '/diagnostic' },
   { label: '마이페이지', icon: '👤', href: '/mypage' },
   { label: '사용 가이드', icon: '📖', href: '/app?guide=1' },
 ];

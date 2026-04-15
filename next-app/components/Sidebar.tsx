@@ -34,6 +34,7 @@ const toolItems: { id: ContentTab; label: string; icon: string; href: string }[]
 ];
 
 const extraItems: { label: string; icon: string; href: string }[] = [
+  { label: 'AEO/GEO 진단', icon: '🔍', href: '/diagnostic' },
   { label: '히스토리', icon: '🕐', href: '/history' },
   { label: '사용 가이드', icon: '📖', href: '/app?guide=1' },
   { label: '피드백', icon: '💬', href: '/feedback' },
