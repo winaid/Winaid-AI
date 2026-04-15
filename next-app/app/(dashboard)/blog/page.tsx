@@ -860,6 +860,7 @@ JSON 형식으로 응답해주세요.`;
           category: request.category,
           hospitalName: hospitalName || undefined,
           ruleFilterViolations: draftViolations,
+          stylePromptText: request.stylePromptText,
           userId: creditCtx.userId || null,
         }),
       }).then(r => r.json()).catch((err: unknown) => ({

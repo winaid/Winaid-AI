@@ -40,6 +40,7 @@ interface Body {
   category?: string;
   hospitalName?: string;
   ruleFilterViolations?: string[];
+  stylePromptText?: string;
   userId?: string | null;
 }
 
@@ -101,6 +102,7 @@ export async function POST(request: NextRequest) {
     category: body.category,
     hospitalName: body.hospitalName,
     ruleFilterViolations: body.ruleFilterViolations,
+    stylePromptText: body.stylePromptText,
   });
 
   // 5) callLLM (Opus 4.6)
