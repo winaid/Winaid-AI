@@ -164,6 +164,14 @@ export interface DiagnosticResponse {
   siteSummary?: string;
   /** 플랫폼별 맞춤 해설 — AIVisibility.reason 을 대체/보완 */
   aiNarratives?: Partial<Record<AIPlatform, string>>;
+
+  // ── 단계 C-a-1: AI 실측 (optional — 실패 시 전부 undefined) ──
+  /** 플랫폼별 실측 검색 결과 (ChatGPT web_search + Gemini grounding) */
+  competitorFindings?: CompetitorFinding[];
+  /** crawl 본문에서 추출한 지역 (예: "강남구", "논산시") */
+  detectedRegion?: string;
+  /** 업종 (기본: "치과", 향후 확장 여지) */
+  detectedCategory?: string;
 }
 
 // ── 단계 5-A: LLM 추출·생성 중간 타입 ───────────────────────────
@@ -173,6 +181,28 @@ export interface SiteMeta {
   siteSummary: string;
   detectedStrengths: string[];
   detectedGaps: string[];
+}
+
+// ── 단계 C-a-1: AI 실측 결과 타입 ─────────────────────────
+
+/** 검색 결과 1건 */
+export interface CompetitorResult {
+  url: string;
+  title: string;
+  snippet: string;
+  domain: string; // 호스트명 (www. prefix 제거)
+  rank: number;   // 1~5
+}
+
+/** 플랫폼별 실측 결과 */
+export interface CompetitorFinding {
+  platform: AIPlatform;       // 'ChatGPT' | 'Gemini'
+  queryUsed: string;           // 예: "논산 치과 추천"
+  topResults: CompetitorResult[]; // 상위 5개 (빈 배열 = 호출 실패)
+  selfIncluded: boolean;       // 본인 도메인 포함 여부
+  selfRank: number | null;     // 1~5 또는 null(미포함)
+  timestamp: string;           // ISO
+  rawError?: string;           // 실패 사유 (디버그/UI)
 }
 
 /** Sonnet 이 기본 진단 + SiteMeta 를 받아 만드는 맞춤 해설 묶음 */

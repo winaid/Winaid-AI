@@ -18,9 +18,10 @@ import { scoreCategories, computeOverallScore } from '../../../lib/diagnostic/sc
 import { predictAIVisibility } from '../../../lib/diagnostic/aiVisibility';
 import { buildActionPlan } from '../../../lib/diagnostic/actionPlan';
 import { enrichDiagnostic } from '../../../lib/diagnostic/enrich';
+import { discoverCompetitors } from '../../../lib/diagnostic/discovery';
 import type { DiagnosticResponse, DiagnosticErrorResponse } from '../../../lib/diagnostic/types';
 
-export const maxDuration = 60;
+export const maxDuration = 120;
 export const dynamic = 'force-dynamic';
 
 interface Body { url?: string }
@@ -142,6 +143,23 @@ export async function POST(request: NextRequest) {
   };
 
   // 11) LLM 맞춤 해설 overlay (단계 5-A) — 실패 시 base 그대로 반환
-  const enriched = await enrichDiagnostic(base, crawl);
+  let enriched = await enrichDiagnostic(base, crawl);
+
+  // 12) AI 실측 — ChatGPT + Gemini 로 "{지역} 치과 추천" 검색 (단계 C-a-1)
+  //     실패/스킵 시 enriched 그대로. throw 전파 없음.
+  try {
+    const disc = await discoverCompetitors(crawl, '치과');
+    if (disc.findings.length > 0 || disc.detectedRegion) {
+      enriched = {
+        ...enriched,
+        ...(disc.findings.length > 0 ? { competitorFindings: disc.findings } : {}),
+        ...(disc.detectedRegion ? { detectedRegion: disc.detectedRegion } : {}),
+        detectedCategory: disc.detectedCategory,
+      };
+    }
+  } catch (e) {
+    console.warn(`[diagnostic] discoverCompetitors 실패: ${(e as Error).message.slice(0, 200)}`);
+  }
+
   return NextResponse.json(enriched);
 }
