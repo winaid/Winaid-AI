@@ -24,7 +24,7 @@ export default function AIVisibilityCard({ visibility }: AIVisibilityCardProps) 
   const pm = PLATFORM_META[visibility.platform];
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm flex flex-col">
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm flex flex-col min-h-[220px]">
       <div className="flex items-center justify-between gap-3 pb-3 border-b border-slate-100">
         <div className="flex items-center gap-2">
           <span className="text-xl">{pm.emoji}</span>
@@ -37,7 +37,7 @@ export default function AIVisibilityCard({ visibility }: AIVisibilityCardProps) 
           {meta.emoji} {meta.label}
         </span>
       </div>
-      <p className="mt-3 text-[13px] text-slate-600 leading-relaxed">{visibility.reason}</p>
+      <p className="mt-3 text-[13px] text-slate-600 leading-relaxed whitespace-pre-line">{visibility.reason}</p>
     </div>
   );
 }

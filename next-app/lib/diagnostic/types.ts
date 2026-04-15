@@ -119,12 +119,16 @@ export interface AIVisibility {
   reason: string;
 }
 
+export type ActionExecutor = 'ai' | 'human' | 'hybrid';
+
 export interface ActionItem {
   action: string;
   impact: 'high' | 'medium' | 'low';
   difficulty: 'easy' | 'medium' | 'hard';
   timeframe: '즉시' | '1주' | '2주' | '1개월';
   category: string;
+  /** 단계 5-B: Sonnet 이 분류하는 실행 주체. 규칙 기반 fallback 은 undefined. */
+  executor?: ActionExecutor;
 }
 
 export interface CrawlMeta {
@@ -177,8 +181,8 @@ export interface Narratives {
   aiNarratives: Partial<Record<AIPlatform, string>>;
   /** key 는 CategoryScore.id (security_tech / site_structure / ...) */
   categoryRecommendations: Record<string, string[]>;
-  /** key 는 priorityActions 배열의 인덱스 문자열 ("0", "1", ...) — action 문구 교체용 */
-  actionTexts: Record<string, string>;
+  /** 단계 5-B: key 는 priorityActions 인덱스 문자열 ("0", "1", ...). text + executor 쌍. */
+  actionTexts: Record<string, { text: string; executor: ActionExecutor }>;
 }
 
 export interface DiagnosticErrorResponse {

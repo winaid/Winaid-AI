@@ -24,7 +24,44 @@ function scoreHeadline(score: number): string {
   if (score >= 85) return '전반적으로 매우 우수합니다. 소수 개선으로 상위권 유지 가능합니다.';
   if (score >= 70) return '기본기는 탄탄합니다. 몇 가지 보강으로 AI 노출을 크게 끌어올릴 수 있습니다.';
   if (score >= 50) return '중간 수준입니다. 우선 조치 목록부터 순차 적용을 권장합니다.';
-  return '개선 여지가 큽니다. 기술 기반과 콘텐츠 구조부터 전면 재정비가 필요합니다.';
+  return '개선 여지가 큽니다. 기술 기반과 콘텐츠 구조부터 순차 보강이 필요합니다.';
+}
+
+// ── PSI 해석 (규칙 기반) ───────────────────────────────────
+type Band = 'good' | 'warn' | 'bad';
+function bandPsi(score: number | null): Band | 'unknown' {
+  if (score === null) return 'unknown';
+  if (score >= 90) return 'good';
+  if (score >= 50) return 'warn';
+  return 'bad';
+}
+function bandMs(v: number | null, good: number, warn: number): Band | 'unknown' {
+  if (v === null) return 'unknown';
+  if (v <= good) return 'good';
+  if (v <= warn) return 'warn';
+  return 'bad';
+}
+function bandCls(v: number | null): Band | 'unknown' {
+  if (v === null) return 'unknown';
+  if (v <= 0.1) return 'good';
+  if (v <= 0.25) return 'warn';
+  return 'bad';
+}
+function badgeFor(b: Band | 'unknown'): { emoji: string; label: string; color: string } {
+  switch (b) {
+    case 'good': return { emoji: '🟢', label: '양호', color: 'text-emerald-600 bg-emerald-50' };
+    case 'warn': return { emoji: '🟡', label: '주의', color: 'text-amber-600 bg-amber-50' };
+    case 'bad':  return { emoji: '🔴', label: '미흡', color: 'text-red-600 bg-red-50' };
+    default:     return { emoji: '⚪', label: '측정X', color: 'text-slate-400 bg-slate-100' };
+  }
+}
+
+function psiInterpretation(score: number | null, lcp: number | null): string {
+  if (score === null) return '';
+  if (score < 50 && lcp !== null && lcp > 10000) return '로딩이 매우 느려 모바일 환자 이탈 위험이 큽니다.';
+  if (score < 50) return '로딩 성능이 검색 노출에 불리한 수준입니다.';
+  if (score < 90) return '로딩 속도 개선 여지가 있습니다.';
+  return '로딩 성능은 양호합니다.';
 }
 
 function formatDate(iso: string): string {
@@ -51,8 +88,13 @@ export default function DiagnosticResult({ result }: DiagnosticResultProps) {
           <div className="flex-1 min-w-0 text-center md:text-left">
             <h2 className="text-xl font-black text-slate-800 break-words">{result.siteName}</h2>
             <p className="mt-1 text-[12px] text-slate-400 break-all">{result.url}</p>
+            {result.siteSummary && (
+              <p className="mt-2 text-[12px] text-slate-500 leading-relaxed italic">{result.siteSummary}</p>
+            )}
             <p className="mt-2 text-[11px] text-slate-400">분석 시각: {formatDate(result.analyzedAt)}</p>
-            <p className="mt-3 text-sm text-slate-600 leading-relaxed">{scoreHeadline(result.overallScore)}</p>
+            <p className="mt-3 text-sm text-slate-600 leading-relaxed whitespace-pre-line">
+              {result.heroSummary || scoreHeadline(result.overallScore)}
+            </p>
             <div className="mt-4 flex flex-wrap gap-2">
               <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-600">
                 페이지 {result.crawlMeta.pagesAnalyzed}개
@@ -120,13 +162,26 @@ export default function DiagnosticResult({ result }: DiagnosticResultProps) {
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                <PerfTile label="PSI 점수" value={result.performance.score === null ? '—' : `${result.performance.score}`} suffix="/100" highlight />
-                <PerfTile label="FCP" value={fmtMs(result.performance.fcp)} suffix="ms" />
-                <PerfTile label="LCP" value={fmtMs(result.performance.lcp)} suffix="ms" />
-                <PerfTile label="CLS" value={result.performance.cls === null ? '—' : result.performance.cls.toFixed(3)} />
-                <PerfTile label="TBT" value={fmtMs(result.performance.tbt)} suffix="ms" />
-              </div>
+              <>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                  <PerfTile
+                    label="PSI 점수"
+                    value={result.performance.score === null ? '—' : `${result.performance.score}`}
+                    suffix="/100"
+                    highlight
+                    band={bandPsi(result.performance.score)}
+                  />
+                  <PerfTile label="FCP" value={fmtMs(result.performance.fcp)} suffix="ms" band={bandMs(result.performance.fcp, 1800, 3000)} />
+                  <PerfTile label="LCP" value={fmtMs(result.performance.lcp)} suffix="ms" band={bandMs(result.performance.lcp, 2500, 4000)} />
+                  <PerfTile label="CLS" value={result.performance.cls === null ? '—' : result.performance.cls.toFixed(3)} band={bandCls(result.performance.cls)} />
+                  <PerfTile label="TBT" value={fmtMs(result.performance.tbt)} suffix="ms" band={bandMs(result.performance.tbt, 200, 600)} />
+                </div>
+                {psiInterpretation(result.performance.score, result.performance.lcp) && (
+                  <p className="mt-3 text-[12px] text-slate-500 leading-relaxed">
+                    {psiInterpretation(result.performance.score, result.performance.lcp)}
+                  </p>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -161,10 +216,18 @@ function fmtMs(v: number | null): string {
   return String(Math.round(v));
 }
 
-function PerfTile({ label, value, suffix, highlight }: { label: string; value: string; suffix?: string; highlight?: boolean }) {
+function PerfTile({ label, value, suffix, highlight, band }: { label: string; value: string; suffix?: string; highlight?: boolean; band?: Band | 'unknown' }) {
+  const badge = band ? badgeFor(band) : null;
   return (
     <div className={`rounded-xl p-3 border ${highlight ? 'bg-blue-50 border-blue-100' : 'bg-slate-50 border-slate-100'}`}>
-      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{label}</p>
+      <div className="flex items-center justify-between gap-1">
+        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{label}</p>
+        {badge && (
+          <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-bold ${badge.color}`} aria-label={badge.label}>
+            {badge.emoji}
+          </span>
+        )}
+      </div>
       <p className={`mt-1 text-lg font-black ${highlight ? 'text-blue-700' : 'text-slate-700'}`}>
         {value}
         {suffix && value !== '—' && <span className="text-[10px] font-semibold text-slate-400 ml-0.5">{suffix}</span>}

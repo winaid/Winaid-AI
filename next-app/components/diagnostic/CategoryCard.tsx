@@ -57,14 +57,14 @@ export default function CategoryCard({ category }: CategoryCardProps) {
 
       {category.recommendations.length > 0 && (
         <div className="mt-4 pt-4 border-t border-slate-100">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2.5">
             권장 조치
           </p>
-          <ul className="space-y-1.5">
+          <ul className="space-y-3">
             {category.recommendations.map((r, idx) => (
-              <li key={idx} className="text-[12px] text-slate-600 leading-relaxed flex gap-2">
-                <span className="text-blue-500 flex-none">·</span>
-                <span>{r}</span>
+              <li key={idx} className="text-[13px] text-slate-600 leading-relaxed flex gap-2">
+                <span className="text-blue-500 flex-none mt-0.5">·</span>
+                <span className="whitespace-pre-line">{r}</span>
               </li>
             ))}
           </ul>

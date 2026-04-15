@@ -17,6 +17,7 @@ import type {
   CategoryScore,
   AIVisibility,
   ActionItem,
+  ActionExecutor,
   AIPlatform,
 } from './types';
 import { callLLM } from '../llm';
@@ -97,7 +98,26 @@ const NARRATIVE_SYSTEM = `당신은 한국 병원 마케팅 전문가입니다. 
 - 구체적 이유 1~3개 포함
 - 금지 표현: "재정비 필요", "전면 개선", "일반적으로", "~할 수 있습니다" 연속
 - 병원명·진료과·지역을 자연스럽게 녹인다
-- 원장이 읽고 "아 이거구나" 할 수 있게 쉽고 직접적으로`;
+- 원장이 읽고 "아 이거구나" 할 수 있게 쉽고 직접적으로
+
+## 항목별 상세 (categoryRecommendations) 작성 규칙
+- 각 bullet 은 2~3문장
+- 구조: ① 왜 이게 문제인지 (환자 체감 또는 AI 인식 관점) → ② 구체적 조치 방법 → ③ 누가/어디서 하면 되는지 힌트
+- 기술 용어는 한 문장에 하나만, 꼭 쓰면 괄호로 쉬운 설명
+- 예시: "FAQ 스키마가 없어 AI 가 이 병원의 '자주 묻는 질문' 을 출처로 인용하지 못합니다. 홈페이지 제작사에 'FAQPage 구조화 데이터 추가' 요청하거나, 워드프레스라면 RankMath/Yoast 플러그인에서 5분 안에 적용 가능합니다."
+
+## AI 플랫폼 카드 (aiNarratives) 작성 규칙
+- 각 4~5문장
+- 구조: ① 이 AI 의 평가 기준 → ② 이 병원 현재 상태 숫자로 → ③ 구체적으로 왜 노출 안 되는지 → ④ 노출되려면 뭘 해야 하는지 우선 1~2개
+- 숫자를 꼭 인용 (예: "구조화 데이터 0점이라 Gemini 가 이 병원이 치과인지 식당인지 구분 못 합니다")
+- 문단 구분이 필요하면 '\\n\\n' 사용 (UI 에서 단락으로 렌더링)
+
+## 우선 조치 (actionTexts) 작성 규칙 + 실행 주체 분류
+- 각 조치는 **동사로 시작하는 한 문장** (텍스트)
+- executor 분류 (반드시 셋 중 하나):
+  - "ai": AI 가 혼자 끝낼 수 있는 것. 예) 블로그 초안 작성, 스키마 JSON 생성, 메타 description 초안, 이미지 alt 텍스트 작성
+  - "human": 사람이 꼭 해야 하는 것. 예) GMB/네이버 플레이스 등록, CDN 계약, 실제 배포, 진료시간 직접 확인
+  - "hybrid": AI 초안 + 사람 검수/발행. 예) 블로그 10편 작성·업로드, 의료진 소개 문구 작성 후 홈페이지 업로드`;
 
 interface NarrativeArgs {
   meta: SiteMeta | null;
@@ -148,16 +168,16 @@ ${JSON.stringify(actionDigest, null, 2)}
 {
   "heroSummary": "3~4문장 — AI 검색 노출 관점에서 이 병원의 현재 위치·강점·가장 시급한 과제",
   "aiNarratives": {
-    "ChatGPT":     "2~3문장 — 왜 이 정도 노출인지 구체 이유",
-    "Gemini":      "2~3문장",
-    "Perplexity":  "2~3문장",
-    "Copilot":     "2~3문장"
+    "ChatGPT":     "4~5문장 — 평가기준·현재상태숫자·왜노출X·우선조치1~2",
+    "Gemini":      "4~5문장 — 위 구조 동일",
+    "Perplexity":  "4~5문장",
+    "Copilot":     "4~5문장"
   },
   "categoryRecommendations": {
-    ${args.categories.map(c => `"${c.id}": ["이 카테고리에서 이 병원이 우선 해야 할 조치 2~3개 — 추상어 금지, 행동 명세"]`).join(',\n    ')}
+    ${args.categories.map(c => `"${c.id}": ["2~3문장 bullet (왜 문제·구체 조치·누가/어디서), 2~3개"]`).join(',\n    ')}
   },
   "actionTexts": {
-    ${actionDigest.map(a => `"${a.idx}": "priorityActions[${a.idx}] 을 이 병원 상황에 맞춘 한 문장으로 재작성 (왜 중요한지 1~2어절 포함)"`).join(',\n    ')}
+    ${actionDigest.map(a => `"${a.idx}": { "text": "priorityActions[${a.idx}] 을 이 병원 상황에 맞춘 동사 시작 한 문장으로 재작성", "executor": "ai|human|hybrid" }`).join(',\n    ')}
   }
 }`;
 
@@ -186,10 +206,17 @@ ${JSON.stringify(actionDigest, null, 2)}
         catRecs[k] = v.filter((s): s is string => typeof s === 'string' && s.trim().length > 0).slice(0, 4);
       }
     }
-    const actTxts: Record<string, string> = {};
+    const actTxts: Record<string, { text: string; executor: ActionExecutor }> = {};
     const srcAct = (parsed.actionTexts ?? {}) as Record<string, unknown>;
     for (const [k, v] of Object.entries(srcAct)) {
-      if (typeof v === 'string' && v.trim()) actTxts[k] = v.trim();
+      if (v && typeof v === 'object' && !Array.isArray(v)) {
+        const o = v as { text?: unknown; executor?: unknown };
+        const text = typeof o.text === 'string' ? o.text.trim() : '';
+        const exec = o.executor === 'ai' || o.executor === 'human' || o.executor === 'hybrid'
+          ? (o.executor as ActionExecutor)
+          : null;
+        if (text && exec) actTxts[k] = { text, executor: exec };
+      }
     }
 
     return {
@@ -232,7 +259,7 @@ export async function enrichDiagnostic(
     });
     const overlaidActions = base.priorityActions.map((a, i) => {
       const override = n.actionTexts[String(i)];
-      return override ? { ...a, action: override } : a;
+      return override ? { ...a, action: override.text, executor: override.executor } : a;
     });
     const overlaidVisibility = base.aiVisibility.map(v => {
       const override = n.aiNarratives[v.platform];
