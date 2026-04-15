@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { DiagnosticResponse, DiagnosticErrorResponse } from '../../../lib/diagnostic/types';
 import DiagnosticForm from '../../../components/diagnostic/DiagnosticForm';
 import DiagnosticResult from '../../../components/diagnostic/DiagnosticResult';
@@ -15,6 +15,39 @@ const LOADING_STAGES = [
   'AI 노출 예측',
   '보고서 생성',
 ];
+
+/** 각 단계 예상 소요 시간(ms). 실측 평균 기반.
+ *  마지막 단계는 실제 응답 도착까지 대기 (90%→95% 천천히 상승, 응답 오면 100% 점프). */
+const STAGE_DURATIONS_MS = [
+  8_000,   // 웹사이트 접속
+  5_000,   // 페이지 구조 분석
+  20_000,  // 성능 측정 (PSI 가장 오래)
+  15_000,  // AI 노출 예측 (OpenAI + Gemini 병렬)
+  10_000,  // 보고서 생성 — 표시용. 실제로는 응답 올 때까지 대기.
+];
+
+/** 마지막 단계 진입 시점(초) — 앞 4 단계 합. computeProgress / lastStageSubText 공용. */
+const LAST_STAGE_START_SEC = Math.ceil(
+  STAGE_DURATIONS_MS.slice(0, -1).reduce((a, b) => a + b, 0) / 1000
+);
+
+/** 진행률 계산 — 마지막 단계는 90% 에서 시작, 경과에 따라 95% 까지만 천천히 상승. */
+function computeProgress(stage: number, elapsedSec: number): number {
+  const total = LOADING_STAGES.length;
+  if (stage >= total) return 100; // 응답 도착 후 명시적 100% 점프
+  if (stage < total - 1) return Math.round(((stage + 1) / total) * 100);
+  const inLast = Math.max(0, elapsedSec - LAST_STAGE_START_SEC);
+  const bonus = Math.min(5, inLast * 0.25); // 4초당 +1%, 최대 +5%
+  return Math.round(90 + bonus);
+}
+
+/** 마지막 단계 서브 문구 — 경과 15s / 30s 구간에서 단계적 완화 멘트. */
+function lastStageSubText(elapsedSec: number): string {
+  const inLast = Math.max(0, elapsedSec - LAST_STAGE_START_SEC);
+  if (inLast < 15) return '';
+  if (inLast < 30) return '최종 정리 중… 조금만 기다려 주세요';
+  return '응답 수신 대기 중… 거의 다 됐습니다';
+}
 
 const LOADING_TIPS = [
   'AI 검색은 공식 홈페이지를 가진 병원을 3배 더 추천해요.',
@@ -61,37 +94,42 @@ const FAQS: { q: string; a: string }[] = [
 export default function DiagnosticPage() {
   const [status, setStatus] = useState<Status>('idle');
   const [loadingStage, setLoadingStage] = useState(0);
+  const [elapsedSec, setElapsedSec] = useState(0);
   const [result, setResult] = useState<DiagnosticResponse | null>(null);
   const [error, setError] = useState<{ code: string; message: string } | null>(null);
   const [lastUrl, setLastUrl] = useState<string>('');
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // 로딩 진입 시: setTimeout 체인으로 단계 전환(앞 4단계만), 1초 간격 경과 카운터.
+  // status 가 loading 외로 바뀌면 cleanup 으로 전부 정리.
   useEffect(() => {
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, []);
-
-  const startLoadingAnim = () => {
+    if (status !== 'loading') return;
     setLoadingStage(0);
-    if (intervalRef.current) clearInterval(intervalRef.current);
-    intervalRef.current = setInterval(() => {
-      setLoadingStage((s) => (s + 1) % LOADING_STAGES.length);
-    }, 2000);
-  };
-  const stopLoadingAnim = () => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
+    setElapsedSec(0);
+
+    const elapsedTimer = setInterval(() => {
+      setElapsedSec((s) => s + 1);
+    }, 1000);
+
+    const timeouts: ReturnType<typeof setTimeout>[] = [];
+    let acc = 0;
+    // 0→1, 1→2, 2→3, 3→4 전환만 예약. 마지막 단계 도달 후엔 응답 대기.
+    for (let i = 0; i < STAGE_DURATIONS_MS.length - 1; i++) {
+      acc += STAGE_DURATIONS_MS[i];
+      const t = setTimeout(() => setLoadingStage(i + 1), acc);
+      timeouts.push(t);
     }
-  };
+
+    return () => {
+      clearInterval(elapsedTimer);
+      timeouts.forEach(clearTimeout);
+    };
+  }, [status]);
 
   const handleSubmit = async (url: string) => {
     setLastUrl(url);
     setStatus('loading');
     setResult(null);
     setError(null);
-    startLoadingAnim();
 
     try {
       const res = await fetch('/api/diagnostic', {
@@ -100,7 +138,6 @@ export default function DiagnosticPage() {
         body: JSON.stringify({ url }),
       });
       const data = (await res.json()) as DiagnosticResponse | (DiagnosticErrorResponse & { message?: string });
-      stopLoadingAnim();
 
       if (!res.ok || !('success' in data) || data.success !== true) {
         const err = data as DiagnosticErrorResponse & { message?: string };
@@ -112,10 +149,11 @@ export default function DiagnosticPage() {
         return;
       }
 
+      // 응답 도착: 진행률 100% 점프 후 즉시 success 전환
+      setLoadingStage(LOADING_STAGES.length);
       setResult(data);
       setStatus('success');
     } catch (e) {
-      stopLoadingAnim();
       setError({
         code: 'UNKNOWN',
         message: `네트워크 오류: ${(e as Error).message}`,
@@ -128,8 +166,9 @@ export default function DiagnosticPage() {
     if (lastUrl) handleSubmit(lastUrl);
   };
 
-  const progressPct = Math.round(((loadingStage + 1) / LOADING_STAGES.length) * 100);
-  const currentTip = LOADING_TIPS[loadingStage % LOADING_TIPS.length];
+  const progressPct = computeProgress(loadingStage, elapsedSec);
+  const currentTip = LOADING_TIPS[Math.min(loadingStage, LOADING_TIPS.length - 1) % LOADING_TIPS.length];
+  const lastSub = lastStageSubText(elapsedSec);
 
   return (
     <div className="min-h-screen bg-slate-50 py-8 px-4">
@@ -216,14 +255,21 @@ export default function DiagnosticPage() {
                 <span className="text-lg">⚡</span>
                 <h2 className="text-sm font-bold text-slate-800">진단 진행 중</h2>
               </div>
-              <span className="text-[11px] font-semibold text-slate-500">⏱ 약 30~60초 소요 예정</span>
+              <div className="text-[11px] font-semibold text-slate-500 text-right leading-snug">
+                <div>⏱ 약 30~60초 소요 예정</div>
+                <div className={elapsedSec > 60 ? 'text-amber-600' : 'text-slate-500'}>
+                  {elapsedSec}초 경과{elapsedSec > 60 ? ' · 잠시만 더' : ''}
+                </div>
+              </div>
             </div>
 
             {/* 진행률 바 + 카운트 */}
             <div className="mt-5">
               <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500 mb-1.5">
                 <span>진행률</span>
-                <span>{loadingStage + 1} / {LOADING_STAGES.length}</span>
+                <span>
+                  {Math.min(loadingStage + 1, LOADING_STAGES.length)} / {LOADING_STAGES.length} · {progressPct}%
+                </span>
               </div>
               <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
                 <div
@@ -238,10 +284,11 @@ export default function DiagnosticPage() {
               {LOADING_STAGES.map((stage, idx) => {
                 const isDone = idx < loadingStage;
                 const isCur = idx === loadingStage;
+                const isLastCur = isCur && idx === LOADING_STAGES.length - 1;
                 return (
-                  <li key={stage} className="flex items-center gap-3">
+                  <li key={stage} className="flex items-start gap-3">
                     <span
-                      className={`flex-none w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold ${
+                      className={`flex-none mt-0.5 w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold ${
                         isDone
                           ? 'bg-emerald-100 text-emerald-600'
                           : isCur
@@ -254,13 +301,18 @@ export default function DiagnosticPage() {
                         <span className="w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
                       ) : '○'}
                     </span>
-                    <span
-                      className={`text-sm ${
-                        isCur ? 'font-bold text-slate-800' : isDone ? 'text-slate-500' : 'text-slate-400'
-                      }`}
-                    >
-                      {stage}{isDone ? ' 완료' : isCur ? ' 중…' : ''}
-                    </span>
+                    <div className="flex-1 min-w-0">
+                      <span
+                        className={`text-sm ${
+                          isCur ? 'font-bold text-slate-800' : isDone ? 'text-slate-500' : 'text-slate-400'
+                        }`}
+                      >
+                        {stage}{isDone ? ' 완료' : isCur ? ' 중…' : ''}
+                      </span>
+                      {isLastCur && lastSub && (
+                        <p className="mt-0.5 text-xs text-slate-400">{lastSub}</p>
+                      )}
+                    </div>
                   </li>
                 );
               })}
