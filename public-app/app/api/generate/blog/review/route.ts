@@ -16,6 +16,7 @@ import { useCredit } from '../../../../../lib/creditService';
 import { buildBlogReviewPrompt } from '../../../../../lib/blogPrompt';
 import { applyContentFilters } from '../../../../../lib/medicalLawFilter';
 import { callLLM } from '../../../../../lib/llm';
+import { getHospitalStylePrompt } from '../../../../../lib/styleService';
 
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
@@ -97,12 +98,24 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  // 관리자 학습 경로(DB 프로파일) 의 hospitalStyleBlock 을 계산해 styleOverride 트리거에 반영.
+  // 4-A 정책: stylePromptText(UI 학습) 가 있으면 DB 프로파일은 어차피 V3 메인에서 버려지므로 review 에서도 조회 스킵.
+  let hospitalStyleBlock: string | null = null;
+  if (body.hospitalName && !body.stylePromptText?.trim()) {
+    try {
+      hospitalStyleBlock = await getHospitalStylePrompt(body.hospitalName);
+    } catch (err) {
+      console.warn(`[generate/blog/review] getHospitalStylePrompt 실패: ${(err as Error).message}`);
+    }
+  }
+
   // 4) 프롬프트 조립
   const { systemBlocks, userPrompt } = buildBlogReviewPrompt(draftHtml, {
     category: body.category,
     hospitalName: body.hospitalName,
     ruleFilterViolations: body.ruleFilterViolations,
     stylePromptText: body.stylePromptText,
+    hospitalStyleBlock: hospitalStyleBlock ?? undefined,
   });
 
   // 5) callLLM (Opus 4.6)
