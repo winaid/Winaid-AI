@@ -11,7 +11,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { gateGuestRequest } from '../../../lib/guestRateLimit';
+import { gateDiagnosticRequest } from '../../../lib/guestRateLimit';
 import { crawlSite } from '../../../lib/diagnostic/crawler';
 import { fetchPsi } from '../../../lib/diagnostic/psi';
 import { scoreCategories, computeOverallScore } from '../../../lib/diagnostic/scoring';
@@ -80,8 +80,8 @@ function classifyCrawlError(e: unknown): { code: ErrCode; status: number; messag
 
 export async function POST(request: NextRequest) {
   try {
-  // 1) rate limit — 외부 사이트 크롤링이 비싸므로 분당 3회
-  const gate = gateGuestRequest(request, 3);
+  // 1) rate limit — 진단 전용 (Phase 1.2: 로그인=쿠키해시 분당 5, 게스트=IP+UA해시 분당 3)
+  const gate = gateDiagnosticRequest(request);
   if (!gate.ok) {
     return NextResponse.json({ success: false, error: gate.error, code: 'UNKNOWN', message: gate.error }, { status: gate.status });
   }
