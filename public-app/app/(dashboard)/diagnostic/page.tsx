@@ -79,7 +79,7 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: '얼마나 걸리나요?',
-    a: '약 30~60초. 홈페이지 크롤링 + 성능 측정 + ChatGPT/Gemini 실측 + 맞춤 해설 생성까지 포함된 시간입니다.',
+    a: '약 60~90초. 홈페이지 크롤링 + 성능 측정 + ChatGPT/Gemini 실측 + 맞춤 해설 생성까지 포함된 시간입니다.',
   },
   {
     q: '결과는 저장되나요?',
@@ -251,23 +251,42 @@ export default function DiagnosticPage() {
               </ul>
             </section>
 
-            {/* FAQ */}
-            <section className="max-w-2xl mx-auto space-y-2">
-              <h2 className="text-base font-bold text-slate-800 mb-3">자주 묻는 질문</h2>
-              {FAQS.map((f) => (
-                <details
-                  key={f.q}
-                  className="group rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden"
-                >
-                  <summary className="flex items-center justify-between px-5 py-3 cursor-pointer list-none text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors">
-                    <span>{f.q}</span>
-                    <span className="text-slate-400 transition-transform group-open:rotate-180">▼</span>
-                  </summary>
-                  <div className="px-5 pb-4 text-[13px] text-slate-600 leading-relaxed">
-                    {f.a}
-                  </div>
-                </details>
-              ))}
+            {/* FAQ — 프로페셔널 SaaS 스타일 */}
+            <section className="mt-16 max-w-4xl mx-auto">
+              <div className="border-t border-slate-200 pt-12">
+                <div className="mb-8">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-md text-[11px] font-semibold tracking-wider uppercase">
+                    FAQ
+                  </span>
+                  <h2 className="mt-3 text-2xl font-bold text-slate-900 tracking-tight">자주 묻는 질문</h2>
+                </div>
+                <div className="space-y-3">
+                  {FAQS.map((f) => (
+                    <details
+                      key={f.q}
+                      className="group rounded-lg border border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm open:border-slate-900 open:shadow-md transition-all duration-200 overflow-hidden"
+                    >
+                      <summary className="flex items-center gap-3 px-5 py-4 cursor-pointer list-none [&::-webkit-details-marker]:hidden select-none">
+                        <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-slate-100 text-slate-600 text-[11px] font-bold shrink-0 group-open:bg-indigo-600 group-open:text-white transition-colors">
+                          Q
+                        </span>
+                        <span className="flex-1 font-semibold text-[14px] text-slate-800 group-open:text-slate-900">
+                          {f.q}
+                        </span>
+                        <svg
+                          className="w-4 h-4 text-slate-400 group-open:rotate-180 group-open:text-slate-700 transition-all shrink-0"
+                          fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </summary>
+                      <div className="px-5 pb-5 pt-1 pl-14 text-[14px] leading-[1.75] text-slate-600 border-t border-slate-100">
+                        {f.a}
+                      </div>
+                    </details>
+                  ))}
+                </div>
+              </div>
             </section>
           </>
         )}
@@ -281,7 +300,7 @@ export default function DiagnosticPage() {
                 <h2 className="text-sm font-bold text-slate-800">진단 진행 중</h2>
               </div>
               <div className="text-[11px] font-semibold text-slate-500 text-right leading-snug">
-                <div>⏱ 약 30~60초 소요 예정</div>
+                <div>⏱ 약 60~90초 소요 예정</div>
                 <div className={elapsedSec > 60 ? 'text-amber-600' : 'text-slate-500'}>
                   {elapsedSec}초 경과{elapsedSec > 60 ? ' · 잠시만 더' : ''}
                 </div>
