@@ -378,6 +378,63 @@ function extractUrlsFromText(text: string): CompetitorResult[] {
   return out;
 }
 
+// ── 환각 URL 실 접속 검증 ────────────────────────────────
+/**
+ * LLM 이 반환한 (url, title) 쌍이 실제로 병원 사이트인지 HTTP HEAD/GET 으로 검증.
+ * 환각 사례: ChatGPT 가 "서울그랑치과"를 cashdoc.me 에 매핑 → 실제 title 이 "캐시닥" → drop.
+ *
+ * 검증 절차 (각 URL 병렬, 3초 타임아웃):
+ *   1. fetch → <title> 추출
+ *   2. title 에 병원 키워드(치과/의원/병원/…) 포함 여부 확인
+ *   3. 미포함 또는 fetch 실패 → drop
+ *   4. 통과 시 실제 title 로 r.title 보정 + rank 재계산
+ *
+ * 양쪽 LLM(ChatGPT/Gemini) + fallback 경로 모두 사용.
+ * PLATFORM_OR_NOISE_DOMAINS 정적 필터 이후 단계라서 이중 방어.
+ */
+const CLINIC_KEYWORDS = ['치과', '의원', '병원', '클리닉', '한의원', 'dental', 'clinic', 'hospital'];
+const URL_CHECK_TIMEOUT_MS = 3_000;
+
+async function validateHospitalUrls(results: CompetitorResult[]): Promise<CompetitorResult[]> {
+  if (results.length === 0) return results;
+
+  const checks = await Promise.allSettled(
+    results.map(async (r): Promise<CompetitorResult | null> => {
+      try {
+        const res = await fetch(r.url, {
+          signal: AbortSignal.timeout(URL_CHECK_TIMEOUT_MS),
+          redirect: 'follow',
+          headers: {
+            // 일부 사이트는 bot UA 를 차단 — 일반 브라우저 UA 로 위장
+            'User-Agent':
+              'Mozilla/5.0 (compatible; WinaidAEO/1.0; +https://winai.kr)',
+            'Accept': 'text/html,application/xhtml+xml',
+          },
+        });
+        if (!res.ok) return null;
+        const html = await res.text();
+        const m = html.match(/<title[^>]*>([^<]*)<\/title>/i);
+        const actualTitle = (m?.[1] ?? '').replace(/\s+/g, ' ').trim();
+        if (!actualTitle) return null;
+        const lower = actualTitle.toLowerCase();
+        const hasClinicKeyword = CLINIC_KEYWORDS.some((kw) => lower.includes(kw.toLowerCase()));
+        if (!hasClinicKeyword) return null; // 환각: 제목에 병원 단서 없음
+        // 실제 title 로 보정 (OpenAI 가 준 title 이 틀렸을 수 있음). 60자 컷.
+        return { ...r, title: actualTitle.slice(0, 60) };
+      } catch {
+        // timeout / DNS 실패 / 네트워크 오류 → 가짜 URL 가능성, drop
+        return null;
+      }
+    }),
+  );
+
+  const passed: CompetitorResult[] = [];
+  for (const c of checks) {
+    if (c.status === 'fulfilled' && c.value) passed.push(c.value);
+  }
+  return passed.map((r, i) => ({ ...r, rank: i + 1 })); // rank 재계산
+}
+
 // ── OpenAI Responses + web_search ────────────────────────
 
 interface OpenAIResponsesOutputTextContent { type: string; text?: string }
@@ -453,12 +510,12 @@ URL 우선순위:
     console.warn(`[discovery/chatgpt] 응답 원문 (앞 500자): ${(text || '').slice(0, 500)}`);
 
     const arr = tryExtractJsonArray<unknown>(text);
-    if (arr && arr.length > 0) return normalizeResults(arr);
+    if (arr && arr.length > 0) return await validateHospitalUrls(normalizeResults(arr));
     // fallback: 텍스트에서 URL 정규식 추출
     const fallback = extractUrlsFromText(text);
     if (fallback.length > 0) {
       console.warn('[discovery/chatgpt] JSON 추출 실패 → URL 정규식 fallback 사용');
-      return fallback;
+      return await validateHospitalUrls(fallback);
     }
     console.warn('[discovery/chatgpt] JSON + URL fallback 모두 실패');
     return null;
@@ -488,12 +545,12 @@ export async function discoverViaGemini(query: string): Promise<CompetitorResult
       googleSearch: true,
     });
     const arr = tryExtractJsonArray<unknown>(res.text);
-    if (arr && arr.length > 0) return normalizeResults(arr);
+    if (arr && arr.length > 0) return await validateHospitalUrls(normalizeResults(arr));
     // fallback: 텍스트에서 URL 정규식 추출
     const fallback = extractUrlsFromText(res.text);
     if (fallback.length > 0) {
       console.warn('[discovery/gemini] JSON 추출 실패 → URL 정규식 fallback 사용');
-      return fallback;
+      return await validateHospitalUrls(fallback);
     }
     console.warn('[discovery/gemini] JSON + URL fallback 모두 실패');
     return null;
