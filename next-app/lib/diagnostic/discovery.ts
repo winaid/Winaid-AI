@@ -189,7 +189,7 @@ export async function discoverViaChatGPT(query: string): Promise<CompetitorResul
       },
       body: JSON.stringify({
         model: 'gpt-5.4-mini',
-        tools: [{ type: 'web_search' }],
+        tools: [{ type: 'web_search_preview' }],
         input,
       }),
     });
