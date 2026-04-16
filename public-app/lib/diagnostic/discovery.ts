@@ -128,6 +128,23 @@ function normalizeResults(arr: unknown[]): CompetitorResult[] {
   return out;
 }
 
+// ── Fallback: JSON 추출 실패 시 텍스트에서 URL 정규식 추출 ───
+
+const URL_REGEX = /https?:\/\/[^\s)>\]"',]+/g;
+
+function extractUrlsFromText(text: string): CompetitorResult[] {
+  const urls = [...new Set(text.match(URL_REGEX) || [])];
+  return urls.slice(0, 5).map((url, i) => {
+    const domain = hostOf(url);
+    // URL 앞 텍스트에서 병원명 추출 시도 (한글 + 치과/병원/의원 등)
+    const idx = text.indexOf(url);
+    const before = text.slice(Math.max(0, idx - 60), idx);
+    const nameMatch = before.match(/([가-힣]{2,15}(?:치과|병원|의원|클리닉|센터|한의원))/);
+    const title = nameMatch ? nameMatch[1] : domain;
+    return { url, title, snippet: '', domain, rank: i + 1 };
+  }).filter(r => r.domain);
+}
+
 // ── OpenAI Responses + web_search ────────────────────────
 
 interface OpenAIResponsesOutputTextContent { type: string; text?: string }
@@ -152,9 +169,15 @@ export async function discoverViaChatGPT(query: string): Promise<CompetitorResul
     console.warn('[discovery/chatgpt] OPENAI_API_KEY 미설정 — 스킵');
     return null;
   }
-  const input = `"${query}" 를 웹 검색으로 찾아서 상위 5곳 병원의 공식 홈페이지 URL, 병원명(title), 한 줄 설명(snippet) 을 JSON 배열로만 반환하세요. 다른 설명/문장 없이 JSON 배열 하나만.
+  const input = `"${query}" 를 웹 검색으로 찾아서 상위 5곳 병원의 공식 홈페이지 URL, 병원명(title), 한 줄 설명(snippet) 을 JSON 배열로만 반환하세요.
 형식: [{"url": "...", "title": "...", "snippet": "..."}]
-주의: 모두닥/하이닥/네이버플레이스 같은 플랫폼 URL 이 아니라 병원 **공식 홈페이지** URL 을 우선.`;
+주의: 모두닥/하이닥/네이버플레이스 같은 플랫폼 URL 이 아니라 병원 **공식 홈페이지** URL 을 우선.
+
+출력 규칙:
+- 반드시 JSON 배열만 출력하라. [{url, title, snippet}] 형태.
+- 마크다운·설명 텍스트·코드펜스(\`\`\`) 절대 금지.
+- JSON 외 글자가 한 글자라도 들어가면 실패로 처리됨.
+- 결과가 없으면 빈 배열 [] 반환.`;
 
   try {
     const res = await fetch(OPENAI_RESPONSES_URL, {
@@ -182,11 +205,15 @@ export async function discoverViaChatGPT(query: string): Promise<CompetitorResul
     const body = await res.json() as OpenAIResponsesBody;
     const text = extractOpenAIText(body);
     const arr = tryExtractJsonArray<unknown>(text);
-    if (!arr) {
-      console.warn('[discovery/chatgpt] JSON 배열 추출 실패');
-      return null;
+    if (arr && arr.length > 0) return normalizeResults(arr);
+    // fallback: 텍스트에서 URL 정규식 추출
+    const fallback = extractUrlsFromText(text);
+    if (fallback.length > 0) {
+      console.warn('[discovery/chatgpt] JSON 추출 실패 → URL 정규식 fallback 사용');
+      return fallback;
     }
-    return normalizeResults(arr);
+    console.warn('[discovery/chatgpt] JSON + URL fallback 모두 실패');
+    return null;
   } catch (e) {
     const name = (e as Error)?.name || 'Error';
     const msg = (e as Error)?.message || 'unknown';
@@ -213,11 +240,15 @@ export async function discoverViaGemini(query: string): Promise<CompetitorResult
       googleSearch: true,
     });
     const arr = tryExtractJsonArray<unknown>(res.text);
-    if (!arr) {
-      console.warn('[discovery/gemini] JSON 배열 추출 실패');
-      return null;
+    if (arr && arr.length > 0) return normalizeResults(arr);
+    // fallback: 텍스트에서 URL 정규식 추출
+    const fallback = extractUrlsFromText(res.text);
+    if (fallback.length > 0) {
+      console.warn('[discovery/gemini] JSON 추출 실패 → URL 정규식 fallback 사용');
+      return fallback;
     }
-    return normalizeResults(arr);
+    console.warn('[discovery/gemini] JSON + URL fallback 모두 실패');
+    return null;
   } catch (e) {
     console.warn(`[discovery/gemini] 호출 예외: ${(e as Error).message.slice(0, 200)}`);
     return null;
