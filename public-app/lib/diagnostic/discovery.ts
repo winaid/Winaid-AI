@@ -385,7 +385,9 @@ function buildNaturalLanguagePrompt(query: string): string {
   · 특화 진료·리뷰 키워드
 
 자연스러운 대화체로 답변해 주세요. 마크다운·JSON·표·코드펜스 금지.
-추측·환각 금지 — 모르는 정보는 생략.`;
+추측·환각 금지 — 모르는 정보는 생략.
+
+각 병원은 3~4문장으로 간결하게. 전체 답변 1200자 이내로 유지해 주세요.`;
 }
 
 export async function discoverViaChatGPT(query: string): Promise<DiscoverRawAnswer | null> {
@@ -408,7 +410,7 @@ export async function discoverViaChatGPT(query: string): Promise<DiscoverRawAnsw
         // gpt-5-search-api: 검색 도구가 모델 내부에 내장 (별도 tools 설정 불필요)
         model: 'gpt-5-search-api',
         messages: [{ role: 'user', content: prompt }],
-        max_tokens: 16_000, // GPT-5 계열 최대치. 3000자+ 풍부한 답변 끝까지 받기 위함
+        max_tokens: 6_000, // 1200자 가이드 + 여유. 16K 는 생성 시간 과다로 120s 초과 관찰됨
       }),
     });
     if (!res.ok) {
@@ -447,7 +449,7 @@ export async function discoverViaGemini(query: string): Promise<DiscoverRawAnswe
       systemBlocks: [{ type: 'text', text: '한국 병원 정보를 최신 웹 검색으로 찾아 사용자에게 자연스러운 추천 답변을 제공하는 분석자입니다.', cacheable: false }],
       userPrompt: prompt,
       temperature: 0.4, // 자연어 답변엔 약간의 다양성 허용
-      maxOutputTokens: 8_000, // 5곳 × (이름·리뷰·영업시간·거리·특화) 끝까지 + 여유
+      maxOutputTokens: 4_000, // 1200자 가이드 + 여유. 8K 는 생성 시간 과다
       googleSearch: true,
     });
     const text = (res.text ?? '').trim();
