@@ -366,34 +366,10 @@ function wrapAsQuestion(query: string): string {
   return `${query} 추천해줘`;
 }
 
-/**
- * 자연어 추천 답변용 공용 프롬프트 빌더.
- * 사용자가 ChatGPT/Gemini 에 직접 물었을 때 받을 답변과 동일 형태를 유도.
- * 클라이언트가 경량 파서로 깔끔하게 렌더할 수 있도록 마크다운·URL 노출을 강하게 금지.
- */
-function buildNaturalLanguagePrompt(query: string): string {
-  const question = wrapAsQuestion(query);
-  return `${question}
-
-답변에 다음을 포함해 주세요:
-- 선택 기준 1문장 (리뷰·접근성·영업시간 등)
-- 추천 5곳 각각에 대해:
-  · 병원명 (동네/역권)
-  · 리뷰 수·평점 (있으면)
-  · 영업시간 (야간·토요일 여부)
-  · 역 거리 또는 접근성
-  · 특화 진료·리뷰 키워드
-
-서식·URL 규칙 (반드시 지킬 것):
-- 마크다운 금지: **굵게**, ## 제목, ---, ___, 코드펜스, 표 전부 쓰지 마세요.
-- 마크다운 링크 [텍스트](주소) 쓰지 마세요. 본문에 URL 자체를 쓰지 마세요.
-- 순번은 "1)" "2)" 같은 plain text 로만 사용.
-- 인용이 필요하면 (출처: 도메인명) 한 줄로만 적고 URL 본문 금지.
-- 출처 링크는 서버가 별도 메타로 수집하니 본문에는 깨끗한 한국어 문장만.
-
-각 병원은 3~4문장으로 간결하게. 전체 답변 1200자 이내로 유지해 주세요.
-추측·환각 금지 — 모르는 정보는 생략하세요.`;
-}
+// buildNaturalLanguagePrompt 함수는 제거됨.
+// 실측 철학: "사용자가 ChatGPT/Gemini 웹에 직접 질문했을 때 받는 답변" 을 재현.
+// 서버는 형식·글자수·필드 지시를 하지 않고 wrapAsQuestion(query) 한 줄만 user 메시지로 보낸다.
+// 답변이 마크다운/각주 링크를 포함해도 클라이언트 경량 파서(AIVisibilityCard.parseAnswer)가 흡수한다.
 
 export async function discoverViaChatGPT(query: string): Promise<DiscoverRawAnswer | null> {
   const key = process.env.OPENAI_API_KEY;
@@ -401,8 +377,6 @@ export async function discoverViaChatGPT(query: string): Promise<DiscoverRawAnsw
     console.warn('[discovery/chatgpt] OPENAI_API_KEY 미설정 — 스킵');
     return null;
   }
-  const prompt = buildNaturalLanguagePrompt(query);
-
   try {
     const res = await fetch(OPENAI_CHAT_COMPLETIONS_URL, {
       method: 'POST',
@@ -414,8 +388,9 @@ export async function discoverViaChatGPT(query: string): Promise<DiscoverRawAnsw
       body: JSON.stringify({
         // gpt-5-search-api: 검색 도구가 모델 내부에 내장 (별도 tools 설정 불필요)
         model: 'gpt-5-search-api',
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: 6_000, // 1200자 가이드 + 여유. 16K 는 생성 시간 과다로 120s 초과 관찰됨
+        // 실측 철학: 서버는 질문 한 줄만 보낸다. 형식 지시 금지.
+        messages: [{ role: 'user', content: wrapAsQuestion(query) }],
+        max_tokens: 8_192,
       }),
     });
     if (!res.ok) {
@@ -446,15 +421,13 @@ export async function discoverViaChatGPT(query: string): Promise<DiscoverRawAnsw
 // ── Gemini Search grounding (callLLM search_ground task 재사용) ─
 
 export async function discoverViaGemini(query: string): Promise<DiscoverRawAnswer | null> {
-  const prompt = buildNaturalLanguagePrompt(query);
-
   try {
     const res = await callLLM({
       task: 'search_ground',
-      systemBlocks: [{ type: 'text', text: '한국 병원 정보를 최신 웹 검색으로 찾아 사용자에게 자연스러운 추천 답변을 제공하는 분석자입니다.', cacheable: false }],
-      userPrompt: prompt,
-      temperature: 0.4, // 자연어 답변엔 약간의 다양성 허용
-      maxOutputTokens: 4_000, // 1200자 가이드 + 여유. 8K 는 생성 시간 과다
+      // 실측 철학: system 지시·temperature 없이 질문 한 줄만. 사용자 웹 경험 재현.
+      systemBlocks: [],
+      userPrompt: wrapAsQuestion(query),
+      maxOutputTokens: 8_192,
       googleSearch: true,
     });
     const text = (res.text ?? '').trim();
@@ -588,8 +561,9 @@ export async function* streamChatGPT(
     },
     body: JSON.stringify({
       model: 'gpt-5-search-api',
-      messages: [{ role: 'user', content: buildNaturalLanguagePrompt(query) }],
-      max_tokens: 6_000,
+      // 실측 철학: 서버는 질문 한 줄만. 형식 지시 금지.
+      messages: [{ role: 'user', content: wrapAsQuestion(query) }],
+      max_tokens: 8_192,
       stream: true,
     }),
   });
@@ -695,16 +669,11 @@ export async function* streamGemini(
   if (keys.length === 0) throw new Error('GEMINI_API_KEY 미설정');
 
   const model = 'gemini-3.1-pro-preview'; // resolveRoute 가 googleSearch=true 에 강제하는 모델과 일치
+  // 실측 철학: systemInstruction / temperature 모두 제거. 사용자가 Gemini 웹에 직접 물었을 때와 동등.
+  // tools.googleSearch 는 사용자가 웹 UI 에서 검색을 켠 것과 동치라 유지.
   const apiBody = {
-    contents: [{ role: 'user', parts: [{ text: buildNaturalLanguagePrompt(query) }] }],
-    systemInstruction: {
-      parts: [{
-        text:
-          '한국 병원 정보를 최신 웹 검색으로 찾아 사용자에게 자연스러운 추천 답변을 제공하는 분석자입니다.',
-      }],
-    },
+    contents: [{ role: 'user', parts: [{ text: wrapAsQuestion(query) }] }],
     generationConfig: {
-      temperature: 0.4,
       maxOutputTokens: 8192, // 답변 중간 잘림(…특히 분야) 방지
     },
     tools: [{ googleSearch: {} }],
