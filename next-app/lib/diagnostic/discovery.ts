@@ -25,32 +25,106 @@ const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses';
 // ── 지역 추출 — 시·구·동 모두 추출 ───────────────────────
 
 /** 빈도 기반 3순위에서 시/구/군/동/읍/면 모두 매칭 (앞은 한글 아닌 경계). */
-const REGION_PATTERN = /(?<![가-힣])([가-힣]{2,5}(?:시|구|군|동|읍|면))/g;
+// ── 한국 행정구역 화이트리스트 ──────────────────────────────
+// blacklist(가짜 제외) 대신 화이트리스트(진짜만 허용). "대한구", "진료시", "악안면" 자동 제외.
+// 시: bare name (시 제거). 구·군: 접미사 포함.
 
-/** "XXX시/구/동" 등으로 끝나면 오탐인 접두어 목록. 시·구·동·면 접미사 모두 대응. */
-const REGION_BLACKLIST = [
-  // 의료·비즈니스 ("진료시", "접수시" 등)
-  '안내', '당사', '저희', '병원', '의원', '치과', '서비스', '세',
-  '진료', '접수', '상담', '예약', '소개', '운영', '영업', '대표',
-  '원장', '전화', '점심', '야간', '응급', '외래', '입원', '수술',
-  '보험', '비급', '치료', '검진', '건강', '센터', '의료', '한의',
-  '약국', '클리닉', '연합', '네트워', '홈페', '사이트', '온라인',
-  '오전', '오후', '토요', '일요', '공휴', '휴진', '정기',
-  // 동 오탐 ("운동", "활동" 등)
-  '운동', '활동', '이동', '작동', '행동', '변동', '감동', '자동',
-  '수동', '진동', '가동', '기동', '발동', '충동', '협동', '공동',
-  '연동', '반동', '요동', '선동', '소동', '흥동', '동동', '식동',
-  // 면 오탐 — 의학 용어 ("구강악안면", "안면", "전면" 등)
-  '악안', '안면', '전면', '측면', '표면', '단면', '후면', '정면',
-  '내면', '외면',
-  // 구 오탐 — 도구/기구/입구 등
-  '기구', '도구', '입구', '출구', '창구',
-  // 강 접미 오탐
-  '구강', '비강', '흉강',
-];
-const BLACKLIST_RE = new RegExp(`(${REGION_BLACKLIST.join('|')})(?:시|구|군|동|읍|면)$`);
+const KNOWN_SI = new Set([
+  // 특별시·광역시·특별자치시
+  '서울', '부산', '대구', '인천', '광주', '대전', '울산', '세종',
+  // 경기
+  '수원', '성남', '안양', '안산', '용인', '부천', '광명', '평택', '과천', '오산',
+  '시흥', '군포', '의왕', '하남', '이천', '안성', '김포', '화성', '파주', '양주',
+  '포천', '고양', '남양주', '구리', '의정부', '동두천', '여주',
+  // 강원
+  '춘천', '원주', '강릉', '속초', '삼척', '태백', '동해',
+  // 충북
+  '청주', '충주', '제천',
+  // 충남
+  '천안', '아산', '서산', '논산', '계룡', '당진', '공주', '보령',
+  // 전북
+  '전주', '익산', '군산', '정읍', '남원', '김제',
+  // 전남
+  '목포', '여수', '순천', '나주', '광양',
+  // 경북
+  '포항', '경주', '김천', '안동', '구미', '영주', '영천', '상주', '문경', '경산',
+  // 경남
+  '창원', '진주', '통영', '사천', '김해', '밀양', '거제', '양산',
+  // 제주
+  '제주', '서귀포',
+]);
 
-/** 한국 시/도 전체 형태. */
+const KNOWN_GU = new Set([
+  // 서울 25구
+  '종로구', '중구', '용산구', '성동구', '광진구', '동대문구', '중랑구', '성북구',
+  '강북구', '도봉구', '노원구', '은평구', '서대문구', '마포구', '양천구', '강서구',
+  '구로구', '금천구', '영등포구', '동작구', '관악구', '서초구', '강남구', '송파구', '강동구',
+  // 부산 15구
+  '영도구', '부산진구', '동래구', '해운대구', '사하구', '금정구', '연제구', '수영구', '사상구',
+  // 대구
+  '수성구', '달서구',
+  // 인천
+  '미추홀구', '연수구', '남동구', '부평구', '계양구',
+  // 광주
+  '광산구',
+  // 대전
+  '유성구', '대덕구',
+  // 경기 시 산하 구
+  '장안구', '권선구', '팔달구', '영통구',    // 수원
+  '수정구', '중원구', '분당구',              // 성남
+  '만안구', '동안구',                        // 안양
+  '단원구', '상록구',                        // 안산
+  '처인구', '기흥구', '수지구',              // 용인
+  '덕양구', '일산동구', '일산서구',          // 고양
+  // 청주
+  '상당구', '서원구', '흥덕구', '청원구',
+  // 천안
+  '동남구', '서북구',
+  // 전주
+  '완산구', '덕진구',
+  // 포항·창원
+  '의창구', '성산구', '마산합포구', '마산회원구', '진해구',
+  // 공통(중복 허용 — Set)
+  '동구', '서구', '남구', '북구',
+]);
+
+const KNOWN_GUN = new Set([
+  // 경기
+  '양평군', '가평군', '연천군',
+  // 강원
+  '홍천군', '횡성군', '영월군', '평창군', '정선군', '철원군', '화천군',
+  '양구군', '인제군', '고성군', '양양군',
+  // 충북
+  '보은군', '옥천군', '영동군', '증평군', '진천군', '괴산군', '음성군', '단양군',
+  // 충남
+  '금산군', '부여군', '서천군', '청양군', '홍성군', '예산군', '태안군',
+  // 전북
+  '완주군', '진안군', '무주군', '장수군', '임실군', '순창군', '고창군', '부안군',
+  // 전남
+  '담양군', '곡성군', '구례군', '고흥군', '보성군', '화순군', '장흥군', '강진군',
+  '해남군', '영암군', '무안군', '함평군', '영광군', '장성군', '완도군', '진도군', '신안군',
+  // 경북
+  '군위군', '의성군', '청송군', '영양군', '영덕군', '청도군', '고령군', '성주군',
+  '칠곡군', '예천군', '봉화군', '울진군', '울릉군',
+  // 경남
+  '의령군', '함안군', '창녕군', '남해군', '하동군', '산청군', '함양군', '거창군', '합천군',
+  // 부산·대구·인천·울산 산하 군
+  '기장군', '달성군', '강화군', '옹진군', '울주군',
+]);
+
+/** 텍스트에서 word 등장 횟수. */
+function countOccurrences(text: string, word: string): number {
+  let count = 0;
+  let idx = text.indexOf(word);
+  while (idx !== -1) {
+    count++;
+    idx = text.indexOf(word, idx + 1);
+  }
+  return count;
+}
+
+// ── 주소 패턴 (0순위 schema · 1순위 텍스트 공용) ──────────
+
 const ADDR_FULL_PREFIX = '(?:서울특별시|부산광역시|대구광역시|인천광역시|광주광역시|대전광역시|울산광역시|세종특별자치시|경기도?|강원(?:특별자치)?도?|충[남북]도?|전[남북]도?|경[남북]도?|제주(?:특별자치)?도?)';
 
 const ADDR_FULL_PATTERN = new RegExp(
@@ -63,9 +137,22 @@ function cleanRegionSuffix(raw: string): string {
   return raw;
 }
 
+/** 주소 패턴 매치 → 동>구>시 우선 + 화이트리스트 검증. */
+function pickFromAddrMatch(m: RegExpMatchArray): string | null {
+  const dong = m[3]; // 동은 화이트리스트 없어 그대로 (주소 패턴 컨텍스트라 신뢰)
+  const gu = m[2];
+  const si = m[1];
+  if (dong && dong.length >= 2) return dong;
+  if (gu && gu.length >= 2 && KNOWN_GU.has(gu)) return gu;
+  if (si && si.length >= 2) {
+    const bare = cleanRegionSuffix(si);
+    if (KNOWN_SI.has(bare)) return bare;
+  }
+  return null;
+}
+
 // ── 0순위: schema address 파싱 ──────────────────────────
 
-/** schemaMarkup 에서 address 필드를 재귀 탐색. PostalAddress 구조 또는 문자열. */
 function findSchemaAddress(obj: unknown): string | null {
   if (!obj || typeof obj !== 'object') return null;
   if (Array.isArray(obj)) {
@@ -81,17 +168,13 @@ function findSchemaAddress(obj: unknown): string | null {
     if (typeof addr === 'string' && addr.trim().length > 3) return addr.trim();
     if (typeof addr === 'object' && !Array.isArray(addr)) {
       const pa = addr as Record<string, unknown>;
-      const parts = [
-        pa['addressRegion'],    // "경기도"
-        pa['addressLocality'],  // "안산시"
-        pa['streetAddress'],    // "단원구 고잔동 123"
-      ].filter((p): p is string => typeof p === 'string' && p.trim().length > 0)
+      const parts = [pa['addressRegion'], pa['addressLocality'], pa['streetAddress']]
+        .filter((p): p is string => typeof p === 'string' && p.trim().length > 0)
         .map(s => s.trim())
         .join(' ');
       if (parts.length > 3) return parts;
     }
   }
-  // 재귀: 중첩 객체 탐색 (graph, @graph 등)
   for (const key of Object.keys(rec)) {
     if (key === 'address') continue;
     const v = rec[key];
@@ -103,28 +186,32 @@ function findSchemaAddress(obj: unknown): string | null {
   return null;
 }
 
-/** 주소 문자열에서 동>구>시 추출. 기존 ADDR_FULL_PATTERN 재사용. */
 function parseAddressToRegion(addr: string): string | null {
   const m = addr.match(ADDR_FULL_PATTERN);
   if (m) {
-    if (m[3] && m[3].length >= 2 && !BLACKLIST_RE.test(m[3])) return m[3];
-    if (m[2] && m[2].length >= 2 && !BLACKLIST_RE.test(m[2])) return m[2];
-    if (m[1] && m[1].length >= 2 && !BLACKLIST_RE.test(m[1])) return cleanRegionSuffix(m[1]);
+    const result = pickFromAddrMatch(m);
+    if (result) return result;
   }
-  // ADDR_FULL_PATTERN 실패 시 빈도 패턴으로 단일 추출
+  // fallback: 단순 매치
   const simple = addr.match(/([가-힣]{1,5}(?:동|구|군|시))/);
-  if (simple && !BLACKLIST_RE.test(simple[1])) return cleanRegionSuffix(simple[1]);
+  if (simple) {
+    const w = simple[1];
+    if (w.endsWith('구') && KNOWN_GU.has(w)) return w;
+    if (w.endsWith('군') && KNOWN_GUN.has(w)) return w;
+    if (w.endsWith('시')) { const b = cleanRegionSuffix(w); if (KNOWN_SI.has(b)) return b; }
+    if (w.endsWith('동')) return w; // 주소 컨텍스트라 신뢰
+  }
   return null;
 }
 
 /**
- * crawl 에서 한국 행정구역 추출. 동>구>시 구체도 우선.
- * 0순위: schema address (JSON-LD PostalAddress) — 가장 정확.
- * 1순위: 텍스트 내 정식 주소 패턴 (시/도 접두사).
- * 2순위: 텍스트 빈도 기반 (blacklist 필터).
+ * crawl 에서 한국 행정구역 추출.
+ * 0순위: schema JSON-LD address — 100% 정확.
+ * 1순위: 텍스트 정식 주소 패턴 (시/도 접두사) — 동>구>시.
+ * 2순위: 화이트리스트 매칭 — 시·구·군만 (동은 ~3000개라 비현실적).
  */
 export function extractRegion(crawl: CrawlResult): string | null {
-  // 0순위: 구조화 데이터에서 주소 추출 — 100% 정확
+  // 0순위: schema
   if (crawl.schemaMarkup && crawl.schemaMarkup.length > 0) {
     const schemaAddr = findSchemaAddress(crawl.schemaMarkup);
     if (schemaAddr) {
@@ -133,31 +220,34 @@ export function extractRegion(crawl: CrawlResult): string | null {
     }
   }
 
-  const haystack = `${crawl.textContent.slice(0, 3000)} ${crawl.title}`;
+  const haystack = `${crawl.textContent.slice(0, 5000)} ${crawl.title}`;
 
-  // 1순위: 주소 라인 — 동>구>시 우선
+  // 1순위: 주소 패턴
   const addrMatch = haystack.match(ADDR_FULL_PATTERN);
   if (addrMatch) {
-    const dong = addrMatch[3];
-    const gu = addrMatch[2];
-    const si = addrMatch[1];
-    if (dong && dong.length >= 2 && !BLACKLIST_RE.test(dong)) return dong;
-    if (gu && gu.length >= 2 && !BLACKLIST_RE.test(gu)) return gu;
-    if (si && si.length >= 2 && !BLACKLIST_RE.test(si)) return cleanRegionSuffix(si);
+    const result = pickFromAddrMatch(addrMatch);
+    if (result) return result;
   }
 
-  // 2순위: 텍스트 전체 빈도 기반
-  const freq = new Map<string, number>();
-  let m: RegExpExecArray | null;
-  REGION_PATTERN.lastIndex = 0;
-  while ((m = REGION_PATTERN.exec(haystack)) !== null) {
-    const name = m[1];
-    if (BLACKLIST_RE.test(name)) continue;
-    freq.set(name, (freq.get(name) ?? 0) + 1);
+  // 2순위: 화이트리스트 매칭 (구 > 시 우선)
+  const candidates = new Map<string, number>();
+  for (const gu of KNOWN_GU) {
+    const c = countOccurrences(haystack, gu);
+    if (c > 0) candidates.set(gu, c);
   }
-  if (freq.size === 0) return null;
-  const top = [...freq.entries()].sort((a, b) => b[1] - a[1])[0][0];
-  return cleanRegionSuffix(top);
+  if (candidates.size > 0) {
+    return [...candidates.entries()].sort((a, b) => b[1] - a[1])[0][0];
+  }
+  for (const si of KNOWN_SI) {
+    const c = countOccurrences(haystack, si);
+    if (c > 0) candidates.set(si, c);
+  }
+  for (const gun of KNOWN_GUN) {
+    const c = countOccurrences(haystack, gun);
+    if (c > 0) candidates.set(gun, c);
+  }
+  if (candidates.size === 0) return null;
+  return [...candidates.entries()].sort((a, b) => b[1] - a[1])[0][0];
 }
 
 // ── 본인 도메인 매치 ─────────────────────────────────────
