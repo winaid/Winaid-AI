@@ -440,7 +440,7 @@ export async function discoverViaGemini(query: string): Promise<DiscoverRawAnswe
       systemBlocks: [{ type: 'text', text: '한국 병원 정보를 최신 웹 검색으로 찾아 사용자에게 자연스러운 추천 답변을 제공하는 분석자입니다.', cacheable: false }],
       userPrompt: prompt,
       temperature: 0.4, // 자연어 답변엔 약간의 다양성 허용
-      maxOutputTokens: 2000,
+      maxOutputTokens: 4000, // 5곳 × (이름·리뷰·영업시간·거리·특화) 끝까지 답변 나오도록 충분히
       googleSearch: true,
     });
     const text = (res.text ?? '').trim();

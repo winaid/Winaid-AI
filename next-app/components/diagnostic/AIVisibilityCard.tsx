@@ -95,10 +95,15 @@ export default function AIVisibilityCard({ visibility, finding, siteName }: AIVi
         </div>
       )}
 
-      {/* 실측 호출 자체가 실패한 경우 */}
+      {/* 실측 호출 자체가 실패한 경우 — 플랫폼별 안내 */}
       {finding && !hasAnswer && finding.rawError && (
         <div className="border-t border-slate-100 bg-slate-50/50 px-5 py-3">
-          <p className="text-[11px] text-slate-400">🔍 실측 실패: {finding.rawError.slice(0, 80)}</p>
+          <p className="text-[12px] text-slate-600 leading-relaxed">
+            {finding.platform === 'ChatGPT'
+              ? '🔍 ChatGPT 는 한국 지역 검색에서 결과를 찾지 못하는 경우가 있습니다. Gemini 결과를 함께 참고해 주세요.'
+              : '🔍 이번엔 실측 답변을 받지 못했습니다. 잠시 후 다시 시도해 주세요.'}
+          </p>
+          <p className="mt-1 text-[10px] text-slate-400">내부 사유: {finding.rawError}</p>
         </div>
       )}
     </div>
