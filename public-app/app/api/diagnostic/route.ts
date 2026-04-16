@@ -130,9 +130,10 @@ export async function POST(request: NextRequest) {
     return err(code, message, status, normalizedUrl);
   }
 
-  // 4) PSI — 선택. 25초 타임아웃. 실패 시 null → "측정 불가" (UI 자동 대응).
-  //    psi.ts 내부 타임아웃(25s) + 여기서 withTimeout(25s) 이중 보호.
-  const psi = await withTimeout(fetchPsi(crawl.finalUrl), 25_000, 'psi').catch(() => null);
+  // 4) PSI — 선택. 실패 시 null → "측정 불가" (UI 자동 대응).
+  //    psi.ts: 1회당 35s × 1회 재시도 = 최악 70s. 여기 외부 가드도 70s 로 정렬.
+  //    maxDuration 180s 안에서 crawl(15) + PSI(70) + max(enrich 75, discovery 75) = 160s, 여유 ~20s.
+  const psi = await withTimeout(fetchPsi(crawl.finalUrl), 70_000, 'psi').catch(() => null);
 
   // 5~7) 채점 + 종합
   const categories = scoreCategories({
