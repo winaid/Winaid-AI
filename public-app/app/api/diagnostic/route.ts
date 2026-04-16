@@ -78,6 +78,16 @@ function classifyCrawlError(e: unknown): { code: ErrCode; status: number; messag
   return { code: 'UNKNOWN', status: 500, message: `진단 중 오류가 발생했습니다: ${msg.slice(0, 200)}` };
 }
 
+/** 개별 단계 타임아웃 — Promise.race 로 감싸 ms 초과 시 reject. */
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(`${label} timeout (${ms}ms)`)), ms),
+    ),
+  ]);
+}
+
 export async function POST(request: NextRequest) {
   try {
   // 1) rate limit — 진단 전용 (Phase 1.2: 로그인=쿠키해시 분당 5, 게스트=IP+UA해시 분당 3)
@@ -109,8 +119,9 @@ export async function POST(request: NextRequest) {
     return err(code, message, status, normalizedUrl);
   }
 
-  // 4) PSI — 선택. 실패해도 null 로 진행 (psi.ts 내부 try/catch)
-  const psi = await fetchPsi(crawl.finalUrl);
+  // 4) PSI — 선택. 25초 타임아웃. 실패 시 null → "측정 불가" (UI 자동 대응).
+  //    psi.ts 내부 타임아웃(25s) + 여기서 withTimeout(25s) 이중 보호.
+  const psi = await withTimeout(fetchPsi(crawl.finalUrl), 25_000, 'psi').catch(() => null);
 
   // 5~7) 채점 + 종합
   const categories = scoreCategories({
@@ -150,8 +161,8 @@ export async function POST(request: NextRequest) {
   // Before: crawl(15) + PSI(40) + enrich(30) + discovery(25) = 110초 순차
   // After:  crawl(15) + PSI(40) + max(enrich 30, discovery 25) = 85초 병렬
   const [enrichResult, discResult] = await Promise.allSettled([
-    enrichDiagnostic(base, crawl),
-    discoverCompetitors(crawl, '치과'),
+    withTimeout(enrichDiagnostic(base, crawl), 30_000, 'enrich'),
+    withTimeout(discoverCompetitors(crawl, '치과'), 30_000, 'discovery'),
   ]);
 
   // enrich 결과 — 실패 시 base 그대로
