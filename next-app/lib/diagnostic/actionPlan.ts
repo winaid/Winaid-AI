@@ -225,20 +225,204 @@ const ACTION_META: Record<string, ActionMeta> = {
   },
 
   // ③ structured_data
-  [LABELS.dentist_schema]: { impact: 'high', difficulty: 'medium', timeframe: '1주', actionText: '제작사에 "Dentist 또는 LocalBusiness JSON-LD 를 head 에 추가" 요청 (AI 가 치과로 인식)', detailedGuide: '' },
-  [LABELS.organization_schema]: { impact: 'medium', difficulty: 'easy', timeframe: '즉시', actionText: '제작사에 "Organization 스키마로 상호·로고·대표전화·sameAs 마크업" 요청', detailedGuide: '' },
-  [LABELS.breadcrumb_schema]: { impact: 'low', difficulty: 'medium', timeframe: '1주', actionText: '제작사에 "하위 페이지에 BreadcrumbList JSON-LD 추가" 요청', detailedGuide: '' },
-  [LABELS.faq_schema]: { impact: 'medium', difficulty: 'easy', timeframe: '즉시', actionText: '제작사에 "FAQ 섹션에 FAQPage JSON-LD 적용" 요청 (Q&A 를 AI 가 질문 답변으로 인식)', detailedGuide: '' },
-  [LABELS.profile_schema]: { impact: 'medium', difficulty: 'medium', timeframe: '1주', actionText: '제작사에 "의료진 페이지에 Physician 또는 ProfilePage 스키마 추가" 요청', detailedGuide: '' },
+  [LABELS.dentist_schema]: {
+    impact: 'high', difficulty: 'medium', timeframe: '1주',
+    actionText: '제작사에 "Dentist 또는 LocalBusiness JSON-LD 를 head 에 추가" 요청 (AI 가 치과로 인식)',
+    detailedGuide: `이게 뭐예요?
+AI 에게 "이 사이트는 치과입니다" 라고 정확히 알려주는 코드 표식(JSON-LD) 입니다. 추가하면 AI 가 일반 가게가 아닌 의료기관으로 분류합니다.
+
+어떻게 하나요?
+1. 제작사에 연락하세요. (사용자가 직접 코드를 만지지 않아도 됩니다)
+2. 다음 문구를 복사해서 보내세요:
+   "head 태그에 schema.org 의 Dentist 또는 LocalBusiness 타입 JSON-LD 를 추가해주세요. 항목은 name, address, telephone, openingHours, geo 좌표, priceRange, sameAs(SNS 링크) 입니다."
+3. 30~60분이면 끝납니다. 보통 무료입니다.
+
+팁
+- 작업 후 search.google.com/test/rich-results 에 본인 사이트 주소를 넣어 인식되는지 확인하세요.
+- "Dentist" 가 가장 정확하고, 일반 의원이면 "MedicalClinic" 도 가능합니다.`,
+  },
+  [LABELS.organization_schema]: {
+    impact: 'medium', difficulty: 'easy', timeframe: '즉시',
+    actionText: '제작사에 "Organization 스키마로 상호·로고·대표전화·sameAs 마크업" 요청',
+    detailedGuide: `이게 뭐예요?
+병원의 기본 정보(상호·로고·전화·SNS) 를 AI 에게 한 번에 알려주는 코드 표식입니다. "병원 명함을 코드로 박아두는 것" 이라고 보시면 됩니다.
+
+어떻게 하나요?
+1. 제작사에 연락하세요.
+2. 다음 문구를 복사해서 보내세요:
+   "Organization 또는 LocalBusiness 스키마(JSON-LD) 를 head 에 추가해주세요. 항목은 name(상호), logo(로고 URL), telephone(대표 전화), url(홈페이지 주소), sameAs(네이버·구글·카카오·인스타 URL 배열) 입니다."
+3. 20~30분이면 끝납니다.
+
+팁
+- 작업 후 search.google.com/test/rich-results 로 검증하면 누락 항목을 확인할 수 있습니다.
+- sameAs 에 모든 외부 채널 URL 을 넣으면 AI 가 "이 병원의 공식 채널" 임을 더 확실히 인식합니다.`,
+  },
+  [LABELS.breadcrumb_schema]: {
+    impact: 'low', difficulty: 'medium', timeframe: '1주',
+    actionText: '제작사에 "하위 페이지에 BreadcrumbList JSON-LD 추가" 요청',
+    detailedGuide: `이게 뭐예요?
+"홈 > 진료안내 > 임플란트" 같은 경로 표시를 AI 에게 알려주는 코드 표식입니다. 검색 결과에 경로가 함께 노출되기도 합니다.
+
+어떻게 하나요?
+1. 제작사에 연락하세요.
+2. 다음 문구를 복사해서 보내세요:
+   "하위 페이지(진료/의료진/오시는 길 등) 에 BreadcrumbList JSON-LD 스키마를 추가해주세요. 각 페이지의 상위 경로가 보이도록요."
+3. 보통 3~7일 정도 걸립니다.
+
+팁
+- 영향도는 다른 항목보다 작아서 우선순위는 낮은 편입니다.
+- 작업 후 search.google.com/test/rich-results 에서 인식되는지 확인하세요.`,
+  },
+  [LABELS.faq_schema]: {
+    impact: 'medium', difficulty: 'easy', timeframe: '즉시',
+    actionText: '제작사에 "FAQ 섹션에 FAQPage JSON-LD 적용" 요청 (Q&A 를 AI 가 질문 답변으로 인식)',
+    detailedGuide: `이게 뭐예요?
+FAQ 섹션의 질문·답변을 AI 가 "Q&A 쌍" 으로 인식하게 만드는 코드 표식입니다. AI 검색 답변에 그대로 인용되는 일이 많아 효과 큽니다.
+
+어떻게 하나요?
+1. 먼저 "자주 묻는 질문" 페이지가 있어야 합니다. (없으면 "has_faq_page" 항목 먼저)
+2. 제작사에 다음 문구를 보내세요:
+   "FAQ 섹션에 schema.org 의 FAQPage JSON-LD 를 적용해주세요. 각 질문·답변 쌍이 mainEntity 배열에 들어가도록요."
+3. 30~60분이면 끝납니다.
+
+팁
+- 작업 후 search.google.com/test/rich-results 에서 인식되는지 꼭 확인하세요.
+- 답변 길이는 너무 짧지(50자 미만) 너무 길지(500자 초과) 않게 유지하세요.`,
+  },
+  [LABELS.profile_schema]: {
+    impact: 'medium', difficulty: 'medium', timeframe: '1주',
+    actionText: '제작사에 "의료진 페이지에 Physician 또는 ProfilePage 스키마 추가" 요청',
+    detailedGuide: `이게 뭐예요?
+의료진 한 분 한 분의 정보(이름·전공·소속) 를 AI 에게 알려주는 코드 표식입니다. AI 가 "이 병원에 어떤 전문의가 있나" 파악할 때 결정적입니다.
+
+어떻게 하나요?
+1. 의료진 소개 페이지가 있어야 합니다. (없으면 "has_doctor_page" 먼저)
+2. 제작사에 다음 문구를 보내세요:
+   "의료진 페이지에 각 의사별로 schema.org 의 Physician 또는 ProfilePage 스키마를 추가해주세요. name, jobTitle, alumniOf, memberOf 항목 포함이요."
+3. 보통 1주일 정도 걸립니다.
+
+팁
+- 의료진이 여러 분이면 한 명씩 따로 표시해야 합니다.
+- 학회 회원·자격증 정보가 있으면 더 풍부해집니다. search.google.com/test/rich-results 로 검증하세요.`,
+  },
 
   // ④ content_quality
-  [LABELS.h1_count]: { impact: 'medium', difficulty: 'easy', timeframe: '즉시', actionText: '제작사에 "페이지마다 핵심 주제를 담은 H1 태그 1개만 두도록" 요청', detailedGuide: '' },
-  [LABELS.h2_count]: { impact: 'medium', difficulty: 'easy', timeframe: '즉시', actionText: '관리자 모드에서 본문 섹션 제목을 H2 로 3개 이상 나누기', detailedGuide: '' },
-  [LABELS.title_opt]: { impact: 'high', difficulty: 'easy', timeframe: '즉시', actionText: '제작사에 "title 태그를 \'{지역}구 {병원명} - {업종}\' 형식으로 수정" 요청', detailedGuide: '' },
-  [LABELS.meta_desc]: { impact: 'high', difficulty: 'easy', timeframe: '즉시', actionText: '관리자 모드에서 meta description 을 50~160자로 작성 (어떤 진료·누구에게·어떤 특징)', detailedGuide: '' },
-  [LABELS.alt_ratio]: { impact: 'medium', difficulty: 'easy', timeframe: '즉시', actionText: '관리자 모드에서 각 이미지에 alt 텍스트 한 줄 추가 (장식용은 alt="" 빈 값)', detailedGuide: '' },
-  [LABELS.doctor_in_text]: { impact: 'high', difficulty: 'easy', timeframe: '즉시', actionText: '관리자 모드에서 의료진 소개에 "구강외과 전문의"·"치주과 전문의" 식 타이틀 추가', detailedGuide: '' },
-  [LABELS.word_count]: { impact: 'medium', difficulty: 'medium', timeframe: '1주', actionText: 'AI 로 핵심 페이지 본문 500자 이상 초안 작성 → 원장 검수 → 관리자 모드 업로드', detailedGuide: '' },
+  [LABELS.h1_count]: {
+    impact: 'medium', difficulty: 'easy', timeframe: '즉시',
+    actionText: '제작사에 "페이지마다 핵심 주제를 담은 H1 태그 1개만 두도록" 요청',
+    detailedGuide: `이게 뭐예요?
+페이지 맨 위 큰 제목(H1) 입니다. 책으로 치면 "장 제목". 한 페이지에 H1 은 1개만 있어야 검색엔진과 AI 가 "이 페이지의 핵심 주제" 를 명확히 파악합니다.
+
+어떻게 하나요?
+1. 제작사에 연락하세요.
+2. 다음 문구를 복사해서 보내세요:
+   "각 페이지마다 핵심 주제를 담은 H1 태그가 1개만 있도록 해주세요. H1 이 여러 개거나 0개인 페이지는 1개로 정리해주세요."
+3. 페이지 수에 따라 1시간~하루 정도면 끝납니다.
+
+팁
+- H1 은 페이지 제목과 같거나 비슷하면 자연스럽습니다.
+- H1 안에 핵심 키워드(병원명·진료명·지역명) 를 포함하면 효과 큼.`,
+  },
+  [LABELS.h2_count]: {
+    impact: 'medium', difficulty: 'easy', timeframe: '즉시',
+    actionText: '관리자 모드에서 본문 섹션 제목을 H2 로 3개 이상 나누기',
+    detailedGuide: `이게 뭐예요?
+본문 중간 제목(H2) 입니다. 책으로 치면 "절 제목". 글이 길 때 H2 로 섹션을 나눠야 AI 가 "이 부분이 어떤 내용인지" 빠르게 파악합니다.
+
+어떻게 하나요?
+1. 관리자 모드에서 본문 작성 화면을 여세요.
+2. 본문이 긴 페이지(특히 진료 안내·블로그) 에 섹션 제목을 H2 로 3개 이상 나누세요.
+   예: "임플란트란?" / "치료 과정" / "주의사항" / "비용 안내"
+3. 페이지당 5~10분이면 끝납니다.
+
+팁
+- 편집기 툴바에 "H2" 또는 "제목 2" 버튼이 있을 겁니다.
+- 한 페이지에 H1 은 1개, H2 는 3~7개 정도가 적정합니다.`,
+  },
+  [LABELS.title_opt]: {
+    impact: 'high', difficulty: 'easy', timeframe: '즉시',
+    actionText: '제작사에 "title 태그를 \'{지역}구 {병원명} - {업종}\' 형식으로 수정" 요청',
+    detailedGuide: `이게 뭐예요?
+브라우저 탭과 검색 결과 첫 줄에 보이는 페이지 제목(title) 입니다. AI 노출의 시작점이라 매우 중요합니다.
+
+어떻게 하나요?
+1. 제작사에 연락하세요.
+2. 다음 문구를 복사해서 보내세요:
+   "각 페이지의 title 태그를 다음 형식으로 수정해주세요: '[지역(구·동)] [병원명] - [업종]'. 예: '강남구 오라클치과 - 임플란트 전문'. 길이는 30~60자."
+3. 페이지 수에 따라 1~3시간이면 끝납니다.
+
+팁
+- 모든 페이지가 같은 title 이면 안 됩니다. 페이지마다 달라야 합니다.
+- 핵심은 "지역 + 병원명 + 진료" 세 가지를 다 넣는 것.`,
+  },
+  [LABELS.meta_desc]: {
+    impact: 'high', difficulty: 'easy', timeframe: '즉시',
+    actionText: '관리자 모드에서 meta description 을 50~160자로 작성 (어떤 진료·누구에게·어떤 특징)',
+    detailedGuide: `이게 뭐예요?
+검색 결과에서 제목 아래 보이는 한두 줄 요약(meta description) 입니다. 사용자가 클릭할지 말지 결정하는 결정적 자리입니다.
+
+어떻게 하나요?
+1. 관리자 모드에서 각 페이지의 "SEO" 또는 "메타 설명" 항목을 찾으세요.
+2. 50~160자로 작성하세요. 다음 3가지를 꼭 포함:
+   - 어떤 진료를 하는지
+   - 누구를 위한 곳인지 (지역·전문 분야)
+   - 우리 병원만의 특징
+   예: "강남구 ○○치과 - 야간 진료, 토요일 운영. 임플란트·교정 전문의 상주. 무료 상담 가능."
+3. 페이지당 5~10분이면 끝납니다.
+
+팁
+- 모든 페이지가 같은 설명이면 안 됩니다.
+- "광고 표현"(최고·1위·100%) 은 의료광고법 위반이라 피하세요.`,
+  },
+  [LABELS.alt_ratio]: {
+    impact: 'medium', difficulty: 'easy', timeframe: '즉시',
+    actionText: '관리자 모드에서 각 이미지에 alt 텍스트 한 줄 추가 (장식용은 alt="" 빈 값)',
+    detailedGuide: `이게 뭐예요?
+이미지마다 붙이는 짧은 설명문(alt 텍스트) 입니다. 시각장애인 음성 안내용이지만, 동시에 AI 가 "이 사진이 뭔지" 이해하는 자료가 됩니다.
+
+어떻게 하나요?
+1. 관리자 모드에서 각 이미지를 클릭하세요.
+2. "대체 텍스트" 또는 "alt" 항목에 한 줄 설명을 적으세요.
+   예: "원장님이 환자를 진료하는 모습", "임플란트 시술 전후 비교 사진"
+3. 장식용 이미지(아이콘·구분선 등) 는 alt 를 빈 값(alt="") 으로 두세요.
+
+팁
+- 설명에 핵심 키워드("임플란트", "치과") 를 자연스럽게 포함하세요.
+- "사진", "이미지" 같은 단어는 빼는 게 더 깔끔합니다.`,
+  },
+  [LABELS.doctor_in_text]: {
+    impact: 'high', difficulty: 'easy', timeframe: '즉시',
+    actionText: '관리자 모드에서 의료진 소개에 "구강외과 전문의"·"치주과 전문의" 식 타이틀 추가',
+    detailedGuide: `이게 뭐예요?
+의료진 소개 본문에 "○○과 전문의" 같은 공식 자격을 텍스트로 명시하는 것입니다. AI 가 "이 병원에 진짜 전문의가 있나" 를 본문에서 찾습니다.
+
+어떻게 하나요?
+1. WINAID "AI 보정" 또는 "블로그 생성" 으로 의료진 소개 초안을 만드세요.
+2. 다음 정보를 텍스트로 적으세요:
+   - 정식 자격명: "구강외과 전문의", "치주과 전문의", "보철과 전문의" 등
+   - 출신 학교 + 졸업 연도
+   - 소속 학회 (대한구강악안면임프란트학회 등)
+3. 관리자 모드에서 의료진 소개 페이지에 업로드. 페이지당 30분 정도.
+
+팁
+- 자격증·인증서를 사진으로만 올리면 AI 가 못 읽습니다. 꼭 텍스트로 적으세요.
+- 전문의가 아닌 일반의는 "치과의사" 로 명시하면 됩니다.`,
+  },
+  [LABELS.word_count]: {
+    impact: 'medium', difficulty: 'medium', timeframe: '1주',
+    actionText: 'AI 로 핵심 페이지 본문 500자 이상 초안 작성 → 원장 검수 → 관리자 모드 업로드',
+    detailedGuide: `이게 뭐예요?
+페이지 본문의 글자 수입니다. 너무 짧으면(200자 미만) AI 가 "정보가 부족하다" 고 판단해 추천에서 밀립니다.
+
+어떻게 하나요?
+1. 글자 수가 부족한 페이지(특히 진료 안내·의료진 소개) 를 찾으세요.
+2. WINAID "블로그 생성" 또는 "AI 보정" 으로 본문을 500자 이상으로 보강하세요.
+3. 원장님 검수 후 관리자 모드로 업로드하세요.
+
+팁
+- 단순 나열보다 "왜 이 진료가 필요한가 / 우리 병원의 특징 / 절차 / 주의사항" 구조로 풀면 자연스럽게 길어집니다.
+- 너무 길어도(2000자 이상) 가독성이 떨어집니다. 500~1500자가 적정.`,
+  },
 
   // ⑤ external_channels
   [LABELS.naver]: { impact: 'high', difficulty: 'easy', timeframe: '즉시', actionText: '병원 담당자가 smartplace.naver.com 에서 네이버 플레이스 등록 + 홈페이지 푸터에 링크', detailedGuide: '' },
