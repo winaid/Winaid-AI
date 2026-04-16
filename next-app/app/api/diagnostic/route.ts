@@ -21,7 +21,7 @@ import { enrichDiagnostic } from '../../../lib/diagnostic/enrich';
 import { discoverCompetitors } from '../../../lib/diagnostic/discovery';
 import type { DiagnosticResponse, DiagnosticErrorResponse } from '../../../lib/diagnostic/types';
 
-export const maxDuration = 180;
+export const maxDuration = 240;
 export const dynamic = 'force-dynamic';
 
 interface Body { url?: string; customQuery?: string }
@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
 
   // 4) PSI — 선택. 실패 시 null → "측정 불가" (UI 자동 대응).
   //    psi.ts: 1회당 35s × 1회 재시도 = 최악 70s. 여기 외부 가드도 70s 로 정렬.
-  //    maxDuration 180s 안에서 crawl(15) + PSI(70) + max(enrich 75, discovery 75) = 160s, 여유 ~20s.
+  //    maxDuration 240s 안에서 crawl(15) + PSI(70) + max(enrich 75, discovery 120) = 205s, 여유 ~35s.
   const psi = await withTimeout(fetchPsi(crawl.finalUrl), 70_000, 'psi').catch(() => null);
 
   // 5~7) 채점 + 종합
@@ -172,7 +172,7 @@ export async function POST(request: NextRequest) {
   // After:  crawl(15) + PSI(40) + max(enrich 30, discovery 25) = 85초 병렬
   const [enrichResult, discResult] = await Promise.allSettled([
     withTimeout(enrichDiagnostic(base, crawl), 75_000, 'enrich'),
-    withTimeout(discoverCompetitors(crawl, '치과', customQuery), 75_000, 'discovery'),
+    withTimeout(discoverCompetitors(crawl, '치과', customQuery), 120_000, 'discovery'),
   ]);
 
   // enrich 결과 — 실패 시 base 그대로
