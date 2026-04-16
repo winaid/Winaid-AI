@@ -215,15 +215,17 @@ export async function discoverViaChatGPT(query: string): Promise<CompetitorResul
     console.warn('[discovery/chatgpt] OPENAI_API_KEY 미설정 — 스킵');
     return null;
   }
-  const input = `"${query}" 를 웹 검색으로 찾아서 상위 5곳 병원의 공식 홈페이지 URL, 병원명(title), 한 줄 설명(snippet) 을 JSON 배열로만 반환하세요.
-형식: [{"url": "...", "title": "...", "snippet": "..."}]
-주의: 모두닥/하이닥/네이버플레이스 같은 플랫폼 URL 이 아니라 병원 **공식 홈페이지** URL 을 우선.
+  const input = `"${query}" 를 웹 검색해서 관련 병원/치과 상위 5곳의 정보를 JSON 배열로 반환하세요.
+형식: [{"url": "...", "title": "병원명", "snippet": "한 줄 설명"}]
+
+URL 우선순위:
+1. 병원 공식 홈페이지가 있으면 그 URL
+2. 공식 홈페이지를 못 찾으면 네이버 플레이스, 블로그, 또는 병원 정보가 나오는 URL이라도 포함
 
 출력 규칙:
-- 반드시 JSON 배열만 출력하라. [{url, title, snippet}] 형태.
-- 마크다운·설명 텍스트·코드펜스(\`\`\`) 절대 금지.
-- JSON 외 글자가 한 글자라도 들어가면 실패로 처리됨.
-- 결과가 없으면 빈 배열 [] 반환.`;
+- JSON 배열만 출력. 마크다운·설명·코드펜스 금지.
+- 최소 1개 이상 반환. 5개 미만이어도 있는 만큼.
+- 정말 아무것도 못 찾을 때만 빈 배열 [].`;
 
   try {
     const res = await fetch(OPENAI_RESPONSES_URL, {
@@ -234,7 +236,7 @@ export async function discoverViaChatGPT(query: string): Promise<CompetitorResul
         'Authorization': `Bearer ${key}`,
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: 'gpt-5.4',
         tools: [{ type: 'web_search_preview' }],
         input,
       }),
