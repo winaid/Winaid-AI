@@ -1,7 +1,250 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import type { AIVisibility } from '../../lib/diagnostic/types';
+
+// ── 출처·본문 파싱 유틸 ────────────────────────────────────
+// 서버는 프롬프트 최소화로 원본 그대로를 돌려주니 클라이언트에서 마크다운을 정리한다.
+// 외부 dependency 금지 — 허용 태그 이외는 React 가 자동 이스케이프하므로 안전.
+
+export interface BadgeSource {
+  host: string;
+  url: string;
+}
+
+const TRACKING_KEYS = /^(utm_|ref$|gclid$|fbclid$|mc_|yclid$|_hsenc$|_hsmi$)/i;
+
+function stripTrackingParams(raw: string): string {
+  try {
+    const u = new URL(raw);
+    const toDelete: string[] = [];
+    u.searchParams.forEach((_, k) => {
+      if (TRACKING_KEYS.test(k)) toDelete.push(k);
+    });
+    for (const k of toDelete) u.searchParams.delete(k);
+    u.hash = '';
+    return u.toString();
+  } catch {
+    return raw;
+  }
+}
+
+function prettyHost(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '').toLowerCase();
+  } catch {
+    return url;
+  }
+}
+
+/** http(s) 스킴만 허용. 그 외(javascript:, data:, file:…)는 버림. */
+function safeHref(url: string): string | null {
+  try {
+    const u = new URL(url);
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return null;
+    return u.toString();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 본문에서 URL 을 추출해 host 기준 dedupe, 등장 순서 유지.
+ * [label](url) 마크다운 링크 + 맨 URL 둘 다 커버.
+ */
+function extractSources(text: string): BadgeSource[] {
+  const MD_LINK = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g;
+  const BARE_URL = /https?:\/\/[^\s)>\]"',]+/g;
+  const seen = new Set<string>();
+  const out: BadgeSource[] = [];
+  const push = (raw: string) => {
+    const safe = safeHref(raw);
+    if (!safe) return;
+    const clean = stripTrackingParams(safe);
+    const host = prettyHost(clean);
+    if (!host || seen.has(host)) return;
+    seen.add(host);
+    out.push({ host, url: clean });
+  };
+  for (const m of text.matchAll(MD_LINK)) push(m[2]);
+  for (const m of text.matchAll(BARE_URL)) push(m[0]);
+  return out;
+}
+
+/** `**bold**` → <strong>, 그 외 텍스트는 그대로. React 가 자동 이스케이프. */
+function renderInline(text: string, keyPrefix: string): ReactNode[] {
+  const parts: ReactNode[] = [];
+  const BOLD = /\*\*([^*]+)\*\*/g;
+  let idx = 0;
+  let last = 0;
+  let m: RegExpExecArray | null;
+  while ((m = BOLD.exec(text)) !== null) {
+    if (m.index > last) parts.push(text.slice(last, m.index));
+    parts.push(<strong key={`${keyPrefix}-b-${idx++}`}>{m[1]}</strong>);
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) parts.push(text.slice(last));
+  return parts;
+}
+
+/**
+ * 마크다운 링크·맨 URL·`---` 를 본문에서 제거 + 공백 정돈.
+ * 순서: md link → bare url → hr line → 공백 collapse.
+ */
+function cleanForBody(raw: string): string {
+  let t = raw;
+  t = t.replace(/\[([^\]]+)\]\(https?:\/\/[^\s)]+\)/g, '$1');
+  t = t.replace(/https?:\/\/[^\s)>\]"',]+/g, '');
+  t = t.replace(/^\s*[-_*]{3,}\s*$/gm, '');
+  t = t.replace(/[ \t]+/g, ' ');
+  t = t.replace(/\n{3,}/g, '\n\n');
+  return t.trim();
+}
+
+const BULLET_RE = /^\s*[-•*]\s+/;
+const NUMBER_RE = /^\s*\d+[.)]\s+/;
+
+/**
+ * 답변을 React 노드 트리로 파싱.
+ * 블록: 빈 줄 구분. 각 블록 내부에서 bullet/number 연속은 ul/ol 로 그룹핑.
+ * 본문 안의 URL 은 이미 cleanForBody 에서 제거됨 — sources 는 상위에서 별도 처리.
+ */
+function parseAnswer(raw: string): ReactNode {
+  const cleaned = cleanForBody(raw);
+  if (!cleaned) return null;
+  const blocks = cleaned.split(/\n\s*\n/);
+  const out: ReactNode[] = [];
+  blocks.forEach((block, bi) => {
+    const lines = block.split(/\n/).map((l) => l.trim()).filter(Boolean);
+    if (lines.length === 0) return;
+    let i = 0;
+    let sub = 0;
+    while (i < lines.length) {
+      if (BULLET_RE.test(lines[i])) {
+        const items: string[] = [];
+        while (i < lines.length && BULLET_RE.test(lines[i])) {
+          items.push(lines[i].replace(BULLET_RE, ''));
+          i++;
+        }
+        out.push(
+          <ul key={`b${bi}-ul${sub++}`} className="list-disc pl-5 space-y-1 my-2">
+            {items.map((it, k) => <li key={k}>{renderInline(it, `b${bi}-u${k}`)}</li>)}
+          </ul>,
+        );
+      } else if (NUMBER_RE.test(lines[i])) {
+        const items: string[] = [];
+        while (i < lines.length && NUMBER_RE.test(lines[i])) {
+          items.push(lines[i].replace(NUMBER_RE, ''));
+          i++;
+        }
+        out.push(
+          <ol key={`b${bi}-ol${sub++}`} className="list-decimal pl-5 space-y-1 my-2">
+            {items.map((it, k) => <li key={k}>{renderInline(it, `b${bi}-n${k}`)}</li>)}
+          </ol>,
+        );
+      } else {
+        const para: string[] = [];
+        while (i < lines.length && !BULLET_RE.test(lines[i]) && !NUMBER_RE.test(lines[i])) {
+          para.push(lines[i]);
+          i++;
+        }
+        out.push(
+          <p key={`b${bi}-p${sub++}`} className="my-1.5">
+            {renderInline(para.join(' '), `b${bi}-p${sub}`)}
+          </p>,
+        );
+      }
+    }
+  });
+  return out;
+}
+
+// ── 출처 배지 서브컴포넌트 ─────────────────────────────────
+
+const BADGE_BASE =
+  'inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1 ' +
+  'text-[13px] leading-none font-medium text-slate-700 whitespace-nowrap max-w-[14rem] ' +
+  'transition-[color,background-color,border-color,box-shadow] duration-150 ease-out ' +
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 ' +
+  'active:scale-[0.98] active:bg-slate-100';
+
+const BADGE_ACCENT: Record<AIVisibility['platform'], string> = {
+  ChatGPT:
+    'hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-800 ' +
+    'hover:shadow-[0_1px_2px_rgba(16,185,129,0.15)] focus-visible:ring-emerald-400 visited:text-slate-700',
+  Gemini:
+    'hover:border-sky-300 hover:bg-sky-50 hover:text-sky-800 ' +
+    'hover:shadow-[0_1px_2px_rgba(14,165,233,0.15)] focus-visible:ring-sky-400 visited:text-slate-700',
+};
+
+function ExternalIcon() {
+  return (
+    <svg
+      viewBox="0 0 20 20"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      className="h-3.5 w-3.5 shrink-0 text-slate-400"
+    >
+      <path d="M11 5h4v4" />
+      <path d="M15 5l-7 7" />
+      <path d="M14 11v4a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h4" />
+    </svg>
+  );
+}
+
+function SourceBadge({
+  source,
+  platform,
+}: {
+  source: BadgeSource;
+  platform: AIVisibility['platform'];
+}) {
+  return (
+    <a
+      href={source.url}
+      target="_blank"
+      rel="noopener noreferrer nofollow"
+      title={source.url}
+      aria-label={`${source.host} 출처 새 탭 열기`}
+      className={`${BADGE_BASE} ${BADGE_ACCENT[platform]}`}
+    >
+      <ExternalIcon />
+      <span className="truncate">{source.host}</span>
+    </a>
+  );
+}
+
+function MoreBadge({
+  count,
+  expanded,
+  onClick,
+  controlsId,
+}: {
+  count: number;
+  expanded: boolean;
+  onClick: () => void;
+  controlsId: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-expanded={expanded}
+      aria-controls={controlsId}
+      className={
+        `${BADGE_BASE} text-slate-500 hover:border-slate-300 hover:bg-slate-50 ` +
+        'hover:text-slate-700 focus-visible:ring-slate-400'
+      }
+    >
+      {expanded ? '접기' : `+${count}개`}
+    </button>
+  );
+}
 
 /**
  * AIVisibilityCard — 플랫폼별 AI 노출 예측 + 실측(Streaming) UI (단계 S-B)
@@ -20,7 +263,18 @@ interface AIVisibilityCardProps {
 type StreamState =
   | { phase: 'idle' }
   | { phase: 'streaming'; query: string; answerText: string }
-  | { phase: 'done'; query: string; answerText: string; selfIncluded: boolean; selfRank: number | null; timestamp: string }
+  | {
+      phase: 'done';
+      query: string;
+      answerText: string;
+      selfIncluded: boolean;
+      selfRank: number | null;
+      timestamp: string;
+      /** 핫픽스: 서버가 finishReason MAX_TOKENS/SAFETY 등으로 비정상 종료라고 알리면 true */
+      truncated: boolean;
+      /** 서버가 done 이벤트에 실어보낸 출처 (Gemini grounding 우선, 없으면 본문 regex) */
+      sources: BadgeSource[];
+    }
   | { phase: 'error'; message: string };
 
 const LIKELIHOOD_META: Record<AIVisibility['likelihood'], { label: string; color: string; emoji: string }> = {
@@ -55,6 +309,7 @@ export default function AIVisibilityCard({ visibility, siteName, selfUrl }: AIVi
 
   const [state, setState] = useState<StreamState>({ phase: 'idle' });
   const [customQueryInput, setCustomQueryInput] = useState('');
+  const [sourcesExpanded, setSourcesExpanded] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
   // unmount 시 in-flight stream 정리
@@ -121,6 +376,9 @@ export default function AIVisibilityCard({ visibility, siteName, selfUrl }: AIVi
             selfRank?: number | null;
             timestamp?: string;
             message?: string;
+            truncated?: boolean;
+            reason?: string;
+            sources?: unknown;
           };
           try {
             payload = JSON.parse(line.slice(6));
@@ -143,6 +401,17 @@ export default function AIVisibilityCard({ visibility, siteName, selfUrl }: AIVi
                 : prev,
             );
           } else if (payload.type === 'done') {
+            // 서버가 done 에 실어보낸 sources 만 XSS 관점에서 재검증 후 받아씀.
+            const rawSources = Array.isArray(payload.sources) ? payload.sources : [];
+            const sources: BadgeSource[] = [];
+            for (const s of rawSources) {
+              if (!s || typeof s !== 'object') continue;
+              const obj = s as { host?: unknown; url?: unknown };
+              if (typeof obj.host !== 'string' || typeof obj.url !== 'string') continue;
+              if (!/^https?:\/\//i.test(obj.url)) continue;
+              if (sources.some((x) => x.host === obj.host)) continue;
+              sources.push({ host: obj.host, url: obj.url });
+            }
             setState((prev) => ({
               phase: 'done',
               query:
@@ -161,6 +430,8 @@ export default function AIVisibilityCard({ visibility, siteName, selfUrl }: AIVi
               selfRank: typeof payload.selfRank === 'number' ? payload.selfRank : null,
               timestamp:
                 typeof payload.timestamp === 'string' ? payload.timestamp : new Date().toISOString(),
+              truncated: !!payload.truncated,
+              sources,
             }));
           } else if (payload.type === 'error') {
             setState({
@@ -175,6 +446,8 @@ export default function AIVisibilityCard({ visibility, siteName, selfUrl }: AIVi
       setState((prev) => {
         if (prev.phase !== 'streaming') return prev;
         if (prev.answerText.length > 0) {
+          // 메타가 안 왔으니 sources 는 본문 regex fallback
+          const sources = extractSources(prev.answerText);
           return {
             phase: 'done',
             query: prev.query,
@@ -182,6 +455,8 @@ export default function AIVisibilityCard({ visibility, siteName, selfUrl }: AIVi
             selfIncluded: false,
             selfRank: null,
             timestamp: new Date().toISOString(),
+            truncated: true, // done 이벤트 없이 끊김 = 잘림으로 간주
+            sources,
           };
         }
         return { phase: 'error', message: '답변을 받지 못하고 스트림이 종료되었습니다.' };
@@ -292,49 +567,102 @@ export default function AIVisibilityCard({ visibility, siteName, selfUrl }: AIVi
           </div>
         )}
 
-        {state.phase === 'done' && (
-          <div>
-            <div className="flex items-center justify-between gap-2 mb-3">
-              <p className="text-[12px] font-bold text-slate-700 truncate">
-                🔍 &ldquo;{state.query}&rdquo; 실제 검색 결과
-              </p>
-              {state.timestamp && (
-                <span className="text-[10px] text-slate-400 flex-none">
-                  {formatTimestamp(state.timestamp)}
-                </span>
-              )}
-            </div>
-            <div className="text-[14px] leading-[1.8] text-slate-700 whitespace-pre-line bg-white rounded-lg p-4 border border-slate-200">
-              {state.answerText || '(빈 답변을 받았습니다)'}
-            </div>
+        {state.phase === 'done' && (() => {
+          const parsedBody = parseAnswer(state.answerText);
+          const MAX_VISIBLE = 5;
+          const visibleSources = sourcesExpanded
+            ? state.sources
+            : state.sources.slice(0, MAX_VISIBLE);
+          const remaining = Math.max(0, state.sources.length - MAX_VISIBLE);
+          const sourcesId = `diag-sources-${visibility.platform}`;
+          return (
+            <div>
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <p className="text-[12px] font-bold text-slate-700 truncate">
+                  🔍 &ldquo;{state.query}&rdquo; 실제 검색 결과
+                </p>
+                {state.timestamp && (
+                  <span className="text-[10px] text-slate-400 flex-none">
+                    {formatTimestamp(state.timestamp)}
+                  </span>
+                )}
+              </div>
 
-            <div className="mt-3">
-              {state.selfIncluded ? (
-                <div className="rounded-lg px-3 py-2 text-sm font-medium bg-green-50 text-green-800 border border-green-200">
-                  ✅ {siteName || '본인 사이트'} URL 이 답변에 포함되어 있습니다
-                  {state.selfRank ? ` (${state.selfRank}번째 언급)` : ''}
-                </div>
-              ) : (
-                <div className="rounded-lg px-3 py-2 text-sm font-medium bg-amber-50 text-amber-800 border border-amber-200">
-                  ⚠️ {siteName || '본인 사이트'} URL 이 답변에 포함되어 있지 않습니다
+              {/* 본문 — parseAnswer 로 마크다운 정돈, URL/각주는 sources 로 회수 */}
+              <div className="text-[14px] leading-[1.8] text-slate-700 bg-white rounded-lg p-4 border border-slate-200">
+                {parsedBody ?? <span className="text-slate-400">(빈 답변을 받았습니다)</span>}
+              </div>
+
+              {/* 잘림 안내 — finishReason MAX_TOKENS/SAFETY 혹은 스트림 비정상 종료 */}
+              {state.truncated && (
+                <p className="mt-3 text-xs text-amber-600 flex items-center gap-1">
+                  <span aria-hidden="true">⚠</span>
+                  <span>응답이 길어져 일부가 생략되었어요</span>
+                </p>
+              )}
+
+              {/* 참고 출처 — 서버 sources 만 사용 (Gemini grounding 우선, 없으면 본문 regex fallback) */}
+              {state.sources.length > 0 && (
+                <div
+                  id={sourcesId}
+                  className="mt-4 flex flex-wrap items-center gap-1.5 sm:gap-2"
+                >
+                  <span className="mr-0.5 select-none text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                    참고 출처
+                  </span>
+                  {visibleSources.map((s) => (
+                    <SourceBadge key={s.host} source={s} platform={visibility.platform} />
+                  ))}
+                  {remaining > 0 && !sourcesExpanded && (
+                    <MoreBadge
+                      count={remaining}
+                      expanded={false}
+                      onClick={() => setSourcesExpanded(true)}
+                      controlsId={sourcesId}
+                    />
+                  )}
+                  {sourcesExpanded && state.sources.length > MAX_VISIBLE && (
+                    <MoreBadge
+                      count={0}
+                      expanded={true}
+                      onClick={() => setSourcesExpanded(false)}
+                      controlsId={sourcesId}
+                    />
+                  )}
                 </div>
               )}
-            </div>
 
-            <div className="mt-3 flex items-center justify-between gap-3">
-              <p className="text-[10px] text-slate-400 leading-relaxed">
-                위 답변은 {visibility.platform} 가 사용자 질문에 직접 응답한 내용입니다. 검색 시점·쿼리에 따라 달라질 수 있습니다.
-              </p>
-              <button
-                type="button"
-                onClick={reset}
-                className="flex-none text-[11px] font-semibold text-slate-600 hover:text-slate-900 px-2 py-1 rounded hover:bg-slate-100 transition-colors"
-              >
-                🔄 다시 실측
-              </button>
+              <div className="mt-3">
+                {state.selfIncluded ? (
+                  <div className="rounded-lg px-3 py-2 text-sm font-medium bg-green-50 text-green-800 border border-green-200">
+                    ✅ {siteName || '본인 사이트'} URL 이 답변에 포함되어 있습니다
+                    {state.selfRank ? ` (${state.selfRank}번째 언급)` : ''}
+                  </div>
+                ) : (
+                  <div className="rounded-lg px-3 py-2 text-sm font-medium bg-amber-50 text-amber-800 border border-amber-200">
+                    ⚠️ {siteName || '본인 사이트'} URL 이 답변에 포함되어 있지 않습니다
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-3 flex items-center justify-between gap-3">
+                <p className="text-[10px] text-slate-400 leading-relaxed">
+                  위 답변은 {visibility.platform} 가 사용자 질문에 직접 응답한 내용입니다. 검색 시점·쿼리에 따라 달라질 수 있습니다.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSourcesExpanded(false);
+                    reset();
+                  }}
+                  className="flex-none text-[11px] font-semibold text-slate-600 hover:text-slate-900 px-2 py-1 rounded hover:bg-slate-100 transition-colors"
+                >
+                  🔄 다시 실측
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {state.phase === 'error' && (
           <div>
