@@ -312,7 +312,28 @@ function tryExtractJsonArray<T>(raw: string): T[] | null {
   } catch { return null; }
 }
 
-/** raw 결과 배열을 CompetitorResult[] 로 정규화. 최대 5개. */
+/**
+ * 환각·노이즈 필터 — 병원 공식 URL 이 아닌 플랫폼/블로그/포털은 제외.
+ * ChatGPT 가 URL 과 병원명을 임의 조합해 보고하는 케이스(예: "반월바른플란트치과"↔postincome.co.kr)를
+ * 도메인 단위로 원천 차단. 프롬프트 강화와 병행(이중 방어).
+ */
+const PLATFORM_OR_NOISE_DOMAINS: readonly string[] = [
+  // 병원 검색·리뷰 플랫폼
+  'cashdoc.me', 'placeview.co.kr', 'modoodoc.com', 'ddocdoc.com', 'hidoc.co.kr', 'medius.me',
+  // 실측 샘플에서 환각 URL 호스트로 관측됨
+  'postincome.co.kr', 'peterspickpick.com',
+  // 일반 블로그·카페·포털
+  'blog.naver.com', 'cafe.naver.com', 'tistory.com', 'naver.me', 'kakao.com',
+  // 의료 포털 / 해외 대행
+  'medicalkoreaguide.com', 'koreahealthtrip.com',
+];
+
+function isBlockedDomain(domain: string): boolean {
+  const d = domain.replace(/^www\./, '').toLowerCase();
+  return PLATFORM_OR_NOISE_DOMAINS.some((bad) => d === bad || d.endsWith('.' + bad));
+}
+
+/** raw 결과 배열을 CompetitorResult[] 로 정규화. 최대 5개. 플랫폼·노이즈 도메인은 드롭. */
 function normalizeResults(arr: unknown[]): CompetitorResult[] {
   const out: CompetitorResult[] = [];
   for (const raw of arr) {
@@ -322,6 +343,7 @@ function normalizeResults(arr: unknown[]): CompetitorResult[] {
     if (!url) continue;
     const domain = hostOf(url);
     if (!domain) continue;
+    if (isBlockedDomain(domain)) continue; // 플랫폼·환각 노이즈 도메인 제거
     out.push({
       url,
       title: typeof r.title === 'string' ? r.title.trim().slice(0, 150) : '',
@@ -340,15 +362,20 @@ const URL_REGEX = /https?:\/\/[^\s)>\]"',]+/g;
 
 function extractUrlsFromText(text: string): CompetitorResult[] {
   const urls = [...new Set(text.match(URL_REGEX) || [])];
-  return urls.slice(0, 5).map((url, i) => {
+  const out: CompetitorResult[] = [];
+  for (const url of urls) {
     const domain = hostOf(url);
+    if (!domain) continue;
+    if (isBlockedDomain(domain)) continue; // 플랫폼·환각 노이즈 제거 (fallback 경로에서도 동일)
     // URL 앞 텍스트에서 병원명 추출 시도 (한글 + 치과/병원/의원 등)
     const idx = text.indexOf(url);
     const before = text.slice(Math.max(0, idx - 60), idx);
     const nameMatch = before.match(/([가-힣]{2,15}(?:치과|병원|의원|클리닉|센터|한의원))/);
     const title = nameMatch ? nameMatch[1] : domain;
-    return { url, title, snippet: '', domain, rank: i + 1 };
-  }).filter(r => r.domain);
+    out.push({ url, title, snippet: '', domain, rank: out.length + 1 });
+    if (out.length >= 5) break;
+  }
+  return out;
 }
 
 // ── OpenAI Responses + web_search ────────────────────────
@@ -385,7 +412,13 @@ URL 우선순위:
 출력 규칙:
 - JSON 배열만 출력. 마크다운·설명·코드펜스 금지.
 - 최소 1개 이상 반환. 5개 미만이어도 있는 만큼.
-- 정말 아무것도 못 찾을 때만 빈 배열 [].`;
+- 정말 아무것도 못 찾을 때만 빈 배열 [].
+
+⚠️ 환각 금지 — 매우 중요:
+- 각 결과의 URL 과 병원명은 반드시 web_search 에서 실제로 찾은 페어여야 합니다.
+- URL 과 병원명을 임의로 조합·추측·생성하지 마세요. (예: A 병원을 B 회사 URL 에 매핑)
+- 한 쌍(URL, 병원명)의 일치 여부가 확실하지 않으면 그 결과를 제외하세요.
+- 5개 미만이어도 됩니다. 정확성이 최우선이고, 빈 배열도 허용합니다.`;
 
   try {
     const res = await fetch(OPENAI_RESPONSES_URL, {
