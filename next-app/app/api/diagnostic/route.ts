@@ -158,8 +158,8 @@ export async function POST(request: NextRequest) {
   // Before: crawl(15) + PSI(40) + enrich(30) + discovery(25) = 110초 순차
   // After:  crawl(15) + PSI(40) + max(enrich 30, discovery 25) = 85초 병렬
   const [enrichResult, discResult] = await Promise.allSettled([
-    withTimeout(enrichDiagnostic(base, crawl), 45_000, 'enrich'),
-    withTimeout(discoverCompetitors(crawl, '치과'), 45_000, 'discovery'),
+    withTimeout(enrichDiagnostic(base, crawl), 75_000, 'enrich'),
+    withTimeout(discoverCompetitors(crawl, '치과'), 75_000, 'discovery'),
   ]);
 
   // enrich 결과 — 실패 시 base 그대로

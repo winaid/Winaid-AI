@@ -203,7 +203,14 @@ export async function discoverViaChatGPT(query: string): Promise<CompetitorResul
       return null;
     }
     const body = await res.json() as OpenAIResponsesBody;
+
+    // ── 디버그 로그 — 파싱 실패 원인 추적용 ──
+    const hasSearchCall = Array.isArray(body.output) && body.output.some((o) => o.type === 'web_search_call');
     const text = extractOpenAIText(body);
+    console.warn(`[discovery/chatgpt] web_search_call 존재: ${hasSearchCall}`);
+    console.warn(`[discovery/chatgpt] 응답 전체 키: ${JSON.stringify(Object.keys(body))}`);
+    console.warn(`[discovery/chatgpt] 응답 원문 (앞 500자): ${(text || '').slice(0, 500)}`);
+
     const arr = tryExtractJsonArray<unknown>(text);
     if (arr && arr.length > 0) return normalizeResults(arr);
     // fallback: 텍스트에서 URL 정규식 추출
