@@ -2,7 +2,8 @@
  * AEO/GEO 진단 — 우선 조치 계획 생성
  *
  * CategoryScore[] 에서 fail/warning 항목을 뽑아 impact/difficulty/timeframe 메타와
- * 함께 ActionItem 으로 변환. 카테고리 가중치 → 항목 배점 → 난이도 순으로 정렬해 최대 10개 반환.
+ * 함께 ActionItem 으로 변환. 사용자가 "오늘 바로 손댈 수 있는 큰 한 방"부터 보도록
+ * 난이도(쉬움 우선) → 영향도(큼 우선) → 기간(즉시 우선) 순으로 정렬해 최대 10개 반환.
  */
 
 import type { CategoryScore, ActionItem } from './types';
@@ -70,43 +71,39 @@ const ACTION_META: Record<string, ActionMeta> = {
   [LABELS.blog_searchable]: { impact: 'high', difficulty: 'easy', timeframe: '즉시', actionText: '병원 담당자가 네이버 블로그 관리자 > 관리 > 기본설정 에서 "전체공개 + 외부 검색허용" 스위치 켜기' },
 };
 
-const DIFFICULTY_ORDER: Record<'easy' | 'medium' | 'hard', number> = { easy: 0, medium: 1, hard: 2 };
-
-interface Candidate {
-  item: ActionItem;
-  categoryWeight: number;
-  itemMaxPoints: number;
-  difficultyRank: number;
-}
+// "오늘부터 차근차근" 사용자 관점 정렬 — 난이도 → 영향도 → 기간 순.
+// 같은 키가 다른 곳에서 등장해도 안전하도록 fallback 99 (정렬 마지막).
+const DIFFICULTY_ORDER: Record<string, number> = { easy: 0, medium: 1, hard: 2 };
+const IMPACT_ORDER: Record<string, number> = { high: 0, medium: 1, low: 2 };
+const TIMEFRAME_ORDER: Record<string, number> = {
+  '즉시': 0, '1주': 1, '2주': 2, '1개월': 3, '90일': 4,
+};
 
 export function buildActionPlan(categories: CategoryScore[]): ActionItem[] {
-  const candidates: Candidate[] = [];
+  const items: ActionItem[] = [];
 
   for (const cat of categories) {
     for (const it of cat.items) {
       if (it.status !== 'fail' && it.status !== 'warning') continue;
       const meta = ACTION_META[it.label];
       if (!meta) continue;
-      candidates.push({
-        item: {
-          action: meta.actionText,
-          impact: meta.impact,
-          difficulty: meta.difficulty,
-          timeframe: meta.timeframe,
-          category: cat.name,
-        },
-        categoryWeight: cat.weight,
-        itemMaxPoints: it.maxPoints,
-        difficultyRank: DIFFICULTY_ORDER[meta.difficulty],
+      items.push({
+        action: meta.actionText,
+        impact: meta.impact,
+        difficulty: meta.difficulty,
+        timeframe: meta.timeframe,
+        category: cat.name,
       });
     }
   }
 
-  candidates.sort((a, b) => {
-    if (b.categoryWeight !== a.categoryWeight) return b.categoryWeight - a.categoryWeight;
-    if (b.itemMaxPoints !== a.itemMaxPoints) return b.itemMaxPoints - a.itemMaxPoints;
-    return a.difficultyRank - b.difficultyRank;
+  items.sort((a, b) => {
+    const d = (DIFFICULTY_ORDER[a.difficulty] ?? 99) - (DIFFICULTY_ORDER[b.difficulty] ?? 99);
+    if (d !== 0) return d;
+    const i = (IMPACT_ORDER[a.impact] ?? 99) - (IMPACT_ORDER[b.impact] ?? 99);
+    if (i !== 0) return i;
+    return (TIMEFRAME_ORDER[a.timeframe] ?? 99) - (TIMEFRAME_ORDER[b.timeframe] ?? 99);
   });
 
-  return candidates.slice(0, 10).map(c => c.item);
+  return items.slice(0, 10);
 }
