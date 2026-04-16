@@ -598,8 +598,8 @@ export default function AIVisibilityCard({ visibility, siteName, selfUrl }: AIVi
         </p>
       </div>
 
-      {/* ── 실측 섹션 — phase 별 ── */}
-      <div className="border-t border-slate-100 bg-slate-50/50 px-5 py-4">
+      {/* ── 실측 섹션 — phase 별. done phase 내부에서 mt-auto 가 먹도록 flex col 보장. ── */}
+      <div className="border-t border-slate-100 bg-slate-50/50 px-5 py-4 flex flex-col">
         {state.phase === 'idle' && (
           <div>
             <label
@@ -670,7 +670,7 @@ export default function AIVisibilityCard({ visibility, siteName, selfUrl }: AIVi
           const remaining = Math.max(0, state.sources.length - MAX_VISIBLE);
           const sourcesId = `diag-sources-${visibility.platform}`;
           return (
-            <div>
+            <div className="flex flex-col h-full">
               <div className="flex items-center justify-between gap-2 mb-3">
                 <p className="text-[12px] font-bold text-slate-700 truncate">
                   🔍 &ldquo;{state.query}&rdquo; 실제 검색 결과
@@ -739,7 +739,7 @@ export default function AIVisibilityCard({ visibility, siteName, selfUrl }: AIVi
                 )}
               </div>
 
-              <div className="mt-3 flex items-center justify-between gap-3">
+              <div className="mt-auto pt-4 flex items-center justify-between gap-3">
                 <p className="text-[10px] text-slate-400 leading-relaxed">
                   위 답변은 {visibility.platform} 가 사용자 질문에 직접 응답한 내용입니다. 검색 시점·쿼리에 따라 달라질 수 있습니다.
                 </p>
