@@ -296,22 +296,6 @@ function domainMatches(selfHost: string, resultHost: string): boolean {
   return a.endsWith(`.${b}`) || b.endsWith(`.${a}`);
 }
 
-// ── 공통 JSON 파서 (enrich.ts 와 독립) ───────────────────
-
-function tryExtractJsonArray<T>(raw: string): T[] | null {
-  if (!raw) return null;
-  let text = raw.trim();
-  const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (fence) text = fence[1].trim();
-  const start = text.indexOf('[');
-  const end = text.lastIndexOf(']');
-  if (start < 0 || end < start) return null;
-  try {
-    const parsed = JSON.parse(text.slice(start, end + 1));
-    return Array.isArray(parsed) ? (parsed as T[]) : null;
-  } catch { return null; }
-}
-
 /**
  * 환각·노이즈 필터 — 병원 공식 URL 이 아닌 플랫폼/블로그/포털은 제외.
  * ChatGPT 가 URL 과 병원명을 임의 조합해 보고하는 케이스(예: "반월바른플란트치과"↔postincome.co.kr)를
@@ -333,30 +317,7 @@ function isBlockedDomain(domain: string): boolean {
   return PLATFORM_OR_NOISE_DOMAINS.some((bad) => d === bad || d.endsWith('.' + bad));
 }
 
-/** raw 결과 배열을 CompetitorResult[] 로 정규화. 최대 5개. 플랫폼·노이즈 도메인은 드롭. */
-function normalizeResults(arr: unknown[]): CompetitorResult[] {
-  const out: CompetitorResult[] = [];
-  for (const raw of arr) {
-    if (!raw || typeof raw !== 'object') continue;
-    const r = raw as Record<string, unknown>;
-    const url = typeof r.url === 'string' ? r.url.trim() : '';
-    if (!url) continue;
-    const domain = hostOf(url);
-    if (!domain) continue;
-    if (isBlockedDomain(domain)) continue; // 플랫폼·환각 노이즈 도메인 제거
-    out.push({
-      url,
-      title: typeof r.title === 'string' ? r.title.trim().slice(0, 150) : '',
-      snippet: typeof r.snippet === 'string' ? r.snippet.trim().slice(0, 300) : '',
-      domain,
-      rank: out.length + 1,
-    });
-    if (out.length >= 5) break;
-  }
-  return out;
-}
-
-// ── Fallback: JSON 추출 실패 시 텍스트에서 URL 정규식 추출 ───
+// ── 자연어 답변에서 URL 정규식 추출 (selfIncluded 판정용) ───
 
 const URL_REGEX = /https?:\/\/[^\s)>\]"',]+/g;
 
@@ -378,63 +339,6 @@ function extractUrlsFromText(text: string): CompetitorResult[] {
   return out;
 }
 
-// ── 환각 URL 실 접속 검증 ────────────────────────────────
-/**
- * LLM 이 반환한 (url, title) 쌍이 실제로 병원 사이트인지 HTTP HEAD/GET 으로 검증.
- * 환각 사례: ChatGPT 가 "서울그랑치과"를 cashdoc.me 에 매핑 → 실제 title 이 "캐시닥" → drop.
- *
- * 검증 절차 (각 URL 병렬, 3초 타임아웃):
- *   1. fetch → <title> 추출
- *   2. title 에 병원 키워드(치과/의원/병원/…) 포함 여부 확인
- *   3. 미포함 또는 fetch 실패 → drop
- *   4. 통과 시 실제 title 로 r.title 보정 + rank 재계산
- *
- * 양쪽 LLM(ChatGPT/Gemini) + fallback 경로 모두 사용.
- * PLATFORM_OR_NOISE_DOMAINS 정적 필터 이후 단계라서 이중 방어.
- */
-const CLINIC_KEYWORDS = ['치과', '의원', '병원', '클리닉', '한의원', 'dental', 'clinic', 'hospital'];
-const URL_CHECK_TIMEOUT_MS = 3_000;
-
-async function validateHospitalUrls(results: CompetitorResult[]): Promise<CompetitorResult[]> {
-  if (results.length === 0) return results;
-
-  const checks = await Promise.allSettled(
-    results.map(async (r): Promise<CompetitorResult | null> => {
-      try {
-        const res = await fetch(r.url, {
-          signal: AbortSignal.timeout(URL_CHECK_TIMEOUT_MS),
-          redirect: 'follow',
-          headers: {
-            // 일부 사이트는 bot UA 를 차단 — 일반 브라우저 UA 로 위장
-            'User-Agent':
-              'Mozilla/5.0 (compatible; WinaidAEO/1.0; +https://winai.kr)',
-            'Accept': 'text/html,application/xhtml+xml',
-          },
-        });
-        if (!res.ok) return null;
-        const html = await res.text();
-        const m = html.match(/<title[^>]*>([^<]*)<\/title>/i);
-        const actualTitle = (m?.[1] ?? '').replace(/\s+/g, ' ').trim();
-        if (!actualTitle) return null;
-        const lower = actualTitle.toLowerCase();
-        const hasClinicKeyword = CLINIC_KEYWORDS.some((kw) => lower.includes(kw.toLowerCase()));
-        if (!hasClinicKeyword) return null; // 환각: 제목에 병원 단서 없음
-        // 실제 title 로 보정 (OpenAI 가 준 title 이 틀렸을 수 있음). 60자 컷.
-        return { ...r, title: actualTitle.slice(0, 60) };
-      } catch {
-        // timeout / DNS 실패 / 네트워크 오류 → 가짜 URL 가능성, drop
-        return null;
-      }
-    }),
-  );
-
-  const passed: CompetitorResult[] = [];
-  for (const c of checks) {
-    if (c.status === 'fulfilled' && c.value) passed.push(c.value);
-  }
-  return passed.map((r, i) => ({ ...r, rank: i + 1 })); // rank 재계산
-}
-
 // ── OpenAI Responses + web_search ────────────────────────
 
 interface OpenAIResponsesOutputTextContent { type: string; text?: string }
@@ -453,29 +357,47 @@ function extractOpenAIText(body: OpenAIResponsesBody): string {
   return parts.join('\n');
 }
 
-export async function discoverViaChatGPT(query: string): Promise<CompetitorResult[] | null> {
+/**
+ * LLM 자연어 답변 + 답변에서 추출된 URL/병원명.
+ * answerText 가 우리가 사용자에게 보여줄 핵심. urls 는 selfIncluded 판정용 best-effort.
+ */
+export interface DiscoverRawAnswer {
+  answerText: string;
+  urls: CompetitorResult[];
+}
+
+/**
+ * 자연어 추천 답변용 공용 프롬프트 빌더.
+ * 사용자가 ChatGPT/Gemini 에 직접 물었을 때 받을 답변과 동일 형태를 유도.
+ * JSON·표·마크다운 금지로 "구조화 모드" 진입을 막아 풍부한 답변을 받음.
+ */
+function buildNaturalLanguagePrompt(query: string): string {
+  return `"${query}"
+
+자연스러운 대화체로 추천하세요. 사용자가 직접 물었을 때 받는 답변 그대로.
+
+포함할 내용:
+- 선택 기준 한 문장 (리뷰 평점·접근성·영업시간 등)
+- 추천 병원 약 5곳 각각:
+  · 병원명 (동네·역권을 함께)
+  · 리뷰 수·평점 (확인되면)
+  · 영업시간 (야간·토요일·휴일 진료 여부)
+  · 가까운 역과의 거리 또는 접근성
+  · 특화 진료·시술 또는 자주 언급되는 리뷰 키워드
+
+절대 금지:
+- JSON·표 형식·마크다운 코드펜스
+- 추측·환각 (확실하지 않으면 해당 항목 생략)
+- "검색 결과를 정리해 드립니다" 같은 메타 안내`;
+}
+
+export async function discoverViaChatGPT(query: string): Promise<DiscoverRawAnswer | null> {
   const key = process.env.OPENAI_API_KEY;
   if (!key) {
     console.warn('[discovery/chatgpt] OPENAI_API_KEY 미설정 — 스킵');
     return null;
   }
-  const input = `"${query}" 를 웹 검색해서 관련 병원/치과 상위 5곳의 정보를 JSON 배열로 반환하세요.
-형식: [{"url": "...", "title": "병원명", "snippet": "한 줄 설명"}]
-
-URL 우선순위:
-1. 병원 공식 홈페이지가 있으면 그 URL
-2. 공식 홈페이지를 못 찾으면 네이버 플레이스, 블로그, 또는 병원 정보가 나오는 URL이라도 포함
-
-출력 규칙:
-- JSON 배열만 출력. 마크다운·설명·코드펜스 금지.
-- 최소 1개 이상 반환. 5개 미만이어도 있는 만큼.
-- 정말 아무것도 못 찾을 때만 빈 배열 [].
-
-⚠️ 환각 금지 — 매우 중요:
-- 각 결과의 URL 과 병원명은 반드시 web_search 에서 실제로 찾은 페어여야 합니다.
-- URL 과 병원명을 임의로 조합·추측·생성하지 마세요. (예: A 병원을 B 회사 URL 에 매핑)
-- 한 쌍(URL, 병원명)의 일치 여부가 확실하지 않으면 그 결과를 제외하세요.
-- 5개 미만이어도 됩니다. 정확성이 최우선이고, 빈 배열도 허용합니다.`;
+  const input = buildNaturalLanguagePrompt(query);
 
   try {
     const res = await fetch(OPENAI_RESPONSES_URL, {
@@ -501,24 +423,15 @@ URL 우선순위:
       return null;
     }
     const body = await res.json() as OpenAIResponsesBody;
+    const text = extractOpenAIText(body).trim();
 
-    // ── 디버그 로그 — 파싱 실패 원인 추적용 ──
+    // ── 디버그 로그 ──
     const hasSearchCall = Array.isArray(body.output) && body.output.some((o) => o.type === 'web_search_call');
-    const text = extractOpenAIText(body);
-    console.warn(`[discovery/chatgpt] web_search_call 존재: ${hasSearchCall}`);
-    console.warn(`[discovery/chatgpt] 응답 전체 키: ${JSON.stringify(Object.keys(body))}`);
-    console.warn(`[discovery/chatgpt] 응답 원문 (앞 500자): ${(text || '').slice(0, 500)}`);
+    console.warn(`[discovery/chatgpt] web_search_call 존재: ${hasSearchCall}, 답변 길이: ${text.length}`);
+    console.warn(`[discovery/chatgpt] 응답 원문 (앞 500자): ${text.slice(0, 500)}`);
 
-    const arr = tryExtractJsonArray<unknown>(text);
-    if (arr && arr.length > 0) return await validateHospitalUrls(normalizeResults(arr));
-    // fallback: 텍스트에서 URL 정규식 추출
-    const fallback = extractUrlsFromText(text);
-    if (fallback.length > 0) {
-      console.warn('[discovery/chatgpt] JSON 추출 실패 → URL 정규식 fallback 사용');
-      return await validateHospitalUrls(fallback);
-    }
-    console.warn('[discovery/chatgpt] JSON + URL fallback 모두 실패');
-    return null;
+    if (!text) return null;
+    return { answerText: text, urls: extractUrlsFromText(text) };
   } catch (e) {
     const name = (e as Error)?.name || 'Error';
     const msg = (e as Error)?.message || 'unknown';
@@ -529,31 +442,23 @@ URL 우선순위:
 
 // ── Gemini Search grounding (callLLM search_ground task 재사용) ─
 
-export async function discoverViaGemini(query: string): Promise<CompetitorResult[] | null> {
-  const prompt = `"${query}" 로 최신 웹 검색을 수행해 상위 5곳 병원의 공식 홈페이지 URL, 병원명, 한 줄 설명을 JSON 배열로만 반환하세요.
-다른 설명 없이 JSON 배열 하나만.
-형식: [{"url": "...", "title": "...", "snippet": "..."}]
-모두닥/하이닥/네이버플레이스 같은 플랫폼 URL 말고 병원 공식 홈페이지를 우선하세요.`;
+export async function discoverViaGemini(query: string): Promise<DiscoverRawAnswer | null> {
+  const prompt = buildNaturalLanguagePrompt(query);
 
   try {
     const res = await callLLM({
       task: 'search_ground',
-      systemBlocks: [{ type: 'text', text: '한국 병원 정보를 최신 웹 검색으로 찾아 JSON 배열로만 응답하는 분석자입니다.', cacheable: false }],
+      systemBlocks: [{ type: 'text', text: '한국 병원 정보를 최신 웹 검색으로 찾아 사용자에게 자연스러운 추천 답변을 제공하는 분석자입니다.', cacheable: false }],
       userPrompt: prompt,
-      temperature: 0.2,
+      temperature: 0.4, // 자연어 답변엔 약간의 다양성 허용
       maxOutputTokens: 2000,
       googleSearch: true,
     });
-    const arr = tryExtractJsonArray<unknown>(res.text);
-    if (arr && arr.length > 0) return await validateHospitalUrls(normalizeResults(arr));
-    // fallback: 텍스트에서 URL 정규식 추출
-    const fallback = extractUrlsFromText(res.text);
-    if (fallback.length > 0) {
-      console.warn('[discovery/gemini] JSON 추출 실패 → URL 정규식 fallback 사용');
-      return await validateHospitalUrls(fallback);
-    }
-    console.warn('[discovery/gemini] JSON + URL fallback 모두 실패');
-    return null;
+    const text = (res.text ?? '').trim();
+    console.warn(`[discovery/gemini] 답변 길이: ${text.length}`);
+    console.warn(`[discovery/gemini] 응답 원문 (앞 500자): ${text.slice(0, 500)}`);
+    if (!text) return null;
+    return { answerText: text, urls: extractUrlsFromText(text) };
   } catch (e) {
     console.warn(`[discovery/gemini] 호출 예외: ${(e as Error).message.slice(0, 200)}`);
     return null;
@@ -570,23 +475,25 @@ function buildQuery(region: string | null, category: string): string {
 function evaluateFinding(
   platform: AIPlatform,
   query: string,
-  results: CompetitorResult[] | null,
+  raw: DiscoverRawAnswer | null,
   selfHost: string,
 ): CompetitorFinding {
   const timestamp = new Date().toISOString();
-  if (results === null) {
+  if (raw === null) {
     return {
       platform,
       queryUsed: query,
+      answerText: '',
       topResults: [],
       selfIncluded: false,
       selfRank: null,
       timestamp,
-      rawError: 'call_failed_or_parse_failed',
+      rawError: 'call_failed_or_empty_answer',
     };
   }
+  // selfIncluded 판정 — 자연어 답변에서 추출한 URL 들과 본인 도메인 매칭
   let selfRank: number | null = null;
-  for (const r of results) {
+  for (const r of raw.urls) {
     if (domainMatches(selfHost, r.domain)) {
       selfRank = r.rank;
       break;
@@ -595,7 +502,8 @@ function evaluateFinding(
   return {
     platform,
     queryUsed: query,
-    topResults: results,
+    answerText: raw.answerText,
+    topResults: raw.urls,
     selfIncluded: selfRank !== null,
     selfRank,
     timestamp,
@@ -626,18 +534,18 @@ export async function discoverCompetitors(
       discoverViaChatGPT(query),
       discoverViaGemini(query),
     ]);
-    const chatgptResults = chatgptRes.status === 'fulfilled' ? chatgptRes.value : null;
-    const geminiResults = geminiRes.status === 'fulfilled' ? geminiRes.value : null;
+    const chatgptRaw = chatgptRes.status === 'fulfilled' ? chatgptRes.value : null;
+    const geminiRaw = geminiRes.status === 'fulfilled' ? geminiRes.value : null;
 
     const findings: CompetitorFinding[] = [
-      evaluateFinding('ChatGPT', query, chatgptResults, selfHost),
-      evaluateFinding('Gemini', query, geminiResults, selfHost),
+      evaluateFinding('ChatGPT', query, chatgptRaw, selfHost),
+      evaluateFinding('Gemini', query, geminiRaw, selfHost),
     ];
 
-    // 양쪽 모두 topResults 비어있으면 findings 자체를 비워 UI 가 섹션을 숨길 수 있게 함
-    const anyResults = findings.some(f => f.topResults.length > 0);
+    // 양쪽 모두 답변 텍스트가 비어있으면 findings 자체를 비워 UI 가 섹션을 숨길 수 있게 함
+    const anyAnswer = findings.some((f) => f.answerText.length > 0);
     return {
-      findings: anyResults ? findings : [],
+      findings: anyAnswer ? findings : [],
       detectedRegion: region,
       detectedCategory: category,
     };

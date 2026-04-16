@@ -198,7 +198,10 @@ export interface CompetitorResult {
 export interface CompetitorFinding {
   platform: AIPlatform;       // 'ChatGPT' | 'Gemini'
   queryUsed: string;           // 예: "논산 치과 추천"
-  topResults: CompetitorResult[]; // 상위 5개 (빈 배열 = 호출 실패)
+  /** AI 답변 원문(자연어). UI 가 그대로 렌더. 비어 있으면 실측 실패. */
+  answerText: string;
+  /** 답변에서 정규식으로 추출한 URL/병원명 (selfIncluded 판정용 best-effort, UI 노출 안 함) */
+  topResults: CompetitorResult[];
   selfIncluded: boolean;       // 본인 도메인 포함 여부
   selfRank: number | null;     // 1~5 또는 null(미포함)
   timestamp: string;           // ISO
