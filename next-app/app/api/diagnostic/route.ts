@@ -21,7 +21,7 @@ import { enrichDiagnostic } from '../../../lib/diagnostic/enrich';
 import { discoverCompetitors } from '../../../lib/diagnostic/discovery';
 import type { DiagnosticResponse, DiagnosticErrorResponse } from '../../../lib/diagnostic/types';
 
-export const maxDuration = 120;
+export const maxDuration = 180;
 export const dynamic = 'force-dynamic';
 
 interface Body { url?: string }
@@ -143,26 +143,38 @@ export async function POST(request: NextRequest) {
     },
   };
 
-  // 11) LLM 맞춤 해설 overlay (단계 5-A) — 실패 시 base 그대로 반환
-  let enriched = await enrichDiagnostic(base, crawl);
+  // 11+12) enrich + discovery 병렬 실행 (Phase 1.3)
+  // 둘 다 crawl 만 입력으로 쓰고 서로 의존 없음 → Promise.allSettled 로 ~25초 절약.
+  // Before: crawl(15) + PSI(40) + enrich(30) + discovery(25) = 110초 순차
+  // After:  crawl(15) + PSI(40) + max(enrich 30, discovery 25) = 85초 병렬
+  const [enrichResult, discResult] = await Promise.allSettled([
+    enrichDiagnostic(base, crawl),
+    discoverCompetitors(crawl, '치과'),
+  ]);
 
-  // 12) AI 실측 — ChatGPT + Gemini 로 "{지역} 치과 추천" 검색 (단계 C-a-1)
-  //     실패/스킵 시 enriched 그대로. throw 전파 없음.
-  try {
-    const disc = await discoverCompetitors(crawl, '치과');
+  // enrich 결과 — 실패 시 base 그대로
+  const enriched = enrichResult.status === 'fulfilled' ? enrichResult.value : base;
+  if (enrichResult.status === 'rejected') {
+    console.warn(`[diagnostic] enrichDiagnostic rejected: ${(enrichResult.reason as Error)?.message?.slice(0, 200)}`);
+  }
+
+  // discovery 결과 — 실패 시 enriched 그대로
+  let final = enriched;
+  if (discResult.status === 'fulfilled') {
+    const disc = discResult.value;
     if (disc.findings.length > 0 || disc.detectedRegion) {
-      enriched = {
+      final = {
         ...enriched,
         ...(disc.findings.length > 0 ? { competitorFindings: disc.findings } : {}),
         ...(disc.detectedRegion ? { detectedRegion: disc.detectedRegion } : {}),
         detectedCategory: disc.detectedCategory,
       };
     }
-  } catch (e) {
-    console.warn(`[diagnostic] discoverCompetitors 실패: ${(e as Error).message.slice(0, 200)}`);
+  } else {
+    console.warn(`[diagnostic] discoverCompetitors rejected: ${(discResult.reason as Error)?.message?.slice(0, 200)}`);
   }
 
-  return NextResponse.json(enriched);
+  return NextResponse.json(final);
   } catch (e) {
     // 최상위 안전망 — 어떤 예외든 JSON UNKNOWN 응답으로 변환.
     // 기존 세부 try/catch 가 못 잡은 케이스(LLM throw, scoring 예외 등) 보호.
