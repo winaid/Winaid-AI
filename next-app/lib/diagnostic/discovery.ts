@@ -25,23 +25,67 @@ const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses';
 // 앞은 한글 아닌 경계, 뒤는 허용 (한국어 조사 "시에/시에서/구의/군을" 등 뒤에 한글이 자주 붙음)
 const REGION_GU_GUN_SI = /(?<![가-힣])([가-힣]{2,5}(?:시|구|군))/g;
 
+/** 의료·일반 동사 명사 + "시" 가 합쳐지면 지역 오탐이 됨. "진료시" "접수시" "상담시" 등. */
+const REGION_BLACKLIST_SUFFIX = [
+  '안내', '당사', '저희', '병원', '의원', '치과', '서비스', '세',
+  '진료', '접수', '상담', '예약', '소개', '운영', '영업', '대표',
+  '원장', '전화', '점심', '야간', '응급', '외래', '입원', '수술',
+  '보험', '비급', '치료', '검진', '건강', '센터', '의료', '한의',
+  '약국', '클리닉', '연합', '네트워', '홈페', '사이트', '온라인',
+  '오전', '오후', '토요', '일요', '공휴', '휴진', '정기',
+];
+const BLACKLIST_RE = new RegExp(`(${REGION_BLACKLIST_SUFFIX.join('|')})시$`);
+
+/** 한국 시/도 전체 형태 — "서울특별시", "경기도" 등까지 포함해 "특별시" 오탐 방지. */
+const ADDR_FULL_PREFIX = '(?:서울특별시|부산광역시|대구광역시|인천광역시|광주광역시|대전광역시|울산광역시|세종특별자치시|경기도?|강원(?:특별자치)?도?|충[남북]도?|전[남북]도?|경[남북]도?|제주(?:특별자치)?도?)';
+const ADDR_PATTERN = new RegExp(
+  `${ADDR_FULL_PREFIX}[가-힣\\s]{0,15}?([가-힣]{1,5}(?:시|구|군))`,
+);
+const ADDR_DONG_PATTERN = /([가-힣]{1,4}동)\s*\d/;
+
+/** "안산시" → "안산", "강남구" → "강남구", "마천동" → "마천동". 시만 제거. */
+function cleanRegionSuffix(raw: string): string {
+  if (raw.endsWith('시') && raw.length > 1) return raw.slice(0, -1);
+  return raw;
+}
+
 /**
- * crawl 본문에서 한국 행정구역(시/구/군) 추출.
- * 여러 후보가 있으면 빈도 1위 반환. 없으면 null.
+ * crawl 본문에서 한국 행정구역 추출.
+ * 1순위: "서울/경기/..." 로 시작하는 주소 라인에서 시/구/군 정확 추출.
+ * 2순위: "XX동 123" 패턴에서 동 단위 추출.
+ * 3순위: 텍스트 전체에서 시/구/군 빈도 기반 추출 (blacklist 필터).
  */
 export function extractRegion(crawl: CrawlResult): string | null {
   const haystack = `${crawl.textContent.slice(0, 3000)} ${crawl.title}`;
+
+  // 1순위: 행정구역 주소 패턴 ("경기도 안산시 단원구" → "안산")
+  const addrMatch = haystack.match(ADDR_PATTERN);
+  if (addrMatch) {
+    const candidate = addrMatch[1];
+    if (!BLACKLIST_RE.test(candidate)) {
+      return cleanRegionSuffix(candidate);
+    }
+  }
+
+  // 2순위: "마천동 123" 같은 동+번지 패턴
+  const dongMatch = haystack.match(ADDR_DONG_PATTERN);
+  if (dongMatch) {
+    const dong = dongMatch[1];
+    if (!BLACKLIST_RE.test(dong)) return dong;
+  }
+
+  // 3순위: 텍스트 전체 빈도 기반 (기존 로직, blacklist 확장)
   const freq = new Map<string, number>();
   let m: RegExpExecArray | null;
   REGION_GU_GUN_SI.lastIndex = 0;
   while ((m = REGION_GU_GUN_SI.exec(haystack)) !== null) {
     const name = m[1];
-    // 일반어 제외 (예: "안내시", "당사", "병원시" 등 흔한 오탐)
-    if (/(안내|당사|저희|병원|의원|치과|서비스|세)시$/.test(name)) continue;
+    if (BLACKLIST_RE.test(name)) continue;
     freq.set(name, (freq.get(name) ?? 0) + 1);
   }
   if (freq.size === 0) return null;
-  return [...freq.entries()].sort((a, b) => b[1] - a[1])[0][0];
+  const top = [...freq.entries()].sort((a, b) => b[1] - a[1])[0][0];
+  return cleanRegionSuffix(top);
 }
 
 // ── 본인 도메인 매치 ─────────────────────────────────────
