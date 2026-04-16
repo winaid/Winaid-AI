@@ -27,20 +27,202 @@ interface ActionMeta {
 // 톤: 중학생 기준 + 제작사 요청 스크립트. suffix 금지 (executor 필드로 분류).
 const ACTION_META: Record<string, ActionMeta> = {
   // ① security_tech
-  [LABELS.https]: { impact: 'high', difficulty: 'medium', timeframe: '1주', actionText: '제작사에 "SSL 인증서 발급 + 전 페이지 HTTPS 리다이렉트" 요청', detailedGuide: '' },
-  [LABELS.viewport]: { impact: 'high', difficulty: 'easy', timeframe: '즉시', actionText: '제작사에 "head 에 viewport 메타 태그 추가 (모바일 레이아웃)" 요청', detailedGuide: '' },
-  [LABELS.robots]: { impact: 'medium', difficulty: 'easy', timeframe: '즉시', actionText: '제작사에 "사이트 루트에 robots.txt 배치 + Sitemap 디렉티브 포함" 요청', detailedGuide: '' },
-  [LABELS.sitemap]: { impact: 'high', difficulty: 'medium', timeframe: '1주', actionText: '제작사에 "sitemap.xml 생성" 요청 후 네이버 서치어드바이저·구글 서치콘솔 제출', detailedGuide: '' },
-  [LABELS.psi]: { impact: 'high', difficulty: 'hard', timeframe: '1개월', actionText: '제작사에 "사진 WebP 변환(용량 반 감소) + 지연 로딩 + 코드 분할" 요청 (squoosh.app 활용)', detailedGuide: '' },
+  [LABELS.https]: {
+    impact: 'high', difficulty: 'medium', timeframe: '1주',
+    actionText: '제작사에 "SSL 인증서 발급 + 전 페이지 HTTPS 리다이렉트" 요청',
+    detailedGuide: `이게 뭐예요?
+홈페이지 주소 앞 자물쇠 표시(🔒)를 만드는 보안 인증서입니다. 없으면 구글·네이버·AI 가 "안전하지 않은 사이트"로 분류해서 추천에서 밀립니다.
+
+어떻게 하나요?
+1. 홈페이지를 만들어준 제작사(업체)에 연락하세요.
+2. 다음 문구를 복사해서 보내세요:
+   "SSL 인증서를 발급하고 모든 페이지를 https:// 로 강제 리다이렉트(자동 이동) 해주세요. Let's Encrypt 무료 인증서면 충분합니다."
+3. 보통 1~2일이면 끝납니다. 무료 또는 호스팅비에 포함된 경우가 많습니다.
+
+팁
+- 작업 후 본인 사이트 주소창 앞에 🔒 자물쇠가 보이는지 확인하세요.
+- 호스팅 업체가 자동 발급해주는 곳도 많아 추가 비용 없이 끝나기도 합니다.`,
+  },
+  [LABELS.viewport]: {
+    impact: 'high', difficulty: 'easy', timeframe: '즉시',
+    actionText: '제작사에 "head 에 viewport 메타 태그 추가 (모바일 레이아웃)" 요청',
+    detailedGuide: `이게 뭐예요?
+홈페이지가 스마트폰에서 제대로 보이게 하는 작은 설정입니다. 없으면 글씨가 너무 작게 나오거나 옆으로 스크롤이 생깁니다.
+
+어떻게 하나요?
+1. 홈페이지를 만들어준 제작사(업체)에 연락하세요.
+2. 다음 문구를 복사해서 보내세요:
+   "head 태그에 viewport 메타 태그 추가 부탁드립니다. width=device-width, initial-scale=1.0"
+3. 제작사가 5~10분이면 끝냅니다. 대부분 무료로 해줍니다.
+
+팁
+- 본인이 직접 코드를 만지지 않아도 됩니다.
+- pagespeed.web.dev 에서 모바일 점수로 효과 확인 가능.`,
+  },
+  [LABELS.robots]: {
+    impact: 'medium', difficulty: 'easy', timeframe: '즉시',
+    actionText: '제작사에 "사이트 루트에 robots.txt 배치 + Sitemap 디렉티브 포함" 요청',
+    detailedGuide: `이게 뭐예요?
+검색엔진(구글·네이버) 로봇에게 "이 페이지는 봐도 됩니다 / 안 됩니다"를 알려주는 작은 안내문 파일입니다.
+
+어떻게 하나요?
+1. 제작사에 연락하세요.
+2. 다음 문구를 복사해서 보내세요:
+   "사이트 루트에 robots.txt 를 배치해주세요. 내용은 'User-agent: *  Allow: /  Sitemap: https://[우리 사이트 주소]/sitemap.xml' 으로요."
+3. 10~15분이면 끝납니다. 무료입니다.
+
+팁
+- 작업 후 "[우리 사이트 주소]/robots.txt" 로 직접 접속해서 파일이 보이면 정상입니다.
+- 제작사가 잘못 설정하면 사이트가 검색에서 사라질 수도 있어 꼭 확인하세요.`,
+  },
+  [LABELS.sitemap]: {
+    impact: 'high', difficulty: 'medium', timeframe: '1주',
+    actionText: '제작사에 "sitemap.xml 생성" 요청 후 네이버 서치어드바이저·구글 서치콘솔 제출',
+    detailedGuide: `이게 뭐예요?
+홈페이지 안의 모든 페이지 목록을 정리한 지도 파일입니다. 검색엔진과 AI 가 "이 사이트엔 어떤 페이지들이 있구나" 빠르게 파악합니다.
+
+어떻게 하나요?
+1. 제작사에 연락하세요.
+2. 다음 문구를 복사해서 보내세요:
+   "sitemap.xml 을 자동 생성하도록 설정하고 사이트 루트에 배치해주세요. 페이지가 늘어나면 자동 갱신되는 방식이면 좋습니다."
+3. 그다음 네이버 서치어드바이저(searchadvisor.naver.com) 와 구글 서치 콘솔(search.google.com/search-console) 에 사이트맵 주소를 등록해주세요.
+
+팁
+- 한 번 등록해두면 이후엔 손이 갈 일이 거의 없습니다.
+- robots.txt 안에 sitemap 주소가 들어 있으면 검색엔진이 더 빨리 찾습니다.`,
+  },
+  [LABELS.psi]: {
+    impact: 'high', difficulty: 'hard', timeframe: '1개월',
+    actionText: '제작사에 "사진 WebP 변환(용량 반 감소) + 지연 로딩 + 코드 분할" 요청 (squoosh.app 활용)',
+    detailedGuide: `이게 뭐예요?
+홈페이지가 스마트폰에서 얼마나 빨리 뜨는지 점수입니다. 50점 미만이면 사용자가 페이지가 뜨기 전에 떠나고 AI 추천에서도 불리해집니다.
+
+어떻게 하나요?
+1. pagespeed.web.dev 에서 본인 홈페이지 주소를 입력해 점수를 확인하세요.
+2. 제작사에 다음 문구를 보내세요:
+   "PageSpeed Insights 점수가 ___점입니다. 사진을 WebP 로 변환(용량 반 감소)하고 지연 로딩(Lazy Load), 자바스크립트 코드 분할(Code Split) 작업 부탁드립니다."
+3. 보통 1~2주가 걸리고 비용이 발생할 수 있습니다.
+
+팁
+- squoosh.app 또는 tinypng.com 에서 사진을 직접 압축해 제작사에 보낼 수도 있습니다.
+- 점수보다 LCP(가장 큰 요소가 보이는 시간) 가 2.5초 미만인지가 더 중요합니다.`,
+  },
 
   // ② site_structure
-  [LABELS.own_domain]: { impact: 'high', difficulty: 'hard', timeframe: '1개월', actionText: '병원 담당자가 자체 도메인 구매 후 제작사에 홈페이지 이전 의뢰 (모두닥/하이닥 등 플랫폼은 AI 가산점 없음)', detailedGuide: '' },
-  [LABELS.has_doctor_page]: { impact: 'high', difficulty: 'medium', timeframe: '1주', actionText: 'AI 로 의료진 소개 초안 작성 후 원장 검수 → 홈페이지 업로드 (이름·전공·경력·사진)', detailedGuide: '' },
-  [LABELS.has_treatment_page]: { impact: 'high', difficulty: 'medium', timeframe: '1주', actionText: '제작사에 "진료 안내 페이지를 카테고리로 정리" 요청 또는 관리자 모드에서 메뉴 재배치', detailedGuide: '' },
-  [LABELS.has_service_details]: { impact: 'medium', difficulty: 'hard', timeframe: '2주', actionText: 'AI 로 주요 시술별 상세(설명·대상·과정·기간) 초안 작성 → 원장 검수 → 홈페이지 업로드', detailedGuide: '' },
-  [LABELS.has_location_page]: { impact: 'medium', difficulty: 'easy', timeframe: '즉시', actionText: '관리자 모드에서 "오시는 길" 페이지에 네이버 지도 iframe + 도로명 주소 + 교통 안내 추가', detailedGuide: '' },
-  [LABELS.has_faq_page]: { impact: 'medium', difficulty: 'medium', timeframe: '1주', actionText: 'AI 로 FAQ 10개 초안(비용·예약·진료) 작성 → 원장 검수 → 관리자 모드 업로드', detailedGuide: '' },
-  [LABELS.has_pricing_page]: { impact: 'medium', difficulty: 'medium', timeframe: '1주', actionText: '관리자 모드에서 "상담 비용 안내" 페이지 작성 (구체 금액 대신 범위·상담 기준)', detailedGuide: '' },
+  [LABELS.own_domain]: {
+    impact: 'high', difficulty: 'hard', timeframe: '1개월',
+    actionText: '병원 담당자가 자체 도메인 구매 후 제작사에 홈페이지 이전 의뢰 (모두닥/하이닥 등 플랫폼은 AI 가산점 없음)',
+    detailedGuide: `이게 뭐예요?
+"우리병원이름.kr" 처럼 본인 소유의 주소입니다. 모두닥·하이닥·네이버 블로그만 쓰면 AI 는 "이 병원만의 공식 정보가 없다"고 판단해 추천에서 밀립니다.
+
+어떻게 하나요?
+1. 가비아(gabia.com) 또는 후이즈(whois.co.kr) 에서 도메인을 구매하세요. (.kr 또는 .co.kr 추천, 연 1~2만원)
+2. 제작사에 다음 문구를 보내세요:
+   "구매한 도메인 [도메인명] 으로 홈페이지를 이전해주세요. 기존 플랫폼에 있던 콘텐츠도 모두 옮겨주시고요."
+3. 보통 2~4주 걸리고 비용이 발생합니다(견적 필요).
+
+팁
+- 도메인은 한번 사면 5~10년치를 한꺼번에 결제하는 게 갱신 잊을 일 없어 안전합니다.
+- 기존 플랫폼은 한동안 같이 운영하다 안정되면 정리하세요.`,
+  },
+  [LABELS.has_doctor_page]: {
+    impact: 'high', difficulty: 'medium', timeframe: '1주',
+    actionText: 'AI 로 의료진 소개 초안 작성 후 원장 검수 → 홈페이지 업로드 (이름·전공·경력·사진)',
+    detailedGuide: `이게 뭐예요?
+원장님과 의료진을 소개하는 별도 페이지입니다. AI 가 "이 병원에 어떤 전문의가 있나" 파악하는 가장 중요한 자료입니다.
+
+어떻게 하나요?
+1. WINAID "AI 보정" 또는 "블로그 생성" 으로 의료진 소개 초안을 만드세요.
+2. 원장님이 직접 검수해 사실 관계를 확인하세요. (이름·전공·졸업·경력·소속 학회·자격증·진료 분야·사진)
+3. 제작사 또는 관리자 모드에서 "의료진 소개" 메뉴를 만들고 업로드하세요.
+
+팁
+- 사진은 깨끗한 흰 배경에 가운 입은 얼굴 사진이 가장 좋습니다.
+- "구강외과 전문의", "치주과 전문의" 같은 공식 타이틀을 꼭 텍스트로 명시하세요.`,
+  },
+  [LABELS.has_treatment_page]: {
+    impact: 'high', difficulty: 'medium', timeframe: '1주',
+    actionText: '제작사에 "진료 안내 페이지를 카테고리로 정리" 요청 또는 관리자 모드에서 메뉴 재배치',
+    detailedGuide: `이게 뭐예요?
+"임플란트 / 교정 / 충치치료" 같은 진료 카테고리별 안내 페이지입니다. AI 가 "이 병원이 어떤 진료를 하나" 빠르게 파악합니다.
+
+어떻게 하나요?
+1. 제작사 또는 관리자 모드에서 메뉴를 진료 카테고리로 정리하세요.
+2. 제작사에 다음 문구를 보내세요:
+   "진료 안내 메뉴를 '임플란트 / 신경치료 / 보철 / 교정 / 미백 / 보존' 같은 카테고리로 정리하고 각각 상세 페이지로 연결해주세요."
+3. 보통 3~7일 정도 걸립니다.
+
+팁
+- 한 페이지에 모든 진료를 다 넣지 말고 진료별로 나누세요.
+- 카테고리명은 환자가 검색할 때 쓰는 단어로(예: "치아 미백" O, "투스 화이트닝" X).`,
+  },
+  [LABELS.has_service_details]: {
+    impact: 'medium', difficulty: 'hard', timeframe: '2주',
+    actionText: 'AI 로 주요 시술별 상세(설명·대상·과정·기간) 초안 작성 → 원장 검수 → 홈페이지 업로드',
+    detailedGuide: `이게 뭐예요?
+임플란트 같은 주요 시술 하나하나에 대한 자세한 설명 페이지입니다. "임플란트가 뭐예요?" 같은 질문에 AI 가 답할 때 인용할 본문이 됩니다.
+
+어떻게 하나요?
+1. WINAID "블로그 생성" 으로 시술별 상세 초안(설명·대상·과정·기간·주의사항)을 만드세요.
+2. 원장님이 검수해서 의학적 사실을 확인·보정하세요.
+3. 제작사 또는 관리자 모드에서 진료 카테고리 아래 상세 페이지로 업로드하세요.
+
+팁
+- 한 시술당 본문 500~1000자 정도가 적정합니다.
+- "효과 100%", "통증 없음" 같은 의료광고법 위반 표현은 피하세요. WINAID 의료법 검증 기능을 활용하세요.`,
+  },
+  [LABELS.has_location_page]: {
+    impact: 'medium', difficulty: 'easy', timeframe: '즉시',
+    actionText: '관리자 모드에서 "오시는 길" 페이지에 네이버 지도 iframe + 도로명 주소 + 교통 안내 추가',
+    detailedGuide: `이게 뭐예요?
+"오시는 길" 페이지입니다. 주소·지도·교통편을 한 곳에 모아두면 AI 가 "이 병원 위치"를 정확히 파악합니다.
+
+어떻게 하나요?
+1. 관리자 모드에서 "오시는 길" 페이지를 만드세요.
+2. 다음을 모두 넣으세요:
+   - 도로명 주소(텍스트로, 이미지 X)
+   - 네이버 지도 또는 카카오 지도 iframe
+   - 가까운 지하철역·버스 정류장 + 도보 시간
+   - 주차 안내 (있을 경우)
+3. 30분 정도면 끝납니다. 무료입니다.
+
+팁
+- 네이버 지도는 map.naver.com 에서 본인 병원 검색 → 공유 → "퍼가기" 코드를 받으면 됩니다.
+- 주소를 이미지로만 넣으면 AI 가 못 읽습니다. 꼭 텍스트로 적으세요.`,
+  },
+  [LABELS.has_faq_page]: {
+    impact: 'medium', difficulty: 'medium', timeframe: '1주',
+    actionText: 'AI 로 FAQ 10개 초안(비용·예약·진료) 작성 → 원장 검수 → 관리자 모드 업로드',
+    detailedGuide: `이게 뭐예요?
+환자들이 자주 묻는 질문 모음 페이지입니다. AI 는 FAQ 페이지를 정말 좋아해서 답변을 그대로 인용해 보여주곤 합니다.
+
+어떻게 하나요?
+1. WINAID "블로그 생성" 또는 "보도자료" 로 FAQ 10개 초안을 만드세요. (비용·예약·진료시간·주차·통증·기간 등)
+2. 원장님이 검수해서 우리 병원에 맞게 답변을 다듬으세요.
+3. 관리자 모드에서 "자주 묻는 질문" 페이지로 업로드하세요.
+
+팁
+- 질문은 환자가 실제로 쓰는 말투("임플란트 얼마예요?") 로 적으세요.
+- 답변은 2~4줄로 짧게, 더 알고 싶으면 진료 페이지로 링크하세요.`,
+  },
+  [LABELS.has_pricing_page]: {
+    impact: 'medium', difficulty: 'medium', timeframe: '1주',
+    actionText: '관리자 모드에서 "상담 비용 안내" 페이지 작성 (구체 금액 대신 범위·상담 기준)',
+    detailedGuide: `이게 뭐예요?
+상담 비용·진료비 안내 페이지입니다. 의료광고법상 구체 금액 표시는 제한이 있어서 "범위 + 상담 안내" 형태로 작성합니다.
+
+어떻게 하나요?
+1. 관리자 모드에서 "비용 안내" 페이지를 만드세요.
+2. 다음 형식으로 작성하세요:
+   - 진료 항목별 일반적 가격대 ("임플란트: 환자 상태에 따라 다름, 상담 후 안내")
+   - 보험 적용 여부
+   - "정확한 비용은 무료 상담 후 안내드립니다" 문구
+3. 1시간 이내면 끝납니다.
+
+팁
+- 구체 금액("100만원") 은 의료광고법 위반 소지가 있어 피하세요.
+- "상담 무료" 같은 강조 표현보다 "전화·방문 상담 가능" 같은 표현이 안전합니다.`,
+  },
 
   // ③ structured_data
   [LABELS.dentist_schema]: { impact: 'high', difficulty: 'medium', timeframe: '1주', actionText: '제작사에 "Dentist 또는 LocalBusiness JSON-LD 를 head 에 추가" 요청 (AI 가 치과로 인식)', detailedGuide: '' },
