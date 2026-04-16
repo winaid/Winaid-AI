@@ -199,9 +199,17 @@ export default function DiagnosticResult({ result }: DiagnosticResultProps) {
       {/* 탭 3: AI 노출 — 2개 플랫폼(ChatGPT + Gemini) 2열 1행 레이아웃 */}
       {tab === 'ai' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl mx-auto">
-          {result.aiVisibility.map((v) => (
-            <AIVisibilityCard key={v.platform} visibility={v} />
-          ))}
+          {result.aiVisibility.map((v) => {
+            const finding = result.competitorFindings?.find(f => f.platform === v.platform);
+            return (
+              <AIVisibilityCard
+                key={v.platform}
+                visibility={v}
+                finding={finding}
+                siteName={result.siteName}
+              />
+            );
+          })}
         </div>
       )}
 
