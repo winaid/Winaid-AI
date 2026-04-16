@@ -92,11 +92,87 @@ function renderInline(text: string, keyPrefix: string): ReactNode[] {
  * 마크다운 링크·맨 URL·`---` 를 본문에서 제거 + 공백 정돈.
  * 순서: md link → bare url → hr line → 공백 collapse.
  */
+/**
+ * 마크다운 테이블 → 평탄 bullet 리스트 문자열 변환.
+ * ChatGPT 가 자주 쓰는 `| a | b | c |` + `|---|---|---|` 파이프 테이블이
+ * 카드 폭 좁은 UI 에서 가로 스크롤·작은 글자로 가독성 나쁨 → 60대 친화 bullet 으로.
+ *
+ * 행별 변환 예:
+ *   | 치과명 | 특징 | 주소 |
+ *   |---|---|---|
+ *   | A치과 | 야간진료 | 강남구 |
+ *   →
+ *   - **A치과** — 특징: 야간진료 · 주소: 강남구
+ *
+ * 테이블이 아니면 null 반환.
+ */
+function parseTableCells(line: string): string[] {
+  return line
+    .replace(/^\s*\|/, '')
+    .replace(/\|\s*$/, '')
+    .split('|')
+    .map((c) => c.trim());
+}
+
+const TABLE_ROW_RE = /^\s*\|.*\|\s*$/;
+const TABLE_DIVIDER_RE = /^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)+\|?\s*$/;
+
+/** 전체 텍스트를 훑어 테이블 구간만 평탄 bullet 문자열로 치환. */
+function flattenMarkdownTables(raw: string): string {
+  const lines = raw.split('\n');
+  const out: string[] = [];
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    if (
+      TABLE_ROW_RE.test(line) &&
+      i + 1 < lines.length &&
+      TABLE_DIVIDER_RE.test(lines[i + 1])
+    ) {
+      const headers = parseTableCells(line).filter(Boolean);
+      i += 2; // 헤더 + 분리자 건너뜀
+      const rows: string[][] = [];
+      while (i < lines.length && TABLE_ROW_RE.test(lines[i])) {
+        const cells = parseTableCells(lines[i]).filter(Boolean);
+        if (cells.length > 0) rows.push(cells);
+        i++;
+      }
+      for (const cells of rows) {
+        const first = cells[0] ?? '';
+        const rest = cells.slice(1);
+        const restStr = rest
+          .map((c, idx) => {
+            const h = headers[idx + 1];
+            return h ? `${h}: ${c}` : c;
+          })
+          .filter(Boolean)
+          .join(' · ');
+        out.push(restStr ? `- **${first}** — ${restStr}` : `- **${first}**`);
+      }
+      out.push(''); // 변환 블록 다음 줄 바꿈 (후속 블록 split 의 빈 줄 확보)
+      continue;
+    }
+    out.push(line);
+    i++;
+  }
+  return out.join('\n');
+}
+
 function cleanForBody(raw: string): string {
   let t = raw;
+  // 1) 파이프 테이블 → 평탄 bullet (줄 단위라 가장 먼저).
+  t = flattenMarkdownTables(t);
+  // 2) 마크다운 링크 [label](url) → label 만 남김.
   t = t.replace(/\[([^\]]+)\]\(https?:\/\/[^\s)]+\)/g, '$1');
+  // 3) 맨 URL 제거 (출처는 배지로 별도 노출).
   t = t.replace(/https?:\/\/[^\s)>\]"',]+/g, '');
+  // 4) 도메인-only 괄호 인용 "(cashdoc.me)", "(adb2023.kr)" 제거.
+  //    괄호 안에 영문자·숫자·하이픈·점만 있고 최소 하나의 점을 포함할 때만.
+  //    → "(평점 4.66/5)", "(인비절라인)", "(고잔동/중앙역)" 같은 정상 괄호는 보존.
+  t = t.replace(/(^|\s)\(\s*([a-z0-9][a-z0-9-]*(?:\.[a-z0-9-]+)+)\s*\)/gi, '$1');
+  // 5) 수평선 라인 제거.
   t = t.replace(/^\s*[-_*]{3,}\s*$/gm, '');
+  // 6) 공백 collapse.
   t = t.replace(/[ \t]+/g, ' ');
   t = t.replace(/\n{3,}/g, '\n\n');
   return t.trim();
@@ -104,6 +180,7 @@ function cleanForBody(raw: string): string {
 
 const BULLET_RE = /^\s*[-•*]\s+/;
 const NUMBER_RE = /^\s*\d+[.)]\s+/;
+const HEADER_RE = /^\s*(#{2,3})\s+(.+?)\s*#*\s*$/;
 
 /**
  * 답변을 React 노드 트리로 파싱.
@@ -121,7 +198,19 @@ function parseAnswer(raw: string): ReactNode {
     let i = 0;
     let sub = 0;
     while (i < lines.length) {
-      if (BULLET_RE.test(lines[i])) {
+      const headerMatch = HEADER_RE.exec(lines[i]);
+      if (headerMatch) {
+        // ## / ### 헤더 → <h3> (ChatGPT 의 "## ✅", "### 요약" 류 정돈)
+        out.push(
+          <h3
+            key={`b${bi}-h${sub++}`}
+            className="mt-4 mb-2 text-[14px] font-bold text-slate-800"
+          >
+            {renderInline(headerMatch[2], `b${bi}-h${sub}`)}
+          </h3>,
+        );
+        i++;
+      } else if (BULLET_RE.test(lines[i])) {
         const items: string[] = [];
         while (i < lines.length && BULLET_RE.test(lines[i])) {
           items.push(lines[i].replace(BULLET_RE, ''));
@@ -145,7 +234,12 @@ function parseAnswer(raw: string): ReactNode {
         );
       } else {
         const para: string[] = [];
-        while (i < lines.length && !BULLET_RE.test(lines[i]) && !NUMBER_RE.test(lines[i])) {
+        while (
+          i < lines.length &&
+          !BULLET_RE.test(lines[i]) &&
+          !NUMBER_RE.test(lines[i]) &&
+          !HEADER_RE.test(lines[i])
+        ) {
           para.push(lines[i]);
           i++;
         }
