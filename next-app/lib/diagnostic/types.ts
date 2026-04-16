@@ -129,6 +129,8 @@ export interface ActionItem {
   category: string;
   /** 단계 5-B: Sonnet 이 분류하는 실행 주체. 규칙 기반 fallback 은 undefined. */
   executor?: ActionExecutor;
+  /** 60대 원장님이 직접 제작사에 요청할 수 있도록 한 상세 가이드 (이게 뭐예요? / 어떻게 하나요? / 팁). */
+  detailedGuide?: string;
 }
 
 export interface CrawlMeta {
