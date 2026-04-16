@@ -63,6 +63,32 @@ function groupKeyOf(executor: ActionExecutor | undefined): GroupKey {
 
 const GROUP_ORDER: GroupKey[] = ['ai', 'hybrid', 'human', 'other'];
 
+// ── detailedGuide 3섹션 파서 ────────────────────────────────
+// "이게 뭐예요?" / "어떻게 하나요?" / "팁" 헤더로 본문을 나눠 각각을 별도 박스로 렌더.
+// 헤더 인식 실패 시 파싱 결과 전부 비어 있으면 호출부가 fallback(단일 whitespace-pre-line) 사용.
+interface ParsedGuide {
+  what?: string;
+  how?: string;
+  tip?: string;
+}
+
+function parseDetailedGuide(guide: string): ParsedGuide {
+  const buckets: Record<'what' | 'how' | 'tip', string> = { what: '', how: '', tip: '' };
+  const lines = guide.split(/\n/);
+  let current: 'what' | 'how' | 'tip' | null = null;
+  for (const line of lines) {
+    if (/^이게 뭐예요\?/.test(line)) { current = 'what'; continue; }
+    if (/^어떻게 하나요\?/.test(line)) { current = 'how'; continue; }
+    if (/^팁\s*$/.test(line)) { current = 'tip'; continue; }
+    if (current) buckets[current] += line + '\n';
+  }
+  return {
+    what: buckets.what.trim() || undefined,
+    how: buckets.how.trim() || undefined,
+    tip: buckets.tip.trim() || undefined,
+  };
+}
+
 export default function ActionPlan({ actions }: ActionPlanProps) {
   const [selectedAction, setSelectedAction] = useState<ActionItem | null>(null);
 
@@ -208,15 +234,62 @@ export default function ActionPlan({ actions }: ActionPlanProps) {
               </div>
 
               <div className="px-6 py-4">
-                {a.detailedGuide ? (
-                  <div className="text-[14px] leading-relaxed text-slate-700 whitespace-pre-line">
-                    {a.detailedGuide}
-                  </div>
-                ) : (
-                  <div className="rounded-lg bg-slate-50 border border-slate-200 px-4 py-6 text-center text-sm text-slate-500">
-                    상세 가이드 준비 중입니다.
-                  </div>
-                )}
+                {(() => {
+                  if (!a.detailedGuide) {
+                    return (
+                      <div className="rounded-lg bg-slate-50 border border-slate-200 px-4 py-6 text-center text-sm text-slate-500">
+                        상세 가이드 준비 중입니다.
+                      </div>
+                    );
+                  }
+                  const parsed = parseDetailedGuide(a.detailedGuide);
+                  const hasAnySection = !!(parsed.what || parsed.how || parsed.tip);
+                  // 파싱 실패 → 기존 단일 whitespace-pre-line 으로 안전 fallback
+                  if (!hasAnySection) {
+                    return (
+                      <div className="text-[14px] leading-relaxed text-slate-700 whitespace-pre-line">
+                        {a.detailedGuide}
+                      </div>
+                    );
+                  }
+                  return (
+                    <div className="space-y-4">
+                      {parsed.what && (
+                        <div className="rounded-xl bg-indigo-50 border border-indigo-100 p-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-lg" aria-hidden="true">📖</span>
+                            <span className="text-sm font-bold text-indigo-900">이게 뭐예요?</span>
+                          </div>
+                          <div className="text-[14px] leading-relaxed text-slate-700 whitespace-pre-line">
+                            {parsed.what}
+                          </div>
+                        </div>
+                      )}
+                      {parsed.how && (
+                        <div className="rounded-xl bg-blue-50 border border-blue-100 p-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-lg" aria-hidden="true">🛠</span>
+                            <span className="text-sm font-bold text-blue-900">어떻게 하나요?</span>
+                          </div>
+                          <div className="text-[14px] leading-relaxed text-slate-700 whitespace-pre-line">
+                            {parsed.how}
+                          </div>
+                        </div>
+                      )}
+                      {parsed.tip && (
+                        <div className="rounded-xl bg-amber-50 border border-amber-100 p-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-lg" aria-hidden="true">💡</span>
+                            <span className="text-sm font-bold text-amber-900">팁</span>
+                          </div>
+                          <div className="text-[14px] leading-relaxed text-slate-700 whitespace-pre-line">
+                            {parsed.tip}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
 
               <div className="sticky bottom-0 bg-white border-t border-slate-100 px-6 py-3 flex justify-end">
