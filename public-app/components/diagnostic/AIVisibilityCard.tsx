@@ -486,7 +486,7 @@ export default function AIVisibilityCard({ visibility, siteName, selfUrl }: AIVi
   return (
     <div className="rounded-2xl border border-slate-200 bg-white shadow-sm flex flex-col min-h-[220px] overflow-hidden">
       {/* ── 예측 + reason ── */}
-      <div className="p-5">
+      <div className="p-5 flex-1">
         <div className="flex items-center justify-between gap-3 pb-3 border-b border-slate-100">
           <div className="flex items-center gap-2">
             <span className="text-xl">{pm.emoji}</span>
@@ -505,7 +505,7 @@ export default function AIVisibilityCard({ visibility, siteName, selfUrl }: AIVi
       </div>
 
       {/* ── 실측 섹션 — phase 별 ── */}
-      <div className="border-t border-slate-100 bg-slate-50/50 px-5 py-4 flex-1">
+      <div className="border-t border-slate-100 bg-slate-50/50 px-5 py-4">
         {state.phase === 'idle' && (
           <div>
             <label
