@@ -357,28 +357,35 @@ export interface DiscoverRawAnswer {
 }
 
 /**
+ * 쿼리를 "사용자가 실제로 물어보는 질문" 형태로 감쌈.
+ * "안산 치과" → "안산 치과 추천해줘"
+ * 이미 "추천/어디/좋은/best" 같은 질문 단어가 들어 있으면 그대로 둠.
+ */
+function wrapAsQuestion(query: string): string {
+  if (/추천|어디|좋은|best/i.test(query)) return query;
+  return `${query} 추천해줘`;
+}
+
+/**
  * 자연어 추천 답변용 공용 프롬프트 빌더.
  * 사용자가 ChatGPT/Gemini 에 직접 물었을 때 받을 답변과 동일 형태를 유도.
  * JSON·표·마크다운 금지로 "구조화 모드" 진입을 막아 풍부한 답변을 받음.
  */
 function buildNaturalLanguagePrompt(query: string): string {
-  return `"${query}"
+  const question = wrapAsQuestion(query);
+  return `${question}
 
-자연스러운 대화체로 추천하세요. 사용자가 직접 물었을 때 받는 답변 그대로.
+답변에 다음을 포함해 주세요:
+- 선택 기준 1문장 (리뷰·접근성·영업시간 등)
+- 추천 5곳 각각에 대해:
+  · 병원명 (동네/역권)
+  · 리뷰 수·평점 (있으면)
+  · 영업시간 (야간·토요일 여부)
+  · 역 거리 또는 접근성
+  · 특화 진료·리뷰 키워드
 
-포함할 내용:
-- 선택 기준 한 문장 (리뷰 평점·접근성·영업시간 등)
-- 추천 병원 약 5곳 각각:
-  · 병원명 (동네·역권을 함께)
-  · 리뷰 수·평점 (확인되면)
-  · 영업시간 (야간·토요일·휴일 진료 여부)
-  · 가까운 역과의 거리 또는 접근성
-  · 특화 진료·시술 또는 자주 언급되는 리뷰 키워드
-
-절대 금지:
-- JSON·표 형식·마크다운 코드펜스
-- 추측·환각 (확실하지 않으면 해당 항목 생략)
-- "검색 결과를 정리해 드립니다" 같은 메타 안내`;
+자연스러운 대화체로 답변해 주세요. 마크다운·JSON·표·코드펜스 금지.
+추측·환각 금지 — 모르는 정보는 생략.`;
 }
 
 export async function discoverViaChatGPT(query: string): Promise<DiscoverRawAnswer | null> {
