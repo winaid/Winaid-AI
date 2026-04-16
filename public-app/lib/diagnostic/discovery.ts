@@ -188,7 +188,7 @@ export async function discoverViaChatGPT(query: string): Promise<CompetitorResul
         'Authorization': `Bearer ${key}`,
       },
       body: JSON.stringify({
-        model: 'gpt-5.4-mini',
+        model: 'gpt-4o',
         tools: [{ type: 'web_search_preview' }],
         input,
       }),
