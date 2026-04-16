@@ -18,7 +18,7 @@ import type {
 import { callLLM } from '../llm';
 
 const CHATGPT_TIMEOUT_MS = 30_000;
-const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses';
+const OPENAI_CHAT_COMPLETIONS_URL = 'https://api.openai.com/v1/chat/completions';
 
 // ── 지역 추출 ──────────────────────────────────────────────
 
@@ -339,22 +339,12 @@ function extractUrlsFromText(text: string): CompetitorResult[] {
   return out;
 }
 
-// ── OpenAI Responses + web_search ────────────────────────
+// ── OpenAI Chat Completions (gpt-5-search-api, 검색 내장) ───
 
-interface OpenAIResponsesOutputTextContent { type: string; text?: string }
-interface OpenAIResponsesOutputMessage { type: string; content?: OpenAIResponsesOutputTextContent[] }
-interface OpenAIResponsesBody { output?: OpenAIResponsesOutputMessage[]; output_text?: string }
-
-function extractOpenAIText(body: OpenAIResponsesBody): string {
-  if (typeof body.output_text === 'string' && body.output_text.trim()) return body.output_text;
-  const parts: string[] = [];
-  for (const o of body.output ?? []) {
-    if (o.type !== 'message') continue;
-    for (const c of o.content ?? []) {
-      if (typeof c.text === 'string') parts.push(c.text);
-    }
-  }
-  return parts.join('\n');
+/** Chat Completions 응답 형태 최소 shape. */
+interface OpenAIChatCompletionsBody {
+  choices?: { message?: { content?: string } }[];
+  error?: { message?: string };
 }
 
 /**
@@ -397,10 +387,10 @@ export async function discoverViaChatGPT(query: string): Promise<DiscoverRawAnsw
     console.warn('[discovery/chatgpt] OPENAI_API_KEY 미설정 — 스킵');
     return null;
   }
-  const input = buildNaturalLanguagePrompt(query);
+  const prompt = buildNaturalLanguagePrompt(query);
 
   try {
-    const res = await fetch(OPENAI_RESPONSES_URL, {
+    const res = await fetch(OPENAI_CHAT_COMPLETIONS_URL, {
       method: 'POST',
       signal: AbortSignal.timeout(CHATGPT_TIMEOUT_MS),
       headers: {
@@ -408,9 +398,10 @@ export async function discoverViaChatGPT(query: string): Promise<DiscoverRawAnsw
         'Authorization': `Bearer ${key}`,
       },
       body: JSON.stringify({
-        model: 'gpt-5.4',
-        tools: [{ type: 'web_search_preview' }],
-        input,
+        // gpt-5-search-api: 검색 도구가 모델 내부에 내장 (별도 tools 설정 불필요)
+        model: 'gpt-5-search-api',
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 4000,
       }),
     });
     if (!res.ok) {
@@ -422,12 +413,10 @@ export async function discoverViaChatGPT(query: string): Promise<DiscoverRawAnsw
       console.warn(`[discovery/chatgpt] 응답 실패: ${detail}`);
       return null;
     }
-    const body = await res.json() as OpenAIResponsesBody;
-    const text = extractOpenAIText(body).trim();
+    const body = await res.json() as OpenAIChatCompletionsBody;
+    const text = (body.choices?.[0]?.message?.content ?? '').trim();
 
-    // ── 디버그 로그 ──
-    const hasSearchCall = Array.isArray(body.output) && body.output.some((o) => o.type === 'web_search_call');
-    console.warn(`[discovery/chatgpt] web_search_call 존재: ${hasSearchCall}, 답변 길이: ${text.length}`);
+    console.warn(`[discovery/chatgpt] 답변 길이: ${text.length}`);
     console.warn(`[discovery/chatgpt] 응답 원문 (앞 500자): ${text.slice(0, 500)}`);
 
     if (!text) return null;
