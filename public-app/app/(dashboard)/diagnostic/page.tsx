@@ -98,6 +98,7 @@ export default function DiagnosticPage() {
   const [result, setResult] = useState<DiagnosticResponse | null>(null);
   const [error, setError] = useState<{ code: string; message: string } | null>(null);
   const [lastUrl, setLastUrl] = useState<string>('');
+  const [lastQuery, setLastQuery] = useState<string | undefined>(undefined);
 
   // 로딩 진입 시: setTimeout 체인으로 단계 전환(앞 4단계만), 1초 간격 경과 카운터.
   // status 가 loading 외로 바뀌면 cleanup 으로 전부 정리.
@@ -125,8 +126,9 @@ export default function DiagnosticPage() {
     };
   }, [status]);
 
-  const handleSubmit = async (url: string) => {
+  const handleSubmit = async (url: string, customQuery?: string) => {
     setLastUrl(url);
+    setLastQuery(customQuery);
     setStatus('loading');
     setResult(null);
     setError(null);
@@ -135,7 +137,7 @@ export default function DiagnosticPage() {
       const res = await fetch('/api/diagnostic', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url }),
+        body: JSON.stringify({ url, ...(customQuery ? { customQuery } : {}) }),
       });
       const contentType = res.headers.get('content-type') || '';
 
@@ -188,7 +190,7 @@ export default function DiagnosticPage() {
   };
 
   const handleRetry = () => {
-    if (lastUrl) handleSubmit(lastUrl);
+    if (lastUrl) handleSubmit(lastUrl, lastQuery);
   };
 
   const progressPct = computeProgress(loadingStage, elapsedSec);

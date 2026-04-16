@@ -521,11 +521,14 @@ export interface DiscoverOutcome {
 export async function discoverCompetitors(
   crawl: CrawlResult,
   category: string = '치과',
+  customQuery?: string,
 ): Promise<DiscoverOutcome> {
   try {
-    const region = extractRegion(crawl);
-    // 지역 추출 실패해도 category 만으로 진행 (결과 품질 ↓이지만 완전 스킵보다 낫다)
-    const query = buildQuery(region, category);
+    // 사용자 직접 입력 검색어가 있으면 지역 추출 로직을 우회(오탐 0 보장).
+    // 없을 때만 기존 extractRegion → buildQuery 폴백.
+    const trimmedCustom = customQuery?.trim();
+    const region = trimmedCustom ? null : extractRegion(crawl);
+    const query = trimmedCustom || buildQuery(region, category);
     const selfHost = hostOf(crawl.finalUrl);
 
     // 두 플랫폼 병렬 — Promise.allSettled 로 상호 실패 격리

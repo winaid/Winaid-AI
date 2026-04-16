@@ -24,7 +24,17 @@ import type { DiagnosticResponse, DiagnosticErrorResponse } from '../../../lib/d
 export const maxDuration = 180;
 export const dynamic = 'force-dynamic';
 
-interface Body { url?: string }
+interface Body { url?: string; customQuery?: string }
+
+/** 사용자 직접 입력 검색어 상한 — 프론트와 일치. 초과 시 절단(거부 아님). */
+const MAX_QUERY_LEN = 100;
+
+/** customQuery 정규화 — trim + 길이 캡. 비어 있으면 undefined(자동 추출). */
+function sanitizeCustomQuery(raw: unknown): string | undefined {
+  if (typeof raw !== 'string') return undefined;
+  const t = raw.trim().slice(0, MAX_QUERY_LEN);
+  return t || undefined;
+}
 
 type ErrCode = NonNullable<DiagnosticErrorResponse['code']>;
 
@@ -108,6 +118,7 @@ export async function POST(request: NextRequest) {
   if (!normalizedUrl) {
     return err('INVALID_URL', '유효한 URL 형식이 아닙니다.', 400, body.url);
   }
+  const customQuery = sanitizeCustomQuery(body.customQuery);
 
   // 3) 크롤링 — robots.txt / sitemap.xml 은 crawler 가 내부에서 이미 처리해 CrawlResult 에 채움
   let crawl;
@@ -162,7 +173,7 @@ export async function POST(request: NextRequest) {
   // After:  crawl(15) + PSI(40) + max(enrich 30, discovery 25) = 85초 병렬
   const [enrichResult, discResult] = await Promise.allSettled([
     withTimeout(enrichDiagnostic(base, crawl), 75_000, 'enrich'),
-    withTimeout(discoverCompetitors(crawl, '치과'), 75_000, 'discovery'),
+    withTimeout(discoverCompetitors(crawl, '치과', customQuery), 75_000, 'discovery'),
   ]);
 
   // enrich 결과 — 실패 시 base 그대로
