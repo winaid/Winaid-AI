@@ -29,6 +29,7 @@ import {
   hostOf,
   domainMatches,
   extractUrlsFromText,
+  type StreamMeta,
 } from '../../../../lib/diagnostic/discovery';
 import type { AIPlatform } from '../../../../lib/diagnostic/types';
 
@@ -128,14 +129,21 @@ export async function POST(request: NextRequest) {
 
       let fullText = '';
       try {
-        const iterator =
+        // manual iteration 으로 generator return value(StreamMeta) 캡처
+        const iterator: AsyncGenerator<string, StreamMeta, void> =
           platform === 'ChatGPT' ? streamChatGPT(query) : streamGemini(query);
-        for await (const chunk of iterator) {
-          fullText += chunk;
-          send({ type: 'chunk', text: chunk });
+        let meta: StreamMeta = { truncated: false, sources: [] };
+        while (true) {
+          const result = await iterator.next();
+          if (result.done) {
+            if (result.value) meta = result.value;
+            break;
+          }
+          fullText += result.value;
+          send({ type: 'chunk', text: result.value });
         }
 
-        // 완료 — 누적된 답변에서 URL 추출 후 selfIncluded 판정
+        // 완료 — 누적된 답변에서 URL 추출 후 selfIncluded 판정 (기존 로직 유지)
         const topResults = extractUrlsFromText(fullText);
         let selfRank: number | null = null;
         for (const r of topResults) {
@@ -151,6 +159,10 @@ export async function POST(request: NextRequest) {
           topResults,
           selfIncluded: selfRank !== null,
           selfRank,
+          // 핫픽스: 제너레이터 메타 — truncated/reason 은 UI 에서 ⚠ 안내, sources 는 배지로 렌더
+          truncated: meta.truncated,
+          ...(meta.reason ? { reason: meta.reason } : {}),
+          sources: meta.sources,
           timestamp: new Date().toISOString(),
         });
       } catch (e) {

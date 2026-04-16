@@ -369,7 +369,7 @@ function wrapAsQuestion(query: string): string {
 /**
  * 자연어 추천 답변용 공용 프롬프트 빌더.
  * 사용자가 ChatGPT/Gemini 에 직접 물었을 때 받을 답변과 동일 형태를 유도.
- * JSON·표·마크다운 금지로 "구조화 모드" 진입을 막아 풍부한 답변을 받음.
+ * 클라이언트가 경량 파서로 깔끔하게 렌더할 수 있도록 마크다운·URL 노출을 강하게 금지.
  */
 function buildNaturalLanguagePrompt(query: string): string {
   const question = wrapAsQuestion(query);
@@ -384,10 +384,15 @@ function buildNaturalLanguagePrompt(query: string): string {
   · 역 거리 또는 접근성
   · 특화 진료·리뷰 키워드
 
-자연스러운 대화체로 답변해 주세요. 마크다운·JSON·표·코드펜스 금지.
-추측·환각 금지 — 모르는 정보는 생략.
+서식·URL 규칙 (반드시 지킬 것):
+- 마크다운 금지: **굵게**, ## 제목, ---, ___, 코드펜스, 표 전부 쓰지 마세요.
+- 마크다운 링크 [텍스트](주소) 쓰지 마세요. 본문에 URL 자체를 쓰지 마세요.
+- 순번은 "1)" "2)" 같은 plain text 로만 사용.
+- 인용이 필요하면 (출처: 도메인명) 한 줄로만 적고 URL 본문 금지.
+- 출처 링크는 서버가 별도 메타로 수집하니 본문에는 깨끗한 한국어 문장만.
 
-각 병원은 3~4문장으로 간결하게. 전체 답변 1200자 이내로 유지해 주세요.`;
+각 병원은 3~4문장으로 간결하게. 전체 답변 1200자 이내로 유지해 주세요.
+추측·환각 금지 — 모르는 정보는 생략하세요.`;
 }
 
 export async function discoverViaChatGPT(query: string): Promise<DiscoverRawAnswer | null> {
@@ -485,22 +490,98 @@ export function buildDiscoveryQuery(
   return buildQuery(region, category);
 }
 
-// ── Streaming 버전 (단계 S-A) ─────────────────────────────
+// ── Streaming 버전 (단계 S-A + Gemini 진짜 streaming 핫픽스) ──
 // 기본 /api/diagnostic 에서 실측을 분리하고, 사용자가 "실측하기" 를 누를 때
 // /api/diagnostic/stream 에서 플랫폼별로 하나씩 호출. SSE 로 chunk 단위 전달.
+//
+// 양쪽 제너레이터 공통 반환 타입(StreamMeta):
+//   - truncated: finishReason 이 MAX_TOKENS/SAFETY 등 비정상 종료를 의미하는가
+//   - reason: 실제 finishReason 문자열 (UI 안내용)
+//   - sources: 답변 본문·grounding 메타에서 추출한 출처 목록 (본문과 분리 노출용)
+
+export interface StreamSource {
+  host: string;       // "cashdoc.me"
+  url: string;        // https://… (tracking 쿼리 제거)
+  label?: string;     // 페이지 제목 (Gemini grounding 제공 시)
+}
+
+export interface StreamMeta {
+  truncated: boolean;
+  reason?: string;
+  sources: StreamSource[];
+}
+
+/** 광고·트래킹 쿼리 파라미터 — 출처 URL 에서 제거. */
+const TRACKING_PARAM_PATTERNS: RegExp[] = [
+  /^utm_/i,
+  /^ref$/i,
+  /^gclid$/i,
+  /^fbclid$/i,
+  /^mc_/i,
+  /^yclid$/i,
+  /^_hsenc$/i,
+  /^_hsmi$/i,
+  /^hsCtaTracking$/i,
+];
+
+function stripTrackingParams(raw: string): string {
+  try {
+    const u = new URL(raw);
+    const toDelete: string[] = [];
+    u.searchParams.forEach((_, key) => {
+      if (TRACKING_PARAM_PATTERNS.some((re) => re.test(key))) toDelete.push(key);
+    });
+    for (const k of toDelete) u.searchParams.delete(k);
+    u.hash = '';
+    return u.toString();
+  } catch {
+    return raw;
+  }
+}
+
+function hostOfUrl(raw: string): string | null {
+  try {
+    return new URL(raw).hostname.replace(/^www\./, '').toLowerCase();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 답변 본문에서 URL 을 regex 로 추출 → host 기준 dedupe → 등장 순서 유지.
+ * Gemini grounding 메타가 없거나 ChatGPT 에서는 이걸로 fallback.
+ */
+export function extractSourcesFromText(text: string): StreamSource[] {
+  const URL_REGEX = /https?:\/\/[^\s)>\]"',]+/g;
+  const matches = text.match(URL_REGEX) ?? [];
+  const seen = new Set<string>();
+  const out: StreamSource[] = [];
+  for (const raw of matches) {
+    const host = hostOfUrl(raw);
+    if (!host) continue;
+    if (seen.has(host)) continue;
+    seen.add(host);
+    out.push({ host, url: stripTrackingParams(raw) });
+  }
+  return out;
+}
+
+/** Gemini 정상 종료로 간주할 finishReason 값. 이외는 truncated 처리. */
+const GEMINI_CLEAN_FINISH = new Set(['STOP', 'OTHER', 'FINISH_REASON_UNSPECIFIED']);
 
 /**
  * OpenAI Chat Completions 실측 — 진짜 SSE 스트림.
- * yield 된 문자열은 delta.content 즉 사용자에게 한 번에 보여줄 다음 조각.
- * 에러는 throw — 호출부에서 error 이벤트로 변환.
+ * yield 된 문자열은 delta.content. 생성 완료 후 return 으로 StreamMeta 전달.
  */
-export async function* streamChatGPT(query: string): AsyncGenerator<string, void, void> {
+export async function* streamChatGPT(
+  query: string,
+): AsyncGenerator<string, StreamMeta, void> {
   const key = process.env.OPENAI_API_KEY;
   if (!key) throw new Error('OPENAI_API_KEY 미설정');
 
   const res = await fetch(OPENAI_CHAT_COMPLETIONS_URL, {
     method: 'POST',
-    signal: AbortSignal.timeout(300_000), // 최악 5분 안전망 (stream 특성상 길게)
+    signal: AbortSignal.timeout(300_000),
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${key}`,
@@ -515,63 +596,217 @@ export async function* streamChatGPT(query: string): AsyncGenerator<string, void
   if (!res.ok || !res.body) {
     let detail = `HTTP ${res.status}`;
     try {
-      const body = await res.json() as { error?: { message?: string } };
+      const body = (await res.json()) as { error?: { message?: string } };
       if (body.error?.message) detail += ` · ${body.error.message.slice(0, 200)}`;
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     throw new Error(`OpenAI stream 실패: ${detail}`);
   }
 
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
+  let fullText = '';
+  let finishReason: string | undefined;
 
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
     buffer += decoder.decode(value, { stream: true });
     const lines = buffer.split('\n');
-    buffer = lines.pop() ?? ''; // 마지막 불완전 라인 버퍼 유지
+    buffer = lines.pop() ?? '';
     for (const rawLine of lines) {
       const line = rawLine.trimEnd();
       if (!line.startsWith('data: ')) continue;
       const data = line.slice(6);
-      if (data === '[DONE]') return;
+      if (data === '[DONE]') {
+        const truncated = finishReason === 'length';
+        return {
+          truncated,
+          reason: truncated ? 'MAX_TOKENS' : finishReason,
+          sources: extractSourcesFromText(fullText),
+        };
+      }
       try {
         const parsed = JSON.parse(data) as {
-          choices?: { delta?: { content?: string } }[];
+          choices?: {
+            delta?: { content?: string };
+            finish_reason?: string | null;
+          }[];
         };
-        const content = parsed.choices?.[0]?.delta?.content;
-        if (typeof content === 'string' && content.length > 0) yield content;
+        const choice = parsed.choices?.[0];
+        const content = choice?.delta?.content;
+        if (typeof content === 'string' && content.length > 0) {
+          fullText += content;
+          yield content;
+        }
+        if (typeof choice?.finish_reason === 'string') {
+          finishReason = choice.finish_reason;
+        }
       } catch {
-        /* 불완전 JSON (멀티라인 chunk 분할) — 다음 라인과 병합되지는 않으므로 skip */
+        /* 불완전 JSON — skip */
       }
     }
   }
+
+  const truncated = finishReason === 'length';
+  return {
+    truncated,
+    reason: truncated ? 'MAX_TOKENS' : finishReason,
+    sources: extractSourcesFromText(fullText),
+  };
+}
+
+// ── Gemini REST streaming (streamGenerateContent?alt=sse) ───
+// callLLM 의 fake-stream 을 걷어내고 진짜 SSE 로 전환. 멀티키 로테이션은 최초 연결 시점에만
+// 시도 (스트림이 시작되면 키 교체 불가). groundingMetadata 의 web 항목을 sources 로 수집.
+
+interface GeminiStreamChunk {
+  candidates?: Array<{
+    content?: { parts?: Array<{ text?: string }> };
+    finishReason?: string;
+    groundingMetadata?: {
+      groundingChunks?: Array<{ web?: { uri?: string; title?: string } }>;
+    };
+  }>;
+}
+
+function getGeminiKeys(): string[] {
+  const keys: string[] = [];
+  for (let i = 0; i <= 10; i++) {
+    const envName = i === 0 ? 'GEMINI_API_KEY' : `GEMINI_API_KEY_${i}`;
+    const val = process.env[envName];
+    if (val) keys.push(val);
+  }
+  return keys;
 }
 
 /**
- * Gemini 실측 — Phase 0 의 callLLM 이 stream 미지원이라 fake-stream 으로 구현.
- * 전체 답변을 받은 뒤 50자씩 쪼개 30ms 간격으로 yield → UI 타이핑 효과.
- * TODO: @google/genai 의 generateContentStream 으로 마이그레이션해 진짜 스트림.
+ * Gemini 실측 — 진짜 SSE streaming.
+ * googleSearch 그라운딩 유지. maxOutputTokens 8192 로 답변 잘림 방지.
+ * finishReason MAX_TOKENS/SAFETY 등이면 truncated=true 반환.
+ * groundingMetadata 가 있으면 sources 에 우선 사용, 없으면 본문 regex fallback.
  */
-export async function* streamGemini(query: string): AsyncGenerator<string, void, void> {
-  const res = await callLLM({
-    task: 'search_ground',
-    systemBlocks: [{ type: 'text', text: '한국 병원 정보를 최신 웹 검색으로 찾아 사용자에게 자연스러운 추천 답변을 제공하는 분석자입니다.', cacheable: false }],
-    userPrompt: buildNaturalLanguagePrompt(query),
-    temperature: 0.4,
-    maxOutputTokens: 4_000,
-    googleSearch: true,
-  });
-  const text = (res.text ?? '').trim();
-  if (!text) return;
+export async function* streamGemini(
+  query: string,
+): AsyncGenerator<string, StreamMeta, void> {
+  const keys = getGeminiKeys();
+  if (keys.length === 0) throw new Error('GEMINI_API_KEY 미설정');
 
-  const CHUNK = 50;
-  const DELAY_MS = 30;
-  for (let i = 0; i < text.length; i += CHUNK) {
-    yield text.slice(i, i + CHUNK);
-    await new Promise<void>((resolve) => setTimeout(resolve, DELAY_MS));
+  const model = 'gemini-3.1-pro-preview'; // resolveRoute 가 googleSearch=true 에 강제하는 모델과 일치
+  const apiBody = {
+    contents: [{ role: 'user', parts: [{ text: buildNaturalLanguagePrompt(query) }] }],
+    systemInstruction: {
+      parts: [{
+        text:
+          '한국 병원 정보를 최신 웹 검색으로 찾아 사용자에게 자연스러운 추천 답변을 제공하는 분석자입니다.',
+      }],
+    },
+    generationConfig: {
+      temperature: 0.4,
+      maxOutputTokens: 8192, // 답변 중간 잘림(…특히 분야) 방지
+    },
+    tools: [{ googleSearch: {} }],
+  };
+
+  // 연결 단계에서만 키 fallback. 스트림 시작 후엔 교체 불가.
+  const maxConnAttempts = Math.min(keys.length, 2);
+  let res: Response | null = null;
+  let lastErr = '';
+  for (let attempt = 0; attempt < maxConnAttempts; attempt++) {
+    const key = keys[attempt];
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse`;
+    try {
+      const r = await fetch(url, {
+        method: 'POST',
+        signal: AbortSignal.timeout(300_000),
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+        body: JSON.stringify(apiBody),
+      });
+      if (r.ok && r.body) {
+        res = r;
+        break;
+      }
+      lastErr = `HTTP ${r.status}`;
+      try {
+        const detail = await r.text();
+        if (detail) {
+          lastErr += ` · ${detail.slice(0, 200).replace(/key=[A-Za-z0-9_-]+/g, 'key=***')}`;
+        }
+      } catch {
+        /* ignore */
+      }
+      // 재시도 가능 상태 코드만 다음 키 시도
+      if (r.status !== 429 && r.status !== 500 && r.status !== 502 && r.status !== 503 && r.status !== 504) {
+        break;
+      }
+    } catch (e) {
+      lastErr = `fetch 실패: ${(e as Error).message.slice(0, 120)}`;
+    }
   }
+  if (!res || !res.body) {
+    throw new Error(`Gemini stream 실패: ${lastErr || 'unknown'}`);
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let fullText = '';
+  let finishReason: string | undefined;
+  const groundingMap = new Map<string, StreamSource>(); // host → source (dedupe)
+
+  const collectGrounding = (chunk: GeminiStreamChunk) => {
+    const gm = chunk.candidates?.[0]?.groundingMetadata?.groundingChunks;
+    if (!gm) return;
+    for (const g of gm) {
+      const uri = g.web?.uri;
+      if (!uri) continue;
+      const host = hostOfUrl(uri);
+      if (!host || groundingMap.has(host)) continue;
+      groundingMap.set(host, {
+        host,
+        url: stripTrackingParams(uri),
+        label: g.web?.title,
+      });
+    }
+  };
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    // Gemini SSE 는 CRLF 가능성 있음 — \r?\n\r?\n 로 안전 분리
+    const events = buffer.split(/\r?\n\r?\n/);
+    buffer = events.pop() ?? '';
+    for (const ev of events) {
+      const line = ev.trim();
+      if (!line.startsWith('data: ')) continue;
+      const data = line.slice(6);
+      if (!data || data === '[DONE]') continue;
+      let chunk: GeminiStreamChunk;
+      try {
+        chunk = JSON.parse(data) as GeminiStreamChunk;
+      } catch {
+        continue;
+      }
+      const candidate = chunk.candidates?.[0];
+      if (candidate?.finishReason) finishReason = candidate.finishReason;
+      collectGrounding(chunk);
+      const parts = candidate?.content?.parts ?? [];
+      for (const p of parts) {
+        if (typeof p.text === 'string' && p.text.length > 0) {
+          fullText += p.text;
+          yield p.text;
+        }
+      }
+    }
+  }
+
+  const truncated = finishReason !== undefined && !GEMINI_CLEAN_FINISH.has(finishReason);
+  const sources =
+    groundingMap.size > 0 ? Array.from(groundingMap.values()) : extractSourcesFromText(fullText);
+  return { truncated, reason: finishReason, sources };
 }
 
 // ── 조립: 쿼리 + 병렬 호출 + 본인 매치 ────────────────────
