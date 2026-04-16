@@ -46,19 +46,48 @@ export function extractRegion(crawl: CrawlResult): string | null {
 
 // ── 본인 도메인 매치 ─────────────────────────────────────
 
-/** www. 제거 후 호스트명만 추출. 실패 시 빈 문자열. */
+/** 제거할 서브도메인 접두사. www/m/blog/mobile/app/web 순서대로 첫 매치만 제거. */
+const STRIP_SUBDOMAINS = ['www.', 'm.', 'blog.', 'mobile.', 'app.', 'web.'];
+
+/** strip 후 bare domain 이 플랫폼 자체 도메인이면 strip 하지 않음 (blog.naver.com ≠ naver.com). */
+const PLATFORM_BARE_DOMAINS = [
+  'naver.com', 'daum.net', 'kakao.com', 'tistory.com',
+  'google.com', 'youtube.com', 'instagram.com', 'facebook.com',
+];
+
+/**
+ * URL 에서 bare 호스트명 추출. m./www./blog. 같은 알려진 서브도메인 접두사 제거.
+ * 단 strip 결과가 플랫폼 bare domain(naver.com 등) 이면 원본 유지
+ * (blog.naver.com/myId 가 naver.com 과 매치되는 오탐 방지).
+ */
 function hostOf(url: string): string {
   try {
-    const h = new URL(url).hostname.toLowerCase();
-    return h.startsWith('www.') ? h.slice(4) : h;
+    const raw = new URL(url).hostname.toLowerCase();
+    for (const prefix of STRIP_SUBDOMAINS) {
+      if (raw.startsWith(prefix)) {
+        const stripped = raw.slice(prefix.length);
+        // 플랫폼 bare domain 이면 strip 하지 않고 원본 반환
+        if (PLATFORM_BARE_DOMAINS.includes(stripped)) return raw;
+        return stripped;
+      }
+    }
+    return raw;
   } catch { return ''; }
 }
 
-/** host 매치 — 완전 일치 또는 suffix 일치 (subdomain 허용). */
+/** host 매치 — hostOf 정규화 후 완전 일치 + 커스텀 서브도메인 suffix 매치.
+ *  플랫폼 도메인(naver.com, tistory.com 등) 간에는 suffix 매치 안 함 (blog.naver.com ≠ naver.com 보장). */
 function domainMatches(selfHost: string, resultHost: string): boolean {
   if (!selfHost || !resultHost) return false;
-  if (selfHost === resultHost) return true;
-  return resultHost.endsWith(`.${selfHost}`) || selfHost.endsWith(`.${resultHost}`);
+  const a = hostOf(`https://${selfHost}`);
+  const b = hostOf(`https://${resultHost}`);
+  if (!a || !b) return false;
+  if (a === b) return true;
+  // 양쪽 중 하나라도 플랫폼 도메인을 포함하면 완전 일치만 (suffix 매치로 오탐 방지)
+  const isPlatform = (h: string) => PLATFORM_BARE_DOMAINS.some(p => h === p || h.endsWith(`.${p}`));
+  if (isPlatform(a) || isPlatform(b)) return false;
+  // 커스텀 도메인 간 서브도메인 대응 (clinic.brplant.co.kr vs brplant.co.kr)
+  return a.endsWith(`.${b}`) || b.endsWith(`.${a}`);
 }
 
 // ── 공통 JSON 파서 (enrich.ts 와 독립) ───────────────────
