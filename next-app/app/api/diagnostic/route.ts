@@ -1,9 +1,12 @@
 /**
- * POST /api/diagnostic — AEO/GEO 진단 도구
+ * POST /api/diagnostic — AEO/GEO 기본 진단 (실측 제외)
  *
- * body: { url: string }
+ * body: { url: string, customQuery?: string }
  * 흐름: crawlSite → (선택) fetchPsi → scoreCategories → computeOverallScore
- *       → predictAIVisibility → buildActionPlan → DiagnosticResponse 반환
+ *       → predictAIVisibility → buildActionPlan → enrichDiagnostic → DiagnosticResponse 반환
+ *
+ * 실측(ChatGPT/Gemini 답변) 은 /api/diagnostic/stream 별도 엔드포인트로 분리됨 (단계 S-A).
+ * 사용자가 "실측하기" 버튼을 눌렀을 때만 플랫폼별로 SSE 스트림.
  *
  * 에러 코드 / HTTP status:
  *   INVALID_URL → 400 / UNREACHABLE → 502 / TIMEOUT → 504
@@ -18,10 +21,12 @@ import { scoreCategories, computeOverallScore } from '../../../lib/diagnostic/sc
 import { predictAIVisibility } from '../../../lib/diagnostic/aiVisibility';
 import { buildActionPlan } from '../../../lib/diagnostic/actionPlan';
 import { enrichDiagnostic } from '../../../lib/diagnostic/enrich';
-import { discoverCompetitors } from '../../../lib/diagnostic/discovery';
+import { extractRegion } from '../../../lib/diagnostic/discovery';
 import type { DiagnosticResponse, DiagnosticErrorResponse } from '../../../lib/diagnostic/types';
 
-export const maxDuration = 240;
+// 실측(discovery) 은 /api/diagnostic/stream 별도 엔드포인트로 분리 (단계 S-A, 플랫폼별 SSE).
+// 기본 진단은 crawl + PSI + scoring + enrich 만 — maxDuration 240→120 으로 감축.
+export const maxDuration = 120;
 export const dynamic = 'force-dynamic';
 
 interface Body { url?: string; customQuery?: string }
@@ -130,7 +135,8 @@ export async function POST(request: NextRequest) {
 
   // 4) PSI — 선택. 실패 시 null → "측정 불가" (UI 자동 대응).
   //    psi.ts: 1회당 35s × 1회 재시도 = 최악 70s. 여기 외부 가드도 70s 로 정렬.
-  //    maxDuration 240s 안에서 crawl(15) + PSI(70) + max(enrich 75, discovery 120) = 205s, 여유 ~35s.
+  //    maxDuration 120s 안에서 crawl(~5) + PSI(평균 ~30, 최악 70) + enrich(평균 ~40, 최악 75) = 평균 ~75s.
+  //    실측(discovery) 은 /api/diagnostic/stream 별도 엔드포인트로 분리됨.
   const psi = await withTimeout(fetchPsi(crawl.finalUrl), 70_000, 'psi').catch(() => null);
 
   // 5~7) 채점 + 종합
@@ -166,36 +172,21 @@ export async function POST(request: NextRequest) {
     },
   };
 
-  // 11+12) enrich + discovery 병렬 실행 (Phase 1.3)
-  // 둘 다 crawl 만 입력으로 쓰고 서로 의존 없음 → Promise.allSettled 로 ~25초 절약.
-  // Before: crawl(15) + PSI(40) + enrich(30) + discovery(25) = 110초 순차
-  // After:  crawl(15) + PSI(40) + max(enrich 30, discovery 25) = 85초 병렬
-  const [enrichResult, discResult] = await Promise.allSettled([
-    withTimeout(enrichDiagnostic(base, crawl), 75_000, 'enrich'),
-    withTimeout(discoverCompetitors(crawl, '치과', customQuery), 120_000, 'discovery'),
-  ]);
+  // 11) enrich 실행 (discovery 는 /api/diagnostic/stream 으로 분리됨)
+  const enriched = await withTimeout(enrichDiagnostic(base, crawl), 75_000, 'enrich').catch((e) => {
+    console.warn(`[diagnostic] enrichDiagnostic rejected: ${(e as Error)?.message?.slice(0, 200)}`);
+    return base;
+  });
 
-  // enrich 결과 — 실패 시 base 그대로
-  const enriched = enrichResult.status === 'fulfilled' ? enrichResult.value : base;
-  if (enrichResult.status === 'rejected') {
-    console.warn(`[diagnostic] enrichDiagnostic rejected: ${(enrichResult.reason as Error)?.message?.slice(0, 200)}`);
-  }
+  // 12) detectedRegion / detectedCategory — 예전엔 discovery 가 채웠는데 이제 여기서 직접.
+  //     UI 가 "지역·업종 자동 추출" 표시에 사용. customQuery 가 있으면 지역 표시 생략 (사용자 지정).
+  const detectedRegion = customQuery ? undefined : (extractRegion(crawl) ?? undefined);
 
-  // discovery 결과 — 실패 시 enriched 그대로
-  let final = enriched;
-  if (discResult.status === 'fulfilled') {
-    const disc = discResult.value;
-    if (disc.findings.length > 0 || disc.detectedRegion) {
-      final = {
-        ...enriched,
-        ...(disc.findings.length > 0 ? { competitorFindings: disc.findings } : {}),
-        ...(disc.detectedRegion ? { detectedRegion: disc.detectedRegion } : {}),
-        detectedCategory: disc.detectedCategory,
-      };
-    }
-  } else {
-    console.warn(`[diagnostic] discoverCompetitors rejected: ${(discResult.reason as Error)?.message?.slice(0, 200)}`);
-  }
+  const final: DiagnosticResponse = {
+    ...enriched,
+    detectedCategory: '치과',
+    ...(detectedRegion ? { detectedRegion } : {}),
+  };
 
   return NextResponse.json(final);
   } catch (e) {

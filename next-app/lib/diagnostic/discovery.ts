@@ -266,7 +266,7 @@ const PLATFORM_BARE_DOMAINS = [
  * 단 strip 결과가 플랫폼 bare domain(naver.com 등) 이면 원본 유지
  * (blog.naver.com/myId 가 naver.com 과 매치되는 오탐 방지).
  */
-function hostOf(url: string): string {
+export function hostOf(url: string): string {
   try {
     const raw = new URL(url).hostname.toLowerCase();
     for (const prefix of STRIP_SUBDOMAINS) {
@@ -283,7 +283,7 @@ function hostOf(url: string): string {
 
 /** host 매치 — hostOf 정규화 후 완전 일치 + 커스텀 서브도메인 suffix 매치.
  *  플랫폼 도메인(naver.com, tistory.com 등) 간에는 suffix 매치 안 함 (blog.naver.com ≠ naver.com 보장). */
-function domainMatches(selfHost: string, resultHost: string): boolean {
+export function domainMatches(selfHost: string, resultHost: string): boolean {
   if (!selfHost || !resultHost) return false;
   const a = hostOf(`https://${selfHost}`);
   const b = hostOf(`https://${resultHost}`);
@@ -321,7 +321,7 @@ function isBlockedDomain(domain: string): boolean {
 
 const URL_REGEX = /https?:\/\/[^\s)>\]"',]+/g;
 
-function extractUrlsFromText(text: string): CompetitorResult[] {
+export function extractUrlsFromText(text: string): CompetitorResult[] {
   const urls = [...new Set(text.match(URL_REGEX) || [])];
   const out: CompetitorResult[] = [];
   for (const url of urls) {
@@ -463,12 +463,118 @@ export async function discoverViaGemini(query: string): Promise<DiscoverRawAnswe
   }
 }
 
-// ── 조립: 쿼리 + 병렬 호출 + 본인 매치 ────────────────────
+// ── 쿼리 빌더 (stream 엔드포인트 + discoverCompetitors 공용) ─
 
 function buildQuery(region: string | null, category: string): string {
   if (region) return `${region} ${category} 추천`;
   return `${category} 추천`;
 }
+
+/**
+ * customQuery 가 있으면 그대로, 없으면 extractRegion → buildQuery 로 자동 생성.
+ * stream 엔드포인트에서 간결히 사용하기 위한 외부용 헬퍼.
+ */
+export function buildDiscoveryQuery(
+  crawl: CrawlResult,
+  category: string,
+  customQuery?: string,
+): string {
+  const trimmed = customQuery?.trim();
+  if (trimmed) return trimmed;
+  const region = extractRegion(crawl);
+  return buildQuery(region, category);
+}
+
+// ── Streaming 버전 (단계 S-A) ─────────────────────────────
+// 기본 /api/diagnostic 에서 실측을 분리하고, 사용자가 "실측하기" 를 누를 때
+// /api/diagnostic/stream 에서 플랫폼별로 하나씩 호출. SSE 로 chunk 단위 전달.
+
+/**
+ * OpenAI Chat Completions 실측 — 진짜 SSE 스트림.
+ * yield 된 문자열은 delta.content 즉 사용자에게 한 번에 보여줄 다음 조각.
+ * 에러는 throw — 호출부에서 error 이벤트로 변환.
+ */
+export async function* streamChatGPT(query: string): AsyncGenerator<string, void, void> {
+  const key = process.env.OPENAI_API_KEY;
+  if (!key) throw new Error('OPENAI_API_KEY 미설정');
+
+  const res = await fetch(OPENAI_CHAT_COMPLETIONS_URL, {
+    method: 'POST',
+    signal: AbortSignal.timeout(300_000), // 최악 5분 안전망 (stream 특성상 길게)
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${key}`,
+    },
+    body: JSON.stringify({
+      model: 'gpt-5-search-api',
+      messages: [{ role: 'user', content: buildNaturalLanguagePrompt(query) }],
+      max_tokens: 6_000,
+      stream: true,
+    }),
+  });
+  if (!res.ok || !res.body) {
+    let detail = `HTTP ${res.status}`;
+    try {
+      const body = await res.json() as { error?: { message?: string } };
+      if (body.error?.message) detail += ` · ${body.error.message.slice(0, 200)}`;
+    } catch { /* ignore */ }
+    throw new Error(`OpenAI stream 실패: ${detail}`);
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() ?? ''; // 마지막 불완전 라인 버퍼 유지
+    for (const rawLine of lines) {
+      const line = rawLine.trimEnd();
+      if (!line.startsWith('data: ')) continue;
+      const data = line.slice(6);
+      if (data === '[DONE]') return;
+      try {
+        const parsed = JSON.parse(data) as {
+          choices?: { delta?: { content?: string } }[];
+        };
+        const content = parsed.choices?.[0]?.delta?.content;
+        if (typeof content === 'string' && content.length > 0) yield content;
+      } catch {
+        /* 불완전 JSON (멀티라인 chunk 분할) — 다음 라인과 병합되지는 않으므로 skip */
+      }
+    }
+  }
+}
+
+/**
+ * Gemini 실측 — Phase 0 의 callLLM 이 stream 미지원이라 fake-stream 으로 구현.
+ * 전체 답변을 받은 뒤 50자씩 쪼개 30ms 간격으로 yield → UI 타이핑 효과.
+ * TODO: @google/genai 의 generateContentStream 으로 마이그레이션해 진짜 스트림.
+ */
+export async function* streamGemini(query: string): AsyncGenerator<string, void, void> {
+  const res = await callLLM({
+    task: 'search_ground',
+    systemBlocks: [{ type: 'text', text: '한국 병원 정보를 최신 웹 검색으로 찾아 사용자에게 자연스러운 추천 답변을 제공하는 분석자입니다.', cacheable: false }],
+    userPrompt: buildNaturalLanguagePrompt(query),
+    temperature: 0.4,
+    maxOutputTokens: 4_000,
+    googleSearch: true,
+  });
+  const text = (res.text ?? '').trim();
+  if (!text) return;
+
+  const CHUNK = 50;
+  const DELAY_MS = 30;
+  for (let i = 0; i < text.length; i += CHUNK) {
+    yield text.slice(i, i + CHUNK);
+    await new Promise<void>((resolve) => setTimeout(resolve, DELAY_MS));
+  }
+}
+
+// ── 조립: 쿼리 + 병렬 호출 + 본인 매치 ────────────────────
 
 function evaluateFinding(
   platform: AIPlatform,
