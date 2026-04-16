@@ -47,7 +47,7 @@ const DEFAULT_ROUTING: Record<LLMTaskKind, RouteDefinition> = {
   landing_chat:       { provider: 'gemini', model: 'gemini-3.1-flash-lite-preview', batchPreferred: false },
   diagnostic_extract: { provider: 'gemini', model: 'gemini-3.1-flash-lite-preview', batchPreferred: false },
   diagnostic_narrative: { provider: 'claude', model: 'claude-sonnet-4-6',         batchPreferred: false },
-  search_ground:      { provider: 'gemini', model: 'gemini-3.1-pro-preview',    batchPreferred: false },
+  search_ground:      { provider: 'gemini', model: 'gemini-3.1-flash-lite-preview', batchPreferred: false },
 };
 
 /** Claude 전역 비활성 시 떨어질 Gemini 모델 */
@@ -72,7 +72,7 @@ const GEMINI_FALLBACK_MODEL: Record<LLMTaskKind, string> = {
   landing_chat:       'gemini-3.1-flash-lite-preview',
   diagnostic_extract: 'gemini-3.1-flash-lite-preview',
   diagnostic_narrative: 'gemini-3.1-pro-preview',
-  search_ground:      'gemini-3.1-pro-preview',
+  search_ground:      'gemini-3.1-flash-lite-preview',
 };
 
 /**
