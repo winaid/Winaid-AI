@@ -61,6 +61,13 @@ export interface GenerationRequest {
   /** 화이트리스트 참고 자료 — referenceFetcher 에서 수집한 의학적 사실 (프롬프트 주입용) */
   referenceFacts?: string;
   referenceSources?: string[];
+  /** 이미지 라이브러리에서 선택한 이미지 (블로그 [IMG_N] 마커에 직접 삽입) */
+  libraryImages?: {
+    id: string;
+    publicUrl: string;
+    altText: string;
+    tags: string[];
+  }[];
 }
 
 export interface TrendingItem {

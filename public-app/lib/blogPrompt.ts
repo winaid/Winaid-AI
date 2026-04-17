@@ -529,6 +529,20 @@ ${range.max}자 초과 시 → 가장 약한 문단을 삭제 후 출력. 패딩
     );
   }
 
+  // ── 이미지 라이브러리 (사전 제공 이미지) ──
+  if (req.libraryImages && req.libraryImages.length > 0) {
+    promptParts.push(
+      '',
+      '[사전 제공된 이미지]',
+      '아래 이미지가 이미 준비되어 있습니다. 글의 적절한 위치에 배치하세요.',
+      ...req.libraryImages.map((img, i) =>
+        `[IMG_${i + 1}] — 태그: ${img.tags.join(', ')} / alt: "${img.altText}"`
+      ),
+      `나머지 ${req.imageCount || 0}장은 AI 이미지 프롬프트를 작성하세요.`,
+      '사전 제공 이미지의 프롬프트는 "USE_LIBRARY"로만 적으세요.',
+    );
+  }
+
   // ── 병원 홈페이지/블로그 분석 결과 ──
   // clinicContext 는 clinicContextService 가 크롤링·분석해서 만든 2차 사용자 데이터.
   // 각 배열 요소가 프롬프트에 그대로 흘러가므로 sanitize 필요.
@@ -1220,6 +1234,17 @@ export function buildBlogPromptV3(
       req.referenceFacts,
       `출처: ${req.referenceSources?.join(', ') || '신뢰 의료 기관'}`,
       '⚠️ 위 참고 자료의 사실만 활용. 추측/환각 금지. 참고 자료 문장 그대로 복사 금지.',
+    );
+  }
+
+  if (req.libraryImages && req.libraryImages.length > 0) {
+    varParts.push(
+      '',
+      '[사전 제공된 이미지]',
+      ...req.libraryImages.map((img, i) =>
+        `[IMG_${i + 1}] — 태그: ${img.tags.join(', ')} / alt: "${img.altText}"`
+      ),
+      `나머지 ${req.imageCount || 0}장은 AI 이미지 프롬프트. 사전 제공 이미지 프롬프트는 "USE_LIBRARY"로만.`,
     );
   }
 
