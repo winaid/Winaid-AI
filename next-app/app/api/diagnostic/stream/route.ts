@@ -21,6 +21,7 @@
 
 import { NextRequest } from 'next/server';
 import { checkAuth } from '../../../../lib/apiAuth';
+import { supabase } from '../../../../lib/supabase';
 import { crawlSite } from '../../../../lib/diagnostic/crawler';
 import {
   streamChatGPT,
@@ -35,6 +36,69 @@ import type { AIPlatform } from '../../../../lib/diagnostic/types';
 
 export const maxDuration = 600; // 10분 — 실측은 긴 스트림 허용
 export const dynamic = 'force-dynamic';
+
+// ── 캐시 헬퍼 ──────────────────────────────────────────────
+
+async function sha256(text: string): Promise<string> {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+interface CachedRow {
+  answer_text: string;
+  sources: unknown;
+  self_included: boolean;
+  self_rank: number | null;
+  truncated: boolean;
+  created_at: string;
+}
+
+const CACHE_TTL_MS = 30 * 86_400_000; // 30일
+
+function buildCachedStream(
+  cached: CachedRow,
+  platform: string,
+  query: string,
+  selfHost: string,
+): Response {
+  const encoder = new TextEncoder();
+  const text = cached.answer_text;
+  const CHUNK = 50;
+  const DELAY = 30;
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const send = (payload: Record<string, unknown>) => {
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(payload)}\n\n`));
+      };
+      send({ type: 'start', platform, query, timestamp: new Date().toISOString() });
+      for (let i = 0; i < text.length; i += CHUNK) {
+        send({ type: 'chunk', text: text.slice(i, i + CHUNK) });
+        await new Promise<void>((r) => setTimeout(r, DELAY));
+      }
+      send({
+        type: 'done',
+        answerText: text,
+        topResults: [],
+        selfIncluded: cached.self_included,
+        selfRank: cached.self_rank,
+        truncated: cached.truncated,
+        sources: Array.isArray(cached.sources) ? cached.sources : [],
+        cached: true,
+        cachedAt: cached.created_at,
+        timestamp: new Date().toISOString(),
+      });
+      controller.close();
+    },
+  });
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream; charset=utf-8',
+      'Cache-Control': 'no-cache, no-transform',
+      'Connection': 'keep-alive',
+      'X-Accel-Buffering': 'no',
+    },
+  });
+}
 
 const MAX_QUERY_LEN = 100;
 
@@ -110,6 +174,27 @@ export async function POST(request: NextRequest) {
   const query = buildDiscoveryQuery(crawl, '치과', customQuery);
   const selfHost = hostOf(crawl.finalUrl);
 
+  // 3.5) 캐시 조회 — 30일 이내 동일 platform+query 결과가 있으면 fake-stream 으로 즉시 반환.
+  //       Supabase 미설정 or DB 에러 시 skip (graceful).
+  if (supabase) {
+    try {
+      const queryHash = await sha256(query);
+      const cutoff = new Date(Date.now() - CACHE_TTL_MS).toISOString();
+      const { data: cached } = await supabase
+        .from('diagnostic_stream_cache')
+        .select('answer_text, sources, self_included, self_rank, truncated, created_at')
+        .eq('platform', platform)
+        .eq('query_hash', queryHash)
+        .gt('created_at', cutoff)
+        .maybeSingle();
+      if (cached) {
+        return buildCachedStream(cached as CachedRow, platform, query, selfHost);
+      }
+    } catch (e) {
+      console.warn(`[diagnostic/stream] 캐시 조회 실패 (skip): ${(e as Error).message.slice(0, 100)}`);
+    }
+  }
+
   // 4) SSE stream
   const encoder = new TextEncoder();
   const stream = new ReadableStream<Uint8Array>({
@@ -151,13 +236,36 @@ export async function POST(request: NextRequest) {
           }
         }
 
+        // 캐시 저장 (비동기, 실패해도 done 이벤트에 영향 없음)
+        if (supabase && fullText.length > 30) {
+          sha256(query).then((queryHash) => {
+            supabase!
+              .from('diagnostic_stream_cache')
+              .upsert(
+                {
+                  platform,
+                  query_hash: queryHash,
+                  query_text: query,
+                  answer_text: fullText,
+                  sources: JSON.stringify(meta.sources),
+                  self_included: selfRank !== null,
+                  self_rank: selfRank,
+                  truncated: meta.truncated,
+                },
+                { onConflict: 'platform,query_hash' },
+              )
+              .then(({ error }) => {
+                if (error) console.warn(`[diagnostic/stream] 캐시 저장 실패: ${error.message.slice(0, 100)}`);
+              });
+          });
+        }
+
         send({
           type: 'done',
           answerText: fullText,
           topResults,
           selfIncluded: selfRank !== null,
           selfRank,
-          // 핫픽스: 제너레이터 메타 — truncated/reason 은 UI 에서 ⚠ 안내, sources 는 배지로 렌더
           truncated: meta.truncated,
           ...(meta.reason ? { reason: meta.reason } : {}),
           sources: meta.sources,
