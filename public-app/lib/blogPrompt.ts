@@ -1525,3 +1525,253 @@ export function buildBlogSectionPromptV3(
 
   return { systemBlocks, userPrompt };
 }
+
+// ═══════════════════════════════════════════════════════════════════
+// 2-Pass 병렬 생성 — Pass 1: 아웃라인 / Pass 2: 섹션별 병렬 작성
+// ═══════════════════════════════════════════════════════════════════
+
+import type { BlogOutline } from './types';
+
+const OUTLINE_PERSONA = `[역할]
+너는 한국 병·의원 네이버 블로그 콘텐츠의 구조를 설계하는 수석 에디터다.
+주어진 주제·키워드·진료과 정보를 바탕으로 블로그 아웃라인(골격)을 JSON으로 출력한다.
+
+[출력 규칙 — STRICT]
+- JSON 객체 하나만 출력한다. JSON 밖의 텍스트/코드펜스/설명문 절대 금지.
+- 스키마:
+{
+  "sections": [
+    {
+      "type": "intro" | "section" | "outro",
+      "heading": "소제목 텍스트 (intro/outro는 null)",
+      "summary": "이 섹션이 다룰 핵심 내용 1~2문장",
+      "imageIndex": 1,
+      "charTarget": 200
+    }
+  ],
+  "totalCharTarget": 1500,
+  "keyMessage": "이 글의 핵심 메시지 한 줄"
+}
+
+[아웃라인 설계 원칙]
+1. intro(도입부) 1개 + section(본문) 3~6개 + outro(마무리) 1개.
+2. section 개수는 목표 글자수에 따라 자동 스케일:
+   - 1500자 이하 → section 3개
+   - 1500~2500자 → section 4개
+   - 2500~3500자 → section 5개
+   - 3500자 이상 → section 6개
+3. 각 section의 charTarget 합 = totalCharTarget (±10%).
+4. intro charTarget ≈ 200자, outro charTarget ≈ 200자.
+5. 소제목(heading)은 검색형 구어체 10~25자. 예: "찬 물만 마시면 이가 시린 이유"
+6. 소제목에 SEO 키워드 자연 포함 (최소 2개 소제목에).
+7. imageIndex는 이미지를 배치할 섹션에만 1부터 순서대로 부여. 이미지 0장이면 전부 생략.
+8. summary는 해당 섹션이 다룰 구체적 내용 — 막연한 서술 금지.
+9. 흐름: intro→section들→outro 가 자연스러운 논리 순서로 연결.
+
+[금지]
+- 소제목 중복 금지.
+- "~에 대해 알아보겠습니다" 류 소제목 금지.
+- 같은 키워드를 모든 소제목에 넣는 것 금지 (2~3개에만).`;
+
+export function buildOutlinePrompt(
+  req: GenerationRequest,
+): BlogPromptV3 {
+  const safeTopic = sanitizePromptInput(req.topic, 500);
+  const safeBlogTitle = sanitizePromptInput(req.blogTitle, 200);
+  const safeKeywords = sanitizePromptInput(req.keywords, 300);
+  const safeDisease = sanitizePromptInput(req.disease, 100);
+  const safeHospitalName = sanitizePromptInput(req.hospitalName, 100);
+  const safePatientPersona = sanitizePromptInput(req.patientPersona, 200);
+  const safeCustomSubheadings = sanitizeSourceContent(req.customSubheadings, 2000);
+
+  const targetLength = req.textLength || 1500;
+  const targetImageCount = req.imageCount ?? 0;
+
+  const systemBlocks: CacheableBlock[] = [];
+  systemBlocks.push({ type: 'text', text: OUTLINE_PERSONA, cacheable: true, cacheTtl: '5m' });
+
+  if (req.category && CATEGORY_DEPTH_GUIDES[req.category]) {
+    systemBlocks.push({ type: 'text', text: CATEGORY_DEPTH_GUIDES[req.category], cacheable: true, cacheTtl: '5m' });
+  }
+
+  const seasonalCtx = getSeasonalContext(req.category);
+
+  const varParts: string[] = [
+    '[아웃라인 요청]',
+    `- 진료과: ${req.category || '미지정'}`,
+    `- 주제: ${safeTopic}`,
+    safeBlogTitle && safeBlogTitle !== safeTopic ? `- 제목(참고): ${safeBlogTitle}` : '',
+    `- SEO 키워드: ${safeKeywords || '없음'}`,
+    safeDisease ? `- 질환: ${safeDisease}` : '',
+    safeHospitalName ? `- 병원명: ${safeHospitalName}` : '',
+    safePatientPersona ? `- 타겟 페르소나: ${safePatientPersona}` : '',
+    `- 목표 글자수: ${targetLength}자`,
+    `- 이미지 개수: ${targetImageCount}`,
+    safeCustomSubheadings ? `- 소제목 힌트 (사용자 지정): ${safeCustomSubheadings}` : '',
+    seasonalCtx || '',
+  ].filter(Boolean);
+
+  if (req.referenceFacts) {
+    varParts.push(
+      '',
+      '[참고 의학 자료 요약]',
+      req.referenceFacts.slice(0, 2000),
+      '→ 아웃라인 설계 시 위 사실을 반영할 섹션을 배치하세요.',
+    );
+  }
+
+  systemBlocks.push({ type: 'text', text: varParts.join('\n'), cacheable: false });
+
+  const userPrompt = '위 요청에 맞는 블로그 아웃라인을 JSON으로만 출력해라. JSON 밖의 텍스트 절대 금지.';
+
+  return { systemBlocks, userPrompt };
+}
+
+// ── buildSectionFromOutlinePrompt — Pass 2: 개별 섹션 작성 ──
+
+import type { BlogOutlineSection } from './types';
+
+interface SectionFromOutlineInput {
+  section: BlogOutlineSection;
+  sectionIndex: number;
+  outline: BlogOutline;
+  req: GenerationRequest;
+  hospitalStyleBlock?: string | { systemBlock: string; fewShotBlock?: string } | null;
+}
+
+export function buildSectionFromOutlinePrompt(
+  input: SectionFromOutlineInput,
+): BlogPromptV3 {
+  const { section, sectionIndex, outline, req } = input;
+
+  const safeTopic = sanitizePromptInput(req.topic, 500);
+  const safeKeywords = sanitizePromptInput(req.keywords, 300);
+  const safeDisease = sanitizePromptInput(req.disease, 100);
+  const safeHospitalName = sanitizePromptInput(req.hospitalName, 100);
+
+  const audienceGuide = AUDIENCE_GUIDES[req.audienceMode] || AUDIENCE_GUIDES['환자용(친절/공감)'];
+  const personaGuide = PERSONA_GUIDES[req.persona] || PERSONA_GUIDES.hospital_info;
+  const toneGuide = TONE_GUIDES[req.tone] || TONE_GUIDES.warm;
+  const styleGuide = STYLE_GUIDES[req.writingStyle || 'empathy'] || '';
+  const medLawBlock = getMedicalLawPromptBlock(req.medicalLawMode !== 'relaxed');
+  const categoryBlock = req.category && CATEGORY_DEPTH_GUIDES[req.category] ? CATEGORY_DEPTH_GUIDES[req.category] : '';
+
+  const systemBlocks: CacheableBlock[] = [];
+
+  const sectionPersona = `[역할]
+너는 한국 병·의원 네이버 블로그의 특정 섹션을 작성하는 에디터다.
+주어진 아웃라인과 섹션 지시에 따라 해당 섹션의 HTML만 출력한다.
+
+[출력 규칙 — STRICT]
+- HTML 만. 허용 태그: <h2>, <h3>, <p>, <ul>, <li>, <strong>, <em>.
+- 마크다운 / 코��펜스 / JSON / 설명문 절대 금지.
+- 이미지 마커: [IMG_N] 형식. 실제 <img> 태그 금지.
+
+[문체 — 사람처럼 쓰기]
+- 같은 어미 2회 연속 금지. "~입니다/~이에요/~거든요/~합니다" 자연스럽게 섞기.
+- 문장 길이 혼합: 40자+ 긴 문장과 10~15자 짧은 문장 불규칙하게.
+- 감각 표현: 주제에 맞는 것만 ("찌릿한", "욱신거리는" 등).
+- 구체적 숫자: "오래" → "약 3~6개월".
+- 수식어 삭제: "매우 중요한" → "중요한".
+
+[금지 표현]
+"~라고 알려져 있습니다", "일반적으로", "~에 대해 알아보겠습니다",
+"또한", "더불어", "아울러" → 내용 흐름으로 대체.
+
+[가독성]
+1. 한 <p> 최대 4문장, 150자 이내.
+2. 3개 이상 나열 → <ul><li> 리스트.
+3. 핵심 수치·결론 → <strong> 강조.
+4. ���제목(h3) 아래 첫 문장 = 질문형 또는 상황 묘사형.
+5. 소제목 사이 최소 2개, 최대 4개 문단.`;
+
+  systemBlocks.push({ type: 'text', text: sectionPersona, cacheable: true, cacheTtl: '5m' });
+  systemBlocks.push({ type: 'text', text: medLawBlock, cacheable: true, cacheTtl: '5m' });
+
+  if (categoryBlock) {
+    systemBlocks.push({ type: 'text', text: categoryBlock, cacheable: true, cacheTtl: '5m' });
+  }
+
+  const profileText = [
+    `[대상 독자] ${audienceGuide}`,
+    `[페르소나] ${personaGuide}`,
+    `[어조] ${toneGuide}`,
+    styleGuide ? `[문체] ${styleGuide}` : '',
+  ].filter(Boolean).join('\n');
+  systemBlocks.push({ type: 'text', text: profileText, cacheable: true, cacheTtl: '5m' });
+
+  if (input.hospitalStyleBlock && !req.stylePromptText?.trim()) {
+    const hsb = input.hospitalStyleBlock;
+    const text = typeof hsb === 'string'
+      ? hsb
+      : [hsb.systemBlock, hsb.fewShotBlock].filter(Boolean).join('\n\n');
+    if (text) {
+      systemBlocks.push({ type: 'text', text, cacheable: true, cacheTtl: '5m' });
+    }
+  }
+
+  if (req.stylePromptText && req.stylePromptText.trim()) {
+    systemBlocks.push({
+      type: 'text',
+      text: `⚠️ 아래 학습된 말투/화자 설정이 최우선이며, 다른 정체성/톤 지시보다 우선한다.\n\n${req.stylePromptText}`,
+      cacheable: true,
+      cacheTtl: '5m',
+    });
+  }
+
+  const outlineSummary = outline.sections
+    .map((s, i) => {
+      const mark = i === sectionIndex ? '→' : ' ';
+      const heading = s.heading || (s.type === 'intro' ? '(도입부)' : '(마무리)');
+      return `${mark} [${i}] ${s.type}: ${heading} — ${s.summary} (${s.charTarget}자)`;
+    })
+    .join('\n');
+
+  const imgMarker = section.imageIndex ? `\n- 이미지 마커: [IMG_${section.imageIndex}]를 적절한 위치에 배치.` : '';
+
+  const hnClean = safeHospitalName?.trim() || '';
+  const includeIntro = req.includeHospitalIntro !== false;
+  let introGreeting = '';
+  if (section.type === 'intro' && hnClean && includeIntro) {
+    if (req.persona === 'director_1st') {
+      introGreeting = `\n- 도입 첫 ���장: "안녕하세요. {가치 수식구 15~35자} ${hnClean} 대표 원장입니다." 형식. 수식구는 주제에 맞게 매번 새로 작성.`;
+    } else if (req.persona === 'coordinator') {
+      introGreeting = `\n- 도입 첫 문장: "안녕하세요. {가치 수식구 15~35자} ${hnClean} 상담실장입니다." 형식.`;
+    }
+  }
+
+  const varParts: string[] = [
+    '[전체 아웃라인]',
+    `핵심 메시지: ${outline.keyMessage}`,
+    outlineSummary,
+    '',
+    `[작성할 섹션 — index ${sectionIndex}]`,
+    `- type: ${section.type}`,
+    section.heading ? `- 소제목: ${section.heading}` : '',
+    `- 내용 방향: ${section.summary}`,
+    `- 목표 글자수: ${section.charTarget || 300}자 (±20%)`,
+    imgMarker,
+    introGreeting,
+    '',
+    `- 진료과: ${req.category || '미지정'}`,
+    `- 주제: ${safeTopic}`,
+    `- SEO 키워드: ${safeKeywords || '없음'}`,
+    safeDisease ? `- 질환: ${safeDisease}` : '',
+  ].filter(Boolean);
+
+  if (req.referenceFacts) {
+    varParts.push(
+      '',
+      '[참고 의학 자료]',
+      req.referenceFacts.slice(0, 2000),
+      '⚠️ 위 사실만 활용. 추측/환각 금지.',
+    );
+  }
+
+  systemBlocks.push({ type: 'text', text: varParts.join('\n'), cacheable: false });
+
+  const typeLabel = section.type === 'intro' ? '도입부' : section.type === 'outro' ? '마무리' : `"${section.heading}"`;
+  const userPrompt = `${typeLabel} 섹션의 HTML만 출력해라. 설명/코드펜스 금지.`;
+
+  return { systemBlocks, userPrompt };
+}

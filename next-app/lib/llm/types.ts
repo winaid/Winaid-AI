@@ -46,7 +46,8 @@ export type LLMTaskKind =
   // ── Gemini→Claude 전환 (블로그 보조 기능) ──
   | 'blog_title_recommend'
   | 'blog_seo_eval'
-  | 'blog_image_prompt';
+  | 'blog_image_prompt'
+  | 'blog_outline';
 
 export interface CacheableBlock {
   type: 'text';

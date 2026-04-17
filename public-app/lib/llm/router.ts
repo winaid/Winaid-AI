@@ -52,6 +52,7 @@ const DEFAULT_ROUTING: Record<LLMTaskKind, RouteDefinition> = {
   blog_title_recommend: { provider: 'claude', model: 'claude-sonnet-4-6',         batchPreferred: false },
   blog_seo_eval:        { provider: 'claude', model: 'claude-sonnet-4-6',         batchPreferred: false },
   blog_image_prompt:    { provider: 'claude', model: 'claude-sonnet-4-6',         batchPreferred: false },
+  blog_outline:         { provider: 'claude', model: 'claude-sonnet-4-6',         batchPreferred: false },
 };
 
 /** Claude 전역 비활성 시 떨어질 Gemini 모델 */
@@ -80,6 +81,7 @@ const GEMINI_FALLBACK_MODEL: Record<LLMTaskKind, string> = {
   blog_title_recommend: 'gemini-3.1-flash-lite-preview',
   blog_seo_eval:        'gemini-3.1-flash-lite-preview',
   blog_image_prompt:    'gemini-3.1-flash-lite-preview',
+  blog_outline:         'gemini-3.1-flash-lite-preview',
 };
 
 /**
@@ -113,6 +115,7 @@ function exhaustiveCheck(task: LLMTaskKind): void {
     case 'blog_title_recommend':
     case 'blog_seo_eval':
     case 'blog_image_prompt':
+    case 'blog_outline':
       return;
     default:
       assertNever(task);

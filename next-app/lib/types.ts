@@ -80,6 +80,20 @@ export interface TrendingItem {
   searchVolume?: number;
 }
 
+export interface BlogOutlineSection {
+  type: 'intro' | 'section' | 'outro';
+  heading?: string;
+  summary: string;
+  imageIndex?: number;
+  charTarget?: number;
+}
+
+export interface BlogOutline {
+  sections: BlogOutlineSection[];
+  totalCharTarget: number;
+  keyMessage: string;
+}
+
 export interface SeoTitleItem {
   title: string;
   score: number;
