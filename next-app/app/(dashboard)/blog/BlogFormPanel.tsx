@@ -314,58 +314,7 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
             <input type="text" value={keywords} onChange={e => setKeywords(e.target.value)} placeholder="예: 강남 치과, 임플란트 가격" className={inputCls} />
           </div>
 
-          {/* 질환명 */}
-          <div>
-            <label className={labelCls}>질환명</label>
-            <input type="text" value={disease} onChange={e => setDisease(e.target.value)} placeholder="예: 치주염, 충치 — 글의 실제 주제" className={inputCls} />
-          </div>
-
-          {/* AI 제목 추천 + 트렌드 주제 (2버튼 가로) */}
-          <div className="flex gap-2">
-            <button type="button" onClick={handleRecommendTitles} disabled={isLoadingTitles || !(topic || disease || keywords)}
-              className="flex-1 py-2 bg-slate-100 text-slate-600 rounded-lg text-xs font-semibold hover:bg-slate-200 transition-all disabled:opacity-40 flex items-center justify-center gap-1">
-              {isLoadingTitles ? <><div className="w-3 h-3 border-2 border-slate-400 border-t-slate-600 rounded-full animate-spin" />생성 중...</> : <>✨ AI 제목 추천</>}
-            </button>
-            <button type="button" onClick={handleRecommendTrends} disabled={isLoadingTrends}
-              className="flex-1 py-2 bg-slate-100 text-slate-600 rounded-lg text-xs font-semibold hover:bg-slate-200 transition-all disabled:opacity-40 flex items-center justify-center gap-1">
-              {isLoadingTrends ? <><div className="w-3 h-3 border-2 border-slate-400 border-t-slate-600 rounded-full animate-spin" />검색 중...</> : (disease.trim() || topic.trim()) ? <>🔍 &ldquo;{(disease.trim() || topic.trim()).length > 8 ? (disease.trim() || topic.trim()).slice(0, 8) + '…' : (disease.trim() || topic.trim())}&rdquo; 관련 주제</> : <>🔥 트렌드 주제</>}
-            </button>
-          </div>
-
-          {/* SEO 제목 추천 결과 */}
-          {seoTitles.length > 0 && (
-            <div className="space-y-1">
-              {seoTitles.map((item, idx) => (
-                <button key={idx} type="button" onClick={() => setBlogTitle(item.title)}
-                  className="w-full text-left px-3 py-2 bg-white border border-slate-100 rounded-lg hover:border-blue-400 transition-all group relative">
-                  <div className="absolute top-2 right-2 text-[10px] font-semibold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">SEO {item.score}</div>
-                  <span className="text-[10px] text-slate-400 block">{item.type}</span>
-                  <span className="text-xs font-medium text-slate-700 group-hover:text-blue-600 block pr-12">{item.title}</span>
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* 트렌드 주제 결과 */}
-          {trendingItems.length > 0 && (
-            <div className="space-y-1.5">
-              {trendingItems.map((item, idx) => (
-                <button key={idx} type="button" onClick={() => { setTopic(item.topic); setDisease(item.condition || item.topic); setTrendingItems([]); }}
-                  className="w-full text-left px-4 py-3 bg-white border border-slate-200 rounded-xl hover:border-blue-300 hover:bg-blue-50 transition-all group">
-                  <div className="flex items-center gap-2">
-                    <span className="text-blue-500 font-bold text-sm">{idx + 1}</span>
-                    <span className="font-semibold text-slate-800 text-sm group-hover:text-blue-700">{item.topic}</span>
-                    {item.condition && (
-                      <span className="ml-auto text-[10px] font-bold text-blue-500 bg-blue-50 px-2 py-0.5 rounded-full flex-shrink-0">
-                        {item.condition}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-[11px] text-slate-400 mt-1 pl-5">{item.seasonal_factor}</p>
-                </button>
-              ))}
-            </div>
-          )}
+          {/* 질환명·제목추천·트렌드 — next-app 에서 제거 (주제 하나로 통합) */}
 
           {/* 병원 홈페이지/블로그 URL */}
           {hospitalName && (

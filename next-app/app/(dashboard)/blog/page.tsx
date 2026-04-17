@@ -769,7 +769,7 @@ JSON 형식으로 응답해주세요.`;
       topic: topic.trim(),
       blogTitle: blogTitle.trim() || undefined,
       keywords: keywords.trim(),
-      disease: disease.trim() || undefined,
+      disease: disease.trim() || topic.trim() || undefined, // next-app: 질환명 필드 제거 → topic 으로 대체
       tone,
       audienceMode,
       persona,
