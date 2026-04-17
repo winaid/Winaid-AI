@@ -573,7 +573,7 @@ SEO 점수 기준:
       let prompt: string;
       if (userKeyword) {
         // 키워드가 있으면 → 관련 세부 주제 추천
-        prompt = `"${userKeyword}" 키워드와 관련된 병원 마케팅용 블로그 주제를 5개 추천해줘.
+        prompt = `"${userKeyword}" 키워드와 관련된 병원 마케팅용 블로그 주제를 8개 추천해줘.
 
 규칙:
 1. 환자가 실제로 네이버에서 검색할만한 구체적인 주제
@@ -595,7 +595,7 @@ SEO 점수 기준:
 6. 네이버 블로그 SEO에 유리한 롱테일 키워드 포함`;
       } else {
         // 키워드 없으면 → 진료과별 핫 키워드
-        prompt = `${category} 분야에서 요즘 환자들이 가장 많이 검색하는 핫한 블로그 주제 5개를 추천해줘.
+        prompt = `${category} 분야에서 요즘 환자들이 가장 많이 검색하는 핫한 블로그 주제 8개를 추천해줘.
 
 규칙:
 1. 최신 검색 트렌드 반영 (웹 검색으로 확인)
@@ -646,8 +646,47 @@ SEO 점수 기준:
       const data = await res.json() as { text?: string; error?: string };
       if (!res.ok || !data.text) throw new Error(data.error || '트렌드 분석 실패');
 
-      const items: TrendingItem[] = JSON.parse(data.text);
-      setTrendingItems(items);
+      const rawItems: TrendingItem[] = JSON.parse(data.text);
+
+      // ── 네이버 검색량 실측 검증 (환각 키워드 제거) ──
+      let verified: TrendingItem[];
+      try {
+        const verifyCtrl = new AbortController();
+        const verifyTimer = setTimeout(() => verifyCtrl.abort(), 5_000);
+        const kwRes = await fetch('/api/naver/keyword-stats', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ keywords: rawItems.map((it) => it.topic) }),
+          signal: verifyCtrl.signal,
+        });
+        clearTimeout(verifyTimer);
+        if (kwRes.ok) {
+          const kwData = (await kwRes.json()) as {
+            results?: { keyword: string; monthlySearchVolume: number }[];
+          };
+          const volMap = new Map<string, number>();
+          for (const r of kwData.results ?? []) volMap.set(r.keyword, r.monthlySearchVolume);
+          const enriched = rawItems.map((it) => {
+            let vol = volMap.get(it.topic) ?? 0;
+            if (vol === 0) {
+              for (const [kw, v] of volMap) {
+                if (kw.includes(it.topic) || it.topic.includes(kw)) vol = Math.max(vol, v);
+              }
+            }
+            return { ...it, searchVolume: vol };
+          });
+          const filtered = enriched.filter((it) => (it.searchVolume ?? 0) > 0)
+            .sort((a, b) => (b.searchVolume ?? 0) - (a.searchVolume ?? 0))
+            .slice(0, 5);
+          verified = filtered.length > 0 ? filtered : rawItems.slice(0, 5);
+        } else {
+          verified = rawItems.slice(0, 5);
+        }
+      } catch {
+        verified = rawItems.slice(0, 5); // 타임아웃 · 네트워크 에러 → 원본 상위 5개
+      }
+
+      setTrendingItems(verified);
     } catch (e) {
       console.error('[TREND] ❌ 트렌드 로딩 실패:', e);
       setError('트렌드 로딩 실패');

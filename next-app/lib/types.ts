@@ -69,6 +69,8 @@ export interface TrendingItem {
   keywords: string;
   score: number;
   seasonal_factor: string;
+  /** 네이버 월간 검색량 (PC+모바일). 검증 후 매핑. 0 또는 undefined 면 미검증/미검색. */
+  searchVolume?: number;
 }
 
 export interface SeoTitleItem {

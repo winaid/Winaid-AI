@@ -465,7 +465,14 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
                       </span>
                     )}
                   </div>
-                  <p className="text-[11px] text-slate-400 mt-1 pl-5">{item.seasonal_factor}</p>
+                  <div className="flex items-center gap-2 mt-1 pl-5">
+                    <span className="text-[11px] text-slate-400">{item.seasonal_factor}</span>
+                    {item.searchVolume != null && item.searchVolume > 0 && (
+                      <span className="text-[10px] font-medium text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
+                        월 {item.searchVolume.toLocaleString()}회
+                      </span>
+                    )}
+                  </div>
                 </button>
               ))}
             </div>
