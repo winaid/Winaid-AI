@@ -229,3 +229,9 @@ export interface RefreshNarrativeResponse {
   aiVisibility: AIVisibility[];
   priorityActions?: ActionItem[];
 }
+
+/** 진단 히스토리 — 점수 추이 바 차트용 (GET /api/diagnostic/history 응답 아이템). */
+export interface HistoryEntry {
+  overall_score: number;
+  analyzed_at: string;
+}

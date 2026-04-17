@@ -1,11 +1,12 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type {
   DiagnosticResponse,
   AIPlatform,
   MeasurementData,
   RefreshNarrativeResponse,
+  HistoryEntry,
 } from '../../lib/diagnostic/types';
 import ScoreRing from './ScoreRing';
 import CategoryCard from './CategoryCard';
@@ -85,6 +86,15 @@ function formatDate(iso: string): string {
 
 export default function DiagnosticResult({ result, onResultUpdate }: DiagnosticResultProps) {
   const [tab, setTab] = useState<Tab>('summary');
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+
+  useEffect(() => {
+    if (!result?.url) return;
+    fetch(`/api/diagnostic/history?url=${encodeURIComponent(result.url)}`)
+      .then((r) => r.json())
+      .then((d) => setHistory(d.history ?? []))
+      .catch(() => {});
+  }, [result?.url]);
 
   // ── C+B 강화안: 실측 결과 수집 + 해설 갱신 ──
   const [measurementResults, setMeasurementResults] = useState<Partial<Record<AIPlatform, MeasurementData>>>({});
@@ -161,6 +171,27 @@ export default function DiagnosticResult({ result, onResultUpdate }: DiagnosticR
           </div>
         </div>
       </div>
+
+      {/* 📈 점수 추이 — 히스토리 2건 이상일 때만 표시 */}
+      {history.length > 1 && (
+        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <h3 className="text-[13px] font-bold text-slate-600 mb-3">📈 점수 추이</h3>
+          <div className="flex items-end gap-2 h-16">
+            {history.map((h, i) => (
+              <div key={i} className="flex flex-col items-center gap-1 flex-1">
+                <span className="text-[11px] font-bold text-slate-700">{h.overall_score}</span>
+                <div
+                  className="w-full rounded-t bg-indigo-400 min-h-[4px]"
+                  style={{ height: `${(h.overall_score / 100) * 48}px` }}
+                />
+                <span className="text-[9px] text-slate-400">
+                  {new Date(h.analyzed_at).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* 탭 */}
       <div className="flex gap-1 p-1 bg-slate-100 rounded-xl overflow-x-auto">

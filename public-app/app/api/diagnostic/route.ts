@@ -23,6 +23,7 @@ import { buildActionPlan } from '../../../lib/diagnostic/actionPlan';
 import { enrichDiagnostic } from '../../../lib/diagnostic/enrich';
 import { extractRegion } from '../../../lib/diagnostic/discovery';
 import { logDiagnostic, generateTraceId } from '../../../lib/diagnostic/logger';
+import { supabase } from '../../../lib/supabase';
 import type { DiagnosticResponse, DiagnosticErrorResponse } from '../../../lib/diagnostic/types';
 
 // 실측(discovery) 은 /api/diagnostic/stream 별도 엔드포인트로 분리 (단계 S-A, 플랫폼별 SSE).
@@ -194,6 +195,21 @@ export async function POST(request: NextRequest) {
     ...(detectedRegion ? { detectedRegion } : {}),
   };
   logDiagnostic({ traceId, step: 'done', duration: Date.now() - t0, url: normalizedUrl, detail: `score=${final.overallScore}` });
+
+  // 히스토리 저장 (fire-and-forget — 응답 지연 안 함)
+  if (supabase) {
+    supabase.from('diagnostic_history').insert({
+      url: final.url,
+      site_name: final.siteName,
+      overall_score: Math.round(final.overallScore),
+      categories: final.categories,
+      ai_visibility: final.aiVisibility,
+      hero_summary: final.heroSummary ?? null,
+      analyzed_at: final.analyzedAt,
+    }).then(({ error }) => {
+      if (error) console.warn('[history] 저장 실패:', error.message);
+    });
+  }
 
   return NextResponse.json(final);
   } catch (e) {
