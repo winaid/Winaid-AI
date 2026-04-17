@@ -19,6 +19,7 @@ import type {
   ActionItem,
   ActionExecutor,
   AIPlatform,
+  MeasurementData,
 } from './types';
 import { callLLM } from '../llm';
 
@@ -159,6 +160,26 @@ const NARRATIVE_SYSTEM = `당신은 한국 병원 마케팅 전문가입니다. 
 ## 항목 id 참고
 - 항목 id 예시: own_domain, specialist_mentioned/doctor_in_text, platform_dependency, news_mentions, owned_channels_diversity, blog_searchable, dentist_schema, faq_structure 등 — categoryRecommendations 키는 카테고리 id(security_tech 등) 기준이고, 조치 문장은 위 항목 의미를 반영해 이 병원 맥락으로 풀어쓰세요.`;
 
+function buildMeasurementSection(m: Partial<Record<AIPlatform, MeasurementData>>): string {
+  const lines: string[] = ['\n[AI 실측 결과 (실제 검색 결과)]'];
+  for (const p of AI_PLATFORMS) {
+    const d = m[p];
+    if (!d) { lines.push(`- ${p}: (실측 미완료)`); continue; }
+    const rank = d.selfIncluded && d.selfRank
+      ? `${d.selfRank}위로 포함됨`
+      : d.selfIncluded ? '포함됨' : '미포함';
+    lines.push(`- ${p}: "${d.queryUsed}" 검색 시 ${rank}`);
+  }
+  lines.push(
+    '',
+    '이 실측 결과를 heroSummary, aiNarratives, categoryRecommendations 에 반영하세요.',
+    '예측만으로 "노출 가능성 높음"이라 했지만 실측에서 미포함이면 그 괴리를 설명하세요.',
+    '예측이 "보통"인데 실측 1위면 긍정적으로 강조하세요.',
+    'aiVisibility 의 reason 을 실측 사실이 포함된 버전으로 재작성하세요.',
+  );
+  return lines.join('\n');
+}
+
 interface NarrativeArgs {
   meta: SiteMeta | null;
   categories: CategoryScore[];
@@ -166,6 +187,8 @@ interface NarrativeArgs {
   priorityActions: ActionItem[];
   siteName: string;
   overallScore: number;
+  /** C+B 강화안: 실측 결과가 있으면 Sonnet 프롬프트에 실측 사실 섹션을 삽입. */
+  measurements?: Partial<Record<AIPlatform, MeasurementData>>;
 }
 
 export async function generateNarratives(args: NarrativeArgs): Promise<Narratives | null> {
@@ -202,7 +225,7 @@ ${JSON.stringify(aiDigest, null, 2)}
 
 [우선 조치 (index: action)]
 ${JSON.stringify(actionDigest, null, 2)}
-
+${args.measurements ? buildMeasurementSection(args.measurements) : ''}
 위 정보를 바탕으로 아래 JSON 으로만 응답하세요. 다른 텍스트 금지.
 
 {

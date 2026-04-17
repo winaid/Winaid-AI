@@ -225,3 +225,21 @@ export interface DiagnosticErrorResponse {
   error: string;
   code?: 'INVALID_URL' | 'UNREACHABLE' | 'TIMEOUT' | 'PARSE_ERROR' | 'UNKNOWN';
 }
+
+// ── 실측 → 해설 갱신 (C+B 강화안) ────────────────────────
+
+/** 단일 플랫폼의 실측 결과 (카드 → 부모 → /refresh-narrative 전달용) */
+export interface MeasurementData {
+  selfIncluded: boolean;
+  selfRank: number | null;
+  queryUsed: string;
+  answerText: string;
+}
+
+/** POST /api/diagnostic/refresh-narrative 응답 — 갱신된 필드만. */
+export interface RefreshNarrativeResponse {
+  heroSummary: string;
+  aiNarratives: Partial<Record<AIPlatform, string>>;
+  aiVisibility: AIVisibility[];
+  priorityActions?: ActionItem[];
+}
