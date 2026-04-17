@@ -368,8 +368,10 @@ type StreamState =
       truncated: boolean;
       /** 서버가 done 이벤트에 실어보낸 출처 (Gemini grounding 우선, 없으면 본문 regex) */
       sources: BadgeSource[];
+      /** finishReason 원문 (SAFETY 감지·디버그용) */
+      reason?: string;
     }
-  | { phase: 'error'; message: string };
+  | { phase: 'error'; message: string; autoRetrying?: boolean };
 
 const LIKELIHOOD_META: Record<AIVisibility['likelihood'], { label: string; color: string; emoji: string }> = {
   high: { label: '높음', color: 'bg-emerald-50 text-emerald-700 border-emerald-200', emoji: '🟢' },
@@ -405,11 +407,19 @@ export default function AIVisibilityCard({ visibility, siteName, selfUrl }: AIVi
   const [customQueryInput, setCustomQueryInput] = useState('');
   const [sourcesExpanded, setSourcesExpanded] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
+  /** 네트워크 drop 자동 재시도 횟수 — 1회만 허용. reset 시 0 으로 초기화. */
+  const retryCountRef = useRef(0);
+  /** 자동 재시도 타이머 — reset / unmount 시 cancel */
+  const autoRetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // unmount 시 in-flight stream 정리
+  // unmount 시 in-flight stream + 대기 중 자동 재시도 타이머 정리
   useEffect(() => {
     return () => {
       abortRef.current?.abort();
+      if (autoRetryTimerRef.current) {
+        clearTimeout(autoRetryTimerRef.current);
+        autoRetryTimerRef.current = null;
+      }
     };
   }, []);
 
@@ -525,6 +535,7 @@ export default function AIVisibilityCard({ visibility, siteName, selfUrl }: AIVi
               timestamp:
                 typeof payload.timestamp === 'string' ? payload.timestamp : new Date().toISOString(),
               truncated: !!payload.truncated,
+              reason: typeof payload.reason === 'string' ? payload.reason : undefined,
               sources,
             }));
           } else if (payload.type === 'error') {
@@ -560,10 +571,19 @@ export default function AIVisibilityCard({ visibility, siteName, selfUrl }: AIVi
         // 사용자가 중단 — idle 로 복귀 (검색어 입력은 유지)
         setState({ phase: 'idle' });
       } else {
-        setState({
-          phase: 'error',
-          message: (e as Error)?.message?.slice(0, 200) || '실측 중 오류가 발생했습니다.',
-        });
+        const msg = (e as Error)?.message?.slice(0, 200) || '실측 중 오류가 발생했습니다.';
+        // 네트워크 drop 등 비-Abort 예외 → 1회만 자동 재시도 (600ms 후)
+        if (retryCountRef.current < 1) {
+          retryCountRef.current += 1;
+          setState({ phase: 'error', message: msg, autoRetrying: true });
+          if (autoRetryTimerRef.current) clearTimeout(autoRetryTimerRef.current);
+          autoRetryTimerRef.current = setTimeout(() => {
+            autoRetryTimerRef.current = null;
+            startStream();
+          }, 600);
+        } else {
+          setState({ phase: 'error', message: msg });
+        }
       }
     }
   }
@@ -574,6 +594,12 @@ export default function AIVisibilityCard({ visibility, siteName, selfUrl }: AIVi
 
   function reset() {
     abortRef.current?.abort();
+    if (autoRetryTimerRef.current) {
+      clearTimeout(autoRetryTimerRef.current);
+      autoRetryTimerRef.current = null;
+    }
+    retryCountRef.current = 0;
+    setSourcesExpanded(false);
     setState({ phase: 'idle' });
   }
 
@@ -662,6 +688,53 @@ export default function AIVisibilityCard({ visibility, siteName, selfUrl }: AIVi
         )}
 
         {state.phase === 'done' && (() => {
+          const trimmedAnswer = state.answerText.trim();
+          const isEmpty = trimmedAnswer.length === 0;
+          const isTooShort = !isEmpty && trimmedAnswer.length < 30;
+          // AI 안전필터 거부 감지: finishReason SAFETY 또는 짧은 답변에 거부 키워드.
+          const REFUSAL_HINTS = /죄송|도움을 드릴 수 없|제공할 수 없|답변을 드릴 수 없|I can't|I cannot/i;
+          const isRefused =
+            state.reason === 'SAFETY' ||
+            (isTooShort && REFUSAL_HINTS.test(trimmedAnswer));
+          if (isEmpty || isTooShort || isRefused) {
+            const anomalyText = isRefused
+              ? 'AI 가 이 질문에 대한 답변을 거부했어요. 검색어를 바꿔서 다시 시도해 보세요.'
+              : 'AI 로부터 의미 있는 답변을 받지 못했어요. 잠시 후 다시 시도해 보세요.';
+            return (
+              <div className="flex flex-col h-full">
+                <div className="flex items-center justify-between gap-2 mb-3">
+                  <p className="text-[12px] font-bold text-slate-700 truncate">
+                    🔍 &ldquo;{state.query}&rdquo; 실측 결과
+                  </p>
+                  {state.timestamp && (
+                    <span className="text-[10px] text-slate-400 flex-none">
+                      {formatTimestamp(state.timestamp)}
+                    </span>
+                  )}
+                </div>
+                <div className="text-sm text-slate-500 bg-white rounded-lg p-4 border border-slate-200 leading-relaxed">
+                  {anomalyText}
+                  {trimmedAnswer && !isRefused && (
+                    <span className="mt-2 block text-[11px] text-slate-400">
+                      (받은 답변: &ldquo;{trimmedAnswer.slice(0, 60)}&rdquo;)
+                    </span>
+                  )}
+                </div>
+                <div className="mt-auto pt-4 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSourcesExpanded(false);
+                      reset();
+                    }}
+                    className="text-[12px] font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg transition-colors"
+                  >
+                    🔄 다시 실측
+                  </button>
+                </div>
+              </div>
+            );
+          }
           const parsedBody = parseAnswer(state.answerText);
           const MAX_VISIBLE = 5;
           const visibleSources = sourcesExpanded
@@ -760,9 +833,16 @@ export default function AIVisibilityCard({ visibility, siteName, selfUrl }: AIVi
 
         {state.phase === 'error' && (
           <div>
-            <p className="text-[12px] text-slate-600 leading-relaxed mb-2">
-              {friendlyFailureText}
-            </p>
+            {state.autoRetrying ? (
+              <p className="text-[12px] text-slate-600 leading-relaxed mb-2 flex items-center gap-1.5">
+                <span className="inline-block h-3 w-3 rounded-full border-2 border-slate-300 border-t-slate-600 animate-spin" aria-hidden="true" />
+                연결이 끊겨 자동으로 다시 시도 중이에요…
+              </p>
+            ) : (
+              <p className="text-[12px] text-slate-600 leading-relaxed mb-2">
+                {friendlyFailureText}
+              </p>
+            )}
             <p className="text-[10px] text-slate-400 mb-3">내부 사유: {state.message}</p>
             <button
               type="button"
