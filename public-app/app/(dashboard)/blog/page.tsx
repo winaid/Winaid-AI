@@ -521,27 +521,17 @@ SEO 점수 기준:
 - 의료광고 안전성 (20점): 법적 리스크 없는가
 - 블로그 적합도 (10점): 클릭하고 싶은 제목인가`;
 
-      const res = await fetch('/api/gemini', {
+      const schemaHint = 'JSON 배열만 출력. [{title:string, score:number, type:"증상질환형"|"변화원인형"|"확인형"|"정상범위형"}]';
+      const res = await fetch('/api/llm', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt,
-          model: 'gemini-3.1-flash-lite-preview',
+          task: 'blog_title_recommend',
+          prompt: prompt + '\n\n' + schemaHint,
+          systemInstruction: '병원 마케팅 블로그 SEO 제목 전문가. JSON 배열만 출력. 마크다운/코드블록 금지.',
           responseType: 'json',
-          timeout: 60000,
-          thinkingLevel: 'none',
-          schema: {
-            type: 'ARRAY',
-            items: {
-              type: 'OBJECT',
-              properties: {
-                title: { type: 'STRING' },
-                score: { type: 'NUMBER' },
-                type: { type: 'STRING', enum: ['증상질환형', '변화원인형', '확인형', '정상범위형'] }
-              },
-              required: ['title', 'score', 'type']
-            }
-          }
+          temperature: 0.5,
+          maxOutputTokens: 2000,
         }),
       });
 
@@ -810,10 +800,11 @@ JSON 형식으로 응답해주세요.`;
         required: ['total', 'title', 'keyword_structure', 'user_retention', 'medical_safety', 'conversion', 'improvement_suggestions']
       };
 
-      const seoRes = await fetch('/api/gemini', {
+      const schemaText = JSON.stringify(seoSchema, null, 2);
+      const seoRes = await fetch('/api/llm', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: seoPrompt, model: 'gemini-3.1-flash-lite-preview', responseType: 'json', schema: seoSchema, temperature: 0.3, maxOutputTokens: 4096, thinkingLevel: 'none' }),
+        body: JSON.stringify({ task: 'blog_seo_eval', prompt: seoPrompt + `\n\nJSON 스키마:\n${schemaText}\n\n위 스키마에 정확히 맞는 JSON만 출력하세요.`, systemInstruction: '네이버 블로그 SEO 전문가. JSON만 출력.', responseType: 'json', temperature: 0.3, maxOutputTokens: 4096 }),
       });
       const seoData = await seoRes.json() as { text?: string; error?: string };
 
@@ -1427,14 +1418,14 @@ JSON 형식으로 응답해주세요.`;
         workingContent: generatedContent,
         userMessage: chatInput.trim(),
       });
-      const res = await fetch('/api/gemini', {
+      const res = await fetch('/api/llm', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          task: 'refine_chat',
           prompt, systemInstruction,
-          model: 'gemini-3.1-pro-preview',
           temperature: 0.7,
-          maxOutputTokens: 65536,
+          maxOutputTokens: 8192,
         }),
       });
       const data = await res.json() as { text?: string };
@@ -1489,10 +1480,7 @@ JSON 형식으로 응답해주세요.`;
     setIsRecommendingPrompt(true);
     try {
       const textOnly = generatedContent.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 2000);
-      const res = await fetch('/api/gemini', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prompt: `You are a medical blog image prompt specialist.
+      const imgPromptText = `You are a medical blog image prompt specialist.
 Write ONE English image prompt for the ${selectedImgIndex}th image in the Korean hospital blog below.
 
 [RULES]
@@ -1507,9 +1495,10 @@ Write ONE English image prompt for the ${selectedImgIndex}th image in the Korean
 [BLOG CONTENT]
 ${textOnly}
 
-Output ONLY the prompt. No explanation.`,
-          model: 'gemini-3.1-pro-preview', temperature: 0.7, maxOutputTokens: 500, thinkingLevel: 'none',
-        }),
+Output ONLY the prompt. No explanation.`;
+      const res = await fetch('/api/llm', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ task: 'blog_image_prompt', prompt: imgPromptText, systemInstruction: 'Medical blog image prompt specialist. Output only the prompt.', temperature: 0.7, maxOutputTokens: 500 }),
       });
       const data = await res.json() as { text?: string };
       if (data.text) setRegenPrompt(data.text.trim());
