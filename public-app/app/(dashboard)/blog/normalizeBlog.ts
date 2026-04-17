@@ -126,6 +126,26 @@ export function normalizeBlogStructure(html: string, topicFallback: string): { h
   }
   log.push(`[STRUCTURE] 섹션별 문단 수: [${sectionParagraphCounts.join(', ')}]`);
 
+  // 10) 긴 문단 자동 분리 — 150자 초과 <p> 를 한국어 마침 어미 기준으로 분할
+  const PARA_MAX = 150;
+  let splitApplied = 0;
+  out = out.replace(/<p>([^<]+)<\/p>/g, (full, text: string) => {
+    if (text.length <= PARA_MAX) return full;
+    // 한국어 마침 어미(다/요/죠) + 마침표/물음표/느낌표 + 공백 기준 분리
+    const sentences = text.split(/(?<=[다요죠][.!?]\s)/);
+    if (sentences.length <= 1) return full;
+    const mid = Math.ceil(sentences.length / 2);
+    const first = sentences.slice(0, mid).join('').trim();
+    const second = sentences.slice(mid).join('').trim();
+    if (!first || !second) return full;
+    splitApplied++;
+    return `<p>${first}</p>\n<p>${second}</p>`;
+  });
+  const stillLong = (out.match(/<p>[^<]{150,}<\/p>/g) || []).length;
+  if (splitApplied > 0) log.push(`[READABILITY] ✅ 긴 문단 ${splitApplied}개 자동 분리됨`);
+  if (stillLong > 0) log.push(`[READABILITY] ⚠️ 여전히 150자 초과 문단 ${stillLong}개 (수동 확인 필요)`);
+  if (splitApplied === 0 && stillLong === 0) log.push('[READABILITY] ✅ 모든 문단 150자 이내');
+
   out = out.trim();
   return { html: out, log };
 }
