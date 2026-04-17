@@ -1,21 +1,19 @@
 /**
- * POST /api/generate/blog (next-app 내부용) — Phase 2A v4 통합 초안 (Sonnet 4.6)
+ * POST /api/generate/blog (next-app 내부용) — 2-pass 병렬 생성 (v5)
  *
- * public-app 과 시맨틱 동일. 차이:
- *   - 내부용이라 guestRateLimit 없음. apiAuth.checkAuth 만 통과시키는 패턴.
- *   - 나머지 흐름 동일.
+ * public-app 과 시맨틱 동일. 차이: checkAuth (내부용).
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { checkAuth } from '../../../../lib/apiAuth';
 import { useCredit } from '../../../../lib/creditService';
 import { getHospitalStylePrompt } from '../../../../lib/styleService';
-import { buildBlogPromptV3 } from '../../../../lib/blogPrompt';
+import { buildBlogPromptV3, buildOutlinePrompt, buildSectionFromOutlinePrompt } from '../../../../lib/blogPrompt';
 import { filterMedicalLawViolations } from '../../../../lib/medicalLawFilter';
 import { callLLM } from '../../../../lib/llm';
-import type { GenerationRequest } from '../../../../lib/types';
+import type { GenerationRequest, BlogOutline } from '../../../../lib/types';
 
-export const maxDuration = 60;
+export const maxDuration = 120;
 export const dynamic = 'force-dynamic';
 
 interface Body {
@@ -71,32 +69,139 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  const { systemBlocks, userPrompt } = buildBlogPromptV3(req, { hospitalStyleBlock });
-
   try {
-    const resp = await callLLM({
-      task: 'blog_unified',
-      systemBlocks,
-      userPrompt,
-      temperature: 0.85,
-      maxOutputTokens: 8192,
-      userId,
-    });
-
-    const detected = filterMedicalLawViolations(resp.text);
+    const result = await generate2Pass(req, hospitalStyleBlock, userId);
+    const detected = filterMedicalLawViolations(result.text);
 
     return NextResponse.json({
-      text: resp.text,
+      text: result.text,
       violations: detected.foundTerms,
-      usage: resp.usage,
-      model: resp.model,
+      usage: result.usage,
+      model: result.model,
+      mode: result.mode,
     });
   } catch (err) {
     const message = (err as Error).message || 'unknown';
-    console.error(`[generate/blog] callLLM failed: ${message}`);
+    console.error(`[generate/blog] failed: ${message}`);
     return NextResponse.json(
       { error: 'generation_failed', code: message.slice(0, 200) },
       { status: 500 },
     );
   }
+}
+
+function parseOutlineJson(raw: string): BlogOutline | null {
+  try {
+    const match = raw.match(/[\[{][\s\S]*[}\]]/);
+    const json = match ? match[0] : raw;
+    const parsed = JSON.parse(json) as BlogOutline;
+    if (!parsed.sections || !Array.isArray(parsed.sections) || parsed.sections.length < 3) return null;
+    if (!parsed.keyMessage || !parsed.totalCharTarget) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+async function generate2Pass(
+  req: GenerationRequest,
+  hospitalStyleBlock: string | null,
+  userId: string | null,
+): Promise<{ text: string; usage: { inputTokens: number; outputTokens: number; costUsd: number }; model: string; mode: '2pass' | '1pass' }> {
+  let outline: BlogOutline | null = null;
+  try {
+    const outlinePrompt = buildOutlinePrompt(req);
+    const outlineResp = await callLLM({
+      task: 'blog_outline',
+      systemBlocks: outlinePrompt.systemBlocks,
+      userPrompt: outlinePrompt.userPrompt,
+      temperature: 0.5,
+      maxOutputTokens: 2048,
+      userId,
+    });
+    outline = parseOutlineJson(outlineResp.text);
+    if (!outline) {
+      console.warn('[generate/blog] outline parse failed, falling back to 1-pass');
+    }
+  } catch (err) {
+    console.warn(`[generate/blog] outline generation failed: ${(err as Error).message.slice(0, 200)}`);
+  }
+
+  if (!outline) {
+    return generate1Pass(req, hospitalStyleBlock, userId);
+  }
+
+  const sectionPromises = outline.sections.map((section, idx) => {
+    const prompt = buildSectionFromOutlinePrompt({
+      section,
+      sectionIndex: idx,
+      outline,
+      req,
+      hospitalStyleBlock,
+    });
+    return callLLM({
+      task: 'blog_unified',
+      systemBlocks: prompt.systemBlocks,
+      userPrompt: prompt.userPrompt,
+      temperature: 0.85,
+      maxOutputTokens: 4096,
+      userId,
+    });
+  });
+
+  const results = await Promise.allSettled(sectionPromises);
+
+  const htmlParts: string[] = [];
+  let totalInput = 0;
+  let totalOutput = 0;
+  let totalCost = 0;
+  let model = '';
+  let failedCount = 0;
+
+  for (const r of results) {
+    if (r.status === 'fulfilled') {
+      htmlParts.push(r.value.text.trim());
+      totalInput += r.value.usage.inputTokens;
+      totalOutput += r.value.usage.outputTokens;
+      totalCost += r.value.usage.costUsd;
+      if (!model) model = r.value.model;
+    } else {
+      failedCount++;
+      console.warn(`[generate/blog] section failed: ${r.reason?.message?.slice(0, 200) ?? 'unknown'}`);
+    }
+  }
+
+  if (failedCount > results.length / 2) {
+    console.warn(`[generate/blog] ${failedCount}/${results.length} sections failed, falling back to 1-pass`);
+    return generate1Pass(req, hospitalStyleBlock, userId);
+  }
+
+  return {
+    text: htmlParts.join('\n\n'),
+    usage: { inputTokens: totalInput, outputTokens: totalOutput, costUsd: totalCost },
+    model: model || 'claude-sonnet-4-6',
+    mode: '2pass',
+  };
+}
+
+async function generate1Pass(
+  req: GenerationRequest,
+  hospitalStyleBlock: string | null,
+  userId: string | null,
+): Promise<{ text: string; usage: { inputTokens: number; outputTokens: number; costUsd: number }; model: string; mode: '1pass' }> {
+  const { systemBlocks, userPrompt } = buildBlogPromptV3(req, { hospitalStyleBlock });
+  const resp = await callLLM({
+    task: 'blog_unified',
+    systemBlocks,
+    userPrompt,
+    temperature: 0.85,
+    maxOutputTokens: 8192,
+    userId,
+  });
+  return {
+    text: resp.text,
+    usage: resp.usage,
+    model: resp.model,
+    mode: '1pass',
+  };
 }
