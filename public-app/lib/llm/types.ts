@@ -42,7 +42,11 @@ export type LLMTaskKind =
   | 'diagnostic_extract'
   | 'diagnostic_narrative'
   // ── Gemini googleSearch 강제용 — Claude로 넘어가지 않음 ──
-  | 'search_ground';
+  | 'search_ground'
+  // ── Gemini→Claude 전환 (블로그 보조 기능) ──
+  | 'blog_title_recommend'
+  | 'blog_seo_eval'
+  | 'blog_image_prompt';
 
 export interface CacheableBlock {
   type: 'text';

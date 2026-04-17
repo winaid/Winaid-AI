@@ -30,7 +30,7 @@ const DEFAULT_ROUTING: Record<LLMTaskKind, RouteDefinition> = {
   // ── Phase 2A v3: 통합 초안 + Opus 검수 ──
   blog_unified:         { provider: 'claude', model: 'claude-sonnet-4-6',         batchPreferred: false },
   blog_unified_section: { provider: 'claude', model: 'claude-sonnet-4-6',         batchPreferred: false },
-  blog_review:          { provider: 'claude', model: 'claude-opus-4-6',           batchPreferred: false },
+  blog_review:          { provider: 'claude', model: 'claude-opus-4-7',           batchPreferred: false },
   // ── 레거시 (deprecated — blog_unified 로 통합됨. 호환성만 유지) ──
   blog_draft:         { provider: 'claude', model: 'claude-haiku-4-5-20251001', batchPreferred: false },
   blog_section_regen: { provider: 'claude', model: 'claude-haiku-4-5-20251001', batchPreferred: false },
@@ -40,7 +40,7 @@ const DEFAULT_ROUTING: Record<LLMTaskKind, RouteDefinition> = {
   blog_final:         { provider: 'claude', model: 'claude-sonnet-4-6',         batchPreferred: false },
   press:              { provider: 'claude', model: 'claude-sonnet-4-6',         batchPreferred: true  },
   refine_auto:        { provider: 'claude', model: 'claude-haiku-4-5-20251001', batchPreferred: false },
-  refine_chat:        { provider: 'claude', model: 'claude-haiku-4-5-20251001', batchPreferred: false },
+  refine_chat:        { provider: 'claude', model: 'claude-sonnet-4-6',         batchPreferred: false },
   card_news:          { provider: 'claude', model: 'claude-haiku-4-5-20251001', batchPreferred: false },
   style_learn:        { provider: 'claude', model: 'claude-sonnet-4-6',         batchPreferred: true  },
   score_crawled_post: { provider: 'claude', model: 'claude-haiku-4-5-20251001', batchPreferred: true  },
@@ -48,6 +48,10 @@ const DEFAULT_ROUTING: Record<LLMTaskKind, RouteDefinition> = {
   diagnostic_extract: { provider: 'gemini', model: 'gemini-3.1-flash-lite-preview', batchPreferred: false },
   diagnostic_narrative: { provider: 'claude', model: 'claude-sonnet-4-6',         batchPreferred: false },
   search_ground:      { provider: 'gemini', model: 'gemini-3.1-flash-lite-preview', batchPreferred: false },
+  // Gemini→Claude 전환용 신규 task
+  blog_title_recommend: { provider: 'claude', model: 'claude-sonnet-4-6',         batchPreferred: false },
+  blog_seo_eval:        { provider: 'claude', model: 'claude-sonnet-4-6',         batchPreferred: false },
+  blog_image_prompt:    { provider: 'claude', model: 'claude-sonnet-4-6',         batchPreferred: false },
 };
 
 /** Claude 전역 비활성 시 떨어질 Gemini 모델 */
@@ -73,6 +77,9 @@ const GEMINI_FALLBACK_MODEL: Record<LLMTaskKind, string> = {
   diagnostic_extract: 'gemini-3.1-flash-lite-preview',
   diagnostic_narrative: 'gemini-3.1-pro-preview',
   search_ground:      'gemini-3.1-flash-lite-preview',
+  blog_title_recommend: 'gemini-3.1-flash-lite-preview',
+  blog_seo_eval:        'gemini-3.1-flash-lite-preview',
+  blog_image_prompt:    'gemini-3.1-flash-lite-preview',
 };
 
 /**
@@ -103,6 +110,9 @@ function exhaustiveCheck(task: LLMTaskKind): void {
     case 'diagnostic_extract':
     case 'diagnostic_narrative':
     case 'search_ground':
+    case 'blog_title_recommend':
+    case 'blog_seo_eval':
+    case 'blog_image_prompt':
       return;
     default:
       assertNever(task);
