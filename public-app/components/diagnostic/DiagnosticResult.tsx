@@ -1,7 +1,12 @@
 'use client';
 
-import { useState } from 'react';
-import type { DiagnosticResponse } from '../../lib/diagnostic/types';
+import { useCallback, useState } from 'react';
+import type {
+  DiagnosticResponse,
+  AIPlatform,
+  MeasurementData,
+  RefreshNarrativeResponse,
+} from '../../lib/diagnostic/types';
 import ScoreRing from './ScoreRing';
 import CategoryCard from './CategoryCard';
 import AIVisibilityCard from './AIVisibilityCard';
@@ -9,6 +14,8 @@ import ActionPlan from './ActionPlan';
 
 interface DiagnosticResultProps {
   result: DiagnosticResponse;
+  /** C+B 강화안: 해설 갱신 시 부모의 result state 를 덮어쓰기 위한 setter */
+  onResultUpdate?: (updated: DiagnosticResponse) => void;
 }
 
 type Tab = 'summary' | 'details' | 'ai' | 'actions';
@@ -76,8 +83,43 @@ function formatDate(iso: string): string {
   } catch { return iso; }
 }
 
-export default function DiagnosticResult({ result }: DiagnosticResultProps) {
+export default function DiagnosticResult({ result, onResultUpdate }: DiagnosticResultProps) {
   const [tab, setTab] = useState<Tab>('summary');
+
+  // ── C+B 강화안: 실측 결과 수집 + 해설 갱신 ──
+  const [measurementResults, setMeasurementResults] = useState<Partial<Record<AIPlatform, MeasurementData>>>({});
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshDone, setRefreshDone] = useState(false);
+
+  const handleMeasurementDone = useCallback((platform: AIPlatform, data: MeasurementData) => {
+    setMeasurementResults((prev) => ({ ...prev, [platform]: data }));
+  }, []);
+
+  const handleRefreshNarrative = useCallback(async () => {
+    if (refreshing || !onResultUpdate) return;
+    setRefreshing(true);
+    try {
+      const res = await fetch('/api/diagnostic/refresh-narrative', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ diagnosticResult: result, measurements: measurementResults }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = (await res.json()) as RefreshNarrativeResponse;
+      onResultUpdate({
+        ...result,
+        heroSummary: data.heroSummary,
+        aiNarratives: data.aiNarratives,
+        aiVisibility: data.aiVisibility,
+        ...(data.priorityActions ? { priorityActions: data.priorityActions } : {}),
+      });
+      setRefreshDone(true);
+    } catch (e) {
+      console.warn('[refresh-narrative]', e);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refreshing, result, measurementResults, onResultUpdate]);
 
   return (
     <div className="w-full max-w-5xl mx-auto space-y-5">
@@ -199,16 +241,63 @@ export default function DiagnosticResult({ result }: DiagnosticResultProps) {
       {/* 탭 3: AI 노출 — 2개 플랫폼(ChatGPT + Gemini) 2열 1행 레이아웃 */}
       {/*       실측은 각 카드가 자체적으로 /api/diagnostic/stream 소비 (단계 S-B). */}
       {tab === 'ai' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl mx-auto">
-          {result.aiVisibility.map((v) => (
-            <AIVisibilityCard
-              key={v.platform}
-              visibility={v}
-              siteName={result.siteName}
-              selfUrl={result.url}
-            />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl mx-auto">
+            {result.aiVisibility.map((v) => (
+              <AIVisibilityCard
+                key={v.platform}
+                visibility={v}
+                siteName={result.siteName}
+                selfUrl={result.url}
+                onMeasurementDone={handleMeasurementDone}
+              />
+            ))}
+          </div>
+
+          {/* C+B 강화안: "🔄 AI 해설 갱신" 버튼 — 양 플랫폼 실측 완료 후 활성화 */}
+          {onResultUpdate && (
+            <div className="mt-5 flex flex-col items-center gap-2 max-w-md mx-auto">
+              {(() => {
+                const bothDone = !!(measurementResults.ChatGPT && measurementResults.Gemini);
+                if (refreshDone) {
+                  return (
+                    <div className="w-full text-center px-4 py-2.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 text-sm font-bold">
+                      ✅ 실측 결과가 반영된 해설로 갱신되었어요
+                    </div>
+                  );
+                }
+                return (
+                  <>
+                    <button
+                      type="button"
+                      disabled={!bothDone || refreshing}
+                      onClick={handleRefreshNarrative}
+                      className={`w-full px-4 py-2.5 rounded-lg text-sm font-bold transition-colors ${
+                        bothDone && !refreshing
+                          ? 'bg-indigo-600 text-white hover:bg-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-1'
+                          : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                      }`}
+                    >
+                      {refreshing ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                          실측 결과를 반영한 해설 생성 중… 약 30~60초
+                        </span>
+                      ) : (
+                        '🔄 AI 해설 갱신'
+                      )}
+                    </button>
+                    {!bothDone && (
+                      <p className="text-[11px] text-slate-400">
+                        두 플랫폼(ChatGPT · Gemini) 모두 실측 완료 후 갱신할 수 있어요
+                      </p>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
+          )}
+        </>
       )}
 
       {/* 탭 4: 우선 조치 */}

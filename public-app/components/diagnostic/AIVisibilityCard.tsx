@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import type { AIVisibility } from '../../lib/diagnostic/types';
+import type { AIVisibility, AIPlatform, MeasurementData } from '../../lib/diagnostic/types';
 
 // ── 출처·본문 파싱 유틸 ────────────────────────────────────
 // 서버는 프롬프트 최소화로 원본 그대로를 돌려주니 클라이언트에서 마크다운을 정리한다.
@@ -352,6 +352,8 @@ interface AIVisibilityCardProps {
   siteName?: string;
   /** 진단된 URL — /api/diagnostic/stream 에 body.url 로 전달 */
   selfUrl: string;
+  /** C+B 강화안: 실측 완료 시 부모에게 결과 전달 (해설 갱신 버튼 활성화용) */
+  onMeasurementDone?: (platform: AIPlatform, data: MeasurementData) => void;
 }
 
 type StreamState =
@@ -399,7 +401,7 @@ function formatTimestamp(iso: string): string {
   }
 }
 
-export default function AIVisibilityCard({ visibility, siteName, selfUrl }: AIVisibilityCardProps) {
+export default function AIVisibilityCard({ visibility, siteName, selfUrl, onMeasurementDone }: AIVisibilityCardProps) {
   const meta = LIKELIHOOD_META[visibility.likelihood];
   const pm = PLATFORM_META[visibility.platform];
 
@@ -538,6 +540,13 @@ export default function AIVisibilityCard({ visibility, siteName, selfUrl }: AIVi
               reason: typeof payload.reason === 'string' ? payload.reason : undefined,
               sources,
             }));
+            // C+B 강화안: 부모에게 실측 결과 전달 (해설 갱신 버튼 활성화용)
+            onMeasurementDone?.(visibility.platform as AIPlatform, {
+              selfIncluded: !!payload.selfIncluded,
+              selfRank: typeof payload.selfRank === 'number' ? payload.selfRank : null,
+              queryUsed: trimmed || '(자동)',
+              answerText: typeof payload.answerText === 'string' ? payload.answerText : '',
+            });
           } else if (payload.type === 'error') {
             setState({
               phase: 'error',
@@ -565,6 +574,18 @@ export default function AIVisibilityCard({ visibility, siteName, selfUrl }: AIVi
           };
         }
         return { phase: 'error', message: '답변을 받지 못하고 스트림이 종료되었습니다.' };
+      });
+      // 안전망에서 done 전이 시에도 부모 콜백 (selfIncluded=false)
+      setState((prev) => {
+        if (prev.phase === 'done') {
+          onMeasurementDone?.(visibility.platform as AIPlatform, {
+            selfIncluded: prev.selfIncluded,
+            selfRank: prev.selfRank,
+            queryUsed: trimmed || '(자동)',
+            answerText: prev.answerText,
+          });
+        }
+        return prev;
       });
     } catch (e) {
       if ((e as Error).name === 'AbortError') {
@@ -612,16 +633,41 @@ export default function AIVisibilityCard({ visibility, siteName, selfUrl }: AIVi
             <span className="text-xl">{pm.emoji}</span>
             <h3 className="text-base font-bold text-slate-800">{visibility.platform}</h3>
           </div>
-          <span
-            className={`px-3 py-1 rounded-full text-[11px] font-bold border ${meta.color}`}
-            aria-label={`노출 가능성 ${meta.label}`}
-          >
-            {meta.emoji} {meta.label}
-          </span>
+          <div className="flex items-center gap-1.5">
+            <span
+              className={`px-3 py-1 rounded-full text-[11px] font-bold border ${meta.color}`}
+              aria-label={`노출 가능성 ${meta.label}`}
+            >
+              {meta.emoji} {meta.label}
+            </span>
+            {/* 실측 배지 — done phase 에서만 표시 */}
+            {state.phase === 'done' && (
+              state.selfIncluded ? (
+                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold border bg-emerald-50 text-emerald-700 border-emerald-200">
+                  ✅ {state.selfRank ? `${state.selfRank}위 노출` : '노출 확인'}
+                </span>
+              ) : (
+                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold border bg-red-50 text-red-600 border-red-200">
+                  ❌ 미노출
+                </span>
+              )
+            )}
+          </div>
         </div>
         <p className="mt-3 text-[13px] text-slate-600 leading-relaxed whitespace-pre-line">
           {visibility.reason}
         </p>
+        {/* 실측 사실 suffix — done 시 reason 아래 한 줄 */}
+        {state.phase === 'done' && (
+          <p className="mt-2 text-[13px] font-medium text-slate-700">
+            📍 실측 결과: {visibility.platform} 답변에서{' '}
+            {state.selfIncluded
+              ? state.selfRank
+                ? `${state.selfRank}위로 포함되었습니다.`
+                : '포함된 것이 확인되었습니다.'
+              : '확인되지 않았습니다. 검색어나 시점에 따라 달라질 수 있습니다.'}
+          </p>
+        )}
       </div>
 
       {/* ── 실측 섹션 — phase 별. done phase 내부에서 mt-auto 가 먹도록 flex col 보장. ── */}

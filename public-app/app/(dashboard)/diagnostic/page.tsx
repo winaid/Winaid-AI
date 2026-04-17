@@ -404,7 +404,7 @@ export default function DiagnosticPage() {
         )}
 
         {/* ── success ── */}
-        {status === 'success' && result && <DiagnosticResult result={result} />}
+        {status === 'success' && result && <DiagnosticResult result={result} onResultUpdate={setResult} />}
       </div>
     </div>
   );
