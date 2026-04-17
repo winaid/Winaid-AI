@@ -147,7 +147,7 @@ function BlogForm() {
   });
   const [isCrawling, setIsCrawling] = useState(false);
   const [crawlProgress, setCrawlProgress] = useState('');
-  const [includeHospitalIntro, setIncludeHospitalIntro] = useState(false);
+  const [includeHospitalIntro] = useState(true); // 항상 ON — UI 토글 제거
 
   // localStorage에서 커스텀 프롬프트 복원 (old 동일)
   useEffect(() => {
@@ -212,7 +212,7 @@ function BlogForm() {
       if (s.medicalLawMode) setMedicalLawMode(s.medicalLawMode);
       if (s.includeFaq !== undefined) setIncludeFaq(s.includeFaq);
       if (s.faqCount) setFaqCount(s.faqCount);
-      if (s.includeHospitalIntro !== undefined) setIncludeHospitalIntro(s.includeHospitalIntro);
+      // includeHospitalIntro 는 항상 true — localStorage 복원 skip
       if (s.customSubheadings) setCustomSubheadings(s.customSubheadings);
       return true;
     } catch { return false; }
@@ -1733,7 +1733,7 @@ Output ONLY the prompt. No explanation.`;
         setShowCustomInput={setShowCustomInput} setCustomPrompt={setCustomPrompt}
         setCustomSubheadings={setCustomSubheadings}
         setLearnedStyleId={setLearnedStyleId} setShowAdvanced={setShowAdvanced}
-        setIncludeHospitalIntro={setIncludeHospitalIntro}
+        /* setIncludeHospitalIntro 제거 — 항상 true */
         setKeywordStats={setKeywordStats} setShowKeywordPanel={setShowKeywordPanel}
         setKeywordSortBy={setKeywordSortBy} setKeywordSearch={setKeywordSearch}
         setKeywordMinVolume={setKeywordMinVolume} setHideRanked={setHideRanked} setTrendingItems={setTrendingItems}

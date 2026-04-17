@@ -92,7 +92,7 @@ function BlogForm() {
   const [clinicContext, setClinicContext] = useState<ClinicContext | null>(null);
   const [isCrawling, setIsCrawling] = useState(false);
   const [crawlProgress, setCrawlProgress] = useState('');
-  const [includeHospitalIntro, setIncludeHospitalIntro] = useState(false);
+  const [includeHospitalIntro] = useState(true); // 항상 ON
 
   // 화이트리스트 참고 자료 debounce 자동 수집
   useEffect(() => {
@@ -181,7 +181,7 @@ function BlogForm() {
       if (s.medicalLawMode) setMedicalLawMode(s.medicalLawMode);
       if (s.includeFaq !== undefined) setIncludeFaq(s.includeFaq);
       if (s.faqCount) setFaqCount(s.faqCount);
-      if (s.includeHospitalIntro !== undefined) setIncludeHospitalIntro(s.includeHospitalIntro);
+      // includeHospitalIntro 항상 true — skip
       return true;
     } catch { return false; }
   }, []);
@@ -1613,7 +1613,7 @@ Output ONLY the prompt. No explanation.`;
         setShowCustomInput={setShowCustomInput} setCustomPrompt={setCustomPrompt}
         setCustomSubheadings={setCustomSubheadings}
         setLearnedStyleId={setLearnedStyleId} setShowAdvanced={setShowAdvanced}
-        setIncludeHospitalIntro={setIncludeHospitalIntro}
+        /* setIncludeHospitalIntro 제거 — 항상 true */
         setKeywordStats={setKeywordStats} setShowKeywordPanel={setShowKeywordPanel}
         setKeywordSortBy={setKeywordSortBy} setKeywordSearch={setKeywordSearch}
         setKeywordMinVolume={setKeywordMinVolume} setHideRanked={setHideRanked} setTrendingItems={setTrendingItems}

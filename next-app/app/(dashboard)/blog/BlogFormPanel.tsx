@@ -100,7 +100,7 @@ export interface BlogFormPanelProps {
   setCustomSubheadings: (v: string) => void;
   setLearnedStyleId: (v: string | undefined) => void;
   setShowAdvanced: (v: boolean) => void;
-  setIncludeHospitalIntro: (v: boolean) => void;
+  // setIncludeHospitalIntro 제거 — 항상 true
   setKeywordStats: (v: KeywordStat[]) => void;
   setShowKeywordPanel: (v: boolean) => void;
   setKeywordSortBy: (v: 'volume' | 'blog' | 'saturation') => void;
@@ -139,7 +139,7 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
     setShowHospitalDropdown, setSelectedManager, setSelectedHospitalAddress,
     setHomepageUrl, setClinicContext, setCrawlProgress,
     setIncludeFaq, setFaqCount, setShowCustomInput, setCustomPrompt, setCustomSubheadings,
-    setLearnedStyleId, setShowAdvanced, setIncludeHospitalIntro,
+    setLearnedStyleId, setShowAdvanced,
     setKeywordStats, setShowKeywordPanel, setKeywordSortBy, setKeywordSearch, setKeywordMinVolume, setHideRanked, setTrendingItems,
     onSubmit: handleSubmit,
     onAnalyzeKeywords: handleAnalyzeKeywords,
@@ -533,12 +533,7 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
                     <p className="text-[10px] text-slate-400">홈페이지 크롤링 후 자동 삽입</p>
                   </div>
                 </div>
-                <button type="button" onClick={() => setIncludeHospitalIntro(!includeHospitalIntro)}
-                  className={`relative rounded-full transition-colors ${includeHospitalIntro ? 'bg-blue-500' : 'bg-slate-300'}`}
-                  style={{ width: 40, height: 22 }}
-                >
-                  <span className={`absolute top-[3px] left-[3px] w-4 h-4 bg-white rounded-full shadow transition-all duration-200 ${includeHospitalIntro ? 'translate-x-[18px]' : 'translate-x-0'}`} />
-                </button>
+                <span className="text-[10px] text-emerald-600 font-semibold">✅ 항상 포함</span>
               </div>
               {/* 소제목 직접 입력 (OLD 기준: 이미지 스타일 위) */}
               <div>
