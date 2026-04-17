@@ -22,6 +22,7 @@ import { predictAIVisibility } from '../../../lib/diagnostic/aiVisibility';
 import { buildActionPlan } from '../../../lib/diagnostic/actionPlan';
 import { enrichDiagnostic } from '../../../lib/diagnostic/enrich';
 import { extractRegion } from '../../../lib/diagnostic/discovery';
+import { logDiagnostic, generateTraceId } from '../../../lib/diagnostic/logger';
 import type { DiagnosticResponse, DiagnosticErrorResponse } from '../../../lib/diagnostic/types';
 
 // 실측(discovery) 은 /api/diagnostic/stream 별도 엔드포인트로 분리 (단계 S-A, 플랫폼별 SSE).
@@ -104,6 +105,8 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
 }
 
 export async function POST(request: NextRequest) {
+  const traceId = generateTraceId();
+  const t0 = Date.now();
   try {
   // 1) rate limit — 진단 전용 (Phase 1.2: 로그인=쿠키해시 분당 5, 게스트=IP+UA해시 분당 3)
   const gate = gateDiagnosticRequest(request);
@@ -125,21 +128,22 @@ export async function POST(request: NextRequest) {
   }
   const customQuery = sanitizeCustomQuery(body.customQuery);
 
-  // 3) 크롤링 — robots.txt / sitemap.xml 은 crawler 가 내부에서 이미 처리해 CrawlResult 에 채움
+  // 3) 크롤링
   let crawl;
+  const tCrawl = Date.now();
   try {
     crawl = await crawlSite(normalizedUrl);
+    logDiagnostic({ traceId, step: 'crawl', duration: Date.now() - tCrawl, url: normalizedUrl });
   } catch (e) {
+    logDiagnostic({ traceId, step: 'crawl_error', duration: Date.now() - tCrawl, url: normalizedUrl, error: (e as Error).message.slice(0, 200) });
     const { code, status, message } = classifyCrawlError(e);
-    if (code === 'UNKNOWN') console.warn(`[diagnostic] crawlSite 실패: ${(e as Error).message}`);
     return err(code, message, status, normalizedUrl);
   }
 
-  // 4) PSI — 선택. 실패 시 null → "측정 불가" (UI 자동 대응).
-  //    psi.ts: 1회당 35s × 1회 재시도 = 최악 70s. 여기 외부 가드도 70s 로 정렬.
-  //    maxDuration 120s 안에서 crawl(~5) + PSI(평균 ~30, 최악 70) + enrich(평균 ~40, 최악 75) = 평균 ~75s.
-  //    실측(discovery) 은 /api/diagnostic/stream 별도 엔드포인트로 분리됨.
+  // 4) PSI
+  const tPsi = Date.now();
   const psi = await withTimeout(fetchPsi(crawl.finalUrl), 70_000, 'psi').catch(() => null);
+  logDiagnostic({ traceId, step: 'psi', duration: Date.now() - tPsi, detail: psi ? `score=${psi.score}` : 'null' });
 
   // 5~7) 채점 + 종합
   const categories = scoreCategories({
@@ -174,14 +178,14 @@ export async function POST(request: NextRequest) {
     },
   };
 
-  // 11) enrich 실행 (discovery 는 /api/diagnostic/stream 으로 분리됨)
+  // 11) enrich
+  const tEnrich = Date.now();
   const enriched = await withTimeout(enrichDiagnostic(base, crawl), 75_000, 'enrich').catch((e) => {
-    console.warn(`[diagnostic] enrichDiagnostic rejected: ${(e as Error)?.message?.slice(0, 200)}`);
+    logDiagnostic({ traceId, step: 'enrich_error', duration: Date.now() - tEnrich, error: (e as Error)?.message?.slice(0, 200) });
     return base;
   });
+  logDiagnostic({ traceId, step: 'enrich', duration: Date.now() - tEnrich });
 
-  // 12) detectedRegion / detectedCategory — 예전엔 discovery 가 채웠는데 이제 여기서 직접.
-  //     UI 가 "지역·업종 자동 추출" 표시에 사용. customQuery 가 있으면 지역 표시 생략 (사용자 지정).
   const detectedRegion = customQuery ? undefined : (extractRegion(crawl) ?? undefined);
 
   const final: DiagnosticResponse = {
@@ -189,6 +193,7 @@ export async function POST(request: NextRequest) {
     detectedCategory: '치과',
     ...(detectedRegion ? { detectedRegion } : {}),
   };
+  logDiagnostic({ traceId, step: 'done', duration: Date.now() - t0, url: normalizedUrl, detail: `score=${final.overallScore}` });
 
   return NextResponse.json(final);
   } catch (e) {

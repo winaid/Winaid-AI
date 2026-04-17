@@ -32,6 +32,7 @@ import {
   extractUrlsFromText,
   type StreamMeta,
 } from '../../../../lib/diagnostic/discovery';
+import { logDiagnostic, generateTraceId } from '../../../../lib/diagnostic/logger';
 import type { AIPlatform } from '../../../../lib/diagnostic/types';
 
 export const maxDuration = 600; // 10분 — 실측은 긴 스트림 허용
@@ -159,6 +160,8 @@ export async function POST(request: NextRequest) {
     return jsonError(400, "platform 은 'ChatGPT' 또는 'Gemini' 여야 합니다.");
   }
   const platform = body.platform;
+  const traceId = generateTraceId();
+  const tStream = Date.now();
   const customQuery = sanitizeCustomQuery(body.customQuery);
 
   // 3) crawl — 지역 추출 + selfHost 계산용. 실패 시 SSE 진입 전에 JSON 에러.
@@ -188,8 +191,10 @@ export async function POST(request: NextRequest) {
         .gt('created_at', cutoff)
         .maybeSingle();
       if (cached) {
+        logDiagnostic({ traceId, step: 'cache_hit', platform, cacheHit: true, duration: Date.now() - tStream });
         return buildCachedStream(cached as CachedRow, platform, query, selfHost);
       }
+      logDiagnostic({ traceId, step: 'cache_miss', platform, cacheHit: false });
     } catch (e) {
       console.warn(`[diagnostic/stream] 캐시 조회 실패 (skip): ${(e as Error).message.slice(0, 100)}`);
     }
@@ -271,9 +276,10 @@ export async function POST(request: NextRequest) {
           sources: meta.sources,
           timestamp: new Date().toISOString(),
         });
+        logDiagnostic({ traceId, step: 'stream_done', platform, duration: Date.now() - tStream });
       } catch (e) {
         const msg = (e as Error)?.message?.slice(0, 200) || 'unknown';
-        console.warn(`[diagnostic/stream/${platform}] ${msg}`);
+        logDiagnostic({ traceId, step: 'stream_error', platform, duration: Date.now() - tStream, error: msg });
         send({
           type: 'error',
           message: msg,

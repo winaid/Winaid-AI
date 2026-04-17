@@ -11,6 +11,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { gateDiagnosticRequest } from '../../../../lib/guestRateLimit';
 import { generateNarratives } from '../../../../lib/diagnostic/enrich';
+import { logDiagnostic, generateTraceId } from '../../../../lib/diagnostic/logger';
 import type {
   DiagnosticResponse,
   AIPlatform,
@@ -48,6 +49,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'at least one platform measurement required' }, { status: 400 });
   }
 
+  const traceId = generateTraceId();
+  const t0 = Date.now();
+  logDiagnostic({ traceId, step: 'refresh_start' });
+
   try {
     const narr = await generateNarratives({
       meta: diag.siteSummary
@@ -76,9 +81,10 @@ export async function POST(request: NextRequest) {
       aiVisibility: updatedVisibility,
     };
 
+    logDiagnostic({ traceId, step: 'refresh_done', duration: Date.now() - t0 });
     return NextResponse.json(response);
   } catch (e) {
-    console.warn(`[refresh-narrative] ${(e as Error).message.slice(0, 200)}`);
+    logDiagnostic({ traceId, step: 'refresh_error', duration: Date.now() - t0, error: (e as Error).message.slice(0, 200) });
     return NextResponse.json({ error: 'internal error' }, { status: 500 });
   }
 }
