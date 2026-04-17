@@ -657,6 +657,116 @@ FAQ 섹션을 본문(화면에 보이는 글) 에 만드는 것입니다. faq_sc
 - 글 단위로도 공개/비공개 설정이 따로 있습니다. 핵심 글은 모두 공개로.
 - 네이버 서치어드바이저(searchadvisor.naver.com) 에 블로그도 등록해두면 더 좋습니다.`,
   },
+
+  // ── Tier 3-A 확장 7항목 ────────────────────────────────
+  [LABELS.content_freshness]: {
+    impact: 'medium', difficulty: 'easy', timeframe: '즉시',
+    actionText: '콘텐츠에 최근 수정 날짜를 표시하고 정기적으로 갱신하세요',
+    detailedGuide: `이게 뭐예요?
+홈페이지 글에 "마지막 수정: 2026-04-15" 같은 날짜가 표시되는 것입니다. AI 는 최근에 업데이트된 페이지를 더 신뢰합니다.
+
+어떻게 하나요?
+1. 관리자 모드에서 주요 페이지(진료 안내·의료진 소개) 의 수정일을 갱신하세요.
+2. 제작사에 다음 문구를 보내세요:
+   "각 페이지에 article:modified_time 메타 태그를 추가해주세요. 수정할 때마다 자동 갱신되게요."
+3. 3개월에 한 번 이상 주요 페이지 내용을 점검·수정하세요.
+
+팁
+- 내용을 바꾸지 않아도 날짜만 바꾸는 건 검색엔진이 감지합니다. 실제로 문구를 보강하세요.`,
+  },
+  [LABELS.author_info]: {
+    impact: 'medium', difficulty: 'easy', timeframe: '즉시',
+    actionText: '글 작성자(의료진) 이름과 약력을 메타 태그로 표시하세요',
+    detailedGuide: `이게 뭐예요?
+글을 누가 썼는지(저자 정보) AI 에게 알려주는 것입니다. 의료 분야에서 전문의가 쓴 글은 AI 신뢰도가 높아집니다.
+
+어떻게 하나요?
+1. 제작사에 다음 문구를 보내세요:
+   "각 페이지에 meta name='author' content='원장님 이름' 태그를 추가해주세요."
+2. JSON-LD 에 author 항목도 같이 넣으면 더 좋습니다:
+   "author": { "@type": "Person", "name": "홍길동", "jobTitle": "구강외과 전문의" }
+
+팁
+- 의료진 여러 분이면 대표 저자 한 명만 넣어도 됩니다.
+- author 정보는 Google 의 E-E-A-T (전문성·경험·권위·신뢰) 평가에 직접 반영됩니다.`,
+  },
+  [LABELS.image_optimization]: {
+    impact: 'medium', difficulty: 'medium', timeframe: '1주',
+    actionText: '이미지를 WebP 포맷으로 변환하고 lazy loading 을 적용하세요',
+    detailedGuide: `이게 뭐예요?
+사진 파일을 더 작고 빠른 형식(WebP)으로 바꾸고, 스크롤해야 보이는 사진은 나중에 불러오는(Lazy Load) 설정입니다.
+
+어떻게 하나요?
+1. squoosh.app 또는 tinypng.com 에서 사진을 WebP 로 변환하세요.
+2. 제작사에 다음 문구를 보내세요:
+   "모든 img 태그에 loading='lazy' 속성을 추가하고, 가능하면 srcset 으로 반응형 이미지를 제공해주세요."
+3. 변환한 WebP 파일을 제작사에 전달하거나 관리자 모드에서 교체하세요.
+
+팁
+- 첫 화면에 바로 보이는 이미지(히어로 배너 등)는 lazy 를 빼세요 (바로 보여야 하므로).
+- WebP 변환만으로 용량이 평균 50% 줄어들어 페이지 속도가 체감됩니다.`,
+  },
+  [LABELS.ai_crawler_access]: {
+    impact: 'high', difficulty: 'easy', timeframe: '즉시',
+    actionText: 'robots.txt 에 GPTBot, ClaudeBot 등 AI 크롤러 접근을 허용하세요',
+    detailedGuide: `이게 뭐예요?
+robots.txt 파일에서 ChatGPT(GPTBot)·Claude(ClaudeBot) 등 AI 크롤러의 접근을 허용·차단하는 설정입니다. 차단하면 AI 가 홈페이지 내용을 못 읽어 추천에서 빠집니다.
+
+어떻게 하나요?
+1. 제작사에 다음 문구를 보내세요:
+   "robots.txt 에 GPTBot, ClaudeBot, Google-Extended, PerplexityBot 에 대해 Disallow: / 가 있으면 제거해주세요. 또는 Allow: / 로 바꿔주세요."
+2. 5분이면 끝납니다. 무료입니다.
+
+팁
+- AI 크롤러를 차단하면 ChatGPT·Gemini 검색에서 우리 병원이 아예 안 나옵니다.
+- 개인정보 페이지만 차단하고 나머지는 열어두는 게 최선입니다.`,
+  },
+  [LABELS.llms_txt]: {
+    impact: 'high', difficulty: 'easy', timeframe: '즉시',
+    actionText: '/llms.txt 파일을 만들어 AI 가 사이트 정보를 올바르게 파악하게 하세요',
+    detailedGuide: `이게 뭐예요?
+AI 에게 "이 사이트는 이런 곳입니다" 라고 알려주는 텍스트 파일입니다. robots.txt 의 AI 버전이라고 생각하시면 됩니다.
+
+어떻게 하나요?
+1. 제작사에 다음 문구를 보내세요:
+   "사이트 루트에 /llms.txt 파일을 만들어주세요. 내용은 병원명, 주소, 진료과목, 대표 시술, 의료진 이름·전공을 plain text 로 적어주세요."
+2. 10~15분이면 끝납니다. 무료입니다.
+
+팁
+- 형식은 자유입니다. AI 가 읽기 쉽게 간결한 텍스트로 적으세요.
+- 참고: llmstxt.org 에서 형식 가이드를 확인할 수 있습니다.`,
+  },
+  [LABELS.review_schema]: {
+    impact: 'medium', difficulty: 'medium', timeframe: '1주',
+    actionText: '환자 리뷰를 Review/AggregateRating 구조화 데이터로 마크업하세요',
+    detailedGuide: `이게 뭐예요?
+환자 리뷰·평점을 AI 가 "이 병원은 평점 4.5, 리뷰 120건" 처럼 인식하게 만드는 코드 표식입니다.
+
+어떻게 하나요?
+1. 제작사에 다음 문구를 보내세요:
+   "홈페이지의 후기/리뷰 섹션에 schema.org 의 Review 또는 AggregateRating JSON-LD 를 적용해주세요. ratingValue, reviewCount, bestRating 항목 포함이요."
+2. 보통 1주일 정도 걸립니다.
+
+팁
+- 가짜 리뷰를 마크업하면 구글 페널티 대상입니다. 실제 환자 리뷰만 사용하세요.
+- search.google.com/test/rich-results 에서 마크업이 인식되는지 확인하세요.`,
+  },
+  [LABELS.howto_schema]: {
+    impact: 'medium', difficulty: 'medium', timeframe: '1주',
+    actionText: '시술 과정 설명을 HowTo 구조화 데이터로 마크업하세요',
+    detailedGuide: `이게 뭐예요?
+"임플란트는 어떤 과정으로 진행되나요?" 같은 질문에 AI 가 단계별로 인용할 수 있게 만드는 코드 표식입니다.
+
+어떻게 하나요?
+1. 시술 설명 페이지에 단계별 과정이 이미 텍스트로 있어야 합니다. (없으면 WINAID 블로그 생성으로 초안 작성)
+2. 제작사에 다음 문구를 보내세요:
+   "시술 과정 페이지에 schema.org 의 HowTo JSON-LD 를 적용해주세요. step 배열에 각 단계(name, text) 를 포함이요."
+3. 보통 1주일 정도 걸립니다.
+
+팁
+- 임플란트·교정·미백 같은 주요 시술만 3~5개 적용해도 효과 큽니다.
+- search.google.com/test/rich-results 에서 확인하세요.`,
+  },
 };
 
 // "오늘부터 차근차근" 사용자 관점 정렬 — 난이도 → 영향도 → 기간 순.

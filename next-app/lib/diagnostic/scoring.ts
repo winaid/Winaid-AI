@@ -56,6 +56,14 @@ export const LABELS = {
   address_text: '주소 노출',
   hours_text: '영업시간 노출',
   blog_searchable: '블로그 외부 검색 허용',
+  // Tier 3-A 확장
+  content_freshness: '콘텐츠 신선도',
+  author_info: '저자(Author) 정보',
+  image_optimization: '이미지 최적화 (WebP · Lazy)',
+  ai_crawler_access: 'AI 크롤러 접근 허용',
+  llms_txt: 'llms.txt 파일',
+  review_schema: 'Review/평점 스키마',
+  howto_schema: 'HowTo 스키마',
 } as const;
 
 export type LabelKey = keyof typeof LABELS;
@@ -330,6 +338,15 @@ function scoreStructuredData(crawl: CrawlResult): CategoryScore {
     ? makeItem(LABELS.profile_schema, 15, 15, 'pass', 'Profile/Physician 스키마 감지됨.')
     : makeItem(LABELS.profile_schema, 15, 0, 'fail', 'ProfilePage/Physician 스키마 없음.'));
 
+  // Tier 3-A #11: Review/AggregateRating + HowTo 스키마
+  items.push(crawl.schemaTypes.some((t) => /review|aggregaterating/i.test(t))
+    ? makeItem(LABELS.review_schema, 10, 10, 'pass', 'Review/AggregateRating 스키마 발견.')
+    : makeItem(LABELS.review_schema, 10, 0, 'fail', 'Review/AggregateRating 스키마 없음 — 환자 리뷰를 구조화 데이터로 마크업하면 AI 답변에 인용됩니다.'));
+
+  items.push(crawl.schemaTypes.some((t) => /howto/i.test(t))
+    ? makeItem(LABELS.howto_schema, 10, 10, 'pass', 'HowTo 스키마 발견.')
+    : makeItem(LABELS.howto_schema, 10, 0, 'fail', 'HowTo 스키마 없음 — 시술 과정을 HowTo 로 마크업하면 "임플란트 과정" 같은 질문에 AI 가 인용합니다.'));
+
   return toCategoryScore('structured_data', '구조화 데이터', items);
 }
 
@@ -396,6 +413,38 @@ function scoreContentQuality(crawl: CrawlResult): CategoryScore {
   items.push(crawl.wordCount >= 500
     ? makeItem(LABELS.word_count, 10, 10, 'pass', `본문 ${crawl.wordCount}자.`, String(crawl.wordCount))
     : makeItem(LABELS.word_count, 10, 0, 'fail', `본문 ${crawl.wordCount}자 — 500자 이상 권장.`, String(crawl.wordCount)));
+
+  // Tier 3-A #8: 콘텐츠 신선도
+  const freshDate = crawl.dateModified || crawl.datePublished;
+  if (freshDate) {
+    const age = Date.now() - new Date(freshDate).getTime();
+    items.push(age < 90 * 86_400_000
+      ? makeItem(LABELS.content_freshness, 10, 10, 'pass', `최근 수정: ${freshDate.slice(0, 10)}.`)
+      : age < 365 * 86_400_000
+        ? makeItem(LABELS.content_freshness, 10, 5, 'warning', `마지막 수정: ${freshDate.slice(0, 10)} (3개월 이상 경과).`)
+        : makeItem(LABELS.content_freshness, 10, 0, 'fail', `마지막 수정: ${freshDate.slice(0, 10)} (1년 이상 경과).`));
+  } else {
+    items.push(makeItem(LABELS.content_freshness, 10, 0, 'unknown', '수정 날짜 정보 없음.'));
+  }
+
+  // Tier 3-A #12: Author
+  items.push(crawl.author
+    ? makeItem(LABELS.author_info, 10, 10, 'pass', `저자: ${crawl.author}`)
+    : makeItem(LABELS.author_info, 10, 0, 'warning', '저자(Author) 정보가 표시되지 않았습니다.'));
+
+  // Tier 3-A #13: 이미지 최적화
+  const opt = crawl.imageOptimization;
+  if (opt && opt.totalImages > 0) {
+    const webpR = opt.webpCount / opt.totalImages;
+    const lazyR = opt.lazyCount / opt.totalImages;
+    items.push(webpR >= 0.5 && lazyR >= 0.5
+      ? makeItem(LABELS.image_optimization, 10, 10, 'pass', `WebP ${Math.round(webpR * 100)}% · Lazy ${Math.round(lazyR * 100)}%.`)
+      : webpR >= 0.3 || lazyR >= 0.3
+        ? makeItem(LABELS.image_optimization, 10, 5, 'warning', `WebP ${Math.round(webpR * 100)}% · Lazy ${Math.round(lazyR * 100)}% — 50% 이상 권장.`)
+        : makeItem(LABELS.image_optimization, 10, 0, 'fail', `WebP ${Math.round(webpR * 100)}% · Lazy ${Math.round(lazyR * 100)}% — 이미지 최적화 필요.`));
+  } else {
+    items.push(makeItem(LABELS.image_optimization, 10, 0, 'unknown', '이미지가 없거나 분석할 수 없습니다.'));
+  }
 
   return toCategoryScore('content_quality', '콘텐츠 품질', items);
 }
@@ -485,6 +534,24 @@ function scoreAeoGeo(crawl: CrawlResult): CategoryScore {
       : '네이버 블로그 링크가 없어 외부 검색 허용 설정을 점검할 수 없습니다.',
     hasNaverBlog ? '수동 확인 필요' : '대상 없음',
   ));
+
+  // Tier 3-A #9: AI 크롤러 허용
+  const aip = crawl.aiCrawlerPolicy;
+  if (aip) {
+    const allowed = Object.values(aip).filter((v) => v === 'allowed').length;
+    items.push(allowed >= 3
+      ? makeItem(LABELS.ai_crawler_access, 12, 12, 'pass', `AI 크롤러 ${allowed}/5 허용.`)
+      : allowed >= 1
+        ? makeItem(LABELS.ai_crawler_access, 12, 6, 'warning', `AI 크롤러 ${allowed}/5 만 허용 — 나머지 차단됨.`)
+        : makeItem(LABELS.ai_crawler_access, 12, 0, 'fail', 'robots.txt 에서 주요 AI 크롤러가 모두 차단됨.'));
+  } else {
+    items.push(makeItem(LABELS.ai_crawler_access, 12, 6, 'unknown', 'robots.txt 에 AI 크롤러 관련 설정 없음 (기본 허용 추정).'));
+  }
+
+  // Tier 3-A #10: llms.txt
+  items.push(crawl.hasLlmsTxt
+    ? makeItem(LABELS.llms_txt, 8, 8, 'pass', '/llms.txt 발견 — AI 가 사이트 정보를 올바르게 파악 가능.')
+    : makeItem(LABELS.llms_txt, 8, 0, 'fail', '/llms.txt 없음 — AI 가 사이트 구조를 별도로 학습해야 합니다.'));
 
   return toCategoryScore('aeo_geo', 'AEO/GEO 특화', items);
 }
