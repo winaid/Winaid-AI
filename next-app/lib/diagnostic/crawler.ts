@@ -7,7 +7,7 @@
 
 import * as cheerio from 'cheerio';
 import type { CrawlResult, CrawlImage, CrawlLink, CrawlHeading } from './types';
-import { checkRobotsTxt, checkSitemap } from './robotsSitemap';
+import { checkRobotsTxt, checkSitemap, parseAiCrawlerPolicy, checkLlmsTxt } from './robotsSitemap';
 
 // 실제 Chrome UA. 식별자 "AEOBot/1.0" 은 프롬프트 의도를 주석으로만 남김 (Cloudflare WAF 회피 목적).
 const USER_AGENT =
@@ -93,6 +93,14 @@ export async function crawlSite(targetUrl: string, options: CrawlOptions = {}): 
   result.robotsTxtContent = robots.content;
   result.hasSitemap = await checkSitemap(origin, timeoutMs, robots.sitemapUrls);
 
+  // Tier 3-A: AI 크롤러 정책 + llms.txt (병렬)
+  const [aiCrawlerPolicy, hasLlmsTxt] = await Promise.all([
+    Promise.resolve(robots.content ? parseAiCrawlerPolicy(robots.content) : undefined),
+    checkLlmsTxt(origin).catch(() => false),
+  ]);
+  result.aiCrawlerPolicy = aiCrawlerPolicy;
+  result.hasLlmsTxt = hasLlmsTxt;
+
   // 3) 서브페이지 최대 subpageLimit 개 탐색 (의료진/진료안내/FAQ 등 우선)
   result.subpagesReached = await tryCrawlSubpages(result.internalLinks, origin, subpageLimit, timeoutMs);
 
@@ -111,6 +119,20 @@ function parseHtml(html: string, origin: string, finalUrl: string): CrawlResult 
   const lang = $('html').attr('lang')?.trim() ?? '';
   const viewport = $('meta[name="viewport"]').attr('content')?.trim() ?? '';
   const charset = $('meta[charset]').attr('charset')?.trim() ?? $('meta[http-equiv="Content-Type"]').attr('content') ?? '';
+
+  // Tier 3-A: 콘텐츠 신선도 (#8) + 저자 (#12)
+  const datePublished =
+    $('meta[property="article:published_time"]').attr('content')?.trim()
+    || $('meta[name="date"]').attr('content')?.trim()
+    || undefined;
+  const dateModified =
+    $('meta[property="article:modified_time"]').attr('content')?.trim()
+    || $('meta[name="last-modified"]').attr('content')?.trim()
+    || undefined;
+  const author =
+    $('meta[name="author"]').attr('content')?.trim()
+    || $('meta[property="article:author"]').attr('content')?.trim()
+    || undefined;
 
   // OG 태그
   const ogTags: Record<string, string> = {};
@@ -154,6 +176,23 @@ function parseHtml(html: string, origin: string, finalUrl: string): CrawlResult 
     }
   });
 
+  // Tier 3-A: JSON-LD fallback for datePublished/Modified/author (#8 #12)
+  // HTML meta 가 없을 때만 JSON-LD 에서 추출 (우선순위: HTML meta > JSON-LD).
+  // 위 변수 datePublished/dateModified/author 는 const → let 필요. parse 함수 내부에서
+  // 이미 const 선언했으므로 여기선 별도 변수 + 아래 반환 객체에서 override.
+  let schemaDatePub: string | undefined;
+  let schemaDateMod: string | undefined;
+  let schemaAuthor: string | undefined;
+  for (const s of schemaMarkup) {
+    if (!schemaDatePub && typeof s.datePublished === 'string') schemaDatePub = s.datePublished;
+    if (!schemaDateMod && typeof s.dateModified === 'string') schemaDateMod = s.dateModified;
+    if (!schemaAuthor) {
+      const a = s.author as { name?: string } | string | undefined;
+      if (typeof a === 'string' && a.trim()) schemaAuthor = a.trim();
+      else if (a && typeof a === 'object' && typeof a.name === 'string') schemaAuthor = a.name.trim();
+    }
+  }
+
   // 링크
   const internalLinks: CrawlLink[] = [];
   const externalLinks: CrawlLink[] = [];
@@ -192,6 +231,17 @@ function parseHtml(html: string, origin: string, finalUrl: string): CrawlResult 
   });
   const totalImages = images.length;
   const imagesWithoutAlt = images.filter(i => !i.hasAlt).length;
+
+  // Tier 3-A: 이미지 최적화 통계 (#13)
+  let webpCount = 0;
+  let lazyCount = 0;
+  let srcsetCount = 0;
+  $('img').each((_, el) => {
+    const src = $(el).attr('src') || '';
+    if (/\.webp(\?|$)/i.test(src)) webpCount++;
+    if ($(el).attr('loading') === 'lazy') lazyCount++;
+    if ($(el).attr('srcset')) srcsetCount++;
+  });
 
   // 본문 텍스트
   $('script, style, noscript').remove();
@@ -257,6 +307,12 @@ function parseHtml(html: string, origin: string, finalUrl: string): CrawlResult 
     hasMap,
     detectedServices,
     subpagesReached: [],
+
+    // Tier 3-A 확장 필드 (HTML meta 우선, JSON-LD fallback)
+    datePublished: datePublished || schemaDatePub,
+    dateModified: dateModified || schemaDateMod,
+    author: author || schemaAuthor,
+    imageOptimization: { webpCount, lazyCount, srcsetCount, totalImages },
   };
 }
 

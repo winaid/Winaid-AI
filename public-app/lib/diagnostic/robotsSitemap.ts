@@ -126,3 +126,52 @@ async function probeUrl(url: string, timeoutMs: number): Promise<boolean> {
     return false;
   }
 }
+
+// ── Tier 3-A: AI 크롤러 정책 + llms.txt ────────────────────
+
+const AI_BOTS = ['GPTBot', 'ClaudeBot', 'Google-Extended', 'PerplexityBot', 'Bingbot'] as const;
+
+function extractUserAgentSection(txt: string, agent: string): string | null {
+  const re = new RegExp(`User-agent:\\s*${agent}\\b[\\s\\S]*?(?=User-agent:|$)`, 'i');
+  const m = txt.match(re);
+  return m ? m[0] : null;
+}
+
+/**
+ * robots.txt 원문에서 주요 AI 크롤러별 허용/차단 정책 파싱.
+ * User-agent 섹션에 "Disallow: /" 가 있으면 blocked, 아니면 allowed.
+ * 섹션 자체가 없으면 unknown (일반 "*" 정책 따름).
+ */
+export function parseAiCrawlerPolicy(
+  robotsTxt: string,
+): Record<string, 'allowed' | 'blocked' | 'unknown'> {
+  const result: Record<string, 'allowed' | 'blocked' | 'unknown'> = {};
+  for (const bot of AI_BOTS) {
+    const section = extractUserAgentSection(robotsTxt, bot);
+    if (!section) {
+      result[bot] = 'unknown';
+      continue;
+    }
+    result[bot] = /Disallow:\s*\/\s*$/m.test(section) ? 'blocked' : 'allowed';
+  }
+  return result;
+}
+
+/**
+ * /llms.txt 또는 /.well-known/llms.txt 존재 여부.
+ * LLM 이 사이트 정보를 올바르게 파악하도록 도와주는 표준 제안 파일.
+ */
+export async function checkLlmsTxt(baseUrl: string): Promise<boolean> {
+  for (const path of ['/llms.txt', '/.well-known/llms.txt']) {
+    try {
+      const res = await fetch(new URL(path, baseUrl).href, {
+        signal: AbortSignal.timeout(5_000),
+        headers: { 'User-Agent': 'WinaidBot/1.0' },
+      });
+      if (res.ok) return true;
+    } catch {
+      /* skip */
+    }
+  }
+  return false;
+}

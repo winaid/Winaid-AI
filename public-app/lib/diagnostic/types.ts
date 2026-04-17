@@ -75,6 +75,24 @@ export interface CrawlResult {
 
   // 서브페이지 감지 결과 (내부 링크에서 실제 fetch 성공한 path 목록)
   subpagesReached: string[];
+
+  // ── Tier 3-A 확장 필드 ────────────────────────────────────
+  /** #8 콘텐츠 신선도 — meta 또는 JSON-LD datePublished/dateModified */
+  datePublished?: string;
+  dateModified?: string;
+  /** #9 AI 크롤러 허용 — robots.txt User-agent 별 정책 */
+  aiCrawlerPolicy?: Record<string, 'allowed' | 'blocked' | 'unknown'>;
+  /** #10 llms.txt 존재 여부 */
+  hasLlmsTxt?: boolean;
+  /** #12 Author 정보 — meta name="author" 또는 JSON-LD author.name */
+  author?: string;
+  /** #13 이미지 최적화 통계 */
+  imageOptimization?: {
+    webpCount: number;
+    lazyCount: number;
+    srcsetCount: number;
+    totalImages: number;
+  };
 }
 
 // ── PSI 결과 ────────────────────────────────────────────────
