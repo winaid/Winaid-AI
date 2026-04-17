@@ -38,6 +38,9 @@ function BlogForm() {
   const youtubeTranscriptParam = searchParams.get('youtubeTranscript');
   const clinicalContextParam = searchParams.get('clinicalContext');
   const [topic, setTopic] = useState(topicParam || '');
+  // 화이트리스트 참고 자료
+  const [referenceResult, setReferenceResult] = useState<{ facts: string; sources: string[] } | null>(null);
+  const [isLoadingReference, setIsLoadingReference] = useState(false);
   const [blogTitle, setBlogTitle] = useState(titleParam || '');
   const [youtubeTranscript] = useState(youtubeTranscriptParam ? decodeURIComponent(youtubeTranscriptParam) : '');
   const [clinicalContext] = useState(clinicalContextParam ? decodeURIComponent(clinicalContextParam) : '');
@@ -57,6 +60,27 @@ function BlogForm() {
   const [textLength, setTextLength] = useState(2500);
   const [hospitalName, setHospitalName] = useState('');
   const [hospitalNameFromProfile, setHospitalNameFromProfile] = useState('');
+
+  // 화이트리스트 참고 자료 debounce 자동 수집
+  useEffect(() => {
+    if (!topic.trim() || topic.trim().length < 2) {
+      setReferenceResult(null);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setIsLoadingReference(true);
+      try {
+        const res = await fetch('/api/reference', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ topic: topic.trim() }),
+        });
+        if (res.ok) setReferenceResult(await res.json());
+      } catch { /* 실패 무시 — 참고 자료 없이도 생성 가능 */ }
+      finally { setIsLoadingReference(false); }
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [topic]);
 
   // 프로필에서 병원명 + 홈페이지 URL 자동 로드
   useEffect(() => {
@@ -829,6 +853,8 @@ JSON 형식으로 응답해주세요.`;
         specialties: clinicContext.specialties,
         locationSignals: [],  // 지역 정보는 글에 삽입하지 않음
       } : undefined,
+      referenceFacts: referenceResult?.facts || undefined,
+      referenceSources: referenceResult?.sources || undefined,
     };
 
     setIsGenerating(true);
@@ -1665,6 +1691,8 @@ Output ONLY the prompt. No explanation.`,
         seoTitles={seoTitles} trendingItems={trendingItems}
         isLoadingTitles={isLoadingTitles} isLoadingTrends={isLoadingTrends}
         isGenerating={isGenerating}
+        isLoadingReference={isLoadingReference}
+        referenceResult={referenceResult}
         setTopic={setTopic} setBlogTitle={setBlogTitle} setKeywords={setKeywords} setKeywordDensity={setKeywordDensity} setDisease={setDisease}
         setCategory={setCategory} setPersona={setPersona} setTone={setTone}
         setAudienceMode={setAudienceMode} setImageStyle={setImageStyle}

@@ -5,6 +5,7 @@
  * 출력: HTML (<h3> 소제목 + <p> 문단 + [IMG_N] 마커)
  */
 import type { GenerationRequest } from './types';
+import { sanitizePromptInput, sanitizeSourceContent } from './promptSanitize';
 
 const AUDIENCE_GUIDES: Record<string, string> = {
   '환자용(친절/공감)': '환자가 치료를 두려워하지 않도록 따뜻하고 공감하는 어조로 작성하세요. 전문 용어는 쉬운 말로 바꿔 설명합니다.',
@@ -32,7 +33,8 @@ const STYLE_GUIDES: Record<string, string> = {
 };
 
 function getImageStyleGuide(req: GenerationRequest): string {
-  const custom = req.customImagePrompt?.trim();
+  // customImagePrompt 는 사용자 입력 → 그대로 Gemini 프롬프트에 흐르므로 sanitize.
+  const custom = sanitizePromptInput(req.customImagePrompt, 300);
   if (custom) return `커스텀 스타일: ${custom}`;
   switch (req.imageStyle) {
     case 'illustration':
@@ -287,6 +289,21 @@ export function buildBlogPrompt(req: GenerationRequest): {
   systemInstruction: string;
   prompt: string;
 } {
+  // 프롬프트 인젝션 방어 — 사용자 입력은 전부 sanitize 한 지역 변수로 사용.
+  // 단문(키워드·제목·병원명)은 sanitizePromptInput, 장문(임상 컨텍스트·YouTube
+  // 스크립트·병원 강점 서술)은 sanitizeSourceContent 로 대괄호·단락 보존.
+  const safeTopic = sanitizePromptInput(req.topic, 500);
+  const safeBlogTitle = sanitizePromptInput(req.blogTitle, 200);
+  const safeKeywords = sanitizePromptInput(req.keywords, 300);
+  const safeDisease = sanitizePromptInput(req.disease, 100);
+  const safeHospitalName = sanitizePromptInput(req.hospitalName, 100);
+  const safePatientPersona = sanitizePromptInput(req.patientPersona, 200);
+  const safeCustomImagePrompt = sanitizePromptInput(req.customImagePrompt, 300);
+  const safeCustomSubheadings = sanitizeSourceContent(req.customSubheadings, 2000);
+  const safeHospitalStrengths = sanitizeSourceContent(req.hospitalStrengths, 3000);
+  const safeClinicalContext = sanitizeSourceContent(req.clinicalContext, 5000);
+  const safeYoutubeTranscript = sanitizeSourceContent(req.youtubeTranscript, 8000);
+
   const audienceGuide = AUDIENCE_GUIDES[req.audienceMode] || AUDIENCE_GUIDES['환자용(친절/공감)'];
   const personaGuide = PERSONA_GUIDES[req.persona] || PERSONA_GUIDES.hospital_info;
   const toneGuide = TONE_GUIDES[req.tone] || TONE_GUIDES.warm;
@@ -417,6 +434,8 @@ ${range.max}자 초과 시 → 가장 약한 문단을 삭제 후 출력. 패딩
     '- ✅ "임플란트 5년 생존율은 90% 이상으로 보고되고 있습니다" (검증 가능한 범위 수치)',
     '',
     ...(CATEGORY_DEPTH_GUIDES[req.category] ? [CATEGORY_DEPTH_GUIDES[req.category]] : []),
+    // isProstheticTopic / classifyTopicType 은 raw topic/disease 로 판정 — sanitize 후에는
+    // 분류 키워드가 사라질 수 있음. 분기 로직은 raw, 프롬프트 삽입은 safe 버전 사용.
     ...(req.category === '치과' && isProstheticTopic(req.topic, req.disease) ? [DENTAL_PROSTHETIC_GUIDE] : []),
     '',
     getTrustedSourcesPromptBlock(req.category),
@@ -455,56 +474,73 @@ ${range.max}자 초과 시 → 가장 약한 문단을 삭제 후 출력. 패딩
     '',
     '[작성 요청]',
     `- 진료과: ${req.category}`,
-    `- 주제(글의 방향): ${req.topic}`,
-    ...(req.blogTitle && req.blogTitle !== req.topic ? [`- 블로그 제목: ${req.blogTitle}`] : []),
-    `- SEO 키워드: ${req.keywords || '없음'}`,
+    `- 주제(글의 방향): ${safeTopic}`,
+    ...(safeBlogTitle && safeBlogTitle !== safeTopic ? [`- 블로그 제목: ${safeBlogTitle}`] : []),
+    `- SEO 키워드: ${safeKeywords || '없음'}`,
   );
 
-  if (req.disease) {
-    promptParts.push(`- 질환(글의 핵심 주제): ${req.disease}`);
+  if (safeDisease) {
+    promptParts.push(`- 질환(글의 핵심 주제): ${safeDisease}`);
   }
-  if (req.hospitalName) {
+  if (safeHospitalName) {
     if (req.includeHospitalIntro) {
-      promptParts.push(`- 병원명: ${req.hospitalName} (병원 소개 섹션에서만 사용)`);
+      promptParts.push(`- 병원명: ${safeHospitalName} (병원 소개 섹션에서만 사용)`);
     } else {
-      promptParts.push(`- 병원명: ${req.hospitalName}`);
-      promptParts.push(`⚠️ 병원 소개 섹션이 비활성화되어 있으므로, 본문에 "${req.hospitalName}" 병원명을 직접 언급하지 마세요. 병원명 없이 일반적인 정보 글로 작성하세요.`);
+      promptParts.push(`- 병원명: ${safeHospitalName}`);
+      promptParts.push(`⚠️ 병원 소개 섹션이 비활성화되어 있으므로, 본문에 "${safeHospitalName}" 병원명을 직접 언급하지 마세요. 병원명 없이 일반적인 정보 글로 작성하세요.`);
     }
   }
 
   // ── 환자 페르소나 타겟팅 ──
-  if (req.patientPersona?.trim()) {
+  if (safePatientPersona) {
     promptParts.push(
       '',
       '[타겟 환자 페르소나]',
-      `이 글의 주요 독자: ${req.patientPersona.trim()}`,
+      `이 글의 주요 독자: ${safePatientPersona}`,
       '→ 이 독자가 가장 궁금해할 정보를 우선 배치하세요.',
       '→ 이 독자의 언어 수준과 관심사에 맞춰 설명 깊이를 조절하세요.',
       '→ 이 독자가 공감할 수 있는 상황/사례를 도입부나 본문에 반영하세요.',
     );
   }
 
+  // ── 화이트리스트 참고 의학 자료 (referenceFetcher 수집) ──
+  if (req.referenceFacts) {
+    promptParts.push(
+      '',
+      '[참고 의학 자료 — 아래 사실을 근거로 글을 작성하세요]',
+      req.referenceFacts,
+      `출처: ${req.referenceSources?.join(', ') || '신뢰 의료 기관'}`,
+      '',
+      '⚠️ 위 참고 자료의 사실만 활용. 추측/환각 금지.',
+      '참고 자료 문장 그대로 복사 금지 — 자연스럽게 풀어쓰기.',
+    );
+  }
+
   // ── 병원 홈페이지/블로그 분석 결과 ──
+  // clinicContext 는 clinicContextService 가 크롤링·분석해서 만든 2차 사용자 데이터.
+  // 각 배열 요소가 프롬프트에 그대로 흘러가므로 sanitize 필요.
   if (req.clinicContext) {
     const ctx = req.clinicContext;
+    const safeJoin = (arr: string[] | undefined) =>
+      (arr || []).map(s => sanitizePromptInput(s, 200)).filter(Boolean).join(', ');
+    const safeServices = safeJoin(ctx.actualServices);
+    const safeSpecialties = safeJoin(ctx.specialties);
     const ctxParts: string[] = ['', '[병원 실제 정보 (홈페이지/블로그 분석 결과)]'];
-    if (ctx.actualServices?.length > 0) {
-      ctxParts.push(`- 실제 제공 서비스: ${ctx.actualServices.join(', ')}`);
+    if (safeServices) {
+      ctxParts.push(`- 실제 제공 서비스: ${safeServices}`);
     }
-    if (ctx.specialties?.length > 0) {
-      ctxParts.push(`- 특화/차별화 진료: ${ctx.specialties.join(', ')}`);
+    if (safeSpecialties) {
+      ctxParts.push(`- 특화/차별화 진료: ${safeSpecialties}`);
     }
-    if (ctx.locationSignals?.length > 0) {
-      ctxParts.push(`- 주변 지역: ${ctx.locationSignals.join(', ')}`);
-    }
-    ctxParts.push(`→ 위 정보 중 현재 글의 주제("${req.topic}")와 관련 있는 정보만 참고하세요.`);
+    ctxParts.push(`→ 위 정보 중 현재 글의 주제("${safeTopic}")와 관련 있는 정보만 참고하세요.`);
     ctxParts.push('→ 주제와 무관한 시술, 장비, 서비스 정보는 절대 포함하지 마세요.');
     ctxParts.push('→ 없는 서비스를 언급하지 마세요.');
+    ctxParts.push('→ 지역명(동, 시, 역 이름 등)은 글에 삽입하지 마세요.');
     ctxParts.push('');
     ctxParts.push('[차별화 — 이 병원만의 글로 만들기]');
-    ctxParts.push('→ 위 병원 정보(특화 진료, 장비, 지역)를 본문에 자연스럽게 녹여서 이 병원에서만 나올 수 있는 글로 만드세요.');
+    ctxParts.push('→ 위 병원 정보(특화 진료, 장비)를 본문에 자연스럽게 녹여서 이 병원에서만 나올 수 있는 글로 만드세요.');
     ctxParts.push('→ 다른 병원 블로그에 그대로 복사해도 어색하지 않은 범용 글은 실패입니다.');
-    ctxParts.push('→ 최소 2곳 이상에서 이 병원의 고유 정보(지역명, 장비명, 특화 시술)를 언급하세요.');
+    ctxParts.push('→ 최소 2곳 이상에서 이 병원의 고유 정보(장비명, 특화 시술)를 언급하세요.');
     promptParts.push(...ctxParts);
   }
 
@@ -536,8 +572,8 @@ ${range.max}자 초과 시 → 가장 약한 문단을 삭제 후 출력. 패딩
     '   · 좋은 예: "건강한 미소를 지켜드리는", "편안한 진료를 약속드리는", "치아 건강의 든든한 동반자"',
     '   · 나쁜 예: "최고의 진료를 하는" (과장), "가장 좋은" (최상급 금지)',
     '   · 인사 후 바로 주제 연결: "오늘은 ~에 대해 이야기해보려고 합니다."',
-    ...(req.persona === 'director_1st' && req.hospitalName
-      ? [`⚠️ 이 글은 대표원장 1인칭이므로 반드시 F(원장 인사형)으로 시작하세요. 병원명: "${req.hospitalName}"`]
+    ...(req.persona === 'director_1st' && safeHospitalName
+      ? [`⚠️ 이 글은 대표원장 1인칭이므로 반드시 F(원장 인사형)으로 시작하세요. 병원명: "${safeHospitalName}"`]
       : topicType === 'symptom' ? ['⚠️ 증상 주제 → A(일상 장면형) 또는 B(시간 경과형) 권장.']
       : topicType === 'compare' ? ['⚠️ 비교 주제 → C(오해 반전형) 또는 E(수치 시작형) 권장.']
       : topicType === 'aftercare' ? ['⚠️ 관리 주제 → B(시간 경과형) 권장. 시술 직후 장면부터 시작.']
@@ -568,36 +604,36 @@ ${range.max}자 초과 시 → 가장 약한 문단을 삭제 후 출력. 패딩
     ? `본문에 5~8회 분산. 도입부(첫 2문장) 금지. 소제목에 1~2회 + 각 섹션 본문에 1회씩. 같은 문장에 2회 금지. 문맥상 자연스러운 위치에만`
     : `본문에 정확히 ${kwDensity}회. 도입부 금지. 소제목에 ${Math.ceil(Number(kwDensity) / 4)}회 + 본문에 나머지. 같은 문단에 2회 금지. 문맥에 맞게`;
 
-  if (req.disease && req.keywords) {
+  if (safeDisease && safeKeywords) {
     promptParts.push(
       '',
       `[키워드·질환 역할 분리]`,
-      `SEO 키워드: "${req.keywords}" / 질환: "${req.disease}"`,
+      `SEO 키워드: "${safeKeywords}" / 질환: "${safeDisease}"`,
       `→ 키워드는 SEO용 — ${kwCountGuide}. 질환이 글의 실제 주제. 다른 질환명 추가 금지.`,
     );
-  } else if (req.keywords) {
+  } else if (safeKeywords) {
     promptParts.push(
       '',
       `[키워드]`,
-      `"${req.keywords}" - ${kwCountGuide}. 도입부 첫 2문장에서는 금지. 다른 질환명 추가 금지.`,
+      `"${safeKeywords}" - ${kwCountGuide}. 도입부 첫 2문장에서는 금지. 다른 질환명 추가 금지.`,
     );
   }
 
   // ── 사용자 지정 소제목 ──
-  if (req.customSubheadings) {
+  if (safeCustomSubheadings) {
     promptParts.push(
       '',
       '[사용자 지정 소제목 - 반드시 이 소제목 사용]',
-      req.customSubheadings,
+      safeCustomSubheadings,
     );
   }
 
   // ── 병원 특장점 ──
-  if (req.hospitalStrengths?.trim()) {
+  if (safeHospitalStrengths) {
     promptParts.push(
       '',
       '[병원 특장점 — 등록된 정보]',
-      req.hospitalStrengths.trim(),
+      safeHospitalStrengths,
       '→ 위 특장점 중 글의 주제와 연관 있는 부분만 자연스럽게 반영.',
       '→ 주제와 무관한 특장점은 언급하지 마세요.',
       '→ 나열하지 말고 본문 흐름에 녹여서 서술.',
@@ -605,20 +641,20 @@ ${range.max}자 초과 시 → 가장 약한 문단을 삭제 후 출력. 패딩
   }
 
   // ── 임상 이미지 분석 결과 ──
-  if (req.clinicalContext?.trim()) {
+  if (safeClinicalContext) {
     promptParts.push(
       '',
       '[임상 이미지 분석 결과 — 참고 자료]',
       '아래는 업로드된 임상/시술 이미지를 AI가 분석한 결과입니다.',
       '이 내용을 바탕으로 정확하고 구체적인 블로그 글을 작성하세요.',
       '분석 결과에 언급된 시술/장비/상태를 본문 최소 3곳 이상에서 구체적으로 언급하세요. 분석에 없는 정보는 추가 금지.',
-      '', req.clinicalContext.trim(),
+      '', safeClinicalContext,
     );
   }
 
   // ── 유튜브 자막 참고 ──
-  if (req.youtubeTranscript?.trim()) {
-    const trimmed = req.youtubeTranscript.trim().slice(0, 8000);
+  if (safeYoutubeTranscript) {
+    const trimmed = safeYoutubeTranscript;
     promptParts.push(
       '',
       '[참고 영상 자막]',
@@ -651,13 +687,17 @@ ${range.max}자 초과 시 → 가장 약한 문단을 삭제 후 출력. 패딩
   // ── 병원 소개 섹션 ──
   if (req.includeHospitalIntro && req.clinicContext) {
     const ctx = req.clinicContext;
+    const safeJoin = (arr: string[] | undefined) =>
+      (arr || []).map(s => sanitizePromptInput(s, 200)).filter(Boolean).join(', ');
+    const svc = safeJoin(ctx.actualServices);
+    const spec = safeJoin(ctx.specialties);
     promptParts.push(
       '',
       '[병원 소개 섹션 - 글 마지막에 삽입]',
       '마무리 섹션 바로 앞에 <h3>병원 소개</h3> 소제목을 추가하고, 아래 정보를 자연스럽게 2~3문단으로 작성하세요.',
-      ctx.actualServices?.length > 0 ? `- 진료 서비스: ${ctx.actualServices.join(', ')}` : '',
-      ctx.specialties?.length > 0 ? `- 특화 진료: ${ctx.specialties.join(', ')}` : '',
-      ctx.locationSignals?.length > 0 ? `- 위치: ${ctx.locationSignals.join(', ')}` : '',
+      svc ? `- 진료 서비스: ${svc}` : '',
+      spec ? `- 특화 진료: ${spec}` : '',
+      '- 지역명(동, 시, 역 이름 등)은 병원 소개에도 포함하지 마세요.',
       '- 병원 소개는 광고가 아닌 정보 전달 톤으로 작성. 의료법 준수.',
     );
   }
@@ -711,11 +751,11 @@ ${range.max}자 초과 시 → 가장 약한 문단을 삭제 후 출력. 패딩
       '- 각 이미지가 서로 다른 장면이어야 합니다 (비슷한 포즈/배경 반복 금지)',
     );
 
-    if (req.customImagePrompt) {
+    if (safeCustomImagePrompt) {
       promptParts.push(
         '',
         `[커스텀 스타일 필수 적용]`,
-        `사용자가 "${req.customImagePrompt}" 스타일을 요청했습니다.`,
+        `사용자가 "${safeCustomImagePrompt}" 스타일을 요청했습니다.`,
         `모든 이미지 프롬프트에 이 스타일 키워드를 반드시 포함하세요.`,
       );
     }
@@ -805,6 +845,14 @@ export function buildSectionRegeneratePrompt(input: SectionRegenerateInput): {
   systemInstruction: string;
   prompt: string;
 } {
+  // 프롬프트 인젝션 방어 — 사용자 입력은 전부 sanitize 한 지역 변수로 사용.
+  const safeSectionTitle = sanitizePromptInput(input.sectionTitle, 200);
+  const safeKeywords = sanitizePromptInput(input.keywords, 300);
+  const safeDisease = sanitizePromptInput(input.disease, 100);
+  const safeCategory = sanitizePromptInput(input.category, 50);
+  const safeSectionHtml = sanitizeSourceContent(input.sectionHtml, 10000);
+  const safeFullContext = sanitizeSourceContent(input.fullContext, 15000);
+
   const personaGuide = PERSONA_GUIDES[input.persona] || PERSONA_GUIDES.hospital_info;
   const audienceGuide = AUDIENCE_GUIDES[input.audienceMode] || AUDIENCE_GUIDES['환자용(친절/공감)'];
   const toneGuide = TONE_GUIDES[input.tone] || TONE_GUIDES.warm;
@@ -857,16 +905,16 @@ export function buildSectionRegeneratePrompt(input: SectionRegenerateInput): {
   const prompt = [
     `[미션] 아래 소제목 섹션만 새로 작성. 나머지 글과의 톤·흐름 유지.`,
     '',
-    `[진료과] ${input.category}`,
-    input.disease ? `[질환] ${input.disease}` : '',
-    input.keywords ? `[SEO 키워드] ${input.keywords} — 재작성 본문에도 자연스럽게 1~2회 포함` : '',
+    `[진료과] ${safeCategory}`,
+    safeDisease ? `[질환] ${safeDisease}` : '',
+    safeKeywords ? `[SEO 키워드] ${safeKeywords} — 재작성 본문에도 자연스럽게 1~2회 포함` : '',
     '',
-    `[소제목] ${input.sectionTitle}`,
+    `[소제목] ${safeSectionTitle}`,
     `[현재 내용]`,
-    input.sectionHtml,
+    safeSectionHtml,
     '',
     `[전체 글 맥락 (참고용 — 이 부분을 수정하는 것이 아닙니다)]`,
-    input.fullContext,
+    safeFullContext,
     '',
     '[재작성 방향]',
     '- 같은 주제를 다루되, 아래 중 하나 이상을 변경:',
@@ -876,12 +924,13 @@ export function buildSectionRegeneratePrompt(input: SectionRegenerateInput): {
     '- 기존 문장을 단순히 어순만 바꾸는 것은 금지. 새로운 정보나 관점이 있어야 합니다.',
     '- 2~3문단 유지. 문단당 3~4문장.',
     '',
-    `[출력] ${input.sectionType === 'intro' ? '<p>부터 시작하는 도입부 HTML만 출력.' : `<h3>${input.sectionTitle}</h3>부터 시작하는 HTML만 출력.`}`,
+    `[출력] ${input.sectionType === 'intro' ? '<p>부터 시작하는 도입부 HTML만 출력.' : `<h3>${safeSectionTitle}</h3>부터 시작하는 HTML만 출력.`}`,
     'HTML만 출력하세요. 설명, 주석, 코드블록 금지.',
   ].filter(Boolean).join('\n');
 
   return { systemInstruction, prompt };
 }
+
 // ═══════════════════════════════════════════════════════════════════
 // Phase 2A v4 — V3 프롬프트 빌더 3개
 //
@@ -894,7 +943,6 @@ export function buildSectionRegeneratePrompt(input: SectionRegenerateInput): {
 // ═══════════════════════════════════════════════════════════════════
 
 import type { CacheableBlock } from './llm';
-import { sanitizePromptInput, sanitizeSourceContent } from './promptSanitize';
 
 export interface BlogPromptV3 {
   systemBlocks: CacheableBlock[];
@@ -1142,6 +1190,17 @@ export function buildBlogPromptV3(
     safeHospitalStrengths ? `- 병원 강점 (참고만): ${safeHospitalStrengths}` : '',
     safeClinicalContext ? `- 임상 맥락 (참고만): ${safeClinicalContext}` : '',
   ].filter(Boolean);
+
+  // 화이트리스트 참고 자료 (referenceFetcher 수집)
+  if (req.referenceFacts) {
+    varParts.push(
+      '',
+      '[참고 의학 자료 — 아래 사실을 근거로 글을 작성하세요]',
+      req.referenceFacts,
+      `출처: ${req.referenceSources?.join(', ') || '신뢰 의료 기관'}`,
+      '⚠️ 위 참고 자료의 사실만 활용. 추측/환각 금지. 참고 자료 문장 그대로 복사 금지.',
+    );
+  }
 
   systemBlocks.push({
     type: 'text',

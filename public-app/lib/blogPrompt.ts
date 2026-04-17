@@ -503,6 +503,19 @@ ${range.max}자 초과 시 → 가장 약한 문단을 삭제 후 출력. 패딩
     );
   }
 
+  // ── 화이트리스트 참고 의학 자료 (referenceFetcher 수집) ──
+  if (req.referenceFacts) {
+    promptParts.push(
+      '',
+      '[참고 의학 자료 — 아래 사실을 근거로 글을 작성하세요]',
+      req.referenceFacts,
+      `출처: ${req.referenceSources?.join(', ') || '신뢰 의료 기관'}`,
+      '',
+      '⚠️ 위 참고 자료의 사실만 활용. 추측/환각 금지.',
+      '참고 자료 문장 그대로 복사 금지 — 자연스럽게 풀어쓰기.',
+    );
+  }
+
   // ── 병원 홈페이지/블로그 분석 결과 ──
   // clinicContext 는 clinicContextService 가 크롤링·분석해서 만든 2차 사용자 데이터.
   // 각 배열 요소가 프롬프트에 그대로 흘러가므로 sanitize 필요.
@@ -1177,6 +1190,17 @@ export function buildBlogPromptV3(
     safeHospitalStrengths ? `- 병원 강점 (참고만): ${safeHospitalStrengths}` : '',
     safeClinicalContext ? `- 임상 맥락 (참고만): ${safeClinicalContext}` : '',
   ].filter(Boolean);
+
+  // 화이트리스트 참고 자료 (referenceFetcher 수집)
+  if (req.referenceFacts) {
+    varParts.push(
+      '',
+      '[참고 의학 자료 — 아래 사실을 근거로 글을 작성하세요]',
+      req.referenceFacts,
+      `출처: ${req.referenceSources?.join(', ') || '신뢰 의료 기관'}`,
+      '⚠️ 위 참고 자료의 사실만 활용. 추측/환각 금지. 참고 자료 문장 그대로 복사 금지.',
+    );
+  }
 
   systemBlocks.push({
     type: 'text',

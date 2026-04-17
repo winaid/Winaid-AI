@@ -58,6 +58,9 @@ export interface GenerationRequest {
     specialties: string[];
     locationSignals: string[];
   } | null;
+  /** 화이트리스트 참고 자료 — referenceFetcher 에서 수집한 의학적 사실 (프롬프트 주입용) */
+  referenceFacts?: string;
+  referenceSources?: string[];
 }
 
 export interface TrendingItem {
