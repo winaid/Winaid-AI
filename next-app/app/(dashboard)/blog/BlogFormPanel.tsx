@@ -4,6 +4,8 @@ import { CATEGORIES, PERSONAS, TONES } from '../../../lib/constants';
 import { TEAM_DATA } from '../../../lib/teamData';
 import type { ContentCategory, AudienceMode, ImageStyle, CssTheme } from '../../../lib/types';
 import type { KeywordStat, KeywordRankResult } from '../../../lib/keywordAnalysisService';
+import type { HospitalImage } from '../../../lib/hospitalImageService';
+import ImageLibrary from '../../../components/blog/ImageLibrary';
 import type { ClinicContext } from '../../../lib/clinicContextService';
 import type { TrendingItem, SeoTitleItem } from '../../../lib/types';
 import WritingStyleLearner from '../../../components/WritingStyleLearner';
@@ -62,6 +64,11 @@ export interface BlogFormPanelProps {
   // ── 참고 자료 상태 ──
   isLoadingReference?: boolean;
   referenceResult?: { facts: string; sources: string[] } | null;
+  // ── 이미지 라이브러리 ──
+  useImageLibrary?: boolean;
+  onToggleImageLibrary?: (v: boolean) => void;
+  selectedLibraryImages?: HospitalImage[];
+  onLibrarySelectionChange?: (imgs: HospitalImage[]) => void;
   // ── 생성 상태 ──
   isGenerating: boolean;
   // ── 폼 setter ──
@@ -126,6 +133,7 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
     seoTitles, trendingItems, isLoadingTitles, isLoadingTrends,
     isGenerating,
     isLoadingReference, referenceResult,
+    useImageLibrary, onToggleImageLibrary, selectedLibraryImages, onLibrarySelectionChange,
     setTopic, setBlogTitle, setKeywords, setKeywordDensity, setDisease, setCategory, setPersona, setTone, setAudienceMode,
     setImageStyle, setImageCount, setImageAspectRatio, setTextLength, setHospitalName, setSelectedTeam,
     setShowHospitalDropdown, setSelectedManager, setSelectedHospitalAddress,
@@ -437,6 +445,29 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
                   ))}
                 </div>
               </div>
+              {/* 이미지 소스 토글 */}
+              {onToggleImageLibrary && (
+                <div className="flex gap-2 mb-2">
+                  <button type="button" onClick={() => onToggleImageLibrary(false)}
+                    className={`flex-1 py-1.5 rounded-lg text-[11px] font-semibold transition-all ${!useImageLibrary ? 'bg-blue-100 text-blue-700 border border-blue-300' : 'bg-slate-50 text-slate-500 border border-slate-200'}`}>
+                    🎨 AI 생성
+                  </button>
+                  <button type="button" onClick={() => onToggleImageLibrary(true)}
+                    className={`flex-1 py-1.5 rounded-lg text-[11px] font-semibold transition-all ${useImageLibrary ? 'bg-blue-100 text-blue-700 border border-blue-300' : 'bg-slate-50 text-slate-500 border border-slate-200'}`}>
+                    📸 내 이미지 사용
+                  </button>
+                </div>
+              )}
+              {useImageLibrary && onLibrarySelectionChange && (
+                <ImageLibrary
+                  enabled={!!useImageLibrary}
+                  onToggle={onToggleImageLibrary || (() => {})}
+                  selectedImages={selectedLibraryImages || []}
+                  onSelectionChange={onLibrarySelectionChange}
+                  maxImages={imageCount}
+                />
+              )}
+
               {/* AI 이미지 수 */}
               <div>
                 <div className="flex justify-between mb-1.5">
