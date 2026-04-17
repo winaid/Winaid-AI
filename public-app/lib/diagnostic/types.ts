@@ -167,9 +167,7 @@ export interface DiagnosticResponse {
   /** 플랫폼별 맞춤 해설 — AIVisibility.reason 을 대체/보완 */
   aiNarratives?: Partial<Record<AIPlatform, string>>;
 
-  // ── 단계 C-a-1: AI 실측 (optional — 실패 시 전부 undefined) ──
-  /** 플랫폼별 실측 검색 결과 (ChatGPT web_search + Gemini grounding) */
-  competitorFindings?: CompetitorFinding[];
+  // ── 단계 C-a-1: AI 실측 (stream 으로 분리, 여기선 메타만) ──
   /** crawl 본문에서 추출한 지역 (예: "강남구", "논산시") */
   detectedRegion?: string;
   /** 업종 (기본: "치과", 향후 확장 여지) */
@@ -185,9 +183,9 @@ export interface SiteMeta {
   detectedGaps: string[];
 }
 
-// ── 단계 C-a-1: AI 실측 결과 타입 ─────────────────────────
+// ── AI 실측 보조 타입 ──────────────────────────────────────
 
-/** 검색 결과 1건 */
+/** 실측 답변에서 추출한 URL 매칭 결과 (selfIncluded 판정용 best-effort) */
 export interface CompetitorResult {
   url: string;
   title: string;
@@ -196,19 +194,7 @@ export interface CompetitorResult {
   rank: number;   // 1~5
 }
 
-/** 플랫폼별 실측 결과 */
-export interface CompetitorFinding {
-  platform: AIPlatform;       // 'ChatGPT' | 'Gemini'
-  queryUsed: string;           // 예: "논산 치과 추천"
-  /** AI 답변 원문(자연어). UI 가 그대로 렌더. 비어 있으면 실측 실패. */
-  answerText: string;
-  /** 답변에서 정규식으로 추출한 URL/병원명 (selfIncluded 판정용 best-effort, UI 노출 안 함) */
-  topResults: CompetitorResult[];
-  selfIncluded: boolean;       // 본인 도메인 포함 여부
-  selfRank: number | null;     // 1~5 또는 null(미포함)
-  timestamp: string;           // ISO
-  rawError?: string;           // 실패 사유 (디버그/UI)
-}
+// CompetitorFinding interface — 제거됨 (stream 분리 후 미사용. git history 에서 복구 가능).
 
 /** Sonnet 이 기본 진단 + SiteMeta 를 받아 만드는 맞춤 해설 묶음 */
 export interface Narratives {

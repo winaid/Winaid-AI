@@ -13,7 +13,6 @@ import type {
   CrawlResult,
   AIPlatform,
   CompetitorResult,
-  CompetitorFinding,
 } from './types';
 import { callLLM } from '../llm';
 
@@ -347,14 +346,8 @@ interface OpenAIChatCompletionsBody {
   error?: { message?: string };
 }
 
-/**
- * LLM 자연어 답변 + 답변에서 추출된 URL/병원명.
- * answerText 가 우리가 사용자에게 보여줄 핵심. urls 는 selfIncluded 판정용 best-effort.
- */
-export interface DiscoverRawAnswer {
-  answerText: string;
-  urls: CompetitorResult[];
-}
+// DiscoverRawAnswer / discoverViaChatGPT / discoverViaGemini — 제거됨.
+// stream 전환(S-A) 후 사용처 0 (streaming 경로만 사용).
 
 /**
  * 쿼리를 "사용자가 실제로 물어보는 질문" 형태로 감쌈.
@@ -371,77 +364,7 @@ function wrapAsQuestion(query: string): string {
 // 서버는 형식·글자수·필드 지시를 하지 않고 wrapAsQuestion(query) 한 줄만 user 메시지로 보낸다.
 // 답변이 마크다운/각주 링크를 포함해도 클라이언트 경량 파서(AIVisibilityCard.parseAnswer)가 흡수한다.
 
-export async function discoverViaChatGPT(query: string): Promise<DiscoverRawAnswer | null> {
-  const key = process.env.OPENAI_API_KEY;
-  if (!key) {
-    console.warn('[discovery/chatgpt] OPENAI_API_KEY 미설정 — 스킵');
-    return null;
-  }
-  try {
-    const res = await fetch(OPENAI_CHAT_COMPLETIONS_URL, {
-      method: 'POST',
-      signal: AbortSignal.timeout(CHATGPT_TIMEOUT_MS),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${key}`,
-      },
-      body: JSON.stringify({
-        // gpt-5-search-api: 검색 도구가 모델 내부에 내장 (별도 tools 설정 불필요)
-        model: 'gpt-5-search-api',
-        // 실측 철학: 서버는 질문 한 줄만 보낸다. 형식 지시 금지.
-        messages: [{ role: 'user', content: wrapAsQuestion(query) }],
-        max_tokens: 8_192,
-      }),
-    });
-    if (!res.ok) {
-      let detail = `HTTP ${res.status}`;
-      try {
-        const body = await res.json() as { error?: { message?: string } };
-        if (body.error?.message) detail += ` · ${body.error.message}`;
-      } catch { /* ignore */ }
-      console.warn(`[discovery/chatgpt] 응답 실패: ${detail}`);
-      return null;
-    }
-    const body = await res.json() as OpenAIChatCompletionsBody;
-    const text = (body.choices?.[0]?.message?.content ?? '').trim();
-
-    console.warn(`[discovery/chatgpt] 답변 길이: ${text.length}`);
-    console.warn(`[discovery/chatgpt] 응답 원문 (앞 500자): ${text.slice(0, 500)}`);
-
-    if (!text) return null;
-    return { answerText: text, urls: extractUrlsFromText(text) };
-  } catch (e) {
-    const name = (e as Error)?.name || 'Error';
-    const msg = (e as Error)?.message || 'unknown';
-    console.warn(`[discovery/chatgpt] 호출 예외: ${name} · ${msg.slice(0, 200)}`);
-    return null;
-  }
-}
-
-// ── Gemini Search grounding (callLLM search_ground task 재사용) ─
-
-export async function discoverViaGemini(query: string): Promise<DiscoverRawAnswer | null> {
-  try {
-    const res = await callLLM({
-      task: 'search_ground',
-      // 실측 철학: system 지시·temperature 없이 질문 한 줄만. 사용자 웹 경험 재현.
-      systemBlocks: [],
-      userPrompt: wrapAsQuestion(query),
-      maxOutputTokens: 8_192,
-      googleSearch: true,
-    });
-    const text = (res.text ?? '').trim();
-    console.warn(`[discovery/gemini] 답변 길이: ${text.length}`);
-    console.warn(`[discovery/gemini] 응답 원문 (앞 500자): ${text.slice(0, 500)}`);
-    if (!text) return null;
-    return { answerText: text, urls: extractUrlsFromText(text) };
-  } catch (e) {
-    console.warn(`[discovery/gemini] 호출 예외: ${(e as Error).message.slice(0, 200)}`);
-    return null;
-  }
-}
-
-// ── 쿼리 빌더 (stream 엔드포인트 + discoverCompetitors 공용) ─
+// ── 쿼리 빌더 (stream 엔드포인트 공용) ──────────────────────
 
 function buildQuery(region: string | null, category: string): string {
   if (region) return `${region} ${category} 추천`;
@@ -778,88 +701,6 @@ export async function* streamGemini(
   return { truncated, reason: finishReason, sources };
 }
 
-// ── 조립: 쿼리 + 병렬 호출 + 본인 매치 ────────────────────
-
-function evaluateFinding(
-  platform: AIPlatform,
-  query: string,
-  raw: DiscoverRawAnswer | null,
-  selfHost: string,
-): CompetitorFinding {
-  const timestamp = new Date().toISOString();
-  if (raw === null) {
-    return {
-      platform,
-      queryUsed: query,
-      answerText: '',
-      topResults: [],
-      selfIncluded: false,
-      selfRank: null,
-      timestamp,
-      rawError: 'call_failed_or_empty_answer',
-    };
-  }
-  // selfIncluded 판정 — 자연어 답변에서 추출한 URL 들과 본인 도메인 매칭
-  let selfRank: number | null = null;
-  for (const r of raw.urls) {
-    if (domainMatches(selfHost, r.domain)) {
-      selfRank = r.rank;
-      break;
-    }
-  }
-  return {
-    platform,
-    queryUsed: query,
-    answerText: raw.answerText,
-    topResults: raw.urls,
-    selfIncluded: selfRank !== null,
-    selfRank,
-    timestamp,
-  };
-}
-
-export interface DiscoverOutcome {
-  findings: CompetitorFinding[];
-  detectedRegion: string | null;
-  detectedCategory: string;
-}
-
-export async function discoverCompetitors(
-  crawl: CrawlResult,
-  category: string = '치과',
-  customQuery?: string,
-): Promise<DiscoverOutcome> {
-  try {
-    // 사용자 직접 입력 검색어가 있으면 지역 추출 로직을 우회(오탐 0 보장).
-    // 없을 때만 기존 extractRegion → buildQuery 폴백.
-    const trimmedCustom = customQuery?.trim();
-    const region = trimmedCustom ? null : extractRegion(crawl);
-    const query = trimmedCustom || buildQuery(region, category);
-    const selfHost = hostOf(crawl.finalUrl);
-
-    // 두 플랫폼 병렬 — Promise.allSettled 로 상호 실패 격리
-    const [chatgptRes, geminiRes] = await Promise.allSettled([
-      discoverViaChatGPT(query),
-      discoverViaGemini(query),
-    ]);
-    const chatgptRaw = chatgptRes.status === 'fulfilled' ? chatgptRes.value : null;
-    const geminiRaw = geminiRes.status === 'fulfilled' ? geminiRes.value : null;
-
-    const findings: CompetitorFinding[] = [
-      evaluateFinding('ChatGPT', query, chatgptRaw, selfHost),
-      evaluateFinding('Gemini', query, geminiRaw, selfHost),
-    ];
-
-    // 양쪽 모두 답변 텍스트가 비어있으면 findings 자체를 비워 UI 가 섹션을 숨길 수 있게 함
-    const anyAnswer = findings.some((f) => f.answerText.length > 0);
-    return {
-      findings: anyAnswer ? findings : [],
-      detectedRegion: region,
-      detectedCategory: category,
-    };
-  } catch (e) {
-    // 내부 호출이 이미 try/catch. 최후 안전망.
-    console.warn(`[diagnostic/discovery] 치명적 실패: ${(e as Error).message.slice(0, 200)}`);
-    return { findings: [], detectedRegion: null, detectedCategory: category };
-  }
-}
+// evaluateFinding / DiscoverOutcome / discoverCompetitors / DiscoverRawAnswer /
+// discoverViaChatGPT / discoverViaGemini — 전부 제거됨 (stream 전환(S-A) 후 사용처 0).
+// git history 에서 복구 가능.
