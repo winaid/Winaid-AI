@@ -485,6 +485,7 @@ export default function AIVisibilityCard({ visibility, siteName, selfUrl, onMeas
             truncated?: boolean;
             reason?: string;
             sources?: unknown;
+            topResults?: unknown;
           };
           try {
             payload = JSON.parse(line.slice(6));
@@ -541,11 +542,17 @@ export default function AIVisibilityCard({ visibility, siteName, selfUrl, onMeas
               sources,
             }));
             // C+B 강화안: 부모에게 실측 결과 전달 (해설 갱신 버튼 활성화용)
+            // Tier 3-B: topResultUrls 추출 (경쟁사 GAP 자동 채움용)
+            const topUrls = (Array.isArray(payload.topResults) ? payload.topResults : [])
+              .filter((r: { url?: string }) => typeof r?.url === 'string')
+              .map((r: { url: string }) => r.url)
+              .slice(0, 5);
             onMeasurementDone?.(visibility.platform as AIPlatform, {
               selfIncluded: !!payload.selfIncluded,
               selfRank: typeof payload.selfRank === 'number' ? payload.selfRank : null,
               queryUsed: trimmed || '(자동)',
               answerText: typeof payload.answerText === 'string' ? payload.answerText : '',
+              topResultUrls: topUrls.length > 0 ? topUrls : undefined,
             });
           } else if (payload.type === 'error') {
             setState({

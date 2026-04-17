@@ -7,6 +7,7 @@ import type {
   MeasurementData,
   RefreshNarrativeResponse,
   HistoryEntry,
+  GapAnalysis,
 } from '../../lib/diagnostic/types';
 import ScoreRing from './ScoreRing';
 import CategoryCard from './CategoryCard';
@@ -101,6 +102,11 @@ export default function DiagnosticResult({ result, onResultUpdate }: DiagnosticR
   const [refreshing, setRefreshing] = useState(false);
   const [refreshDone, setRefreshDone] = useState(false);
 
+  // Tier 3-B: 경쟁사 GAP 분석
+  const [gapResult, setGapResult] = useState<GapAnalysis | null>(null);
+  const [gapLoading, setGapLoading] = useState(false);
+  const [competitorUrl, setCompetitorUrl] = useState('');
+
   const handleMeasurementDone = useCallback((platform: AIPlatform, data: MeasurementData) => {
     setMeasurementResults((prev) => ({ ...prev, [platform]: data }));
   }, []);
@@ -130,6 +136,39 @@ export default function DiagnosticResult({ result, onResultUpdate }: DiagnosticR
       setRefreshing(false);
     }
   }, [refreshing, result, measurementResults, onResultUpdate]);
+
+  // Tier 3-B: 실측 topResultUrls 에서 경쟁사 URL 자동 채움
+  const topUrlCandidates = Object.values(measurementResults)
+    .flatMap((m) => m.topResultUrls ?? [])
+    .filter((u) => u && !u.includes(result.url));
+
+  useEffect(() => {
+    if (topUrlCandidates.length > 0 && !competitorUrl) {
+      setCompetitorUrl(topUrlCandidates[0]);
+    }
+  }, [topUrlCandidates.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleGapAnalysis = useCallback(async () => {
+    if (gapLoading || !competitorUrl.trim()) return;
+    setGapLoading(true);
+    setGapResult(null);
+    try {
+      const res = await fetch('/api/diagnostic/competitor-gap', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ selfResult: result, competitorUrl: competitorUrl.trim() }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error((err as { error?: string }).error || `HTTP ${res.status}`);
+      }
+      setGapResult((await res.json()) as GapAnalysis);
+    } catch (e) {
+      console.warn('[gap]', e);
+    } finally {
+      setGapLoading(false);
+    }
+  }, [gapLoading, competitorUrl, result]);
 
   return (
     <div className="w-full max-w-5xl mx-auto space-y-5">
@@ -328,6 +367,108 @@ export default function DiagnosticResult({ result, onResultUpdate }: DiagnosticR
               })()}
             </div>
           )}
+
+          {/* Tier 3-B: 경쟁사 GAP 분석 */}
+          <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm max-w-4xl mx-auto">
+            <h3 className="text-sm font-bold text-slate-700 mb-2">🏆 경쟁사 GAP 분석</h3>
+            <p className="text-[12px] text-slate-500 mb-3">
+              AI 추천 1위 병원과 비교해서 약점·강점을 분석합니다.
+            </p>
+            <div className="flex gap-2 mb-3">
+              <input
+                type="url"
+                value={competitorUrl}
+                onChange={(e) => setCompetitorUrl(e.target.value)}
+                placeholder="경쟁사 홈페이지 URL"
+                className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
+              />
+              <button
+                type="button"
+                onClick={handleGapAnalysis}
+                disabled={!competitorUrl.trim() || gapLoading}
+                className={`px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition-colors ${
+                  competitorUrl.trim() && !gapLoading
+                    ? 'bg-indigo-600 text-white hover:bg-indigo-700'
+                    : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                }`}
+              >
+                {gapLoading ? '분석 중…' : '🔍 비교 분석'}
+              </button>
+            </div>
+            {topUrlCandidates.length > 0 && !gapResult && (
+              <div className="flex flex-wrap gap-1.5 mb-3">
+                <span className="text-[11px] text-slate-400">AI 추천 병원:</span>
+                {topUrlCandidates.slice(0, 3).map((u) => (
+                  <button key={u} type="button" onClick={() => setCompetitorUrl(u)}
+                    className="px-2 py-0.5 rounded-full text-[11px] border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50 transition-colors truncate max-w-[200px]">
+                    {(() => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return u; } })()}
+                  </button>
+                ))}
+              </div>
+            )}
+            {gapResult && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-center gap-4 py-3 bg-slate-50 rounded-xl">
+                  <div className="text-center">
+                    <p className="text-[11px] text-slate-500">내 병원</p>
+                    <p className="text-2xl font-black text-slate-700">{Math.round(result.overallScore)}</p>
+                  </div>
+                  <span className="text-slate-300 text-lg">vs</span>
+                  <div className="text-center">
+                    <p className="text-[11px] text-slate-500">경쟁사</p>
+                    <p className="text-2xl font-black text-slate-700">{gapResult.competitor.overallScore}</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-[11px] text-slate-500">차이</p>
+                    <p className={`text-lg font-black ${gapResult.gap.overallDiff > 0 ? 'text-red-500' : 'text-emerald-500'}`}>
+                      {gapResult.gap.overallDiff > 0 ? '+' : ''}{gapResult.gap.overallDiff}
+                    </p>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  {gapResult.gap.categoryDiffs.map((d) => (
+                    <div key={d.categoryId} className="flex items-center gap-2 text-[12px]">
+                      <span className="w-24 text-slate-600 truncate">{d.categoryName}</span>
+                      <div className="flex-1 bg-slate-100 rounded-full h-2.5"><div className="bg-indigo-400 rounded-full h-2.5" style={{ width: `${d.selfScore}%` }} /></div>
+                      <span className="w-6 text-right font-bold text-slate-700">{d.selfScore}</span>
+                      <span className="text-slate-300">|</span>
+                      <div className="flex-1 bg-slate-100 rounded-full h-2.5"><div className="bg-amber-400 rounded-full h-2.5" style={{ width: `${d.competitorScore}%` }} /></div>
+                      <span className="w-6 text-right font-bold text-slate-700">{d.competitorScore}</span>
+                      <span className={`w-8 text-right text-[11px] font-bold ${d.diff > 0 ? 'text-red-500' : 'text-emerald-500'}`}>
+                        {d.diff > 0 ? '+' : ''}{d.diff}
+                      </span>
+                    </div>
+                  ))}
+                  <div className="flex gap-3 text-[10px] text-slate-400 mt-1"><span>🟣 내 병원</span><span>🟡 경쟁사</span></div>
+                </div>
+                {gapResult.gap.weakerItems.length > 0 && (
+                  <div>
+                    <p className="text-[11px] font-bold text-red-500 mb-1">⚠ 경쟁사 대비 약점</p>
+                    <div className="flex flex-wrap gap-1">
+                      {gapResult.gap.weakerItems.map((item) => (
+                        <span key={item} className="px-2 py-0.5 rounded-full bg-red-50 text-red-600 text-[11px] border border-red-100">{item}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {gapResult.gap.strongerItems.length > 0 && (
+                  <div>
+                    <p className="text-[11px] font-bold text-emerald-600 mb-1">✅ 경쟁사 대비 강점</p>
+                    <div className="flex flex-wrap gap-1">
+                      {gapResult.gap.strongerItems.map((item) => (
+                        <span key={item} className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 text-[11px] border border-emerald-100">{item}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {gapResult.narrative && (
+                  <div className="bg-indigo-50 rounded-xl p-4 text-[13px] text-slate-700 leading-relaxed whitespace-pre-line">
+                    {gapResult.narrative}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </>
       )}
 
