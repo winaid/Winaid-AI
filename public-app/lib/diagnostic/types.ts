@@ -238,6 +238,8 @@ export interface MeasurementData {
   selfRank: number | null;
   queryUsed: string;
   answerText: string;
+  /** Tier 3-B: 실측 답변에서 추출된 경쟁사 URL 목록 (GAP 분석 자동 채움용, 최대 5) */
+  topResultUrls?: string[];
 }
 
 /** POST /api/diagnostic/refresh-narrative 응답 — 갱신된 필드만. */
@@ -252,4 +254,30 @@ export interface RefreshNarrativeResponse {
 export interface HistoryEntry {
   overall_score: number;
   analyzed_at: string;
+}
+
+// ── Tier 3-B: 경쟁사 GAP 분석 ──────────────────────────────
+
+export interface CategoryDiff {
+  categoryId: string;
+  categoryName: string;
+  selfScore: number;
+  competitorScore: number;
+  diff: number;
+}
+
+export interface GapAnalysis {
+  competitor: {
+    url: string;
+    siteName: string;
+    overallScore: number;
+    categories: CategoryScore[];
+  };
+  gap: {
+    overallDiff: number;
+    categoryDiffs: CategoryDiff[];
+    weakerItems: string[];
+    strongerItems: string[];
+  };
+  narrative: string;
 }
