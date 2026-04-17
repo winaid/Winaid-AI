@@ -225,9 +225,9 @@ function getCategoryProcedures(category?: string): string {
   return CATEGORY_PROCEDURES[category || ''] || CATEGORY_PROCEDURES['치과'];
 }
 
-// ── AI 키워드 후보 생성 ──
+// ── AI 키워드 후보 생성 (보조 fallback — 네이버 suggest·검색량 검증 후 부족할 때만) ──
 
-async function generateKeywordsWithAI(
+async function generateKeywordsWithAI_fallback(
   hospitalName: string,
   address: string,
   category?: string,
@@ -474,6 +474,34 @@ export async function analyzeHospitalKeywords(
     throw new Error('주소에서 지역 키워드를 추출할 수 없습니다.');
   }
 
+  // Step 0.5: 네이버 검색광고 API로 시드 검색량 사전 검증 (환각 시드 조기 제거)
+  onProgress?.('시드 키워드 검색량 사전 검증 중...');
+  try {
+    const seedVerifyRes = await fetch('/api/naver/keyword-stats', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ keywords: seedKeywords.slice(0, 20) }),
+      signal: AbortSignal.timeout(8_000),
+    });
+    if (seedVerifyRes.ok) {
+      const seedData = (await seedVerifyRes.json()) as {
+        results?: { keyword: string; monthlySearchVolume: number }[];
+      };
+      const volMap = new Map<string, number>();
+      for (const r of seedData.results ?? []) volMap.set(r.keyword, r.monthlySearchVolume);
+      // 검색량 있는 시드만 suggest 에 보냄 (0-volume 시드로 suggest 해봤자 무의미)
+      const verifiedSeeds = seedKeywords.filter((kw) => {
+        const vol = volMap.get(kw) ?? volMap.get(kw.replace(/\s+/g, '')) ?? -1;
+        return vol !== 0; // -1(미확인)은 유지, 명확 0만 제거
+      });
+      if (verifiedSeeds.length > 0) {
+        seedKeywords.length = 0;
+        seedKeywords.push(...verifiedSeeds);
+      }
+      onProgress?.(`시드 ${verifiedSeeds.length}/${seedKeywords.length + verifiedSeeds.length}개 검증 통과`);
+    }
+  } catch { /* timeout or network → skip, 원본 시드 사용 */ }
+
   // Step 1: 네이버 자동완성으로 실제 검색어 수집 (핵심!)
   onProgress?.(`${seedKeywords.length}개 지역 키워드로 네이버 자동완성 조회 중...`);
   const allSuggestions: string[] = [...seedKeywords];
@@ -503,7 +531,7 @@ export async function analyzeHospitalKeywords(
     onProgress?.('AI로 추가 키워드 보충 중...');
     try {
       const existingTitles = await fetchExistingBlogTitles(hospitalName);
-      const aiSeeds = await generateKeywordsWithAI(hospitalName, address, category, existingTitles, clinicCtx);
+      const aiSeeds = await generateKeywordsWithAI_fallback(hospitalName, address, category, existingTitles, clinicCtx);
       allSuggestions.push(...aiSeeds);
     } catch { /* AI 실패 시 무시 — 자동완성 결과만으로 진행 */ }
   }
