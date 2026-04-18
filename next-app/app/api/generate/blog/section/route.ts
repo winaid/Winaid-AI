@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
       task: 'blog_unified_section',
       systemBlocks,
       userPrompt,
-      temperature: 0.8,
+      temperature: 0.7,
       maxOutputTokens: 4096,
       userId,
     });

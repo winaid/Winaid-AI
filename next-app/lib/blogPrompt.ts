@@ -945,11 +945,4 @@ JSON 밖의 텍스트, 코드펜스, 설명문 금지.
   return { systemBlocks, userPrompt: parts.filter(p => p !== '').join('\n') };
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// Part E(하단) — 임시 legacy re-export (V1/V2만 남음, 다음 커밋에서 정리)
-// ═══════════════════════════════════════════════════════════════════
-
-export {
-  buildBlogPrompt,
-  buildSectionRegeneratePrompt,
-} from './blogPrompt_legacy';
+// legacy re-export 전부 제거 완료 — blogPrompt_legacy.ts는 롤백 보험으로만 유지

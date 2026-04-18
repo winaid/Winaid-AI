@@ -125,7 +125,7 @@ async function generate2Pass(
       task: 'blog_outline',
       systemBlocks: outlinePrompt.systemBlocks,
       userPrompt: outlinePrompt.userPrompt,
-      temperature: 0.5,
+      temperature: 0.4,
       maxOutputTokens: 2048,
       userId,
     });
@@ -155,7 +155,7 @@ async function generate2Pass(
       task: 'blog_unified',
       systemBlocks: prompt.systemBlocks,
       userPrompt: prompt.userPrompt,
-      temperature: 0.85,
+      temperature: 0.7,
       maxOutputTokens: 4096,
       userId,
     });

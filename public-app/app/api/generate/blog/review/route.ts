@@ -127,7 +127,7 @@ export async function POST(request: NextRequest) {
       task: 'blog_review',
       systemBlocks,
       userPrompt,
-      temperature: 0.2,
+      temperature: 0.3,
       maxOutputTokens: 4096,
       userId,
     });
