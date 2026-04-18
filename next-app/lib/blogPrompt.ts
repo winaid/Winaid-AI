@@ -8,8 +8,8 @@
  * Part E — 빌더 함수 (임시 legacy re-export → 2/3에서 직접 구현)
  */
 
-import type { GenerationRequest } from './types';
-import { sanitizePromptInput } from './promptSanitize';
+import type { GenerationRequest, BlogOutline, BlogOutlineSection } from './types';
+import { sanitizePromptInput, sanitizeSourceContent } from './promptSanitize';
 import type { CacheableBlock } from './llm';
 
 // ═══════════════════════════════════════════════════════════════════
@@ -402,15 +402,554 @@ export const SECTION_REGEN_PERSONA = `<role>
 `;
 
 // ═══════════════════════════════════════════════════════════════════
-// Part E — 임시 re-export (빌더 함수 — 2/3에서 직접 구현 전환)
+// Part E — 빌더 함수 (Claude 최적화 XML 태그 기반)
+// ═══════════════════════════════════════════════════════════════════
+
+/** 공통 user_input XML 블록 — 주제·키워드·병원·어조 등 기본 입력 */
+function buildUserInputBlock(req: GenerationRequest): string {
+  const topic = sanitizePromptInput(req.topic, 500);
+  const blogTitle = sanitizePromptInput(req.blogTitle, 200);
+  const keywords = sanitizePromptInput(req.keywords, 300);
+  const disease = sanitizePromptInput(req.disease, 100);
+  const hospitalName = sanitizePromptInput(req.hospitalName, 100);
+  const patientPersona = sanitizePromptInput(req.patientPersona, 200);
+
+  const audience = AUDIENCE_GUIDES[req.audienceMode] || AUDIENCE_GUIDES['환자용(친절/공감)'];
+  const personaDesc = PERSONA_GUIDES[req.persona] || PERSONA_GUIDES.hospital_info;
+  const toneDesc = TONE_GUIDES[req.tone] || TONE_GUIDES.warm;
+  const styleDesc = STYLE_GUIDES[req.writingStyle || 'empathy'] || '';
+
+  const targetLength = req.textLength || 1500;
+  const imageCount = req.imageCount ?? 0;
+
+  const lines: string[] = [
+    '<user_input>',
+    `  <topic>${topic}</topic>`,
+    blogTitle && blogTitle !== topic ? `  <blog_title>${blogTitle}</blog_title>` : '',
+    `  <keywords>${keywords || '(없음)'}</keywords>`,
+    disease ? `  <disease>${disease}</disease>` : '',
+    `  <category>${req.category || '(미지정)'}</category>`,
+    hospitalName ? `  <hospital_name>${hospitalName}</hospital_name>` : '',
+    patientPersona ? `  <patient_persona>${patientPersona}</patient_persona>` : '',
+    `  <audience>${audience}</audience>`,
+    `  <persona_role>${personaDesc}</persona_role>`,
+    `  <tone>${toneDesc}</tone>`,
+    styleDesc ? `  <writing_style>${styleDesc}</writing_style>` : '',
+    `  <target_chars>${targetLength}</target_chars>`,
+    `  <image_count>${imageCount}</image_count>`,
+    `  <image_style>${getImageStyleGuide(req)}</image_style>`,
+    '</user_input>',
+  ];
+  return lines.filter(Boolean).join('\n');
+}
+
+/** <greeting_rule> XML 블록 — persona + hospital + includeIntro 기반 인사 규칙 */
+function buildGreetingRuleBlock(req: GenerationRequest): string {
+  const hospitalName = sanitizePromptInput(req.hospitalName, 100);
+  const includeIntro = req.includeHospitalIntro !== false;
+
+  if (!hospitalName || !includeIntro) {
+    return `<greeting_rule priority="highest">
+<mode>no_hospital</mode>
+<instruction>병원명 언급 없이 공감 훅 또는 질문형으로 시작하세요.</instruction>
+</greeting_rule>`;
+  }
+  if (req.persona === 'director_1st') {
+    return `<greeting_rule priority="highest">
+<mode>first_person_allowed</mode>
+<hospital_name>${hospitalName}</hospital_name>
+<role>대표 원장</role>
+<required_format><p>안녕하세요. {수식구 15~35자} ${hospitalName} 대표 원장입니다.</p></required_format>
+<instruction>첫 p는 위 형식 한 문장. 수식구는 주제에 맞게 매번 새로 작성. 두 번째 문장부터 공감 훅으로 전환.</instruction>
+</greeting_rule>`;
+  }
+  if (req.persona === 'coordinator') {
+    return `<greeting_rule priority="highest">
+<mode>first_person_allowed</mode>
+<hospital_name>${hospitalName}</hospital_name>
+<role>상담실장</role>
+<required_format><p>안녕하세요. {수식구 15~35자} ${hospitalName} 상담실장입니다.</p></required_format>
+</greeting_rule>`;
+  }
+  return `<greeting_rule priority="highest">
+<mode>hospital_info</mode>
+<hospital_name>${hospitalName}</hospital_name>
+<instruction>1인칭 인사 금지. 본문 중 "${hospitalName}은(는)..." 형태로 3인칭 서술.</instruction>
+</greeting_rule>`;
+}
+
+/** <reference_material> 블록 — req.referenceFacts 있을 때만 */
+function buildReferenceBlock(req: GenerationRequest): string {
+  if (!req.referenceFacts) return '';
+  const safeFacts = sanitizeSourceContent(req.referenceFacts, 3000);
+  const sources = req.referenceSources?.length ? `\n<source>${req.referenceSources.join(', ')}</source>` : '';
+  return `<reference_material>
+${safeFacts}${sources}
+<instruction>위 사실만 활용. 추측/환각 금지. 문장 그대로 복사 금지.</instruction>
+</reference_material>`;
+}
+
+/** <clinic_context> 블록 — req.clinicContext 있을 때만 */
+function buildClinicContextBlock(req: GenerationRequest): string {
+  if (!req.clinicContext) return '';
+  const ctx = req.clinicContext;
+  const safeJoin = (arr?: string[]) => (arr || []).map(s => sanitizePromptInput(s, 200)).filter(Boolean).join(', ');
+  const services = safeJoin(ctx.actualServices);
+  const specialties = safeJoin(ctx.specialties);
+  if (!services && !specialties) return '';
+  const topic = sanitizePromptInput(req.topic, 500);
+  return `<clinic_context>
+${services ? `<services>${services}</services>` : ''}
+${specialties ? `<specialties>${specialties}</specialties>` : ''}
+<instruction>
+현재 주제("${topic}")와 관련 있는 정보만 참고하세요.
+없는 서비스/장비는 언급하지 마세요. 지역명(동·시·역 이름) 본문 삽입 금지.
+</instruction>
+</clinic_context>`;
+}
+
+/** <learned_style> 블록 — stylePromptText 또는 hospitalStyleBlock 있을 때만 */
+function buildLearnedStyleBlock(
+  req: GenerationRequest,
+  hospitalStyleBlock?: string | { systemBlock: string; fewShotBlock?: string } | null,
+): string {
+  if (req.stylePromptText?.trim()) {
+    return `<learned_style priority="override_greeting">
+${req.stylePromptText}
+<instruction>이 말투/화자 설정이 다른 모든 정체성/톤 지시보다 우선합니다. greeting_rule의 표준 인사 형식은 적용하지 마세요. 학습본의 인사 유무/길이를 그대로 재현합니다.</instruction>
+</learned_style>`;
+  }
+  if (hospitalStyleBlock) {
+    const text = typeof hospitalStyleBlock === 'string'
+      ? hospitalStyleBlock
+      : [hospitalStyleBlock.systemBlock, hospitalStyleBlock.fewShotBlock].filter(Boolean).join('\n\n');
+    if (text) {
+      return `<learned_style priority="override_greeting">
+${text}
+<instruction>이 말투가 greeting_rule보다 우선합니다.</instruction>
+</learned_style>`;
+    }
+  }
+  return '';
+}
+
+// ── 1) buildOutlinePrompt — 2패스 Pass 1: 아웃라인 JSON 생성 ──
+
+export function buildOutlinePrompt(
+  req: GenerationRequest,
+  opts: { hospitalStyleBlock?: string | { systemBlock: string; fewShotBlock?: string } | null } = {},
+): BlogPromptV3 {
+  const systemBlocks: CacheableBlock[] = [];
+
+  systemBlocks.push({ type: 'text', text: OUTLINE_PERSONA, cacheable: true, cacheTtl: '1h' });
+  systemBlocks.push({ type: 'text', text: MEDICAL_LAW_CONSTRAINTS, cacheable: true, cacheTtl: '1h' });
+
+  if (req.category && CATEGORY_DEPTH_GUIDES[req.category]) {
+    systemBlocks.push({ type: 'text', text: CATEGORY_DEPTH_GUIDES[req.category], cacheable: true, cacheTtl: '5m' });
+  }
+  if (req.category === '치과' && isProstheticTopic(req.topic, req.disease)) {
+    systemBlocks.push({ type: 'text', text: DENTAL_PROSTHETIC_GUIDE, cacheable: true, cacheTtl: '5m' });
+  }
+
+  const seasonal = getSeasonalContext(req.category || '');
+  if (seasonal) {
+    systemBlocks.push({ type: 'text', text: seasonal, cacheable: true, cacheTtl: '5m' });
+  }
+
+  const learnedStyle = buildLearnedStyleBlock(req, opts.hospitalStyleBlock);
+  if (learnedStyle) {
+    systemBlocks.push({ type: 'text', text: learnedStyle, cacheable: true, cacheTtl: '5m' });
+  }
+
+  const parts: string[] = [buildUserInputBlock(req)];
+
+  const reference = buildReferenceBlock(req);
+  if (reference) parts.push('', reference);
+
+  const clinic = buildClinicContextBlock(req);
+  if (clinic) parts.push('', clinic);
+
+  const targetLength = req.textLength || 1500;
+  const imageCount = req.imageCount ?? 0;
+  parts.push(
+    '',
+    `<task>
+위 정보를 바탕으로 블로그 아웃라인을 JSON으로만 출력하세요.
+- 목표 글자수 ${targetLength}자에 맞춰 section 개수와 각 charTarget 결정
+- 이미지 ${imageCount}장이면 해당 섹션에만 imageIndex를 1부터 순서대로 부여
+- 소제목은 검색형 구어체 10~25자. SEO 키워드를 최소 2개 소제목에 자연 포함
+- intro/outro 각 charTarget ≈ 200자
+- summary에 이 섹션이 다룰 구체적 내용을 1~2문장으로 작성
+- JSON 객체 하나만 출력. 밖의 텍스트 포함하지 마세요.
+</task>`,
+  );
+
+  return { systemBlocks, userPrompt: parts.join('\n') };
+}
+
+// ── 2) buildSectionFromOutlinePrompt — 2패스 Pass 2: 섹션 HTML 생성 ──
+
+interface SectionFromOutlineInput {
+  section: BlogOutlineSection;
+  sectionIndex: number;
+  outline: BlogOutline;
+  req: GenerationRequest;
+  hospitalStyleBlock?: string | { systemBlock: string; fewShotBlock?: string } | null;
+}
+
+export function buildSectionFromOutlinePrompt(
+  input: SectionFromOutlineInput,
+): BlogPromptV3 {
+  const { section, sectionIndex, outline, req, hospitalStyleBlock } = input;
+  const systemBlocks: CacheableBlock[] = [];
+
+  systemBlocks.push({ type: 'text', text: SECTION_PERSONA, cacheable: true, cacheTtl: '1h' });
+  systemBlocks.push({ type: 'text', text: MEDICAL_LAW_CONSTRAINTS, cacheable: true, cacheTtl: '1h' });
+
+  if (req.category && CATEGORY_DEPTH_GUIDES[req.category]) {
+    systemBlocks.push({ type: 'text', text: CATEGORY_DEPTH_GUIDES[req.category], cacheable: true, cacheTtl: '5m' });
+  }
+  if (req.category === '치과' && isProstheticTopic(req.topic, req.disease)) {
+    systemBlocks.push({ type: 'text', text: DENTAL_PROSTHETIC_GUIDE, cacheable: true, cacheTtl: '5m' });
+  }
+
+  const learnedStyle = buildLearnedStyleBlock(req, hospitalStyleBlock);
+  if (learnedStyle) {
+    systemBlocks.push({ type: 'text', text: learnedStyle, cacheable: true, cacheTtl: '5m' });
+  }
+
+  // user prompt
+  const parts: string[] = [buildUserInputBlock(req)];
+
+  // intro 섹션만 greeting_rule 주입
+  if (section.type === 'intro' && !req.stylePromptText?.trim()) {
+    parts.push('', buildGreetingRuleBlock(req));
+  }
+
+  const reference = buildReferenceBlock(req);
+  if (reference) parts.push('', reference);
+
+  // 아웃라인 전체 맥락
+  const allHeadings = outline.sections
+    .map((s, i) => {
+      const mark = i === sectionIndex ? ' current="true"' : '';
+      const heading = s.heading ? ` heading="${sanitizePromptInput(s.heading, 100)}"` : '';
+      return `  <section index="${i}" type="${s.type}"${heading}${mark} />`;
+    })
+    .join('\n');
+
+  parts.push(
+    '',
+    `<outline_context>
+  <total_sections>${outline.sections.length}</total_sections>
+  <key_message>${sanitizePromptInput(outline.keyMessage, 200)}</key_message>
+  <all_headings>
+${allHeadings}
+  </all_headings>
+</outline_context>`,
+  );
+
+  // 대상 섹션 상세
+  const prevHeading = sectionIndex > 0 ? outline.sections[sectionIndex - 1]?.heading : undefined;
+  const nextHeading = sectionIndex < outline.sections.length - 1 ? outline.sections[sectionIndex + 1]?.heading : undefined;
+  const imgMarker = section.imageIndex ? `\n  <image_marker>[IMG_${section.imageIndex}]</image_marker>` : '';
+
+  parts.push(
+    '',
+    `<target_section>
+  <index>${sectionIndex}</index>
+  <type>${section.type}</type>
+${section.heading ? `  <heading>${sanitizePromptInput(section.heading, 100)}</heading>` : ''}
+  <summary>${sanitizePromptInput(section.summary, 500)}</summary>
+  <char_target>${section.charTarget ?? 300}</char_target>${imgMarker}
+${prevHeading ? `  <prev_heading>${sanitizePromptInput(prevHeading, 100)}</prev_heading>` : ''}
+${nextHeading ? `  <next_heading>${sanitizePromptInput(nextHeading, 100)}</next_heading>` : ''}
+</target_section>`,
+  );
+
+  const typeLabel = section.type === 'intro' ? '도입부' : section.type === 'outro' ? '마무리' : `"${section.heading || ''}"`;
+  parts.push(
+    '',
+    `<task>
+target_section의 HTML만 출력하세요. 소제목 heading을 <h2>로 사용하고 아래 2~4개 <p> 문단.
+${section.imageIndex ? `이미지 마커 [IMG_${section.imageIndex}]를 적절한 위치에 포함하세요.` : ''}
+prev_heading과 next_heading이 있으면 문맥이 자연스럽게 이어지도록.
+${typeLabel} 섹션의 HTML만 출력. 설명/코드펜스/마크다운 금지.
+</task>`,
+  );
+
+  return { systemBlocks, userPrompt: parts.join('\n') };
+}
+
+// ── 3) buildBlogPromptV3 — 1패스 fallback: 완결된 블로그 1편 ──
+
+export function buildBlogPromptV3(
+  req: GenerationRequest,
+  opts: { hospitalStyleBlock?: string | { systemBlock: string; fewShotBlock?: string } | null } = {},
+): BlogPromptV3 {
+  const systemBlocks: CacheableBlock[] = [];
+
+  systemBlocks.push({ type: 'text', text: BLOG_PERSONA, cacheable: true, cacheTtl: '1h' });
+  systemBlocks.push({ type: 'text', text: MEDICAL_LAW_CONSTRAINTS, cacheable: true, cacheTtl: '1h' });
+
+  if (req.category && CATEGORY_DEPTH_GUIDES[req.category]) {
+    systemBlocks.push({ type: 'text', text: CATEGORY_DEPTH_GUIDES[req.category], cacheable: true, cacheTtl: '5m' });
+  }
+  if (req.category === '치과' && isProstheticTopic(req.topic, req.disease)) {
+    systemBlocks.push({ type: 'text', text: DENTAL_PROSTHETIC_GUIDE, cacheable: true, cacheTtl: '5m' });
+  }
+
+  const seasonal = getSeasonalContext(req.category || '');
+  if (seasonal) {
+    systemBlocks.push({ type: 'text', text: seasonal, cacheable: true, cacheTtl: '5m' });
+  }
+
+  const learnedStyle = buildLearnedStyleBlock(req, opts.hospitalStyleBlock);
+  if (learnedStyle) {
+    systemBlocks.push({ type: 'text', text: learnedStyle, cacheable: true, cacheTtl: '5m' });
+  }
+
+  // user prompt
+  const parts: string[] = [buildUserInputBlock(req)];
+
+  // 인사 규칙 (학습 말투 없을 때만)
+  if (!req.stylePromptText?.trim()) {
+    parts.push('', buildGreetingRuleBlock(req));
+  }
+
+  const reference = buildReferenceBlock(req);
+  if (reference) parts.push('', reference);
+
+  const clinic = buildClinicContextBlock(req);
+  if (clinic) parts.push('', clinic);
+
+  // 병원 강점
+  const safeStrengths = sanitizeSourceContent(req.hospitalStrengths, 3000);
+  if (safeStrengths) {
+    parts.push(
+      '',
+      `<hospital_strengths>
+${safeStrengths}
+<instruction>주제와 관련된 부분만 본문 흐름에 자연스럽게 녹여 서술. 나열 금지.</instruction>
+</hospital_strengths>`,
+    );
+  }
+
+  // 임상 컨텍스트
+  const safeClinical = sanitizeSourceContent(req.clinicalContext, 5000);
+  if (safeClinical) {
+    parts.push(
+      '',
+      `<clinical_context>
+${safeClinical}
+<instruction>분석 결과에 언급된 시술/장비/상태를 본문 최소 3곳 이상에서 구체적으로 언급. 없는 정보 추가 금지.</instruction>
+</clinical_context>`,
+    );
+  }
+
+  // 이미지 라이브러리
+  if (req.libraryImages?.length) {
+    const imgLines = req.libraryImages.map((img, i) =>
+      `  <image index="${i + 1}" tags="${sanitizePromptInput(img.tags.join(','), 200)}" alt="${sanitizePromptInput(img.altText, 200)}" />`,
+    ).join('\n');
+    parts.push(
+      '',
+      `<library_images>
+${imgLines}
+<instruction>위 이미지가 이미 준비되어 있습니다. 프롬프트는 "USE_LIBRARY"로만 작성.</instruction>
+</library_images>`,
+    );
+  }
+
+  // 사용자 지정 소제목
+  const safeSubheadings = sanitizeSourceContent(req.customSubheadings, 2000);
+  if (safeSubheadings) {
+    parts.push(
+      '',
+      `<custom_subheadings>
+${safeSubheadings}
+<instruction>위 소제목을 그대로 사용하세요.</instruction>
+</custom_subheadings>`,
+    );
+  }
+
+  // FAQ
+  if (req.includeFaq) {
+    parts.push(
+      '',
+      `<faq_section count="${req.faqCount || 3}">
+본문 완전히 마무리 후(결론 뒤) FAQ를 ${req.faqCount || 3}개 작성하세요.
+형식: <div class="faq-section"><h3>💬 자주 묻는 질문</h3><p class="faq-q">Q. ...</p><p class="faq-a">A. ...</p></div>
+실제 환자 질문 기반 구어체, 답변은 2~3문장.
+</faq_section>`,
+    );
+  }
+
+  const targetLength = req.textLength || 1500;
+  const imageCount = req.imageCount ?? 0;
+  parts.push(
+    '',
+    `<task>
+완결된 블로그 글 1편을 HTML로만 출력하세요.
+- 목표 글자수 ${targetLength}자 (±20%)
+- 이미지 ${imageCount}장: [IMG_1] ~ [IMG_${imageCount}] 마커를 본문에 배치
+- greeting_rule / learned_style 중 존재하는 것을 최우선 준수
+- reference_material / clinic_context / clinical_context 의 사실만 활용
+- 본문 마지막에 <div class="references-footer" data-no-copy="true">...</div> 출처 블록 (2~4개 기관명+주제)
+- 출처 블록 다음 줄에 ---SCORES--- 와 {"seo":0~100,"medical":0~100,"conversion":0~100} JSON 한 줄
+HTML 외 텍스트/마크다운/코드펜스 금지.
+</task>`,
+  );
+
+  return { systemBlocks, userPrompt: parts.join('\n') };
+}
+
+// ── 4) buildBlogSectionPromptV3 — 수동 섹션 재생성 ──
+
+export function buildBlogSectionPromptV3(
+  input: SectionRegenerateInputV3,
+): BlogPromptV3 {
+  const systemBlocks: CacheableBlock[] = [];
+
+  systemBlocks.push({ type: 'text', text: SECTION_REGEN_PERSONA, cacheable: true, cacheTtl: '1h' });
+  systemBlocks.push({ type: 'text', text: MEDICAL_LAW_CONSTRAINTS, cacheable: true, cacheTtl: '1h' });
+
+  if (input.category && CATEGORY_DEPTH_GUIDES[input.category]) {
+    systemBlocks.push({ type: 'text', text: CATEGORY_DEPTH_GUIDES[input.category], cacheable: true, cacheTtl: '5m' });
+  }
+
+  if (input.stylePromptText?.trim()) {
+    systemBlocks.push({
+      type: 'text',
+      text: `<learned_style priority="override_greeting">
+${input.stylePromptText}
+<instruction>이 말투/화자 설정이 다른 모든 정체성/톤 지시보다 우선합니다.</instruction>
+</learned_style>`,
+      cacheable: true,
+      cacheTtl: '5m',
+    });
+  }
+
+  // user prompt
+  const safeKeywords = sanitizePromptInput(input.keywords, 300);
+  const safeCurrent = sanitizeSourceContent(input.currentSection, 10000);
+  const safeFullCtx = sanitizeSourceContent(input.fullBlogContent, 30000);
+
+  const parts: string[] = [
+    `<current_section index="${input.sectionIndex}">
+${safeCurrent}
+</current_section>`,
+    '',
+    `<full_blog_context>
+${safeFullCtx}
+</full_blog_context>`,
+    '',
+    `<regeneration_target>
+  <index>${input.sectionIndex}</index>
+  <preserve_heading>true</preserve_heading>
+  <preserve_image_markers>true</preserve_image_markers>
+  <char_range>원본 ±20%</char_range>
+${input.category ? `  <category>${input.category}</category>` : ''}
+${safeKeywords ? `  <seo_keywords>${safeKeywords}</seo_keywords>` : ''}
+</regeneration_target>`,
+    '',
+    `<task>
+current_section만 재작성하세요.
+- heading(h2/h3 텍스트)는 원본 그대로 유지
+- [IMG_N] 마커가 있으면 동일 위치에 유지
+- full_blog_context는 앞뒤 섹션과 톤 일치를 위한 참고용 — 직접 편집하지 마세요
+- 기존 문장의 어순만 바꾸지 말고, 새로운 정보나 관점을 추가하세요
+${safeKeywords ? `- 키워드 "${safeKeywords}"를 본 섹션에 1~2회 자연 포함` : ''}
+- 해당 섹션의 HTML만 출력. 설명/코드펜스 금지.
+</task>`,
+  ];
+
+  return { systemBlocks, userPrompt: parts.filter(p => p !== '').join('\n') };
+}
+
+// ── 5) buildBlogReviewPrompt — Opus 감수 (JSON 출력) ──
+
+export function buildBlogReviewPrompt(
+  draftHtml: string,
+  ctx: {
+    category?: string;
+    hospitalName?: string;
+    ruleFilterViolations?: string[];
+    stylePromptText?: string;
+    hospitalStyleBlock?: string;
+  } = {},
+): BlogPromptV3 {
+  const systemBlocks: CacheableBlock[] = [];
+
+  systemBlocks.push({ type: 'text', text: REVIEWER_PERSONA, cacheable: true, cacheTtl: '1h' });
+  systemBlocks.push({ type: 'text', text: MEDICAL_LAW_CONSTRAINTS, cacheable: true, cacheTtl: '1h' });
+
+  if (ctx.category && CATEGORY_DEPTH_GUIDES[ctx.category]) {
+    systemBlocks.push({ type: 'text', text: CATEGORY_DEPTH_GUIDES[ctx.category], cacheable: true, cacheTtl: '5m' });
+  }
+
+  const hasLearnedStyle = !!(ctx.stylePromptText?.trim() || ctx.hospitalStyleBlock?.trim());
+
+  // user prompt
+  const safeHospital = sanitizePromptInput(ctx.hospitalName, 100) || '(미지정)';
+  const safeDraft = sanitizeSourceContent(draftHtml, 60000);
+  const violations = ctx.ruleFilterViolations?.length ? ctx.ruleFilterViolations.join(', ') : '(감지 없음)';
+
+  const parts: string[] = [
+    `<draft_to_review>
+${safeDraft}
+</draft_to_review>`,
+    '',
+    `<original_request>
+  <hospital_name>${safeHospital}</hospital_name>
+${ctx.category ? `  <category>${ctx.category}</category>` : ''}
+  <rule_filter_detections>${violations}</rule_filter_detections>
+${hasLearnedStyle ? '  <has_learned_style>true</has_learned_style>' : ''}
+</original_request>`,
+    '',
+    `<review_criteria>
+1. 의료광고법 위반 (MEDICAL_LAW_CONSTRAINTS 블록 기준)
+2. AI 냄새 (어미 반복, 접속사 남발, 추상적 서술, 번역투)
+3. SEO (키워드 배치, 소제목 키워드 포함, 중복 없음)
+4. 가독성 (문단 150자 이내, 3+ 나열 시 리스트, 핵심 수치 strong)
+5. 구조 (도입→본문→마무리 논리 흐름, 소제목 순서)
+${hasLearnedStyle ? '6. 학습 말투 경로 — 초안의 인사 유무/형식을 있는 그대로 존중. MISSING/FRAGMENTED 판정 금지.' : '6. 인사 패턴 — "안녕하세요. {수식구} {병원명} {직책}입니다." 형식이 요구된 경우 첫 p를 검증/복원.'}
+</review_criteria>`,
+    '',
+    `<task>
+draft_to_review를 review_criteria 5~6개 항목으로 전수 검토하고 JSON 객체 하나만 출력하세요.
+
+{
+  "verdict": "pass" | "minor_fix" | "major_fix",
+  "issues": [{
+    "category": "medical_law"|"factuality"|"tone"|"seo"|"structure"|"ai_artifact",
+    "severity": "low"|"medium"|"high",
+    "originalQuote": "원문 1~2문장",
+    "problem": "한 줄",
+    "suggestion": "한 줄"
+  }],
+  "revisedHtml": "수정 HTML" | null,
+  "summaryNote": "종합 1~2줄"
+}
+
+verdict 규칙 (기계적 적용):
+- issues 0개 → "pass" (issues=[], revisedHtml=null)
+- 1~3개 AND high 0개 → "minor_fix"
+- 4~5개 OR high 1+ → "major_fix"
+
+revisedHtml 작성 시 원본 구조·소제목·[IMG_N] 마커 보존. 문구만 최소 교정. issues 최대 5개.
+JSON 밖의 텍스트, 코드펜스, 설명문 금지.
+</task>`,
+  ];
+
+  return { systemBlocks, userPrompt: parts.filter(p => p !== '').join('\n') };
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Part E(하단) — 임시 legacy re-export (V1/V2만 남음, 다음 커밋에서 정리)
 // ═══════════════════════════════════════════════════════════════════
 
 export {
   buildBlogPrompt,
   buildSectionRegeneratePrompt,
-  buildBlogPromptV3,
-  buildBlogReviewPrompt,
-  buildBlogSectionPromptV3,
-  buildOutlinePrompt,
-  buildSectionFromOutlinePrompt,
 } from './blogPrompt_legacy';
