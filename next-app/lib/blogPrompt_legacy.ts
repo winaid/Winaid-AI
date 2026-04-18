@@ -1,8 +1,9 @@
 /**
- * 블로그 생성 프롬프트 조립 — GenerationRequest → { systemInstruction, prompt }
+ * @deprecated 이 파일은 Gemini 최적화 시절의 레거시 프롬프트입니다.
+ * 새 Claude 최적화 프롬프트: blogPrompt.ts
+ * 롤백 필요 시에만 사용. 정상 동작 확인 후 삭제 예정.
  *
- * old legacyBlogGeneration.ts 기준으로 이식.
- * 출력: HTML (<h3> 소제목 + <p> 문단 + [IMG_N] 마커)
+ * 원래 설명: 블로그 생성 프롬프트 조립 — GenerationRequest → { systemInstruction, prompt }
  */
 import type { GenerationRequest } from './types';
 import { sanitizePromptInput, sanitizeSourceContent } from './promptSanitize';
