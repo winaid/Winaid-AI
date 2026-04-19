@@ -5,6 +5,7 @@
  */
 import { supabase } from './supabase';
 import type { CrawledPostScore, DBCrawledPost } from './types';
+import type { BrandPreset } from './brandPreset';
 
 // ── 타입 ──
 
@@ -74,6 +75,68 @@ export async function getAllStyleProfiles(): Promise<HospitalStyleProfile[]> {
   return data as HospitalStyleProfile[];
 }
 
+// ── 브랜드 프리셋 (brand_preset JSONB 컬럼) ──
+// hospital_style_profiles 에는 두 개의 JSONB 필드가 공존한다:
+//   - style_profile  : 말투 학습 결과 (AnalyzedStyle)
+//   - brand_preset   : 시각 브랜드 프리셋 (BrandPreset, 2026-04-11 마이그레이션)
+// 두 필드는 의도적으로 분리 — 사용처·갱신 빈도·담당 UI 가 서로 다름.
+
+/**
+ * 병원 브랜드 프리셋 조회.
+ * @returns 저장된 프리셋 또는 null (미설정·Supabase 미구성·DB 에러 시 모두 null)
+ */
+export async function getBrandPreset(hospitalName: string): Promise<BrandPreset | null> {
+  if (!supabase) return null;
+  try {
+    const { data, error } = await supabase
+      .from('hospital_style_profiles')
+      .select('brand_preset')
+      .eq('hospital_name', hospitalName)
+      .maybeSingle();
+    if (error || !data) return null;
+    const raw = (data as { brand_preset?: unknown }).brand_preset;
+    // 마이그레이션 기본값 `'{}'` 가 들어와 있을 수 있음 → 빈 객체는 null 로 취급.
+    if (!raw || typeof raw !== 'object') return null;
+    const preset = raw as Partial<BrandPreset>;
+    if (!preset.colors || !preset.typography) return null;
+    return preset as BrandPreset;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 병원 브랜드 프리셋 저장 (upsert).
+ * hospital_style_profiles 의 row 가 없으면 생성, 있으면 brand_preset 컬럼만 갱신.
+ * 다른 필드(style_profile, naver_blog_url 등)는 건드리지 않는다.
+ *
+ * @returns 성공 여부
+ */
+export async function saveBrandPreset(hospitalName: string, preset: BrandPreset): Promise<boolean> {
+  if (!supabase) return false;
+  if (!hospitalName) return false;
+  try {
+    const presetWithTimestamp: BrandPreset = {
+      ...preset,
+      updatedAt: new Date().toISOString(),
+    };
+    // Supabase 의 네이티브 upsert + onConflict 로 atomic 하게 처리.
+    // 공급한 필드만 갱신되므로 기존 style_profile 등은 보존됨.
+    // (.from().upsert 의 타입 제네릭이 DB 스키마와 연결돼 있지 않아 as any 사용 —
+    //  기존 styleService 의 다른 upsert 호출과 동일한 패턴)
+    const { error } = await (supabase.from('hospital_style_profiles') as any).upsert(
+      {
+        hospital_name: hospitalName,
+        brand_preset: presetWithTimestamp,
+      },
+      { onConflict: 'hospital_name' },
+    );
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
 // ── 의료광고법 금지 표현 필터 (말투 분석 결과에서 위험 표현 제거) ──
 
 import { FORBIDDEN_EXPRESSIONS } from './medicalLawRules';
@@ -100,112 +163,125 @@ export function buildStylePrompt(
   const safeSentenceEndings = filterProhibited(as_.sentenceEndings || []);
   const safeUniqueExpressions = filterProhibited(as_.uniqueExpressions || []);
 
-  const deepBlock = as_.speakerIdentity ? `
-[화자 캐릭터]
-- 정체성: ${as_.speakerIdentity || '미분석'}
-- 독자와의 거리감: ${as_.readerDistance || '미분석'}
-- 설득 방식: ${as_.persuasionStyle || '미분석'}
+  const toneBlock = `<tone>
+  <voice>${as_.tone}</voice>
+  <formality>${as_.formalityLevel === 'formal' ? '격식체' : as_.formalityLevel === 'casual' ? '편한 말투' : '중립적'}</formality>
+  <emotion>${as_.emotionLevel === 'high' ? '풍부하게' : as_.emotionLevel === 'medium' ? '적당히' : '절제하여'}</emotion>
+  <sentence_endings>${safeSentenceEndings.join(', ')}</sentence_endings>
+  <vocabulary>${safeVocabulary.join(', ')}</vocabulary>
+  <structure>${as_.structure}</structure>
+</tone>`;
 
-[문장·문단 DNA]
-- 리듬: ${as_.sentenceRhythm || '미분석'}
-- 전개 구조: ${as_.paragraphFlow || '미분석'}
-- 고유 표현: ${safeUniqueExpressions.length > 0 ? safeUniqueExpressions.join(', ') : '미분석'}
+  const characterBlock = as_.speakerIdentity ? `<speaker_character>
+  <identity>${as_.speakerIdentity}</identity>
+  <reader_distance>${as_.readerDistance || '미분석'}</reader_distance>
+  <persuasion_style>${as_.persuasionStyle || '미분석'}</persuasion_style>
+</speaker_character>` : '';
 
-[의료 콘텐츠 전략]
-- 의료 용어 수준: ${as_.medicalTermLevel || '미분석'}
-- 시술·치료 설명 방식: ${as_.procedureExplainStyle || '미분석'}
-- 신뢰 구축 패턴: ${as_.trustBuildingPattern || '미분석'}
-- 행동 유도(CTA) 방식: ${as_.ctaStyle || '미분석'}
-- 환자 불안 대응: ${as_.anxietyHandling || '미분석'}
+  const dnaBlock = as_.speakerIdentity ? `<writing_dna>
+  <rhythm>${as_.sentenceRhythm || '미분석'}</rhythm>
+  <paragraph_flow>${as_.paragraphFlow || '미분석'}</paragraph_flow>
+  <unique_expressions>${safeUniqueExpressions.join(', ') || '미분석'}</unique_expressions>
+</writing_dna>` : '';
 
-[한 줄 정의] ${as_.oneLineSummary || description}
+  const medicalBlock = as_.speakerIdentity ? `<medical_content_strategy>
+  <term_level>${as_.medicalTermLevel || '미분석'}</term_level>
+  <procedure_explain>${as_.procedureExplainStyle || '미분석'}</procedure_explain>
+  <trust_building>${as_.trustBuildingPattern || '미분석'}</trust_building>
+  <cta_style>${as_.ctaStyle || '미분석'}</cta_style>
+  <anxiety_handling>${as_.anxietyHandling || '미분석'}</anxiety_handling>
+</medical_content_strategy>` : '';
 
-[이 병원다운 문장 — 참고]
+  const examplesBlock = as_.speakerIdentity ? `<style_examples>
+<good label="이 병원다운 문장">
 ${(as_.goodExamples || []).map((ex, i) => `${i + 1}. ${ex}`).join('\n') || '(예시 없음)'}
-
-[이 병원답지 않은 문장 — 절대 금지]
+</good>
+<bad label="이 병원답지 않은 문장">
 ${(as_.badExamples || []).map((ex, i) => `${i + 1}. ${ex}`).join('\n') || '(예시 없음)'}
-` : '';
+</bad>
+</style_examples>` : '';
 
   const bannedBlock = (as_.bannedGenericStyle || []).length > 0
-    ? `\n[이 병원 글에서 금지할 범용 표현]\n${as_.bannedGenericStyle!.map(b => `- ${b}`).join('\n')}\n`
+    ? `<banned_expressions>\n${as_.bannedGenericStyle!.map(b => `- ${b}`).join('\n')}\n</banned_expressions>`
     : '';
 
-  // Tier 2-B: 단락 단위 원문 샘플을 우선 사용 (줄바꿈 재현 가능).
-  // Tier 2-A 이전 프로파일은 문장 15개 추출 방식으로 fallback.
   let referenceBlock = '';
   const repParagraphs = Array.isArray(as_.representativeParagraphs)
     ? as_.representativeParagraphs.filter(p => typeof p === 'string' && p.trim().length >= 50)
     : [];
 
   if (repParagraphs.length > 0) {
-    // Tier 2-A 이후: 원문 단락 그대로 (줄바꿈 보존). Sonnet 이 물리적 리듬을 본뜰 수 있도록.
-    referenceBlock = `
+    referenceBlock = `<original_paragraphs priority="highest">
+<instruction>
+아래 원문 단락의 물리적 구조를 그대로 재현하세요:
+- 한 단락의 문장 수 (1문장짜리 단락이면 1문장만)
+- 단락 사이 빈 줄 위치 (빈 줄이 있으면 빈 p 삽입)
+- 긴 단락 vs 짧은 단락의 리듬 패턴
+- 문장 길이의 장단 교차
 
-[원문 단락 샘플 — 이 병원이 실제로 쓴 단락]
-아래 단락들의 **단락 길이, 문장 수, 줄바꿈 위치, 빈 줄 빈도** 를 본문 <p> 구성에 그대로 재현하라.
-단어까지 베끼지 말고 리듬만 복제. 의료광고법 위반 표현이 섞여 있어도 따라 쓰지 마라.
-원문의 빈 줄(\n\n) 이 단락을 분리하는 자리에는 빈 <p></p> 한 개를 삽입해 시각적 간격을 재현한다. 단일 \n(줄바꿈 1개) 은 공백으로 처리.
+단어·내용을 베끼지 마세요 — 구조와 리듬만 복제합니다.
+의료광고법 위반 표현이 원문에 있어도 따라 쓰지 마세요.
+</instruction>
 
-${repParagraphs.slice(0, 3).map((p, i) => `[예시 ${i + 1}]\n${p}`).join('\n\n===\n\n')}`;
+${repParagraphs.slice(0, 5).map((p, i) => `<sample index="${i + 1}">\n${p}\n</sample>`).join('\n\n')}
+</original_paragraphs>`;
   } else if (rawSampleText && rawSampleText.length > 100) {
-    // Fallback: 기존 문장 15개 추출 방식 (Tier 2-A 이전 프로파일 대응)
     const sentences = rawSampleText
       .split(/[.!?]\s+|\.(?=\s)|(?<=다)\s+/)
       .map(s => s.trim().replace(/^[-–—·•\s]+/, ''))
       .filter(s => s.length >= 20 && s.length <= 80 && !s.includes('http') && !s.includes('©'));
     const uniqueSentences = [...new Set(sentences)].slice(0, 15);
     if (uniqueSentences.length > 0) {
-      referenceBlock = `
-
-[원문 레퍼런스 — 이 병원이 실제로 쓴 문장들]
-아래 문장의 톤, 리듬, 표현 방식을 참고해서 같은 느낌으로 새 문장을 만들어라.
-그대로 복사하지 말고 스타일만 재현.
-
-${uniqueSentences.map((s, i) => `${i + 1}. "${s}"`).join('\n')}`;
+      referenceBlock = `<original_sentences>
+<instruction>
+아래 문장들의 톤·리듬·표현 방식을 참고해서 같은 느낌으로 새 문장을 만드세요.
+그대로 복사하지 말고 스타일만 재현합니다.
+</instruction>
+${uniqueSentences.map(s => `<sentence>${s}</sentence>`).join('\n')}
+</original_sentences>`;
     }
   }
 
-  // Tier 2-B: 단락·줄바꿈 리듬 지시 (paragraphStats 없으면 빈 문자열)
-  const rhythmBlock = as_.paragraphStats ? `
+  const rhythmBlock = as_.paragraphStats ? `<paragraph_rhythm priority="high">
+<metrics>
+  <avg_sentences_per_paragraph>${as_.paragraphStats.avgSentencesPerParagraph}</avg_sentences_per_paragraph>
+  <avg_chars_per_paragraph>${as_.paragraphStats.avgCharsPerParagraph}</avg_chars_per_paragraph>
+  <line_break_style>${as_.paragraphStats.lineBreakStyle}</line_break_style>
+  <double_break_frequency>${as_.paragraphStats.doubleBreakFrequency}</double_break_frequency>
+  <paragraph_length_pattern>${as_.paragraphStats.paragraphLengthPattern || '일정한 길이'}</paragraph_length_pattern>
+</metrics>
+<html_mapping>
+이 수치를 HTML p 구성에 그대로 반영하세요:
+- airy면: p를 짧게 나누고 빈 p를 자주 삽입
+- dense면: 한 p 안에 문장 3~4개 묶기, 빈 줄 최소
+- double_break_frequency가 high면: 약 3문장마다 빈 p 삽입
+- 인사 단락도 이 리듬을 따릅니다 (고정 형식 강제하지 않음)
+</html_mapping>
+</paragraph_rhythm>` : '';
 
-[단락·줄바꿈 리듬 — 반드시 재현]
-- 단락당 평균 문장 수: ${as_.paragraphStats.avgSentencesPerParagraph}
-- 단락당 평균 글자 수: ${as_.paragraphStats.avgCharsPerParagraph}
-- 줄바꿈 스타일: ${
-      as_.paragraphStats.lineBreakStyle === 'dense' ? 'dense (문장 사이 줄바꿈 자주, 숨가쁜 리듬)' :
-      as_.paragraphStats.lineBreakStyle === 'airy' ? 'airy (빈 줄 자주, 여유 있는 리듬)' :
-      'mixed (dense 와 airy 섞임)'
-    }
-- 빈 줄 빈도: ${
-      as_.paragraphStats.doubleBreakFrequency === 'high' ? 'high (약 3문장마다 빈 줄)' :
-      as_.paragraphStats.doubleBreakFrequency === 'medium' ? 'medium (약 3~10문장마다 빈 줄)' :
-      'low (빈 줄 거의 없음, 긴 단락 위주)'
-    }
-- 단락 길이 패턴: ${as_.paragraphStats.paragraphLengthPattern || '일정한 길이'}
-
-본문 생성 시 HTML <p> 태그 구성에 위 리듬을 그대로 반영한다:
-- 단락 당 평균 문장 수를 맞추고, lineBreakStyle 에 따라 문장을 어떻게 끊을지 결정한다.
-- airy 일수록 <p> 를 더 짧게 나누고, dense 일수록 한 <p> 안에 문장을 여러 개 묶는다.
-- 인사 단락도 학습본 원문 리듬을 따른다. 고정 형식(예: "안녕하세요. {병원명} {직책}입니다.") 을 강제하지 않는다.
-` : '';
-
-  return `[병원 고유 문체: ${name}]
-어미 몇 개를 흉내 내는 것이 아니라, 화자의 태도·상담 방식·설명 습관·설득 구조를 재현하라.
-
-[기본 톤]
-- 어조: ${as_.tone}
-- 격식: ${as_.formalityLevel === 'formal' ? '격식체' : as_.formalityLevel === 'casual' ? '편한 말투' : '중립적'}
-- 감정 표현: ${as_.emotionLevel === 'high' ? '풍부하게' : as_.emotionLevel === 'medium' ? '적당히' : '절제하여'}
-- 문장 끝 패턴: ${safeSentenceEndings.join(', ')}
-- 자주 쓰는 표현: ${safeVocabulary.join(', ')}
-- 글 구조: ${as_.structure}
-${deepBlock}${bannedBlock}${rhythmBlock}
-[자가점검]
-1. 이 문단의 화자가 실제 상담실/진료실에서 말하는 것처럼 읽히는가?
+  const selfCheck = `<style_self_check>
+1. 이 문단의 화자가 실제 상담실에서 말하는 것처럼 읽히는가?
 2. 병원명을 가려도 이 병원 톤으로 느껴지는가?
-3. 같은 어미가 3회 이상 연속 반복되지 않았는가?
-4. 단락 길이·문장 수·줄바꿈 위치가 [단락·줄바꿈 리듬] 및 [원문 단락 샘플] 과 비슷한 리듬인가?${referenceBlock}`;
+3. 원문 단락 샘플과 단락 길이·빈 줄 위치가 비슷한가?
+</style_self_check>`;
+
+  return `<hospital_writing_style name="${name}">
+<one_line_summary>${as_.oneLineSummary || description}</one_line_summary>
+
+<instruction priority="highest">
+어미 몇 개를 흉내 내는 것이 아니라, 화자의 태도·상담 방식·설명 습관·설득 구조·단락 리듬을 전부 재현하세요.
+</instruction>
+
+${toneBlock}
+${characterBlock}
+${dnaBlock}
+${medicalBlock}
+${examplesBlock}
+${bannedBlock}
+${referenceBlock}
+${rhythmBlock}
+${selfCheck}
+</hospital_writing_style>`;
 }
 
 // ── 콘텐츠 생성 시 말투 프롬프트 조회 (DB에서) ──
