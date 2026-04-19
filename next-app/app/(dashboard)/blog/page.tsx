@@ -105,7 +105,7 @@ function BlogForm() {
         const res = await fetch('/api/reference', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ topic: topic.trim() }),
+          body: JSON.stringify({ topic: topic.trim(), category }),
         });
         if (res.ok) setReferenceResult(await res.json());
       } catch { /* 실패 무시 */ }

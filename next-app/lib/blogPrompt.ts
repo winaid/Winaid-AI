@@ -508,6 +508,7 @@ HTML 초안을 12개 체크리스트로 전수 검토하고 JSON으로만 답합
 12) 구조: 논리 흐름, 소제목 순서, 주제 이탈
 13) E-E-A-T: 현장 경험·의학 근거·권위 표현·한계 인정 신호 중 2개 이상 존재하는가
 14) 출처 환각: "2024년 연구", "XX 논문" 같은 구체 출처 조작 여부
+15) 참고 자료 일치: reference_material 블록이 있으면 글의 구체 수치·기전이 자료와 일치하는가
 </checklist>
 
 <output_format>
@@ -640,11 +641,38 @@ function buildGreetingRuleBlock(req: GenerationRequest): string {
 function buildReferenceBlock(req: GenerationRequest): string {
   if (!req.referenceFacts) return '';
   const safeFacts = sanitizeSourceContent(req.referenceFacts, 3000);
-  const sources = req.referenceSources?.length ? `\n<source>${req.referenceSources.join(', ')}</source>` : '';
-  return `<reference_material>
-${safeFacts}${sources}
-<instruction>위 사실만 활용. 추측/환각 금지. 문장 그대로 복사 금지.</instruction>
+  const sources = req.referenceSources?.length
+    ? `\n<source>${req.referenceSources.join(', ')}</source>` : '';
+  return `<reference_material priority="highest">
+<facts>
+${safeFacts}
+</facts>${sources}
+<usage_rules>
+1. 위 facts에 명시된 사실만 구체 수치·기전·치료법·효과로 제시하세요.
+2. facts에 없는 구체 정보(성공률·기간·비율·부작용률 등)를 임의로 만들지 마세요.
+3. 추가 설명이 필요하면 "일반적으로 알려진", "개인차가 있는" 같은 약화된 표현 사용.
+4. facts 문장을 그대로 복사하지 말고 자연스럽게 풀어쓰세요.
+5. 구체 논문명·연도·가이드라인 버전은 절대 만들지 마세요 (facts에 있어도 단체명만 인용).
+</usage_rules>
 </reference_material>`;
+}
+
+/** <no_reference_warning> 블록 — referenceFacts 없을 때만. 환각 위험 경감 지시. */
+function buildNoReferenceWarningBlock(req: GenerationRequest): string {
+  if (req.referenceFacts) return '';
+  return `<no_reference_warning priority="highest">
+현재 화이트리스트 의료 기관(대한치과의사협회·국가건강정보포털·서울대병원 등)에서
+이 주제의 참고 자료를 수집하지 못했습니다. 자료 없이 작성할 때 지켜야 할 규칙:
+
+1. 구체 수치(성공률·기간·비율·부작용률) 제시 금지. "일반적으로", "개인차가 있는" 같은 약화된 표현만.
+2. 특정 논문·연구·가이드라인 인용 절대 금지. 단체명도 조심스럽게.
+3. 기전·치료법 설명은 일반적으로 널리 알려진 수준만 서술.
+4. 확신 표현("분명히", "확실히") 대신 "~일 수 있습니다" 형태 사용.
+5. 의료법 위반 위험이 있는 구체 표현은 더욱 조심.
+
+참고 자료 없이 작성한다는 사실을 환자에게 명시하지는 않습니다 —
+대신 서술 강도를 전반적으로 낮추세요.
+</no_reference_warning>`;
 }
 
 /** <clinic_context> 블록 — req.clinicContext 있을 때만 */
@@ -728,6 +756,8 @@ export function buildOutlinePrompt(
 
   const reference = buildReferenceBlock(req);
   if (reference) parts.push('', reference);
+  const noRefWarning = buildNoReferenceWarningBlock(req);
+  if (noRefWarning) parts.push('', noRefWarning);
 
   const clinic = buildClinicContextBlock(req);
   if (clinic) parts.push('', clinic);
@@ -796,6 +826,8 @@ export function buildSectionFromOutlinePrompt(
 
   const reference = buildReferenceBlock(req);
   if (reference) parts.push('', reference);
+  const noRefWarning = buildNoReferenceWarningBlock(req);
+  if (noRefWarning) parts.push('', noRefWarning);
 
   // 아웃라인 전체 맥락
   const allHeadings = outline.sections
@@ -892,6 +924,8 @@ export function buildBlogPromptV3(
 
   const reference = buildReferenceBlock(req);
   if (reference) parts.push('', reference);
+  const noRefWarning = buildNoReferenceWarningBlock(req);
+  if (noRefWarning) parts.push('', noRefWarning);
 
   const clinic = buildClinicContextBlock(req);
   if (clinic) parts.push('', clinic);

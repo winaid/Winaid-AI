@@ -1,6 +1,6 @@
 /**
  * POST /api/reference — 화이트리스트 의료 참고 자료 수집
- * body: { topic: string }
+ * body: { topic: string; category?: string }
  * response: ReferenceResult
  */
 
@@ -15,20 +15,21 @@ export async function POST(request: NextRequest) {
   const auth = await checkAuth(request);
   if (auth) return auth;
 
-  let body: { topic?: string };
+  let body: { topic?: string; category?: string };
   try {
-    body = (await request.json()) as { topic?: string };
+    body = (await request.json()) as { topic?: string; category?: string };
   } catch {
     return NextResponse.json({ error: 'invalid json' }, { status: 400 });
   }
 
   const topic = typeof body.topic === 'string' ? body.topic.trim() : '';
+  const category = typeof body.category === 'string' ? body.category.trim() : undefined;
   if (!topic) {
     return NextResponse.json({ error: 'topic required' }, { status: 400 });
   }
 
   try {
-    const result = await fetchMedicalReference(topic);
+    const result = await fetchMedicalReference(topic, category);
     return NextResponse.json(result);
   } catch (e) {
     console.warn(`[reference] ${(e as Error).message.slice(0, 200)}`);
