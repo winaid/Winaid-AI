@@ -125,6 +125,45 @@ export const CATEGORY_DEPTH_GUIDES: Record<string, string> = {
 </specialist_guide>`,
 };
 
+export const TOPIC_TYPE_GUIDES: Record<TopicType, string> = {
+  info: `<topic_type_guide type="info">
+정보형 주제 (예: "임플란트란", "치아교정 종류"):
+  구조: 현상 공감 → 정의 → 종류/방법 → 주의사항 → 상담 안내
+  핵심: 명확한 분류와 구체 수치. "어떤 것이 나에게 맞을까?" 관점.
+  소제목 예: "어떤 경우에 필요한가요?" "종류별 차이 한눈에" "선택 기준 3가지"
+</topic_type_guide>`,
+  compare: `<topic_type_guide type="compare">
+비교형 주제 (예: "A vs B", "임플란트 종류 비교"):
+  구조: 선택 고민 공감 → 각 옵션 특징 → 장단점 비교 → 상황별 추천 → 상담 안내
+  핵심: 비교표 또는 ul/li로 대조 명확히. 공정한 서술 (특정 옵션 유인 금지).
+  소제목 예: "A는 어떤 분에게 맞을까요?" "B의 장점과 주의점" "상황별 선택 기준"
+</topic_type_guide>`,
+  aftercare: `<topic_type_guide type="aftercare">
+관리/사후관리형 주제 (예: "임플란트 관리법", "시술 후 주의사항"):
+  구조: 왜 관리가 중요한가 → 시기별 가이드 (당일·1주·1개월·장기) → 체크리스트 → 이상 신호 안내
+  핵심: 시간순·단계별 구체 지시. 환자가 바로 따라할 수 있는 행동 중심.
+  소제목 예: "시술 직후 이것만 지키세요" "1주일 후 이렇게 관리" "이런 증상은 주의"
+</topic_type_guide>`,
+  symptom: `<topic_type_guide type="symptom">
+증상형 주제 (예: "잇몸 붓는 이유", "치아 시린 증상"):
+  구조: 증상 공감 (환자 입장 생생히) → 가능한 원인 3~5개 → 자가 점검법 → 수진 권유 타이밍
+  핵심: "어떻게 느껴지는지" 구체 묘사 (찌릿·욱신·시린·붓는 등).
+  과장된 공포 조장 금지. 수진 안내는 자연스럽게.
+  소제목 예: "이런 증상이 있으신가요?" "원인은 크게 세 가지" "언제 병원에 가야 할까?"
+</topic_type_guide>`,
+  qna: `<topic_type_guide type="qna">
+Q&A형 주제 (예: "임플란트 수명은?", "충치 방치하면?"):
+  구조: 질문 명시 → 짧고 명확한 답 (첫 문단 요약) → 근거/배경 설명 → 관련 정보 확장
+  핵심: 스니펫/AI 요약 최적화. 첫 답변을 2~3문장으로 압축 → 이후 상세 설명.
+  소제목 예: "핵심만 빠르게 답변" "왜 그런가요?" "더 알면 좋은 정보"
+</topic_type_guide>`,
+  general: `<topic_type_guide type="general">
+일반형 주제 (명확한 유형이 안 잡히는 경우):
+  구조: 공감 훅 → 핵심 정보 → 환자 체감 사례 → 실천 팁 → 상담 안내
+  핵심: 독자가 "내가 왜 이 글을 읽고 있는지" 답이 되도록 도입부에서 명확히.
+</topic_type_guide>`,
+};
+
 export const SEASONAL_CONTEXTS: Record<string, Record<number, string>> = {
   '치과': {
     1: '신년 건강 다짐, 미뤄둔 치료', 2: '설 후 딱딱한 음식→파절',
@@ -224,6 +263,8 @@ HTML만 출력하세요. 사용 가능 태그: <h2>, <h3>, <p>, <ul>, <li>, <str
 마무리 (2문단):
   핵심 메시지 + "궁금한 점은 담당 의료진과 상담해 보세요" 톤.
   해시태그 10개.
+
+variable 블록의 topic_type이 제공되면 해당 유형별 구조 가이드를 우선 적용하세요.
 </structure>
 
 <writing_style>
@@ -311,6 +352,7 @@ JSON 객체 하나만 출력하세요. JSON 밖의 텍스트는 포함하지 마
 5. imageIndex: 이미지 배치할 섹션에만 1부터 순서대로. 0장이면 전부 생략
 6. summary: 구체적 내용 방향. 막연한 서술 피하세요
 7. intro → sections → outro 자연스러운 논리 순서
+8. variable 블록의 topic_type이 제공되면 해당 유형의 구조 가이드를 반영해 아웃라인 설계
 </design_principles>
 `;
 
@@ -335,6 +377,7 @@ export const SECTION_PERSONA = `<role>
 5. 어미 다양하게: ~합니다, ~이에요, ~거든요, ~인데요
 6. 구체 수치 또는 환자 체감 표현 문단당 1개 이상
 7. 소제목 아래 첫 문장은 질문형 또는 상황 묘사형
+8. variable 블록의 topic_type이 제공되면 해당 유형의 톤과 서술 방향을 반영
 </writing_style>
 
 <examples>
@@ -419,12 +462,14 @@ function buildUserInputBlock(req: GenerationRequest): string {
   const toneDesc = TONE_GUIDES[req.tone] || TONE_GUIDES.warm;
   const styleDesc = STYLE_GUIDES[req.writingStyle || 'empathy'] || '';
 
+  const topicType = classifyTopicType(req.topic, req.disease);
   const targetLength = req.textLength || 1500;
   const imageCount = req.imageCount ?? 0;
 
   const lines: string[] = [
     '<user_input>',
     `  <topic>${topic}</topic>`,
+    `  <topic_type>${topicType}</topic_type>`,
     blogTitle && blogTitle !== topic ? `  <blog_title>${blogTitle}</blog_title>` : '',
     `  <keywords>${keywords || '(없음)'}</keywords>`,
     disease ? `  <disease>${disease}</disease>` : '',
@@ -550,6 +595,10 @@ export function buildOutlinePrompt(
   if (req.category === '치과' && isProstheticTopic(req.topic, req.disease)) {
     systemBlocks.push({ type: 'text', text: DENTAL_PROSTHETIC_GUIDE, cacheable: true, cacheTtl: '5m' });
   }
+  const topicGuideOutline = TOPIC_TYPE_GUIDES[classifyTopicType(req.topic, req.disease)];
+  if (topicGuideOutline) {
+    systemBlocks.push({ type: 'text', text: topicGuideOutline, cacheable: true, cacheTtl: '5m' });
+  }
 
   const seasonal = getSeasonalContext(req.category || '');
   if (seasonal) {
@@ -611,6 +660,10 @@ export function buildSectionFromOutlinePrompt(
   }
   if (req.category === '치과' && isProstheticTopic(req.topic, req.disease)) {
     systemBlocks.push({ type: 'text', text: DENTAL_PROSTHETIC_GUIDE, cacheable: true, cacheTtl: '5m' });
+  }
+  const topicGuideSection = TOPIC_TYPE_GUIDES[classifyTopicType(req.topic, req.disease)];
+  if (topicGuideSection) {
+    systemBlocks.push({ type: 'text', text: topicGuideSection, cacheable: true, cacheTtl: '5m' });
   }
 
   const learnedStyle = buildLearnedStyleBlock(req, hospitalStyleBlock);
@@ -697,6 +750,10 @@ export function buildBlogPromptV3(
   }
   if (req.category === '치과' && isProstheticTopic(req.topic, req.disease)) {
     systemBlocks.push({ type: 'text', text: DENTAL_PROSTHETIC_GUIDE, cacheable: true, cacheTtl: '5m' });
+  }
+  const topicGuideBlog = TOPIC_TYPE_GUIDES[classifyTopicType(req.topic, req.disease)];
+  if (topicGuideBlog) {
+    systemBlocks.push({ type: 'text', text: topicGuideBlog, cacheable: true, cacheTtl: '5m' });
   }
 
   const seasonal = getSeasonalContext(req.category || '');
