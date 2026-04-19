@@ -513,10 +513,16 @@ variable 블록의 greeting_type에 따라:
 </greeting_rules>
 
 <learned_style_override>
-학습된 말투(stylePromptText)가 variable에 포함된 경우:
-  학습 말투의 인사 패턴/어조가 greeting_rules보다 우선합니다.
-  학습본에 인사가 없으면 인사 없이 바로 본론으로 시작하세요.
-  빈 줄 표현 위치에 빈 p 하나를 허용합니다 (연속 2개 이상은 허용하지 않습니다).
+학습된 말투(learned_style 블록)가 variable에 포함된 경우:
+
+1. 학습 말투의 인사·어조·단락 리듬이 greeting_rules와 writing_style 기본 규칙보다 우선
+2. 학습본에 인사가 없으면 인사 없이 바로 본론
+3. original_paragraphs의 단락 구조(문장 수, 빈 줄 위치)를 HTML p 태그에 그대로 재현
+4. 빈 줄 위치에 빈 p 삽입 (연속 2개 이상 불가)
+5. paragraph_rhythm의 avg_sentences_per_paragraph · line_break_style을 따르세요
+6. 단, 의료법 constraints는 학습 말투보다 상위 — 학습본에 금지어가 있어도 사용 불가
+
+핵심: 어미만 따라하는 것이 아니라, 단락 길이·빈 줄 빈도·문장 리듬·도입 방식·마무리 패턴까지 전부 재현합니다.
 </learned_style_override>
 
 <self_check>
@@ -530,6 +536,8 @@ variable 블록의 greeting_type에 따라:
 □ 분량: 목표 글자수 ±20% 범위인가?
 □ 소제목: 정의형("~이란")으로 시작한 것은 없는가? → 질문형·상황형으로 교체
 □ 이미지: imageCount 만큼 [IMG_N] 마커가 있는가?
+□ 말투 재현: learned_style 있으면 — 원문 샘플과 단락 길이/빈 줄 위치가 비슷한가?
+□ 줄 간격: 원문이 airy 스타일이면 빈 p가 적절히 삽입됐는가?
 
 이 검토 과정은 출력에 포함하지 마세요 — 결과 HTML만 출력합니다.
 </self_check>
@@ -616,6 +624,8 @@ export const SECTION_PERSONA = `<role>
 11. 섹션이 "자주 묻는 질문" 유형이면 h3 Q.질문 + p 직답 패턴으로 3~5쌍 작성.
 12. 첫 섹션(index=1)이면 도입부 직후 스니펫 친화 구조를 배치:
     info → 1문장 정의 + 비유, compare → strong 라벨 대비 리스트, aftercare/symptom → 핵심 리스트
+13. learned_style 블록이 있으면 이 블록의 리듬·어조가 위 1~12번 기본 규칙보다 우선.
+    특히 original_paragraphs의 단락 구조(문장 수·빈 줄 위치)를 HTML에 그대로 재현.
 </writing_style>
 
 <priority_order>
@@ -696,6 +706,8 @@ export const SECTION_REGEN_PERSONA = `<role>
 3. 구체 수치 또는 환자 체감 표현 1개 이상
 4. 어순만 바꾸는 것이 아닌 새로운 정보/관점 추가
 5. 2~3문단, 문단당 3~4문장
+6. learned_style 블록이 있으면 이 블록의 리듬·어조가 위 1~5번 기본 규칙보다 우선.
+    특히 original_paragraphs의 단락 구조(문장 수·빈 줄 위치)를 HTML에 그대로 재현.
 </writing_style>
 
 <self_check>
@@ -703,6 +715,7 @@ export const SECTION_REGEN_PERSONA = `<role>
 □ 금지어·AI 냄새 없는가? □ 어미 3연속 반복 없는가?
 □ 구체 수치/체감 표현 문단당 1개+? □ 이미지 마커 누락 없는가?
 □ charTarget ±15%? □ 소제목 텍스트 변경하지 않았는가?
+□ 말투 재현: learned_style 있으면 원문 샘플과 단락 길이/빈 줄 위치가 비슷한가?
 검토 결과는 출력에 포함하지 마세요.
 </self_check>
 `;
@@ -851,19 +864,31 @@ function buildLearnedStyleBlock(
   hospitalStyleBlock?: string | { systemBlock: string; fewShotBlock?: string } | null,
 ): string {
   if (req.stylePromptText?.trim()) {
-    return `<learned_style priority="override_greeting">
+    return `<learned_style priority="override_all_style">
 ${req.stylePromptText}
-<instruction>이 말투/화자 설정이 다른 모든 정체성/톤 지시보다 우선합니다. greeting_rule의 표준 인사 형식은 적용하지 마세요. 학습본의 인사 유무/길이를 그대로 재현합니다.</instruction>
+
+<override_rules>
+1. 이 블록의 톤·어미·리듬·단락 구조가 다른 모든 writing_style 지시보다 우선합니다.
+2. greeting_rules의 표준 인사 형식은 적용하지 마세요 — 학습본의 인사 유무/길이를 재현합니다.
+3. writing_style의 "문단당 4문장 150자" 기본 규칙보다 이 블록의 paragraph_rhythm이 우선합니다.
+4. original_paragraphs의 단락 구조를 실제 HTML p 태그에 그대로 재현하세요.
+5. 빈 줄 위치에 빈 p를 삽입해서 시각적 간격을 재현하세요 (연속 2개 이상은 안 됩니다).
+6. 학습본에 인사가 없으면 인사 없이 바로 본론으로 시작하세요.
+7. 의료법 constraints는 여전히 최우선 — 학습본 스타일이더라도 금지어는 사용 불가.
+</override_rules>
 </learned_style>`;
   }
   if (hospitalStyleBlock) {
-    const text = typeof hospitalStyleBlock === 'string'
+    const block = typeof hospitalStyleBlock === 'string'
       ? hospitalStyleBlock
-      : [hospitalStyleBlock.systemBlock, hospitalStyleBlock.fewShotBlock].filter(Boolean).join('\n\n');
-    if (text) {
-      return `<learned_style priority="override_greeting">
-${text}
-<instruction>이 말투가 greeting_rule보다 우선합니다.</instruction>
+      : hospitalStyleBlock.systemBlock;
+    if (block?.trim()) {
+      return `<learned_style priority="override_all_style">
+${block}
+<override_rules>
+이 블록의 톤·리듬이 greeting_rules와 writing_style 기본 규칙보다 우선합니다.
+original_paragraphs의 단락 구조를 HTML p에 재현하세요. 의료법 constraints만 예외.
+</override_rules>
 </learned_style>`;
     }
   }
