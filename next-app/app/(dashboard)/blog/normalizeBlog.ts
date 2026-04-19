@@ -126,8 +126,9 @@ export function normalizeBlogStructure(html: string, topicFallback: string): { h
   }
   log.push(`[STRUCTURE] 섹션별 문단 수: [${sectionParagraphCounts.join(', ')}]`);
 
-  // 10) 긴 문단 자동 분리 — 150자 초과 <p> 를 한국어 마침 어미 기준으로 분할
-  const PARA_MAX = 150;
+  // 10) 긴 문단 자동 분리 — 180자 초과 <p> 를 한국어 마침 어미 기준으로 분할
+  // (모바일 친화 목표는 150자이지만 자동 분리는 보수적으로 180자 상한)
+  const PARA_MAX = 180;
   let splitApplied = 0;
   out = out.replace(/<p>([^<]+)<\/p>/g, (full, text: string) => {
     if (text.length <= PARA_MAX) return full;
@@ -141,10 +142,10 @@ export function normalizeBlogStructure(html: string, topicFallback: string): { h
     splitApplied++;
     return `<p>${first}</p>\n<p>${second}</p>`;
   });
-  const stillLong = (out.match(/<p>[^<]{150,}<\/p>/g) || []).length;
+  const stillLong = (out.match(/<p>[^<]{180,}<\/p>/g) || []).length;
   if (splitApplied > 0) log.push(`[READABILITY] ✅ 긴 문단 ${splitApplied}개 자동 분리됨`);
-  if (stillLong > 0) log.push(`[READABILITY] ⚠️ 여전히 150자 초과 문단 ${stillLong}개 (수동 확인 필요)`);
-  if (splitApplied === 0 && stillLong === 0) log.push('[READABILITY] ✅ 모든 문단 150자 이내');
+  if (stillLong > 0) log.push(`[READABILITY] ⚠️ 여전히 180자 초과 문단 ${stillLong}개 (수동 확인 필요)`);
+  if (splitApplied === 0 && stillLong === 0) log.push('[READABILITY] ✅ 모든 문단 180자 이내');
 
   out = out.trim();
   return { html: out, log };
