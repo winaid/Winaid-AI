@@ -1061,13 +1061,21 @@ JSON 형식으로 응답해주세요.`;
       }
 
       // 4) 라이브러리 이미지 즉시 교체 (AI 생성 불필요한 마커)
+      console.log('[BLOG] useImageLibrary:', useImageLibrary, 'selectedLibraryImages:', selectedLibraryImages.length);
+      console.log('[BLOG] request.libraryImages:', request.libraryImages?.length || 0);
       if (request.libraryImages && request.libraryImages.length > 0) {
+        console.log('[BLOG] 라이브러리 이미지 교체 시작');
         for (let i = 0; i < request.libraryImages.length; i++) {
           const markerIdx = i + 1;
-          blogText = blogText.replace(
-            new RegExp(`\\[IMG_${markerIdx}(?:\\s+alt="[^"]*")?[^\\]]*\\]`),
-            `<img src="${request.libraryImages[i].publicUrl}" alt="${request.libraryImages[i].altText || ''}" style="max-width:100%;border-radius:12px;" />`,
-          );
+          const markerRe = new RegExp(`\\[IMG_${markerIdx}(?:\\s+alt="[^"]*")?[^\\]]*\\]`);
+          const found = markerRe.test(blogText);
+          console.log(`[BLOG] [IMG_${markerIdx}] 마커 존재: ${found}, URL: ${request.libraryImages[i].publicUrl?.slice(0, 80)}`);
+          if (found) {
+            blogText = blogText.replace(
+              markerRe,
+              `<img src="${request.libraryImages[i].publicUrl}" alt="${request.libraryImages[i].altText || ''}" style="max-width:100%;border-radius:12px;" />`,
+            );
+          }
         }
         console.info(`[BLOG] 라이브러리 이미지 ${request.libraryImages.length}장 즉시 교체`);
       }
@@ -1075,6 +1083,7 @@ JSON 형식으로 응답해주세요.`;
       // 남은 [IMG_N] 마커만 AI 이미지 생성 대상
       const remainingMarkers = blogText.match(/\[IMG_\d+[^\]]*\]/g) || [];
       const aiImageCount = remainingMarkers.length;
+      console.log('[BLOG] 남은 마커:', aiImageCount, remainingMarkers);
 
       // 5) 이미지 없으면 마커 strip 후 바로 표시
       if (aiImageCount === 0 || imagePrompts.length === 0) {
