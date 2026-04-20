@@ -12,10 +12,35 @@ interface ImageLibraryProps {
   maxImages: number;
   userId?: string;
   hospitalName?: string;
+  topic?: string;
+  disease?: string;
+  category?: string;
+}
+
+function extractRelatedTags(topic: string, disease?: string, category?: string): string[] {
+  const text = `${topic} ${disease || ''} ${category || ''}`.toLowerCase();
+  const tagMap: Record<string, string[]> = {
+    '임플란트': ['임플란트', '수술', '의료진', '장비'],
+    '교정': ['치아교정', '의료진', '상담'],
+    '스케일링': ['스케일링', '진료실', '장비'],
+    '충치': ['충치치료', '진료실'],
+    '신경치료': ['신경치료', '진료실', '장비'],
+    '미백': ['치아미백', '상담'],
+    '사랑니': ['사랑니', '수술', '의료진'],
+    '틀니': ['틀니', '의료진', '상담'],
+    '라미네이트': ['라미네이트', '상담', '의료진'],
+    '소아': ['소아치과', '상담'],
+    '피부': ['의료진', '장비', '상담'],
+    '정형': ['의료진', '장비', '진료실'],
+  };
+  for (const [keyword, tags] of Object.entries(tagMap)) {
+    if (text.includes(keyword)) return [...tags, '병원내부'];
+  }
+  return ['일반', '병원내부', '의료진'];
 }
 
 export default function ImageLibrary({
-  enabled, onToggle, selectedImages, onSelectionChange, maxImages, userId, hospitalName,
+  enabled, onToggle, selectedImages, onSelectionChange, maxImages, userId, hospitalName, topic, disease, category,
 }: ImageLibraryProps) {
   const [images, setImages] = useState<HospitalImage[]>([]);
   const [loading, setLoading] = useState(false);
@@ -41,6 +66,24 @@ export default function ImageLibrary({
   useEffect(() => {
     if (enabled) fetchImages();
   }, [enabled, fetchImages]);
+
+  // 주제 기반 자동 추천 선택
+  const autoSelectedRef = useRef(false);
+  useEffect(() => {
+    if (!enabled || images.length === 0 || maxImages === 0) return;
+    if (autoSelectedRef.current && selectedImages.length > 0) return;
+    const topicTags = extractRelatedTags(topic || '', disease, category);
+    const scored = images.map(img => ({
+      ...img,
+      matchScore: img.tags.filter(t => topicTags.includes(t)).length,
+    }));
+    scored.sort((a, b) => b.matchScore - a.matchScore || (b.usageCount || 0) - (a.usageCount || 0));
+    const auto = scored.slice(0, maxImages);
+    if (auto.length > 0) {
+      onSelectionChange(auto);
+      autoSelectedRef.current = true;
+    }
+  }, [enabled, images, maxImages, topic, disease, category]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleUpload = useCallback(async (files: FileList | File[]) => {
     setUploading(true);

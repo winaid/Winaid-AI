@@ -568,6 +568,9 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
                   onSelectionChange={onLibrarySelectionChange}
                   maxImages={imageCount}
                   hospitalName={hospitalName}
+                  topic={topic}
+                  disease={disease}
+                  category={category}
                 />
               )}
 
@@ -611,7 +614,7 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
                   <input type="range" min={0} max={15} step={1} value={imageCount} onChange={e => setImageCount(Number(e.target.value))} className="w-full accent-blue-500 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer" />
                   <div className="flex justify-between mt-1 text-[10px] text-slate-400"><span>0장</span><span className="text-blue-600 font-semibold">{imageCount}장</span><span>15장</span></div>
                   {selectedLibraryImages && selectedLibraryImages.length < imageCount && (
-                    <p className="text-[10px] text-amber-500 mt-1">📸 {imageCount - selectedLibraryImages.length}장 더 선택하세요</p>
+                    <p className="text-[10px] text-amber-500 mt-1">📸 {selectedLibraryImages.length > 0 ? `${imageCount - selectedLibraryImages.length}장 더 선택하세요` : '이미지를 업로드하거나 선택하세요'}</p>
                   )}
                   {selectedLibraryImages && selectedLibraryImages.length > imageCount && (
                     <p className="text-[10px] text-amber-500 mt-1">⚠ {selectedLibraryImages.length - imageCount}장 초과 — {imageCount}장만 사용됩니다</p>
