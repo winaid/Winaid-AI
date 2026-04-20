@@ -61,6 +61,13 @@ export const CLAUDE_RATES: Record<string, ClaudeRates> = {
     cacheWrite5m: 18.75,
     cacheWrite1h: 30.0,
   },
+  'claude-opus-4-7': {
+    input: 15.0,
+    output: 75.0,
+    cacheRead: 1.5,
+    cacheWrite5m: 18.75,
+    cacheWrite1h: 30.0,
+  },
 };
 
 const MTOK = 1_000_000;
@@ -82,7 +89,7 @@ export function computeGeminiCost(
 /**
  * Claude 비용.
  *
- * @param model    claude-haiku-4-5-20251001 | claude-sonnet-4-6 | claude-opus-4-6
+ * @param model    claude-haiku-4-5-20251001 | claude-sonnet-4-6 | claude-opus-4-6 | claude-opus-4-7
  * @param usage    inputTokens/outputTokens/cacheRead/cacheWrite
  * @param isBatch  true면 0.5x
  * @param cacheTtl '5m' | '1h' — cacheWrite 가 있는 경우에만 의미 있음

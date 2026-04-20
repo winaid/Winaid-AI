@@ -68,7 +68,7 @@ export async function setupCommonMocks(page: Page): Promise<void> {
         revisedHtml: null,
         summaryNote: 'mock pass',
         usage: { inputTokens: 50, outputTokens: 80, cacheReadTokens: 0, cacheWriteTokens: 0, costUsd: 0, isBatch: false },
-        model: 'claude-opus-4-6',
+        model: 'claude-opus-4-7',
       }),
     });
   });
@@ -203,7 +203,7 @@ export async function mockBlogReviewMinorFix(page: Page): Promise<void> {
         revisedHtml: '<h2>Mock Blog Title</h2><p>높은 수준의 효과로 교정된 샘플 본문입니다.</p>[IMG_1 alt="mock"]',
         summaryNote: 'mock minor_fix',
         usage: { inputTokens: 50, outputTokens: 80, cacheReadTokens: 0, cacheWriteTokens: 0, costUsd: 0, isBatch: false },
-        model: 'claude-opus-4-6',
+        model: 'claude-opus-4-7',
       }),
     });
   });
