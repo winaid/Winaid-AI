@@ -60,8 +60,10 @@ export default function WritingStyleLearner({
   const [inputMethod, setInputMethod] = useState<InputMethod>('text');
   const [textInput, setTextInput] = useState('');
   const [styleName, setStyleName] = useState('');
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [phase, setPhase] = useState<'idle' | 'extracting' | 'analyzing' | 'saving' | 'done' | 'error'>('idle');
+  const [progressStep, setProgressStep] = useState(0); // 0: 미시작, 1: 수집, 2: 분석, 3: 완료
   const [analyzeProgress, setAnalyzeProgress] = useState('');
+  const isAnalyzing = phase !== 'idle' && phase !== 'done' && phase !== 'error';
   const [savedStyles, setSavedStyles] = useState<LearnedWritingStyle[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [extractedText, setExtractedText] = useState('');
@@ -84,7 +86,8 @@ export default function WritingStyleLearner({
     const file = e.target.files?.[0];
     if (!file) return;
     setError(null);
-    setIsAnalyzing(true);
+    setPhase('extracting');
+    setProgressStep(1);
     setAnalyzeProgress('이미지에서 텍스트 추출 중...');
 
     try {
@@ -107,20 +110,24 @@ export default function WritingStyleLearner({
           if (text) {
             setExtractedText(text);
             setTextInput(text);
+            setPhase('idle');
+            setAnalyzeProgress(`✅ 텍스트 추출 완료 (${text.length}자)`);
           } else {
             setError('이미지에서 텍스트를 찾을 수 없습니다.');
+            setPhase('error');
+            setAnalyzeProgress('');
           }
         } catch {
           setError('텍스트 추출 실패');
-        } finally {
-          setIsAnalyzing(false);
+          setPhase('error');
           setAnalyzeProgress('');
         }
       };
       reader.readAsDataURL(file);
     } catch {
       setError('이미지 처리 실패');
-      setIsAnalyzing(false);
+      setPhase('error');
+      setAnalyzeProgress('');
     }
   };
 
@@ -129,7 +136,8 @@ export default function WritingStyleLearner({
     const file = e.target.files?.[0];
     if (!file) return;
     setError(null);
-    setIsAnalyzing(true);
+    setPhase('extracting');
+    setProgressStep(1);
     setAnalyzeProgress('문서에서 텍스트 추출 중...');
 
     try {
@@ -156,13 +164,16 @@ export default function WritingStyleLearner({
       if (text) {
         setExtractedText(text);
         setTextInput(text);
+        setPhase('idle');
+        setAnalyzeProgress(`✅ 텍스트 추출 완료 (${text.length}자)`);
       } else {
         setError('문서에서 텍스트를 찾을 수 없습니다.');
+        setPhase('error');
+        setAnalyzeProgress('');
       }
     } catch {
       setError('문서 처리 실패');
-    } finally {
-      setIsAnalyzing(false);
+      setPhase('error');
       setAnalyzeProgress('');
     }
   };
@@ -171,7 +182,8 @@ export default function WritingStyleLearner({
   const handleUrlCrawl = async () => {
     if (!urlInput.trim()) { setError('URL을 입력해주세요.'); return; }
     setError(null);
-    setIsAnalyzing(true);
+    setPhase('extracting');
+    setProgressStep(1);
     setAnalyzeProgress('블로그 글 수집 중...');
     try {
       const isBlog = /blog\.naver\.com/i.test(urlInput);
@@ -201,15 +213,18 @@ export default function WritingStyleLearner({
       }
       if (content.length < 100) {
         setError('크롤링된 텍스트가 너무 짧습니다. 다른 URL을 시도해주세요.');
+        setPhase('error');
+        setAnalyzeProgress('');
       } else {
         setExtractedText(content);
         setTextInput(content);
-        setAnalyzeProgress(`${isBlog ? '블로그 글' : '페이지'} 수집 완료! (${content.length}자)`);
+        setPhase('idle');
+        setAnalyzeProgress(`✅ ${isBlog ? '블로그 글' : '페이지'} 수집 완료! (${content.length}자)`);
       }
     } catch {
       setError('URL 크롤링 실패. URL을 확인해주세요.');
-    } finally {
-      setIsAnalyzing(false);
+      setPhase('error');
+      setAnalyzeProgress('');
     }
   };
 
@@ -219,8 +234,24 @@ export default function WritingStyleLearner({
     if (!styleName.trim()) { setError('스타일 이름을 입력해주세요.'); return; }
 
     setError(null);
-    setIsAnalyzing(true);
+    setPhase('analyzing');
+    setProgressStep(2);
     setAnalyzeProgress('AI로 말투 분석 중...');
+
+    // 분석 중 메시지 로테이션 (5초 간격)
+    const rotateMessages = [
+      'AI로 말투 분석 중...',
+      '어조와 톤을 파악하고 있어요...',
+      '단락 리듬을 분석하고 있어요...',
+      '화자 캐릭터를 추출하고 있어요...',
+      '프로파일을 생성하고 있어요...',
+      '거의 다 됐어요, 마무리 중...',
+    ];
+    let msgIdx = 0;
+    const rotateTimer = setInterval(() => {
+      msgIdx = Math.min(msgIdx + 1, rotateMessages.length - 1);
+      setAnalyzeProgress(rotateMessages[msgIdx]);
+    }, 5000);
 
     try {
       const sampleText = textInput.substring(0, 12000);
@@ -322,6 +353,9 @@ JSON 객체 하나만 출력하세요. JSON 밖의 텍스트는 포함하지 마
 
       const newStyle = createLearnedWritingStyle(result, textInput, styleName);
 
+      clearInterval(rotateTimer);
+      setPhase('saving');
+      setProgressStep(3);
       setAnalyzeProgress('프로파일 저장 중...');
       const newStyles = [...savedStyles, newStyle];
       saveStyles(newStyles);
@@ -330,11 +364,19 @@ JSON 객체 하나만 출력하세요. JSON 밖의 텍스트는 포함하지 마
       setTextInput('');
       setStyleName('');
       setExtractedText('');
+
+      setPhase('done');
+      setAnalyzeProgress('✅ 말투 학습 완료!');
+      setTimeout(() => {
+        setPhase('idle');
+        setProgressStep(0);
+        setAnalyzeProgress('');
+      }, 3000);
     } catch (err: unknown) {
+      clearInterval(rotateTimer);
       const msg = err instanceof Error ? err.message : '말투 분석에 실패했습니다.';
       setError(msg);
-    } finally {
-      setIsAnalyzing(false);
+      setPhase('error');
       setAnalyzeProgress('');
     }
   };
@@ -543,11 +585,48 @@ JSON 객체 하나만 출력하세요. JSON 밖의 텍스트는 포함하지 마
               </div>
             )}
 
-            {/* 분석 진행 */}
-            {isAnalyzing && (
-              <div className="mt-3 p-3 rounded-xl flex items-center gap-3 bg-violet-100">
-                <div className="w-5 h-5 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
-                <p className="text-sm font-medium text-violet-600">{analyzeProgress}</p>
+            {/* 3단계 스텝 인디케이터 */}
+            {progressStep > 0 && (
+              <div className="flex items-center gap-2 mt-3">
+                {[
+                  { step: 1, label: '텍스트 수집' },
+                  { step: 2, label: 'AI 분석' },
+                  { step: 3, label: '저장 완료' },
+                ].map(({ step, label }, i) => (
+                  <div key={step} className="flex items-center gap-1.5">
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold ${
+                      progressStep > step ? 'bg-emerald-500 text-white'
+                        : progressStep === step ? 'bg-indigo-500 text-white animate-pulse'
+                        : 'bg-slate-200 text-slate-400'
+                    }`}>
+                      {progressStep > step ? '✓' : step}
+                    </div>
+                    <span className={`text-[11px] ${progressStep >= step ? 'text-slate-700' : 'text-slate-400'}`}>
+                      {label}
+                    </span>
+                    {i < 2 && <div className={`w-6 h-0.5 ${progressStep > step ? 'bg-emerald-400' : 'bg-slate-200'}`} />}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* 진행 메시지 */}
+            {analyzeProgress && (
+              <div className={`mt-2 p-3 rounded-xl flex items-center gap-3 ${
+                phase === 'error' ? 'bg-red-50'
+                  : phase === 'done' ? 'bg-emerald-50'
+                  : 'bg-violet-100'
+              }`}>
+                {(phase === 'analyzing' || phase === 'extracting' || phase === 'saving') && (
+                  <div className="w-5 h-5 border-2 border-violet-500 border-t-transparent rounded-full animate-spin flex-shrink-0" />
+                )}
+                <p className={`text-sm font-medium ${
+                  phase === 'error' ? 'text-red-600'
+                    : phase === 'done' ? 'text-emerald-600'
+                    : 'text-violet-600'
+                }`}>
+                  {analyzeProgress}
+                </p>
               </div>
             )}
 

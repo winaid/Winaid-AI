@@ -52,11 +52,22 @@ type Timer = ReturnType<typeof createTimer>;
 // ── 유틸 ──
 
 /**
+ * 네이버 블로그 hostname 화이트리스트.
+ * - `blog.naver.com` 데스크톱
+ * - `m.blog.naver.com` 모바일 (사용자가 모바일 공유 링크를 붙여넣는 경우 허용)
+ */
+const NAVER_BLOG_HOSTS = new Set(['blog.naver.com', 'm.blog.naver.com']);
+
+/**
  * 네이버 블로그 URL을 hostname 기반으로 엄격하게 검증.
  *
  * 과거의 `blogUrl.includes('blog.naver.com')`은 SSRF 우회 가능:
- *   - http://evil.com/?blog.naver.com, http://blog.naver.com.attacker.com 등.
- * 수정: new URL 파싱 + hostname 정확 매칭 + http/https만 허용.
+ *   - http://evil.com/?blog.naver.com       (쿼리스트링 포함)
+ *   - http://blog.naver.com.attacker.com    (서브도메인 가장)
+ *   - http://attacker.com/blog.naver.com    (경로 포함)
+ * 전부 includes 통과 → 서버가 공격자 호스트로 요청.
+ *
+ * 수정: new URL 파싱 + hostname 화이트리스트 정확 매칭 + http/https만 허용.
  */
 function validateNaverBlogUrl(rawUrl: string): { ok: true } | { ok: false; message: string } {
   let parsed: URL;
@@ -68,15 +79,33 @@ function validateNaverBlogUrl(rawUrl: string): { ok: true } | { ok: false; messa
   if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
     return { ok: false, message: 'http/https URL만 지원합니다.' };
   }
-  if (parsed.hostname !== 'blog.naver.com') {
+  if (!NAVER_BLOG_HOSTS.has(parsed.hostname)) {
     return { ok: false, message: '네이버 블로그 URL만 지원합니다. (blog.naver.com/...)' };
   }
   return { ok: true };
 }
 
 function extractBlogId(blogUrl: string): string | null {
-  const m = blogUrl.match(/blog\.naver\.com\/([^/?#]+)/);
+  const m = blogUrl.match(/(?:m\.)?blog\.naver\.com\/([^/?#]+)/);
   return m ? m[1] : null;
+}
+
+/**
+ * 네이버 블로그 URL에서 특정 글의 logNo를 추출.
+ * 지원 포맷:
+ *   - https://blog.naver.com/{blogId}/{logNo}          (경로형, logNo는 10자리 이상 숫자)
+ *   - https://blog.naver.com/PostView.naver?blogId=X&logNo=Y
+ *   - https://m.blog.naver.com/{blogId}/{logNo}
+ * 블로그 홈 URL(`/blogId` 까지만)에는 logNo 가 없으므로 null 반환.
+ */
+function extractLogNo(blogUrl: string): string | null {
+  // 1) path 형식: /{blogId}/{logNo}
+  const pathMatch = blogUrl.match(/(?:m\.)?blog\.naver\.com\/[^/?#]+\/(\d{8,})/);
+  if (pathMatch) return pathMatch[1];
+  // 2) 쿼리 형식: ?logNo=...
+  const qMatch = blogUrl.match(/[?&]logNo=(\d{8,})/);
+  if (qMatch) return qMatch[1];
+  return null;
 }
 
 async function fetchWithTimeout(url: string, headers: Record<string, string>): Promise<Response> {
@@ -160,7 +189,6 @@ interface PostEntry {
 /** RSS 피드에서 글 목록 추출 */
 async function fetchFromRss(blogId: string, maxPosts: number): Promise<PostEntry[]> {
   const rssUrl = `https://rss.blog.naver.com/${blogId}.xml`;
-  console.log(`[Crawl] RSS 시도: ${rssUrl}`);
 
   try {
     const res = await fetchWithTimeout(rssUrl, {
@@ -168,7 +196,6 @@ async function fetchFromRss(blogId: string, maxPosts: number): Promise<PostEntry
       Accept: 'application/rss+xml, application/xml, text/xml, */*',
     });
     if (!res.ok) {
-      console.log(`[Crawl] RSS 실패: HTTP ${res.status}`);
       return [];
     }
     const xml = await res.text();
@@ -208,10 +235,8 @@ async function fetchFromRss(blogId: string, maxPosts: number): Promise<PostEntry
       items.push({ logNo: logNoMatch[1], title, publishedAt, summary });
     }
 
-    console.log(`[Crawl] RSS에서 ${items.length}개 글 발견`);
     return items;
-  } catch (err) {
-    console.log(`[Crawl] RSS 오류: ${(err as Error).message}`);
+  } catch {
     return [];
   }
 }
@@ -228,13 +253,10 @@ async function fetchLogNos(blogId: string, maxCandidates: number, timer: Timer):
     try {
       const res = await fetchWithTimeout(listUrl, FETCH_HEADERS);
       if (!res.ok) {
-        console.log(`[Crawl] PostList p${page} HTTP ${res.status}`);
         break;
       }
       html = await res.text();
-    } catch (err) {
-      const msg = (err as Error).name === 'AbortError' ? 'timeout' : (err as Error).message;
-      console.log(`[Crawl] PostList p${page} 오류: ${msg}`);
+    } catch {
       break;
     }
 
@@ -259,7 +281,6 @@ async function fetchLogNos(blogId: string, maxCandidates: number, timer: Timer):
       }
     }
 
-    console.log(`[Crawl] PostList p${page}: +${foundNew}개 (누적 ${entries.length})`);
     if (foundNew === 0) break;
     page++;
   }
@@ -291,13 +312,10 @@ async function fetchPostContent(
   try {
     const res = await fetchWithTimeout(url, FETCH_HEADERS);
     if (!res.ok) {
-      console.log(`  [Crawl] PostView ${logNo} HTTP ${res.status}`);
       return null;
     }
     html = await res.text();
-  } catch (err) {
-    const msg = (err as Error).name === 'AbortError' ? 'timeout' : (err as Error).message;
-    console.log(`  [Crawl] PostView ${logNo} 오류: ${msg}`);
+  } catch {
     return null;
   }
 
@@ -429,7 +447,6 @@ async function fetchPostContent(
     if (ogDesc) {
       const desc = cleanHtml(ogDesc[1]);
       if (desc.length > 30) {
-        console.log(`  [Crawl] og:description 폴백: ${logNo} (${desc.length}자)`);
         paragraphs.push(desc);
       }
     }
@@ -437,13 +454,11 @@ async function fetchPostContent(
 
   // RSS에서 이미 가져온 요약이 있고 본문 추출 모두 실패한 경우 → RSS 요약 사용
   if (paragraphs.length === 0 && entry.summary && entry.summary.length > 30) {
-    console.log(`  [Crawl] RSS 요약 폴백: ${logNo} (${entry.summary.length}자)`);
     paragraphs.push(entry.summary);
   }
 
   const content = paragraphs.join('\n\n');
   if (content.length <= 30) {
-    console.log(`  [Crawl] 본문 부족 스킵: ${logNo} (${content.length}자)`);
     return null;
   }
 
@@ -500,15 +515,20 @@ async function fetchPostsBatch(
 // ── 메인 핸들러 ──
 
 export async function POST(request: NextRequest) {
-  const authError = await checkAuth(request);
-  if (authError) return authError;
+  const auth = await checkAuth(request);
+  if (auth) return auth;
 
   const timer = createTimer();
   const diagnostics: string[] = [];
 
   try {
-    const body = (await request.json()) as { blogUrl: string; maxPosts?: number };
-    const { blogUrl, maxPosts = 10 } = body;
+    const body = (await request.json()) as {
+      blogUrl: string;
+      maxPosts?: number;
+      /** 특정 글의 logNo 를 직접 지정해 해당 글만 가져오기 (URL 모드 지원). */
+      targetLogNo?: string;
+    };
+    const { blogUrl, maxPosts = 10, targetLogNo: rawTargetLogNo } = body;
 
     if (!blogUrl || typeof blogUrl !== 'string') {
       return NextResponse.json(
@@ -531,8 +551,48 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // targetLogNo: 클라이언트가 명시했거나, 블로그 URL 자체에 포함돼 있으면 추출.
+    // 숫자만 허용 (인젝션·path traversal 방어).
+    const targetLogNo: string | null = (() => {
+      const candidate = (typeof rawTargetLogNo === 'string' && /^\d{8,}$/.test(rawTargetLogNo))
+        ? rawTargetLogNo
+        : extractLogNo(blogUrl);
+      return candidate;
+    })();
+
+    // ── 특정 글 직접 fetch 경로 ──
+    // logNo 가 명시되면 RSS/PostList 단계를 건너뛰고 해당 글만 가져온다.
+    // 이 경로는 "블로그 홈 URL 이 아닌 특정 포스트 URL" 에 대해 정확한 글을
+    // 반환하기 위함. maxPosts 1 로 요청했더라도 최신 글이 아닌 지정 글을 돌려줌.
+    if (targetLogNo) {
+      diagnostics.push(`targetLogNo=${targetLogNo} — 단일 글 직접 fetch`);
+      const single = await fetchPostContent(blogId, { logNo: targetLogNo });
+      if (!single) {
+        return NextResponse.json(
+          {
+            error: 'Post Not Found',
+            message: '해당 글의 본문을 가져올 수 없습니다. 비공개 글이거나 URL 이 잘못됐을 수 있습니다.',
+            diagnostics,
+          },
+          { status: 404 },
+        );
+      }
+      // 공용 응답 포맷과 일치시키기 위해 logNo 필드는 응답에서 제거.
+      const { logNo: _logNo, ...rest } = single;
+      void _logNo;
+      return NextResponse.json({
+        success: true,
+        blogUrl,
+        blogId,
+        posts: [rest],
+        postsCount: 1,
+        diagnostics,
+        elapsedMs: timer.elapsed(),
+        timestamp: new Date().toISOString(),
+      });
+    }
+
     const limited = Math.min(Number(maxPosts) || 10, 20);
-    console.log(`[Crawl] 시작: ${blogId} (목표 ${limited}개)`);
 
     // ── 1단계: 글 목록 수집 (RSS 우선 → PostList fallback) ──
     let entries: PostEntry[] = [];
@@ -556,7 +616,6 @@ export async function POST(request: NextRequest) {
     if (entries.length === 0) {
       diagnostics.push('글 목록 확보 실패');
       const reason = !timer.hasTimeLeft() ? ' (시간 초과)' : '';
-      console.log(`[Crawl] 글 목록 0건${reason}: ${blogId}`);
       return NextResponse.json({
         success: true,
         blogUrl,
@@ -573,7 +632,6 @@ export async function POST(request: NextRequest) {
     const { posts, skipped, timedOut } = await fetchPostsBatch(blogId, entries, limited, timer);
 
     diagnostics.push(`본문 수집: ${posts.length}개 성공, ${skipped}개 스킵${timedOut ? ', 시간 초과로 조기 종료' : ''}`);
-    console.log(`[Crawl] 본문 수집: ${posts.length}개, 스킵 ${skipped}개 (${timer.elapsed()}ms)`);
 
     // ── 3단계: 날짜순 정렬 ──
     posts.sort((a, b) => {
