@@ -48,21 +48,34 @@ function extractMedicalTerms(keyword: string): string[] {
     .filter(t => !LOCATION_SUFFIXES.test(t)); // 지역명 제외
 }
 
-// 키워드 관련성 검증: 키워드가 제목에 "연속으로" 포함되어야 매칭
-// "불광동 충치치료" → 제목에 "불광동충치치료"가 연속으로 있어야 함
-// "불광동 ~~~ 충치치료" 처럼 떨어져 있으면 매칭 실패
-function isKeywordRelevant(keyword: string, title: string): boolean {
-  const cleanTitle = title
-    .replace(/<[^>]+>/g, '')
-    .replace(/&[a-z]+;/g, ' ')
-    .replace(/\s+/g, '')
-    .toLowerCase();
+/** 3단계 복합 매칭: blogId → bloggername → 핵심 병원명 */
+function isOurBlog(
+  item: { link?: string; title?: string; bloggername?: string; bloggerlink?: string },
+  blogIdSet: Set<string>,
+  hospitalNameNorm: string,
+): boolean {
+  // 1단계: blogId
+  const linkId = (item.link || '').match(/blog\.naver\.com\/([^/?#]+)/)?.[1]?.toLowerCase();
+  const bloggerLinkId = (item.bloggerlink || '').match(/blog\.naver\.com\/([^/?#]+)/)?.[1]?.toLowerCase();
+  if (linkId && blogIdSet.has(linkId)) return true;
+  if (bloggerLinkId && blogIdSet.has(bloggerLinkId)) return true;
 
-  // 키워드에서 공백 제거 후 연속 포함 체크
-  const keywordNoSpace = keyword.replace(/\s+/g, '').toLowerCase();
-  if (keywordNoSpace.length < 2) return true;
+  // 도메인 매칭 (나만의닥터 등)
+  const linkLower = (item.link || '').toLowerCase();
+  if ([...blogIdSet].some(id => id.includes('.') && linkLower.includes(id))) return true;
 
-  return cleanTitle.includes(keywordNoSpace);
+  // 2단계: bloggername에 병원명
+  const blogger = (item.bloggername || '').replace(/\s+/g, '').toLowerCase();
+  if (hospitalNameNorm.length >= 2 && blogger.includes(hospitalNameNorm)) return true;
+
+  // 3단계: 핵심 병원명 (지역 접두사 제거)
+  const core = hospitalNameNorm.replace(/^[가-힣]{1,4}(?:시|구|동|읍|면|군)/g, '').trim();
+  if (core.length >= 3) {
+    const cleanTitle = (item.title || '').replace(/<[^>]+>/g, '').replace(/\s+/g, '').toLowerCase();
+    if (cleanTitle.includes(core) || blogger.includes(core)) return true;
+  }
+
+  return false;
 }
 
 // 의료광고법 저촉 키워드 필터
@@ -98,9 +111,20 @@ export async function checkKeywordRankings(
   const results: KeywordRankResult[] = [];
   const blogIdSet = new Set(blogIds.map(id => id.toLowerCase()));
   const hospitalNameNorm = hospitalName?.replace(/\s/g, '').toLowerCase() || '';
+  const startTime = Date.now();
+  const TOTAL_TIMEOUT = 30_000;
 
   // 3개씩 배치 (rate limit 방지)
   for (let i = 0; i < keywords.length; i += 3) {
+    // 전체 타임아웃 체크
+    if (Date.now() - startTime > TOTAL_TIMEOUT) {
+      onProgress?.(`시간 초과 — ${results.length}/${keywords.length}개 완료`);
+      for (const kw of keywords.slice(i)) {
+        results.push({ keyword: kw, isRanked: false });
+      }
+      break;
+    }
+
     const batch = keywords.slice(i, i + 3);
     onProgress?.(`상위권 체크 중... (${Math.min(i + 3, keywords.length)}/${keywords.length})`);
 
@@ -111,32 +135,19 @@ export async function checkKeywordRankings(
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ query: keyword, display: 30, type: 'blog' }),
+            signal: AbortSignal.timeout(5_000),
           });
           if (!res.ok) return { keyword, isRanked: false };
 
           const data = (await res.json()) as {
-            items?: Array<{ link?: string; title?: string; description?: string; bloggername?: string }>;
+            items?: Array<{ link?: string; title?: string; description?: string; bloggername?: string; bloggerlink?: string }>;
           };
 
           const items = data.items || [];
           for (let rank = 0; rank < items.length; rank++) {
             const item = items[rank];
-            const link = item.link || '';
-            const linkLower = link.toLowerCase();
-            // 블로그 URL에서 blogId 추출
-            const blogIdMatch = link.match(/blog\.naver\.com\/([^/?#]+)/);
-            const bloggerName = (item.bloggername || '').replace(/<[^>]+>/g, '').replace(/\s/g, '').toLowerCase();
-            const isBlogIdMatch = blogIdMatch && blogIdSet.has(blogIdMatch[1].toLowerCase());
-            // blogIds에 도메인(나만의닥터 등)이 포함되어 있으면 해당 도메인도 매칭
-            const isDomainMatch = [...blogIdSet].some(id => id.includes('.') && linkLower.includes(id));
-            const isBloggerNameMatch = hospitalNameNorm.length >= 2 && bloggerName.includes(hospitalNameNorm);
-            if (isBlogIdMatch || isDomainMatch || isBloggerNameMatch) {
-              const rawTitle = item.title || '';
-              const rawDesc = item.description || '';
-              // 키워드가 제목 AND 본문 모두에 연속 포함되어야 매칭
-              // 제목에 키워드가 연속 포함되면 매칭
-              if (!isKeywordRelevant(keyword, rawTitle)) continue;
-              const cleanTitle = rawTitle
+            if (isOurBlog(item, blogIdSet, hospitalNameNorm)) {
+              const cleanTitle = (item.title || '')
                 .replace(/<[^>]+>/g, '')
                 .replace(/&[a-z]+;/g, ' ')
                 .trim();

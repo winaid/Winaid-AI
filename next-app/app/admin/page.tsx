@@ -126,27 +126,38 @@ export default function AdminPage() {
   const [rankCheckKeyword, setRankCheckKeyword] = useState<Record<string, string>>({});
   const [rankResults, setRankResults] = useState<Record<string, { keywords: Array<{ keyword: string; rank: number | null }>; checking: boolean }>>({});
 
-  /** 단일 키워드 네이버 순위 체크 */
-  const checkSingleRank = async (keyword: string, blogIds: string[]): Promise<number | null> => {
+  /** 단일 키워드 네이버 순위 체크 — 3단계 복합 매칭 + 5초 타임아웃 */
+  const checkSingleRank = async (keyword: string, blogIds: string[], hospitalName?: string): Promise<number | null> => {
     try {
       const res = await fetch('/api/naver/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: keyword, display: 30, type: 'blog' }),
+        signal: AbortSignal.timeout(5_000),
       });
       if (!res.ok) return null;
-      const data = (await res.json()) as { items?: Array<{ link?: string; title?: string; description?: string }> };
+      const data = (await res.json()) as { items?: Array<{ link?: string; title?: string; description?: string; bloggername?: string; bloggerlink?: string }> };
       const blogIdSet = new Set(blogIds.map(id => id.toLowerCase()));
-      const kwNoSpace = keyword.replace(/\s+/g, '').toLowerCase();
+      const hospitalNameNorm = (hospitalName || '').replace(/\s+/g, '').toLowerCase();
+
       for (let i = 0; i < (data.items || []).length; i++) {
         const item = data.items![i];
-        const match = (item.link || '').match(/blog\.naver\.com\/([^/?#]+)/);
-        if (match && blogIdSet.has(match[1].toLowerCase())) {
-          const clean = (s: string) => s.replace(/<[^>]+>/g, '').replace(/&[a-z]+;/g, ' ').replace(/\s+/g, '').toLowerCase();
-          const titleClean = clean(item.title || '');
-          const descClean = clean(item.description || '');
-          // 키워드가 제목에 연속 포함되면 매칭
-          if (titleClean.includes(kwNoSpace)) return i + 1;
+        // 1단계: blogId 매칭
+        const linkId = (item.link || '').match(/blog\.naver\.com\/([^/?#]+)/)?.[1]?.toLowerCase();
+        const bloggerLinkId = (item.bloggerlink || '').match(/blog\.naver\.com\/([^/?#]+)/)?.[1]?.toLowerCase();
+        const isBlogIdMatch = (linkId && blogIdSet.has(linkId)) || (bloggerLinkId && blogIdSet.has(bloggerLinkId));
+
+        // 2단계: bloggername에 병원명
+        const blogger = (item.bloggername || '').replace(/\s+/g, '').toLowerCase();
+        const isBloggerMatch = hospitalNameNorm.length >= 2 && blogger.includes(hospitalNameNorm);
+
+        // 3단계: 핵심 병원명 (지역 접두사 제거)
+        const core = hospitalNameNorm.replace(/^[가-힣]{1,4}(?:시|구|동|읍|면|군)/g, '').trim();
+        const cleanTitle = (item.title || '').replace(/<[^>]+>/g, '').replace(/\s+/g, '').toLowerCase();
+        const isCoreMatch = core.length >= 3 && (cleanTitle.includes(core) || blogger.includes(core));
+
+        if (isBlogIdMatch || isBloggerMatch || isCoreMatch) {
+          return i + 1;
         }
       }
       return null;
@@ -179,34 +190,49 @@ export default function AdminPage() {
       .filter((id): id is string => !!id);
     if (blogIds.length === 0) return;
 
-    setRankResults(prev => ({ ...prev, [hospitalName]: { keywords: [], checking: true } }));
-    const coreKeywords = generateCoreKeywords(hospitalName, address);
-    const results: Array<{ keyword: string; rank: number | null }> = [];
+    // 전체 30초 타임아웃
+    const timeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('순위 체크 타임아웃 (30초)')), 30_000),
+    );
 
-    for (let i = 0; i < coreKeywords.length; i++) {
-      const rank = await checkSingleRank(coreKeywords[i], blogIds);
-      results.push({ keyword: coreKeywords[i], rank });
-      // rate limit
-      if (i < coreKeywords.length - 1) await new Promise(r => setTimeout(r, 200));
+    try {
+      await Promise.race([
+        (async () => {
+          setRankResults(prev => ({ ...prev, [hospitalName]: { keywords: [], checking: true } }));
+          const coreKeywords = generateCoreKeywords(hospitalName, address);
+          const results: Array<{ keyword: string; rank: number | null }> = [];
+
+          for (let i = 0; i < coreKeywords.length; i++) {
+            const rank = await checkSingleRank(coreKeywords[i], blogIds, hospitalName);
+            results.push({ keyword: coreKeywords[i], rank });
+            if (i < coreKeywords.length - 1) await new Promise(r => setTimeout(r, 200));
+          }
+
+          const manualRaw = rankCheckKeyword[hospitalName]?.trim();
+          if (manualRaw) {
+            const manualKeywords = manualRaw.split(/[,，]/).map(k => k.trim()).filter(Boolean);
+            for (const mk of manualKeywords) {
+              const clinicMatch = mk.match(/^(.+?(?:치과|의원|병원|한의원|피부과|내과|외과|안과|이비인후과|정형외과|소아과))/);
+              const keyword = clinicMatch ? clinicMatch[1] : mk;
+              if (!coreKeywords.includes(keyword) && !results.some(r => r.keyword === keyword)) {
+                const rank = await checkSingleRank(keyword, blogIds, hospitalName);
+                results.unshift({ keyword, rank });
+                await new Promise(r => setTimeout(r, 200));
+              }
+            }
+          }
+
+          setRankResults(prev => ({ ...prev, [hospitalName]: { keywords: results, checking: false } }));
+        })(),
+        timeout,
+      ]);
+    } catch (err) {
+      console.warn(`[RANK] ${hospitalName}: ${(err as Error).message}`);
+      setRankResults(prev => {
+        const cur = prev[hospitalName];
+        return { ...prev, [hospitalName]: { keywords: cur?.keywords || [], checking: false } };
+      });
     }
-
-    // 수동 키워드: 쉼표로 분리, "치과/의원/병원"으로 끝나는 부분까지가 키워드
-    const manualRaw = rankCheckKeyword[hospitalName]?.trim();
-    if (manualRaw) {
-      const manualKeywords = manualRaw.split(/[,，]/).map(k => k.trim()).filter(Boolean);
-      for (const mk of manualKeywords) {
-        // "을지로입구치과 턱관절" → "을지로입구치과"가 키워드
-        const clinicMatch = mk.match(/^(.+?(?:치과|의원|병원|한의원|피부과|내과|외과|안과|이비인후과|정형외과|소아과))/);
-        const keyword = clinicMatch ? clinicMatch[1] : mk;
-        if (!coreKeywords.includes(keyword) && !results.some(r => r.keyword === keyword)) {
-          const rank = await checkSingleRank(keyword, blogIds);
-          results.unshift({ keyword, rank });
-          await new Promise(r => setTimeout(r, 200));
-        }
-      }
-    }
-
-    setRankResults(prev => ({ ...prev, [hospitalName]: { keywords: results, checking: false } }));
   }, [rankCheckKeyword]);
 
   // 세션 복원
@@ -431,20 +457,30 @@ export default function AdminPage() {
           [hospitalName]: { loading: true, progress: msg },
         }));
       });
+
+      // 학습 즉시 완료 표시
       setCrawlingStatus(prev => ({
         ...prev,
-        [hospitalName]: { loading: false, progress: '학습 완료! 노출 순위 체크 중...' },
+        [hospitalName]: { loading: false, progress: '✅ 말투 학습 완료!' },
       }));
       loadStyleProfiles();
-      // 자동 노출 순위 체크
+
+      // 순위 체크는 fire-and-forget (학습 완료와 독립)
       const team = TEAM_DATA.find(t => t.hospitals.some(h => h.name.replace(/ \(.*\)$/, '') === hospitalName));
       const hospital = team?.hospitals.find(h => h.name.replace(/ \(.*\)$/, '') === hospitalName);
-      handleAutoRankCheck(hospitalName, validUrls, hospital?.address).then(() => {
-        setCrawlingStatus(prev => ({
-          ...prev,
-          [hospitalName]: { loading: false, progress: '학습 + 순위 체크 완료!' },
-        }));
-      });
+      handleAutoRankCheck(hospitalName, validUrls, hospital?.address)
+        .then(() => {
+          setCrawlingStatus(prev => ({
+            ...prev,
+            [hospitalName]: { ...prev[hospitalName], progress: '✅ 말투 학습 + 순위 체크 완료!' },
+          }));
+        })
+        .catch(() => {
+          setCrawlingStatus(prev => ({
+            ...prev,
+            [hospitalName]: { ...prev[hospitalName], progress: '✅ 말투 학습 완료 (순위 체크 실패)' },
+          }));
+        });
     } catch (err: unknown) {
       const errMsg = (err as Error).message || '알 수 없는 오류';
       setCrawlingStatus(prev => ({
