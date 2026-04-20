@@ -950,20 +950,13 @@ image_index가 없으면 마커를 포함하지 마세요.
 </image_instructions>
 
 <writing_style>
-공통 문장·문단 규칙은 별도 common_writing_style 블록 참조.
-이 페르소나의 고유 규칙:
+공통 규칙은 common_writing_style 참조.
 
-1. 소제목(h2/h3) 아래 첫 문장 = 짧은 직답 (Yes/No/숫자/핵심). 이후 확장 서술.
-2. 첫 문장은 질문형 또는 상황 묘사형 (정의형 "~이란" 금지).
-3. 섹션이 "자주 묻는 질문" 유형이면 h3 Q.질문 + p 직답 패턴 3~5쌍.
-4. 첫 섹션(index=1)이면 도입부 직후 스니펫 친화 구조:
-   info → 1문장 정의 + 비유, compare → strong 라벨 대비 리스트, aftercare/symptom → 핵심 리스트.
-5. E-E-A-T 신호 중 섹션에 맞는 1~2개 자연 포함 (경험/전문성/권위/신뢰).
-6. intro 섹션이면 variable의 훅 유형 힌트를, outro는 마무리 유형 힌트를 따르세요.
-7. variable의 topic_type 가이드와 journey_stage 톤을 따르세요.
-8. variable의 charTarget ±15% 준수. 부족하면 구체 사례·수치를 추가, 초과하면 반복·패딩을 삭제.
-9. learned_style이 있으면 이 블록의 리듬·어조가 위 규칙보다 우선.
-   특히 original_paragraphs의 단락 구조(문장 수·빈 줄 위치)를 HTML에 그대로 재현.
+1. 소제목 아래 첫 문장 = 짧은 직답. 이후 확장.
+2. 구체 수치·환자 체감 표현 문단당 1개+.
+3. charTarget ±15% 준수.
+4. learned_style 있으면 리듬·어조 우선.
+5. 진료실 경험·전문 용어를 1~2개 자연 포함 (E-E-A-T).
 </writing_style>
 
 <priority_order>
@@ -1343,15 +1336,15 @@ export function buildSectionFromOutlinePrompt(
   if (topicGuideSection) {
     systemBlocks.push({ type: 'text', text: topicGuideSection, cacheable: true, cacheTtl: '5m' });
   }
-  systemBlocks.push({ type: 'text', text: E_E_A_T_GUIDE, cacheable: true, cacheTtl: '1h' });
-  systemBlocks.push({ type: 'text', text: CITATION_PATTERN_GUIDE, cacheable: true, cacheTtl: '1h' });
+  // E-E-A-T/CITATION/MOBILE/AI_SNIPPET 제거 — SECTION_PERSONA 항목 5 + COMMON으로 충분
   const journeyGuide = JOURNEY_STAGE_GUIDES[inferJourneyStage(classifyTopicType(req.topic, req.disease))];
   if (journeyGuide) {
     systemBlocks.push({ type: 'text', text: journeyGuide, cacheable: true, cacheTtl: '5m' });
   }
-  systemBlocks.push({ type: 'text', text: MOBILE_READABILITY_GUIDE, cacheable: true, cacheTtl: '1h' });
-  systemBlocks.push({ type: 'text', text: AI_SNIPPET_GUIDE, cacheable: true, cacheTtl: '1h' });
-  systemBlocks.push({ type: 'text', text: FAQ_SECTION_GUIDE, cacheable: true, cacheTtl: '1h' });
+  // FAQ 섹션에만 FAQ_SECTION_GUIDE 주입
+  if (section.heading?.includes('자주 묻는 질문')) {
+    systemBlocks.push({ type: 'text', text: FAQ_SECTION_GUIDE, cacheable: true, cacheTtl: '1h' });
+  }
 
   const learnedStyle = buildLearnedStyleBlock(req, hospitalStyleBlock);
   if (learnedStyle) {

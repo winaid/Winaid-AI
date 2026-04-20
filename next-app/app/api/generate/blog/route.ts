@@ -146,7 +146,7 @@ async function generate2Pass(
       task: 'blog_unified',
       systemBlocks: prompt.systemBlocks,
       userPrompt: prompt.userPrompt,
-      temperature: 0.7,
+      temperature: 0.8,
       maxOutputTokens: 4096,
       userId,
     });
