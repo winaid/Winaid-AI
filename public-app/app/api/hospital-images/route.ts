@@ -16,6 +16,7 @@ export async function GET(request: NextRequest) {
 
   const params = request.nextUrl.searchParams;
   const userId = params.get('userId');
+  const hospitalName = params.get('hospitalName');
   const tagsParam = params.get('tags');
   const limit = Math.min(Math.max(parseInt(params.get('limit') || '50', 10) || 50, 1), 100);
   const offset = Math.max(parseInt(params.get('offset') || '0', 10) || 0, 0);
@@ -28,6 +29,9 @@ export async function GET(request: NextRequest) {
 
   if (userId) {
     query = query.eq('user_id', userId);
+  }
+  if (hospitalName) {
+    query = query.eq('hospital_name', hospitalName);
   }
 
   if (tagsParam) {

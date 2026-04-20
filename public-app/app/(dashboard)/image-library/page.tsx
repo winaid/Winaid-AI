@@ -15,6 +15,7 @@ export default function ImageLibraryPage() {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState('');
   const [filterTag, setFilterTag] = useState<string>('');
+  const [selectedHospital, setSelectedHospital] = useState('');
   const [sortBy, setSortBy] = useState<SortBy>('newest');
   const [editImage, setEditImage] = useState<HospitalImage | null>(null);
   const [editTags, setEditTags] = useState<string[]>([]);
@@ -22,10 +23,13 @@ export default function ImageLibraryPage() {
   const [saving, setSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const hospitals = [...new Set(images.map(img => img.hospitalName).filter(Boolean))] as string[];
+
   const loadImages = useCallback(async () => {
     try {
       const params = new URLSearchParams();
       if (filterTag) params.set('tags', filterTag);
+      if (selectedHospital) params.set('hospitalName', selectedHospital);
       params.set('limit', '100');
       const res = await fetch(`/api/hospital-images?${params.toString()}`);
       if (!res.ok) return;
@@ -33,7 +37,7 @@ export default function ImageLibraryPage() {
       setImages(Array.isArray(data) ? data : (data.images || []));
     } catch { /* ignore */ }
     finally { setLoading(false); }
-  }, [filterTag]);
+  }, [filterTag, selectedHospital]);
 
   useEffect(() => { loadImages(); }, [loadImages]);
 
@@ -55,6 +59,7 @@ export default function ImageLibraryPage() {
         const formData = new FormData();
         formData.append('file', file);
         formData.append('userId', userId);
+        if (selectedHospital) formData.append('hospitalName', selectedHospital);
         const res = await fetch('/api/hospital-images/upload', { method: 'POST', body: formData });
         if (!res.ok) continue;
         const uploaded = (await res.json()) as HospitalImage;
@@ -162,7 +167,19 @@ export default function ImageLibraryPage() {
         </div>
       </div>
 
-      {/* 필터 + 정렬 */}
+      {/* 병원 필터 */}
+      {hospitals.length > 0 && (
+        <div className="flex items-center gap-2">
+          <label className="text-xs font-bold text-slate-600">병원</label>
+          <select value={selectedHospital} onChange={e => setSelectedHospital(e.target.value)}
+            className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs bg-white text-slate-700">
+            <option value="">전체</option>
+            {hospitals.map(h => <option key={h} value={h}>{h}</option>)}
+          </select>
+        </div>
+      )}
+
+      {/* 태그 필터 + 정렬 */}
       <div className="flex flex-wrap items-center gap-2">
         <button onClick={() => setFilterTag('')}
           className={`px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all ${!filterTag ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>

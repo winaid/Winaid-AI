@@ -466,6 +466,7 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
                   selectedImages={selectedLibraryImages || []}
                   onSelectionChange={onLibrarySelectionChange}
                   maxImages={imageCount}
+                  hospitalName={hospitalName}
                 />
               )}
 

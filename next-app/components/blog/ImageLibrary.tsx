@@ -11,10 +11,11 @@ interface ImageLibraryProps {
   onSelectionChange: (images: HospitalImage[]) => void;
   maxImages: number;
   userId?: string;
+  hospitalName?: string;
 }
 
 export default function ImageLibrary({
-  enabled, onToggle, selectedImages, onSelectionChange, maxImages, userId,
+  enabled, onToggle, selectedImages, onSelectionChange, maxImages, userId, hospitalName,
 }: ImageLibraryProps) {
   const [images, setImages] = useState<HospitalImage[]>([]);
   const [loading, setLoading] = useState(false);
@@ -25,15 +26,17 @@ export default function ImageLibrary({
   const fetchImages = useCallback(async () => {
     setLoading(true);
     try {
-      const qs = tagFilter ? `?tags=${encodeURIComponent(tagFilter)}&limit=50` : '?limit=50';
-      const res = await fetch(`/api/hospital-images${qs}`);
+      const params = new URLSearchParams({ limit: '50' });
+      if (tagFilter) params.set('tags', tagFilter);
+      if (hospitalName) params.set('hospitalName', hospitalName);
+      const res = await fetch(`/api/hospital-images?${params.toString()}`);
       if (res.ok) {
         const data = await res.json();
-        setImages(data.images ?? []);
+        setImages(Array.isArray(data) ? data : (data.images ?? []));
       }
     } catch { /* skip */ }
     finally { setLoading(false); }
-  }, [tagFilter]);
+  }, [tagFilter, hospitalName]);
 
   useEffect(() => {
     if (enabled) fetchImages();
@@ -46,6 +49,7 @@ export default function ImageLibrary({
         const fd = new FormData();
         fd.append('file', file);
         if (userId) fd.append('userId', userId);
+        if (hospitalName) fd.append('hospitalName', hospitalName);
         const res = await fetch('/api/hospital-images/upload', { method: 'POST', body: fd });
         if (!res.ok) continue;
         const img: HospitalImage = await res.json();
