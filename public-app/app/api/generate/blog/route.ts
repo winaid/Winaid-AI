@@ -15,7 +15,7 @@ import { filterMedicalLawViolations } from '../../../../lib/medicalLawFilter';
 import { callLLM } from '../../../../lib/llm';
 import type { GenerationRequest, BlogOutline } from '../../../../lib/types';
 
-export const maxDuration = 120;
+export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
 
 interface Body {
@@ -131,10 +131,13 @@ async function generate2Pass(
     });
     outline = parseOutlineJson(outlineResp.text);
     if (!outline) {
-      console.warn('[generate/blog] outline parse failed, falling back to 1-pass');
+      console.error('[generate/blog] outline parse FAILED. Raw response:', outlineResp.text?.slice(0, 500));
+    } else {
+      console.log('[generate/blog] outline OK:', outline.sections.length, 'sections');
     }
   } catch (err) {
-    console.warn(`[generate/blog] outline generation failed: ${(err as Error).message.slice(0, 200)}`);
+    console.error('[generate/blog] outline generation FAILED:', (err as Error).message);
+    console.error('[generate/blog] outline FULL ERROR:', JSON.stringify(err, Object.getOwnPropertyNames(err as object)).slice(0, 1000));
   }
 
   // ── Fallback: 1-pass ──
