@@ -213,81 +213,101 @@ export default function WritingStyleLearner({
     }
   };
 
-  // ── 말투 분석 (old analyzeWritingStyle 동일: Gemini /api/gemini 경유) ──
+  // ── 말투 분석 (/api/llm + style_learn task → Sonnet 4.6) ──
   const handleAnalyze = async () => {
     if (!textInput.trim()) { setError('분석할 텍스트를 입력해주세요.'); return; }
     if (!styleName.trim()) { setError('스타일 이름을 입력해주세요.'); return; }
 
     setError(null);
     setIsAnalyzing(true);
-    setAnalyzeProgress('Gemini AI로 말투 분석 중...');
+    setAnalyzeProgress('AI로 말투 분석 중...');
 
     try {
-      const sampleText = textInput.substring(0, 8000);
-      const prompt = `너는 병원 마케팅 콘텐츠 전문 편집자다.
+      const sampleText = textInput.substring(0, 12000);
+      const prompt = `<task>
+당신은 병원 마케팅 콘텐츠 전문 편집자입니다.
 단순히 어미나 표현 몇 개를 모방하는 수준이 아니라,
-해당 병원 고유의 화자 캐릭터, 상담 방식, 설명 습관, 설득 구조, 의료 콘텐츠 전략까지 추출해
-정밀하게 문체를 재현할 수 있는 프로파일을 만들어야 한다.
+해당 병원 고유의 화자 캐릭터·상담 방식·설명 습관·설득 구조·의료 콘텐츠 전략까지 추출해
+정밀하게 문체를 재현할 수 있는 프로파일을 만들어야 합니다.
+</task>
 
-[분석할 텍스트 — ${sampleText.length}자]
+<source_text length="${sampleText.length}">
 ${sampleText}
+</source_text>
 
-[핵심 분석 원칙]
-1. 표면적 어미 모방 금지 — 화자의 태도·환자와의 거리감·설명 흐름·설득 구조까지 분석
-2. 업종 공통 블로그 말투로 평준화 금지 — 이 병원만의 차별점에 집중
-3. 실제 상담실/진료실 대화 기준 — "이 문장이 실제로 사용될 수 있는가?"
-4. 의료 콘텐츠 특화 — 시술/치료 설명 방식, 환자 불안 대응, 신뢰 구축 패턴도 분석
-5. 단락 통계는 원문의 줄바꿈(\\n, \\n\\n)을 기준으로 실제로 세어라. 추측 금지.
+<analysis_principles>
+1. 표면적 어미 모방이 아닌 화자의 태도·환자와의 거리감·설명 흐름·설득 구조까지 분석
+2. 업종 공통 블로그 말투로 평준화하지 않기 — 이 병원만의 차별점에 집중
+3. "이 문장이 실제 상담실에서 쓰일 수 있는가?" 기준
+4. 의료 콘텐츠 특화 — 시술 설명 방식·환자 불안 대응·신뢰 구축 패턴도 분석
+5. 단락 통계는 원문의 줄바꿈(\\n, \\n\\n)을 기준으로 실제로 세기 — 추측 금지
+6. goodExamples와 representativeParagraphs는 반드시 원문에서 정확히 복사 — 한 글자도 바꾸지 않기
+</analysis_principles>
 
-[분석 예시 — 참고용]
-- tone 예시: "환자에게 옆집 언니처럼 친근하게 말하되, 의학적 설명은 정확한 용어를 쓰며 권위를 유지함"
-- speakerIdentity 예시: "원장 본인이 직접 쓰는 톤. 1인칭 '저'를 쓰며, 수술 경험담을 자연스럽게 녹임"
-- medicalTermLevel 예시: "전문 용어를 먼저 쓰고 괄호 안에 쉬운 설명 추가. 예: 치주염(잇몸병)"
-- trustBuildingPattern 예시: "케이스 수치를 구체적으로 언급. '10년간 3,200건' 식의 숫자 근거를 자주 활용"
+<analysis_examples>
+참고용 예시 (이 형태로 구체적으로 작성):
+- tone: "환자에게 옆집 언니처럼 친근하게 말하되, 의학적 설명은 정확한 용어를 쓰며 권위를 유지함"
+- speakerIdentity: "원장 본인이 직접 쓰는 톤. 1인칭 '저'를 쓰며, 수술 경험담을 자연스럽게 녹임"
+- medicalTermLevel: "전문 용어를 먼저 쓰고 괄호 안에 쉬운 설명 추가. 예: 치주염(잇몸병)"
+- trustBuildingPattern: "케이스 수치를 구체적으로 언급. '10년간 3,200건' 식의 숫자 근거를 자주 활용"
+- paragraphStats.lineBreakStyle: 원문에서 빈 줄(\\n\\n)이 3문장마다 나오면 "airy", 10문장 이상 이어지면 "dense"
+</analysis_examples>
 
-[출력 형식]
-반드시 아래 JSON으로만 답변. 설명 텍스트 없이 JSON만 출력.
+<output_format>
+JSON 객체 하나만 출력하세요. JSON 밖의 텍스트는 포함하지 마세요.
+
 {
-  "tone": "전체적인 어조 설명 (2-3문장, 구체적으로)",
-  "sentenceEndings": ["자주 쓰는 문장 끝 패턴 5-8개 — 빈도 높은 순"],
-  "vocabulary": ["이 병원 고유의 특징적 단어/표현 5-10개"],
+  "tone": "전체적인 어조 설명 (2~3문장, 구체적으로)",
+  "sentenceEndings": ["자주 쓰는 문장 끝 패턴 5~8개, 빈도 높은 순"],
+  "vocabulary": ["이 병원 고유의 특징적 단어/표현 5~10개"],
   "structure": "글 구조 설명 (도입-본문-마무리 각각의 특징)",
-  "emotionLevel": "low/medium/high",
-  "formalityLevel": "casual/neutral/formal",
-  "speakerIdentity": "화자 정체성 상세 분석 (누구의 목소리인가, 1인칭/3인칭, 직함 사용 여부)",
-  "readerDistance": "독자와의 거리감 분석 (친구 같은/전문가-환자/선생님-학생 등)",
-  "sentenceRhythm": "문장 리듬 분석 (짧은 문장 위주/긴 설명문/혼합 등)",
-  "paragraphFlow": "문단 전개 구조 분석 (문제제기→해결/스토리텔링→정보/Q&A식 등)",
-  "persuasionStyle": "설득 방식 분석 (감정 호소/데이터 근거/권위 활용/공감 기반 등)",
-  "medicalTermLevel": "의료 용어 사용 수준 분석 (쉬운말만/전문용어+설명/전문가 대상 등)",
-  "procedureExplainStyle": "시술·치료 설명 방식 (단계별/비유 활용/Before-After/비교 등)",
-  "trustBuildingPattern": "환자 신뢰 구축 패턴 (경험 수치/후기 인용/논문 근거/공감 등)",
-  "ctaStyle": "행동 유도(CTA) 방식 (직접 권유/부드러운 제안/정보 제공 후 선택 맡김 등)",
-  "anxietyHandling": "환자 불안 대응 방식 (직접 해소/공감 후 안심/과학적 근거 제시 등)",
-  "uniqueExpressions": ["이 병원만의 고유 표현 5-10개"],
-  "bannedGenericStyle": ["금지할 범용/AI식 표현 5-8개 — 이 병원 톤과 안 맞는 것"],
+  "emotionLevel": "low | medium | high",
+  "formalityLevel": "casual | neutral | formal",
+  "speakerIdentity": "화자 정체성 상세 분석",
+  "readerDistance": "독자와의 거리감 분석",
+  "sentenceRhythm": "문장 리듬 분석",
+  "paragraphFlow": "문단 전개 구조 분석",
+  "persuasionStyle": "설득 방식 분석",
+  "medicalTermLevel": "의료 용어 사용 수준 분석",
+  "procedureExplainStyle": "시술·치료 설명 방식",
+  "trustBuildingPattern": "환자 신뢰 구축 패턴",
+  "ctaStyle": "행동 유도(CTA) 방식",
+  "anxietyHandling": "환자 불안 대응 방식",
+  "uniqueExpressions": ["이 병원만의 고유 표현 5~10개"],
+  "bannedGenericStyle": ["금지할 범용/AI식 표현 5~8개"],
   "oneLineSummary": "이 병원 문체를 한 줄로 정의",
-  "goodExamples": ["⚠️ 반드시 원문에서 그대로 복사-붙여넣기! 한 글자도 바꾸지 마세요. 이 병원다운 문장 5~8개를 원문에서 정확히 인용"],
-  "badExamples": ["이 병원답지 않은 문장 예시 5개 — 이렇게 쓰면 안 됨"],
+  "goodExamples": ["원문에서 그대로 복사한 이 병원다운 문장 5~8개"],
+  "badExamples": ["이 병원답지 않은 문장 예시 5개"],
   "paragraphStats": {
     "avgSentencesPerParagraph": 0,
     "avgCharsPerParagraph": 0,
     "lineBreakStyle": "dense | airy | mixed",
     "doubleBreakFrequency": "low | medium | high",
-    "paragraphLengthPattern": "단락 길이 리듬 서술 (예: 짧게 2개 → 길게 1개 → 짧은 마무리)"
+    "paragraphLengthPattern": "단락 길이 리듬 서술"
   },
-  "representativeParagraphs": ["원문에서 그대로 복사한 단락 3개, 줄바꿈(\\n, \\n\\n) 포함, 각 200~500자"],
+  "representativeParagraphs": ["원문에서 그대로 복사한 대표 단락 5개, 줄바꿈 포함, 각 200~500자"],
   "description": "이 말투를 한 줄로 설명",
-  "stylePrompt": "AI가 이 말투로 글을 쓸 때 반드시 지켜야 할 핵심 지침 (150-250자, 구체적 행동 지침)"
-}`;
+  "stylePrompt": "AI가 이 말투로 글을 쓸 때 반드시 지켜야 할 핵심 지침 (150~250자)"
+}
+</output_format>
 
-      const res = await fetch('/api/gemini', {
+<critical_rules>
+1. goodExamples: 반드시 source_text에서 그대로 복사. 한 글자도 바꾸지 마세요.
+2. representativeParagraphs: 반드시 source_text에서 그대로 복사. 줄바꿈(\\n, \\n\\n) 포함.
+3. paragraphStats: 원문을 실제로 세서 계산. 추측이나 평균적인 숫자 금지.
+4. badExamples: 원문에 없는 "이렇게 쓰면 안 되는" 예시를 새로 작성.
+5. representativeParagraphs는 5개. 다양한 위치에서 선택.
+</critical_rules>`;
+
+      const res = await fetch('/api/llm', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          task: 'style_learn',
           prompt,
-          model: 'gemini-3.1-flash-lite-preview',
+          systemInstruction: '당신은 병원 마케팅 콘텐츠 전문 편집자입니다. 문체·화자 캐릭터·의료 콘텐츠 전략을 정밀 분석합니다. JSON으로만 출력하세요.',
           temperature: 0.2,
+          maxOutputTokens: 4096,
           responseType: 'json',
         }),
       });
