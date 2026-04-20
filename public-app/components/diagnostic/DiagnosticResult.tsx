@@ -259,7 +259,7 @@ export default function DiagnosticResult({ result, onResultUpdate }: DiagnosticR
                   <ScoreRing score={c.score} size={90} label={c.name} />
                   {c.score < 50 && (
                     <p className="mt-1 text-[10px] text-indigo-500 cursor-pointer hover:underline text-center"
-                       onClick={() => window.open('https://winai.kr', '_blank')}>
+                       onClick={() => window.open('https://winaid.co.kr/', '_blank')}>
                       💡 개선이 필요하면 WINAID에 맡겨보세요
                     </p>
                   )}
@@ -497,22 +497,14 @@ export default function DiagnosticResult({ result, onResultUpdate }: DiagnosticR
             AEO/GEO 최적화 · 블로그 콘텐츠 · 구조화 데이터 · 검색 노출 전략까지 원스톱 대행
           </p>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <a
-              href="https://winai.kr"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-6 py-3 bg-white text-indigo-700 font-bold rounded-xl hover:bg-indigo-50 transition-colors shadow-md"
-            >
-              📞 무료 상담 신청하기
-            </a>
-            <a
-              href="mailto:contact@winai.kr"
-              className="px-6 py-3 bg-indigo-500/30 text-white font-semibold rounded-xl hover:bg-indigo-500/50 transition-colors border border-indigo-400/30"
-            >
-              ✉ 이메일 문의
-            </a>
-          </div>
+          <a
+            href="https://winaid.co.kr/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block px-8 py-3 bg-white text-indigo-700 font-bold rounded-xl hover:bg-indigo-50 transition-colors shadow-md"
+          >
+            📞 무료 상담 신청하기
+          </a>
 
           <div className="mt-6 flex flex-wrap justify-center gap-4 text-[12px] text-indigo-200">
             <span>✅ 진단 결과 기반 맞춤 전략</span>
