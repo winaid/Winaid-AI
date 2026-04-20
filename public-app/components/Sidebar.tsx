@@ -25,6 +25,7 @@ const writeItems: { id: ContentTab; label: string; icon: string; href: string }[
 const visualItems: { id: ContentTab; label: string; icon: string; href: string }[] = [
   { id: 'card_news', label: '카드뉴스', icon: '🎨', href: '/card_news' },
   { id: 'image', label: '이미지 생성', icon: '🖼️', href: '/image' },
+  { id: 'image_library' as ContentTab, label: '이미지 관리', icon: '📸', href: '/image-library' },
 ];
 
 const videoItems: { id: ContentTab; label: string; icon: string; href: string }[] = [
