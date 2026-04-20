@@ -44,41 +44,39 @@ export default function ImageLibrary({
 
   const handleUpload = useCallback(async (files: FileList | File[]) => {
     setUploading(true);
-    for (const file of Array.from(files).slice(0, 5)) {
-      try {
-        const fd = new FormData();
-        fd.append('file', file);
-        if (userId) fd.append('userId', userId);
-        if (hospitalName) fd.append('hospitalName', hospitalName);
-        const res = await fetch('/api/hospital-images/upload', { method: 'POST', body: fd });
-        if (!res.ok) continue;
-        const img: HospitalImage = await res.json();
-        // AI 자동 태깅
-        if (img.publicUrl) {
-          fetch('/api/hospital-images/auto-tag', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ imageUrl: img.publicUrl }),
-          }).then(async (r) => {
-            if (!r.ok) return;
-            const tags = await r.json();
-            if (tags.tags?.length || tags.altText) {
-              await fetch(`/api/hospital-images/${img.id}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ tags: tags.tags, altText: tags.altText }),
-              });
-              setImages((prev) => prev.map((i) =>
-                i.id === img.id ? { ...i, tags: tags.tags || i.tags, altText: tags.altText || i.altText } : i,
-              ));
-            }
-          }).catch(() => {});
-        }
-        setImages((prev) => [img, ...prev]);
-      } catch { /* skip */ }
+    const allFiles = Array.from(files).slice(0, 100);
+    for (let batch = 0; batch < allFiles.length; batch += 5) {
+      const chunk = allFiles.slice(batch, batch + 5);
+      await Promise.all(chunk.map(async (file) => {
+        try {
+          const fd = new FormData();
+          fd.append('file', file);
+          if (userId) fd.append('userId', userId);
+          if (hospitalName) fd.append('hospitalName', hospitalName);
+          const res = await fetch('/api/hospital-images/upload', { method: 'POST', body: fd });
+          if (!res.ok) return;
+          const img: HospitalImage = await res.json();
+          setImages((prev) => [img, ...prev]);
+          if (img.publicUrl) {
+            fetch('/api/hospital-images/auto-tag', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ imageId: img.id, imageUrl: img.publicUrl }),
+            }).then(async (r) => {
+              if (!r.ok) return;
+              const tags = await r.json();
+              if (tags.tags?.length || tags.altText) {
+                setImages((prev) => prev.map((i) =>
+                  i.id === img.id ? { ...i, tags: tags.tags || i.tags, altText: tags.altText || i.altText } : i,
+                ));
+              }
+            }).catch(() => {});
+          }
+        } catch { /* skip */ }
+      }));
     }
     setUploading(false);
-  }, []);
+  }, [userId, hospitalName]);
 
   const toggleSelect = useCallback((img: HospitalImage) => {
     const exists = selectedImages.find((s) => s.id === img.id);

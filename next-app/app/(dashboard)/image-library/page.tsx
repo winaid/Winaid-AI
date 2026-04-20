@@ -53,26 +53,29 @@ export default function ImageLibraryPage() {
   const handleUpload = async (files: FileList | null) => {
     if (!files?.length) return;
     setUploading(true);
-    const total = files.length;
+    const allFiles = Array.from(files).slice(0, 100);
+    const total = allFiles.length;
     let done = 0;
 
-    for (const file of Array.from(files).slice(0, 10)) {
-      setUploadProgress(`업로드 중... (${done + 1}/${total})`);
-      try {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('userId', userId);
-        if (selectedHospital) formData.append('hospitalName', selectedHospital);
-        const res = await fetch('/api/hospital-images/upload', { method: 'POST', body: formData });
-        if (!res.ok) continue;
-        const uploaded = (await res.json()) as HospitalImage;
-
-        setUploadProgress(`AI 태깅 중... (${done + 1}/${total})`);
+    // 5장씩 배치 업로드
+    for (let batch = 0; batch < allFiles.length; batch += 5) {
+      const chunk = allFiles.slice(batch, batch + 5);
+      await Promise.all(chunk.map(async (file) => {
+        setUploadProgress(`업로드 중... (${done + 1}/${total})`);
         try {
-          const tagRes = await fetch('/api/hospital-images/auto-tag', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ imageId: uploaded.id, imageUrl: uploaded.publicUrl }),
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('userId', userId);
+          if (selectedHospital) formData.append('hospitalName', selectedHospital);
+          const res = await fetch('/api/hospital-images/upload', { method: 'POST', body: formData });
+          if (!res.ok) { done++; return; }
+          const uploaded = (await res.json()) as HospitalImage;
+
+          try {
+            const tagRes = await fetch('/api/hospital-images/auto-tag', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ imageId: uploaded.id, imageUrl: uploaded.publicUrl }),
           });
           if (tagRes.ok) {
             const tagged = (await tagRes.json()) as HospitalImage;
@@ -85,6 +88,7 @@ export default function ImageLibraryPage() {
         }
       } catch { /* skip failed */ }
       done++;
+      }));
     }
     setUploading(false);
     setUploadProgress('');
