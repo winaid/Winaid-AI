@@ -23,10 +23,11 @@ export default function ImageLibraryPage() {
     try {
       const params = new URLSearchParams();
       if (filterTag) params.set('tags', filterTag);
+      params.set('limit', '100');
       const res = await fetch(`/api/hospital-images?${params.toString()}`);
       if (!res.ok) return;
-      const data = (await res.json()) as HospitalImage[];
-      setImages(data);
+      const data = await res.json();
+      setImages(Array.isArray(data) ? data : (data.images || []));
     } catch { /* ignore */ }
     finally { setLoading(false); }
   }, [filterTag]);

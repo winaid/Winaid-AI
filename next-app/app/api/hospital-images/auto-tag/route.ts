@@ -1,11 +1,12 @@
 /**
  * POST /api/hospital-images/auto-tag — Gemini Vision 으로 이미지 자동 태깅
- * body: { imageUrl: string }
+ * body: { imageId?: string, imageUrl: string }
  * response: { tags: string[], altText: string, description: string }
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '../../../../lib/supabase';
+import { checkAuth } from '../../../../lib/apiAuth';
 import { callLLM } from '../../../../lib/llm';
 
 export const maxDuration = 30;
@@ -19,13 +20,10 @@ const TAG_LIST = [
 ].join(', ');
 
 export async function POST(request: NextRequest) {
-  if (!supabase) {
-    return NextResponse.json({ tags: ['일반'], altText: '', description: '' });
-  }
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: '로그인 필요' }, { status: 401 });
+  const auth = await checkAuth(request);
+  if (auth) return auth;
 
-  let body: { imageUrl?: string };
+  let body: { imageId?: string; imageUrl?: string };
   try { body = await request.json(); } catch {
     return NextResponse.json({ tags: ['일반'], altText: '', description: '' });
   }
@@ -54,11 +52,21 @@ JSON 만 응답:
     const end = text.lastIndexOf('}');
     if (start >= 0 && end > start) {
       const parsed = JSON.parse(text.slice(start, end + 1));
-      return NextResponse.json({
+      const result = {
         tags: Array.isArray(parsed.tags) ? parsed.tags.filter((t: unknown) => typeof t === 'string').slice(0, 5) : ['일반'],
         altText: typeof parsed.altText === 'string' ? parsed.altText.slice(0, 200) : '',
         description: typeof parsed.description === 'string' ? parsed.description.slice(0, 200) : '',
-      });
+      };
+
+      if (supabase && body.imageId) {
+        await supabase.from('hospital_images').update({
+          tags: result.tags,
+          alt_text: result.altText,
+          ai_description: result.description,
+        }).eq('id', body.imageId);
+      }
+
+      return NextResponse.json(result);
     }
   } catch { /* fallback */ }
 

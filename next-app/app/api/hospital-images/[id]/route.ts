@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '../../../../lib/supabase';
+import { checkAuth } from '../../../../lib/apiAuth';
 import { STORAGE_BUCKET } from '../../../../lib/hospitalImageService';
 import type { HospitalImage } from '../../../../lib/hospitalImageService';
 
@@ -7,22 +8,20 @@ export const dynamic = 'force-dynamic';
 
 interface Ctx { params: Promise<{ id: string }> }
 
-export async function DELETE(_request: NextRequest, ctx: Ctx) {
-  if (!supabase) {
-    return NextResponse.json({ error: 'Supabase 미연결' }, { status: 500 });
-  }
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: '로그인 필요' }, { status: 401 });
+export async function DELETE(request: NextRequest, ctx: Ctx) {
+  if (!supabase) return NextResponse.json({ error: 'Supabase 미연결' }, { status: 500 });
+
+  const auth = await checkAuth(request);
+  if (auth) return auth;
 
   const { id } = await ctx.params;
   const { data: row } = await supabase
     .from('hospital_images')
-    .select('storage_path, user_id')
+    .select('storage_path')
     .eq('id', id)
     .single();
 
   if (!row) return NextResponse.json({ error: '이미지를 찾을 수 없습니다.' }, { status: 404 });
-  if (row.user_id !== user.id) return NextResponse.json({ error: '권한 없음' }, { status: 403 });
 
   await supabase.storage.from(STORAGE_BUCKET).remove([row.storage_path]);
   await supabase.from('hospital_images').delete().eq('id', id);
@@ -31,11 +30,10 @@ export async function DELETE(_request: NextRequest, ctx: Ctx) {
 }
 
 export async function PATCH(request: NextRequest, ctx: Ctx) {
-  if (!supabase) {
-    return NextResponse.json({ error: 'Supabase 미연결' }, { status: 500 });
-  }
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: '로그인 필요' }, { status: 401 });
+  if (!supabase) return NextResponse.json({ error: 'Supabase 미연결' }, { status: 500 });
+
+  const auth = await checkAuth(request);
+  if (auth) return auth;
 
   const { id } = await ctx.params;
   const body = (await request.json()) as { tags?: string[]; altText?: string };
@@ -48,7 +46,6 @@ export async function PATCH(request: NextRequest, ctx: Ctx) {
     .from('hospital_images')
     .update(updates)
     .eq('id', id)
-    .eq('user_id', user.id)
     .select()
     .single();
 
