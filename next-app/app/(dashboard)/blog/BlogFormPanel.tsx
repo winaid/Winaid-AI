@@ -391,15 +391,6 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
           {showAdvanced && (
           <div className="space-y-4 p-3 bg-slate-50 rounded-xl border border-slate-100">
             <div className="space-y-3">
-              {/* 대상 독자 */}
-              <div>
-                <label className={labelCls}>대상 독자</label>
-                <select value={audienceMode} onChange={e => setAudienceMode(e.target.value as AudienceMode)} className={inputCls} disabled={isGenerating}>
-                  <option value="환자용(친절/공감)">환자용 (친절/공감)</option>
-                  <option value="보호자용(가족걱정)">보호자용 (부모님/자녀 걱정)</option>
-                  <option value="전문가용(신뢰/정보)">전문가용 (신뢰/정보)</option>
-                </select>
-              </div>
               {/* 키워드 반복 설정 (키워드 입력은 메인 영역으로 이동됨) */}
               {keywords.trim() && (
                 <div className="flex items-center gap-2">
@@ -540,18 +531,6 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
                 </div>
               </div>
 
-              {/* 소제목 직접 입력 (OLD 기준: 이미지 스타일 위) */}
-              <div>
-                <p className="text-[11px] font-semibold text-slate-500 mb-1.5">소제목 직접 입력 <span className="text-slate-400 font-normal">(선택 · 한 줄에 하나씩)</span></p>
-                <textarea
-                  value={customSubheadings}
-                  onChange={e => setCustomSubheadings(e.target.value)}
-                  onPaste={e => { e.preventDefault(); const text = e.clipboardData.getData('text/plain'); document.execCommand('insertText', false, text); }}
-                  placeholder={"임플란트 수술 과정과 기간\n임플란트 후 관리법\n임플란트 비용 비교"}
-                  className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-xs focus:border-blue-400 outline-none resize-none placeholder:text-slate-300"
-                  rows={3}
-                />
-              </div>
               {/* 이미지 스타일 */}
               <div>
                 <p className="text-[11px] font-semibold text-slate-500 mb-1.5">이미지 스타일</p>
