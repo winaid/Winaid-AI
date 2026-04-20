@@ -54,9 +54,30 @@ function BlogForm() {
   const [writingStyle, setWritingStyle] = useState<WritingStyle>('empathy');
   const [cssTheme, setCssTheme] = useState<CssTheme>('modern');
   const [imageStyle, setImageStyle] = useState<ImageStyle>('photo');
-  const [imageCount, setImageCount] = useState(2);
+  const [imageCount, setImageCount] = useState(3);
   const [imageAspectRatio, setImageAspectRatio] = useState<'4:3' | '16:9' | '1:1'>('4:3');
   const [textLength, setTextLength] = useState(2500);
+
+  // 이미지 수량 자동 추천
+  const imageCountManualRef = useRef(false);
+  const recommendedImageCount = useMemo(() => {
+    if (textLength <= 1000) return 1;
+    if (textLength <= 1500) return 2;
+    if (textLength <= 2500) return 3;
+    if (textLength <= 3500) return 4;
+    return 5;
+  }, [textLength]);
+
+  useEffect(() => {
+    if (!imageCountManualRef.current) setImageCount(recommendedImageCount);
+  }, [recommendedImageCount]);
+
+  useEffect(() => { imageCountManualRef.current = false; }, [textLength]);
+
+  const handleImageCountChange = useCallback((count: number) => {
+    imageCountManualRef.current = true;
+    setImageCount(count);
+  }, []);
   const [hospitalName, setHospitalName] = useState('');
   const [hospitalNameFromProfile, setHospitalNameFromProfile] = useState('');
 
@@ -1723,7 +1744,8 @@ Output ONLY the prompt. No explanation.`;
         setTopic={setTopic} setBlogTitle={setBlogTitle} setKeywords={setKeywords} setKeywordDensity={setKeywordDensity} setDisease={setDisease}
         setCategory={setCategory} setPersona={setPersona} setTone={setTone}
         setAudienceMode={setAudienceMode} setImageStyle={setImageStyle}
-        setImageCount={setImageCount} setImageAspectRatio={setImageAspectRatio} setTextLength={setTextLength}
+        setImageCount={handleImageCountChange} recommendedImageCount={recommendedImageCount}
+        setImageAspectRatio={setImageAspectRatio} setTextLength={setTextLength}
         setHospitalName={setHospitalName}
         setSelectedHospitalAddress={setSelectedHospitalAddress}
         setHomepageUrl={setHomepageUrl} setClinicContext={setClinicContext}

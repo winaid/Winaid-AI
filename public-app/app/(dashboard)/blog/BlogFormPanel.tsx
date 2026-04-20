@@ -23,6 +23,7 @@ export interface BlogFormPanelProps {
   audienceMode: AudienceMode;
   imageStyle: ImageStyle;
   imageCount: number;
+  recommendedImageCount: number;
   imageAspectRatio: '4:3' | '16:9' | '1:1';
   textLength: number;
   hospitalName: string;
@@ -117,7 +118,7 @@ export interface BlogFormPanelProps {
 
 export default function BlogFormPanel(props: BlogFormPanelProps) {
   const {
-    topic, blogTitle, keywords, keywordDensity, disease, category, persona, tone, audienceMode, imageStyle, imageCount, imageAspectRatio, textLength,
+    topic, blogTitle, keywords, keywordDensity, disease, category, persona, tone, audienceMode, imageStyle, imageCount, recommendedImageCount, imageAspectRatio, textLength,
     hospitalName, hospitalNameFromProfile, selectedHospitalAddress,
     homepageUrl, clinicContext, isCrawling, crawlProgress,
     includeFaq, faqCount, showCustomInput, customPrompt, customSubheadings,
@@ -583,11 +584,24 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
               <div>
                 <div className="flex justify-between mb-1.5">
                   <label className="text-xs font-semibold text-slate-500">AI 이미지 수</label>
-                  <span className={`text-xs font-semibold ${imageCount === 0 ? 'text-slate-400' : 'text-blue-600'}`}>{imageCount === 0 ? '없음' : `${imageCount}장`}</span>
+                  <span className="text-[10px] text-blue-500 font-normal">
+                    💡 {textLength}자 기준 권장: {recommendedImageCount}장
+                    {imageCount !== recommendedImageCount && ' (수동 변경됨)'}
+                  </span>
                 </div>
                 <input type="range" min={0} max={10} step={1} value={imageCount} onChange={e => setImageCount(Number(e.target.value))} className="w-full accent-blue-500 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer" aria-label={`AI 이미지 수: ${imageCount}장`} />
-                <div className="flex justify-between mt-1 text-[10px] text-slate-400"><span>0장</span><span>10장</span></div>
+                <div className="flex justify-between mt-1 text-[10px] text-slate-400"><span>0장</span><span className={imageCount === 0 ? 'text-slate-400' : 'text-blue-600 font-semibold'}>{imageCount}장</span><span>10장</span></div>
                 {imageCount >= 6 && <p className="text-[10px] text-amber-600 mt-1">이미지가 많을수록 생성 시간이 길어집니다 (6장 이상: 약 3~5분)</p>}
+                <details className="mt-1.5 text-[11px] text-slate-500">
+                  <summary className="cursor-pointer hover:text-slate-700">📸 이미지 유형 가이드</summary>
+                  <ul className="mt-1 space-y-0.5 pl-4 list-disc">
+                    <li><strong>시술 안내</strong> — illustration/3D 권장 (실제 시술 사진은 의료광고법 주의)</li>
+                    <li><strong>원장/의료진</strong> — photo 권장 (신뢰감 ↑)</li>
+                    <li><strong>병원 분위기</strong> — photo/watercolor (따뜻한 톤)</li>
+                    <li><strong>정보형 콘텐츠</strong> — illustration (가독성 ↑)</li>
+                    <li><strong>비교/종류</strong> — 인포그래픽 스타일 (구분 명확)</li>
+                  </ul>
+                </details>
               </div>
               {/* 이미지 비율 */}
               {imageCount > 0 && (
@@ -635,18 +649,7 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
                   </button>
                 </div>
               </div>
-              {/* 병원 소개 섹션 토글 */}
-              <div className="flex items-center justify-between p-3 bg-white rounded-xl border border-slate-200">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm">🏥</span>
-                  <div>
-                    <span className="text-xs font-semibold text-slate-700">병원 소개 섹션</span>
-                    <p className="text-[10px] text-slate-400">홈페이지 크롤링 후 자동 삽입</p>
-                  </div>
-                </div>
-                {/* 토글 제거 — 항상 ON */}
-                <span className="text-[10px] text-emerald-600 font-semibold">✅ 항상 포함</span>
-              </div>
+
               {/* 소제목 직접 입력 (OLD 기준: 이미지 스타일 위) */}
               <div>
                 <p className="text-[11px] font-semibold text-slate-500 mb-1.5">소제목 직접 입력 <span className="text-slate-400 font-normal">(선택 · 한 줄에 하나씩)</span></p>
