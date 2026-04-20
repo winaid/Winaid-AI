@@ -490,6 +490,42 @@ export const TERMINOLOGY_GUIDE: Record<string, string> = {
 </terminology>`,
 };
 
+export const IMAGE_PROMPT_GUIDE = `<image_prompt_guide>
+블로그 본문에 [IMG_N alt="..."] 마커를 배치할 때, alt 속성에 영문 이미지 생성 프롬프트를 직접 작성합니다.
+후처리 파이프라인이 alt 속성 값을 그대로 AI 이미지 생성 프롬프트로 사용합니다.
+
+<format>
+[IMG_1 alt="A bright Korean dental clinic, a Korean female patient in her 30s sitting in the dental chair, a Korean male dentist explaining X-ray with a tablet. Warm lighting, modern interior. eye-level shot. no text, no watermark, no logo"]
+</format>
+
+<rules>
+1. alt 속성은 반드시 영문으로 작성 (파이프라인이 영문을 그대로 이미지 생성에 사용).
+2. 해당 섹션의 내용과 직접 관련된 장면 묘사 (본문과 매칭):
+   ✅ 임플란트 관리 섹션 → "patient brushing around implant with interdental brush"
+   ❌ 임플란트 관리 섹션 → "dental clinic exterior at night" (무관)
+3. 한국 병원 환경 반영: "Korean clinic", "Korean patient/dentist".
+4. 인물 묘사: 나이·성별을 target 환자 페르소나 반영. 자연스러운 표정.
+5. 분위기: 밝고 깨끗한 진료 환경. 불안·공포 유발 장면 금지.
+6. alt 마지막에 반드시 포함: "no text, no watermark, no logo"
+7. 시술 직접 묘사 금지 (피·수술 도구·절개 노출 ❌). 상담·설명·관리 장면 위주.
+8. 이미지 수(image_count)가 0이면 [IMG_N] 마커를 전혀 포함하지 마세요.
+9. 한글 alt 금지. 항상 영문. (짧은 "임플란트 설명" 류 alt는 의미 없는 프롬프트가 됨)
+</rules>
+
+<style_mapping>
+variable의 image_style 에 따라 프롬프트 톤을 조정:
+  illustration → "flat illustration style, pastel colors, clean lines"
+  photo / realistic → "professional photograph, shallow depth of field, natural lighting"
+  3d → "3D rendered, soft shadows, studio lighting"
+  watercolor → "watercolor painting style, soft edges, warm tones"
+스타일 키워드를 alt 끝쪽에 1~2개 포함하면 결과가 일관됩니다.
+</style_mapping>
+
+<length>
+alt 프롬프트 권장 길이: 40~80 English words. 너무 짧으면 생성 품질 저하, 너무 길면 핵심 흐려짐.
+</length>
+</image_prompt_guide>`;
+
 export const COMMON_WRITING_STYLE = `<common_writing_style>
 이 블록은 모든 블로그 본문 작성에 공통 적용되는 문장·문단 규칙입니다.
 페르소나별 고유 규칙(예: 도입부 구조)은 각 페르소나 블록 참조.
@@ -664,6 +700,25 @@ HTML만 출력하세요. 사용 가능 태그: <h2>, <h3>, <p>, <ul>, <li>, <str
 variable 블록의 topic_type이 제공되면 해당 유형별 구조 가이드를 우선 적용하세요.
 </structure>
 
+<title_consistency>
+variable의 blog_title이 제공되면:
+1. 모든 소제목과 본문이 blog_title의 약속을 지키는지 확인.
+   제목이 "임플란트 비용 총정리"면 비용 관련 정보가 핵심이어야 함.
+   제목이 "교정 종류 비교"면 종류별 비교가 빠지면 안 됨.
+2. 도입부 첫 2문장에서 제목의 핵심 키워드를 자연 포함.
+3. 마무리에서 제목의 약속을 "정리"하는 문장 1개.
+
+blog_title이 없으면 topic을 기준으로 동일 원칙 적용.
+</title_consistency>
+
+<image_instructions>
+이미지 수(image_count)가 1 이상이면:
+- 본문 중 시각적 설명이 도움되는 위치에 [IMG_N alt="..."] 마커를 배치하세요.
+- alt 속성에 영문 이미지 생성 프롬프트를 작성합니다 (이후 파이프라인이 alt를 그대로 AI 이미지 프롬프트로 사용).
+- 자세한 작성 기준은 별도 image_prompt_guide 블록 참조.
+이미지 수가 0이면 마커를 전혀 포함하지 마세요.
+</image_instructions>
+
 <writing_style>
 공통 문장·문단 규칙은 별도 common_writing_style 블록 참조.
 이 페르소나의 고유 규칙:
@@ -816,6 +871,7 @@ variable 블록의 greeting_type에 따라:
 □ 스캔: ul/li 항목에 strong 라벨이 있는가?
 □ 첫 화면: 도입부 200자 안에 독자/주제/가치 3요소가 있는가?
 □ 용어: 같은 전문 용어를 글 안에서 다른 표기로 쓰지 않았는가? 첫 등장 병기 확인.
+□ 제목: blog_title의 약속(비용/비교/관리법 등)이 본문에서 실제로 다뤄지는가?
 
 이 검토 과정은 출력에 포함하지 마세요 — 결과 HTML만 출력합니다.
 </self_check>
@@ -864,6 +920,8 @@ JSON 객체 하나만 출력하세요. JSON 밖의 텍스트는 포함하지 마
 15. 각 section의 charTarget 합계가 totalCharTarget의 90~110% 범위인지 검증.
     intro ≈ 15%, 본문 sections ≈ 70%, outro ≈ 15% 비율 권장.
     FAQ 포함 시 FAQ ≈ 10%, 나머지 재분배.
+16. variable의 blog_title이 있으면 아웃라인의 모든 section이 제목의 약속을 뒷받침하는 구조로 설계.
+    제목이 "비용 총정리"면 비용 관련 섹션 필수. "종류 비교"면 비교 섹션 필수.
 </design_principles>
 
 <priority_order>
@@ -890,8 +948,15 @@ export const SECTION_PERSONA = `<role>
 <output_format>
 해당 섹션의 HTML만 출력하세요.
 사용 가능 태그: <h2>, <h3>, <p>, <ul>, <li>, <strong>, <em>.
-이미지 마커: [IMG_N alt="설명"]. 글 밖 텍스트/마크다운/JSON 포함하지 마세요.
+이미지 마커: [IMG_N alt="..."]. 글 밖 텍스트/마크다운/JSON 포함하지 마세요.
 </output_format>
+
+<image_instructions>
+variable의 target_section에 image_index가 있으면:
+- 해당 섹션 내용과 직접 관련된 위치에 [IMG_{image_index} alt="영문 프롬프트"] 배치.
+- alt 속성은 반드시 영문. 자세한 기준은 별도 image_prompt_guide 블록 참조.
+image_index가 없으면 마커를 포함하지 마세요.
+</image_instructions>
 
 <writing_style>
 공통 문장·문단 규칙은 별도 common_writing_style 블록 참조.
@@ -1031,7 +1096,7 @@ function buildUserInputBlock(req: GenerationRequest): string {
     `  <topic>${topic}</topic>`,
     `  <topic_type>${topicType}</topic_type>`,
     `  <journey_stage>${journeyStage}</journey_stage>`,
-    blogTitle && blogTitle !== topic ? `  <blog_title>${blogTitle}</blog_title>` : '',
+    `  <blog_title>${blogTitle && blogTitle !== topic ? blogTitle : '(없음 — topic 기준)'}</blog_title>`,
     `  <keywords>${keywords || '(없음)'}</keywords>`,
     disease ? `  <disease>${disease}</disease>` : '',
     `  <category>${req.category || '(미지정)'}</category>`,
@@ -1271,6 +1336,9 @@ export function buildSectionFromOutlinePrompt(
 
   systemBlocks.push({ type: 'text', text: SECTION_PERSONA, cacheable: true, cacheTtl: '1h' });
   systemBlocks.push({ type: 'text', text: COMMON_WRITING_STYLE, cacheable: true, cacheTtl: '1h' });
+  if ((req.imageCount ?? 0) > 0 && section.imageIndex) {
+    systemBlocks.push({ type: 'text', text: IMAGE_PROMPT_GUIDE, cacheable: true, cacheTtl: '1h' });
+  }
   systemBlocks.push({ type: 'text', text: MEDICAL_LAW_CONSTRAINTS, cacheable: true, cacheTtl: '1h' });
 
   if (req.category && CATEGORY_DEPTH_GUIDES[req.category]) {
@@ -1377,6 +1445,9 @@ export function buildBlogPromptV3(
 
   systemBlocks.push({ type: 'text', text: BLOG_PERSONA, cacheable: true, cacheTtl: '1h' });
   systemBlocks.push({ type: 'text', text: COMMON_WRITING_STYLE, cacheable: true, cacheTtl: '1h' });
+  if ((req.imageCount ?? 0) > 0) {
+    systemBlocks.push({ type: 'text', text: IMAGE_PROMPT_GUIDE, cacheable: true, cacheTtl: '1h' });
+  }
   systemBlocks.push({ type: 'text', text: MEDICAL_LAW_CONSTRAINTS, cacheable: true, cacheTtl: '1h' });
 
   if (req.category && CATEGORY_DEPTH_GUIDES[req.category]) {
