@@ -48,7 +48,7 @@ const TRUSTED_DOMAINS_BY_CATEGORY: Record<string, string[]> = {
     'health.kdca.go.kr',
     'snuh.org',
   ],
-  _common: [               // fallback (카테고리 미지정/매칭 실패)
+  _common: [
     'health.kdca.go.kr',
     'hira.or.kr',
     'kams.or.kr',
@@ -58,39 +58,77 @@ const TRUSTED_DOMAINS_BY_CATEGORY: Record<string, string[]> = {
   ],
 };
 
-function getTrustedDomains(category?: string): string {
+const TRUSTED_NAMES: Record<string, string> = {
+  'kda.or.kr': '대한치과의사협회',
+  'kaoms.org': '대한구강악안면외과학회',
+  'kacd.or.kr': '대한치과보존학회',
+  'health.kdca.go.kr': '국가건강정보포털',
+  'snuh.org': '서울대학교병원',
+  'amc.seoul.kr': '서울아산병원',
+  'hira.or.kr': '건강보험심사평가원',
+  'kams.or.kr': '대한의학회',
+  'mohw.go.kr': '보건복지부',
+  'derma.or.kr': '대한피부과학회',
+  'koa.or.kr': '대한정형외과학회',
+  'kaim.or.kr': '대한내과학회',
+  'ophthalmology.or.kr': '대한안과학회',
+  'korl.or.kr': '대한이비인후과학회',
+};
+
+function getTrustedLabel(category?: string): string {
   const domains = TRUSTED_DOMAINS_BY_CATEGORY[category || '']
     || TRUSTED_DOMAINS_BY_CATEGORY._common;
-  return domains.join(', ');
+  return domains
+    .map(d => TRUSTED_NAMES[d] ? `${TRUSTED_NAMES[d]}(${d})` : d)
+    .join(', ');
+}
+
+function extractSources(text: string): string[] {
+  const allSources = new Set<string>();
+  const patterns: RegExp[] = [
+    /\(출처:\s*([^)]+)\)/g,
+    /[-–]\s*출처:\s*(.+?)(?:\n|$)/g,
+    /【([^】]+)】/g,
+    /(\S+(?:협회|포털|병원|학회|복지부|보건원|의학회))\S*(?:에\s*따르면|에서|의\s*권고|에\s*의하면)/g,
+  ];
+  for (const re of patterns) {
+    for (const m of text.matchAll(re)) {
+      const src = m[1].trim();
+      if (src.length >= 3 && src.length <= 30) allSources.add(src);
+    }
+  }
+  return [...allSources];
 }
 
 export async function fetchMedicalReference(
   topic: string,
   category?: string,
 ): Promise<ReferenceResult> {
-  const trustedDomains = getTrustedDomains(category);
+  const trustedLabel = getTrustedLabel(category);
   const res = await callLLM({
     task: 'search_ground',
     systemBlocks: [{
       type: 'text',
-      text: `의학 정보 검증 전문가. 반드시 신뢰 의료 기관(${trustedDomains}) 자료를 근거로 답변.`,
+      text: `의학 정보 검증 전문가. 반드시 신뢰 의료 기관 자료를 근거로 답변.\n신뢰 기관: ${trustedLabel}`,
       cacheable: false,
     }],
     userPrompt: `"${topic}"에 대한 의학적 사실 정리.
 
 규칙:
-1. ${trustedDomains} 등 공신력 있는 의료 기관 자료만 근거로 사용
-2. 각 정보 뒤에 (출처: 기관명) 표기
+1. ${trustedLabel} 등 공신력 있는 의료 기관 자료만 근거로 사용
+2. 반드시 각 정보 뒤에 (출처: 기관명) 형식으로 출처 표기. 출처 없는 문장 금지.
+   예시: "임플란트 수명은 평균 10~15년입니다. (출처: 대한치과의사협회)"
+   예시: "정기 검진은 6개월마다 권장됩니다. (출처: 국가건강정보포털)"
 3. 정의, 원인, 증상, 치료법, 주의사항 순서
 4. 의료광고법에 저촉되지 않는 객관적 서술
 5. 500~800자
-6. 마크다운 금지, plain text`,
+6. 마크다운 금지, plain text
+7. 모든 문단에 최소 1개 (출처: 기관명). 출처 없이 정보만 나열하지 마세요.`,
     maxOutputTokens: 2_000,
     googleSearch: true,
   });
 
   const text = (res.text ?? '').trim();
-  const sourceMatches = text.matchAll(/\(출처:\s*([^)]+)\)/g);
-  const sources = [...new Set([...sourceMatches].map((m) => m[1].trim()))];
+  const sources = extractSources(text);
   return { facts: text, sources };
 }
