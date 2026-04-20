@@ -96,6 +96,29 @@ function BlogForm() {
   const [customPrompt, setCustomPrompt] = useState('');
   const [showCustomInput, setShowCustomInput] = useState(false);
 
+  // 관리자 학습 말투 DB 프로파일 확인
+  const [dbStyleLoaded, setDbStyleLoaded] = useState(false);
+  const [dbStyleName, setDbStyleName] = useState('');
+
+  useEffect(() => {
+    setDbStyleLoaded(false);
+    setDbStyleName('');
+    if (!hospitalName?.trim()) return;
+    const checkDbStyle = async () => {
+      try {
+        const res = await fetch(`/api/style-check?hospitalName=${encodeURIComponent(hospitalName.trim())}`);
+        if (res.ok) {
+          const data = await res.json() as { hasProfile?: boolean; hospitalName?: string };
+          if (data.hasProfile) {
+            setDbStyleLoaded(true);
+            setDbStyleName(data.hospitalName || hospitalName);
+          }
+        }
+      } catch { /* ignore */ }
+    };
+    checkDbStyle();
+  }, [hospitalName]);
+
   // ── 키워드 분석 상태 (old InputForm 동일) ──
   const [keywordStats, setKeywordStats] = useState<KeywordStat[]>([]);
   const [keywordAiRec, setKeywordAiRec] = useState('');
@@ -1645,6 +1668,7 @@ Output ONLY the prompt. No explanation.`;
         includeFaq={includeFaq} faqCount={faqCount}
         showCustomInput={showCustomInput} customPrompt={customPrompt}
         customSubheadings={customSubheadings} learnedStyleId={learnedStyleId}
+        dbStyleLoaded={dbStyleLoaded} dbStyleName={dbStyleName}
         showAdvanced={showAdvanced} includeHospitalIntro={includeHospitalIntro}
         keywordStats={keywordStats} keywordAiRec={keywordAiRec}
         keywordProgress={keywordProgress} isAnalyzingKeywords={isAnalyzingKeywords}

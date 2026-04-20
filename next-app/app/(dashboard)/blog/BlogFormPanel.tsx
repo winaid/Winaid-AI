@@ -42,6 +42,8 @@ export interface BlogFormPanelProps {
   customPrompt: string;
   customSubheadings: string;
   learnedStyleId: string | undefined;
+  dbStyleLoaded?: boolean;
+  dbStyleName?: string;
   showAdvanced: boolean;
   includeHospitalIntro: boolean;
   // ── 키워드 분석 상태 ──
@@ -128,7 +130,7 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
     hospitalName, selectedTeam, showHospitalDropdown, selectedManager, selectedHospitalAddress,
     homepageUrl, clinicContext, isCrawling, crawlProgress,
     includeFaq, faqCount, showCustomInput, customPrompt, customSubheadings,
-    learnedStyleId, showAdvanced, includeHospitalIntro,
+    learnedStyleId, dbStyleLoaded, dbStyleName, showAdvanced, includeHospitalIntro,
     keywordStats, keywordAiRec, keywordProgress, isAnalyzingKeywords, showKeywordPanel,
     keywordSortBy, keywordSearch, keywordMinVolume, isCheckingRanks, rankResults, hideRanked, isLoadingMoreKeywords,
     seoTitles, trendingItems, isLoadingTitles, isLoadingTrends,
@@ -372,34 +374,6 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
             </button>
           )}
 
-          {/* FAQ 토글 — 항상 표시 */}
-          <div className="flex items-center justify-between p-3 bg-white rounded-xl border border-slate-200">
-            <div className="flex items-center gap-2">
-              <span className="text-sm">❓</span>
-              <div>
-                <span className="text-xs font-semibold text-slate-700">FAQ 섹션</span>
-                <p className="text-[10px] text-slate-400">자주 묻는 질문 3~5개 자동 생성</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              {includeFaq && (
-                <div className="flex gap-0.5">
-                  {[3, 4, 5].map(num => (
-                    <button key={num} type="button" onClick={() => setFaqCount(num)}
-                      className={`w-7 h-7 rounded-md text-[10px] font-semibold transition-all ${faqCount === num ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
-                    >{num}</button>
-                  ))}
-                </div>
-              )}
-              <button type="button" onClick={() => setIncludeFaq(!includeFaq)}
-                className={`relative rounded-full transition-colors ${includeFaq ? 'bg-blue-500' : 'bg-slate-300'}`}
-                style={{ width: 40, height: 22 }}
-              >
-                <span className={`absolute top-[3px] left-[3px] w-4 h-4 bg-white rounded-full shadow transition-all duration-200 ${includeFaq ? 'translate-x-[18px]' : 'translate-x-0'}`} />
-              </button>
-            </div>
-          </div>
-
           {/* 세부 옵션 토글 */}
           {(() => {
             const advancedCount = [
@@ -487,6 +461,34 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
                   hospitalName={hospitalName}
                 />
               )}
+
+              {/* FAQ 토글 */}
+              <div className="flex items-center justify-between p-3 bg-white rounded-xl border border-slate-200">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">❓</span>
+                  <div>
+                    <span className="text-xs font-semibold text-slate-700">FAQ 섹션</span>
+                    <p className="text-[10px] text-slate-400">자주 묻는 질문 3~5개 자동 생성</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {includeFaq && (
+                    <div className="flex gap-0.5">
+                      {[3, 4, 5].map(num => (
+                        <button key={num} type="button" onClick={() => setFaqCount(num)}
+                          className={`w-7 h-7 rounded-md text-[10px] font-semibold transition-all ${faqCount === num ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+                        >{num}</button>
+                      ))}
+                    </div>
+                  )}
+                  <button type="button" onClick={() => setIncludeFaq(!includeFaq)}
+                    className={`relative rounded-full transition-colors ${includeFaq ? 'bg-blue-500' : 'bg-slate-300'}`}
+                    style={{ width: 40, height: 22 }}
+                  >
+                    <span className={`absolute top-[3px] left-[3px] w-4 h-4 bg-white rounded-full shadow transition-all duration-200 ${includeFaq ? 'translate-x-[18px]' : 'translate-x-0'}`} />
+                  </button>
+                </div>
+              </div>
 
               {/* 이미지 수 슬라이더 */}
               {useImageLibrary ? (
@@ -585,7 +587,19 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
                   </div>
                 )}
               </div>
-              {/* 말투 학습 (old 동일 위치: 이미지 스타일 아래, 화자/어조 위) */}
+              {/* 관리자 학습 말투 자동 적용 안내 */}
+              {dbStyleLoaded && !learnedStyleId && (
+                <div className="px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-200 text-[12px] text-emerald-700 flex items-center gap-2">
+                  <span>✅</span>
+                  <span><strong>{dbStyleName}</strong> 관리자 학습 말투가 자동 적용됩니다</span>
+                </div>
+              )}
+              {dbStyleLoaded && learnedStyleId && (
+                <div className="px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 text-[11px] text-amber-700">
+                  ⚠ 수동 말투 선택 중 — 관리자 학습 말투 대신 선택한 말투가 적용됩니다
+                </div>
+              )}
+              {/* 말투 학습 */}
               <WritingStyleLearner
                 onStyleSelect={(styleId) => setLearnedStyleId(styleId)}
                 selectedStyleId={learnedStyleId}
