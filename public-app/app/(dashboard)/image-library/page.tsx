@@ -2,11 +2,14 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { isSupabaseConfigured } from '../../../lib/supabase';
+import { useAuthGuard } from '../../../hooks/useAuthGuard';
 import { IMAGE_TAG_PRESETS, type HospitalImage } from '../../../lib/hospitalImageService';
 
 type SortBy = 'newest' | 'most_used' | 'name';
 
 export default function ImageLibraryPage() {
+  const { user } = useAuthGuard();
+  const userId = user?.id || 'guest';
   const [images, setImages] = useState<HospitalImage[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -51,6 +54,7 @@ export default function ImageLibraryPage() {
       try {
         const formData = new FormData();
         formData.append('file', file);
+        formData.append('userId', userId);
         const res = await fetch('/api/hospital-images/upload', { method: 'POST', body: formData });
         if (!res.ok) continue;
         const uploaded = (await res.json()) as HospitalImage;

@@ -10,10 +10,11 @@ interface ImageLibraryProps {
   selectedImages: HospitalImage[];
   onSelectionChange: (images: HospitalImage[]) => void;
   maxImages: number;
+  userId?: string;
 }
 
 export default function ImageLibrary({
-  enabled, onToggle, selectedImages, onSelectionChange, maxImages,
+  enabled, onToggle, selectedImages, onSelectionChange, maxImages, userId,
 }: ImageLibraryProps) {
   const [images, setImages] = useState<HospitalImage[]>([]);
   const [loading, setLoading] = useState(false);
@@ -44,6 +45,7 @@ export default function ImageLibrary({
       try {
         const fd = new FormData();
         fd.append('file', file);
+        if (userId) fd.append('userId', userId);
         const res = await fetch('/api/hospital-images/upload', { method: 'POST', body: fd });
         if (!res.ok) continue;
         const img: HospitalImage = await res.json();
