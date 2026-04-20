@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { isSupabaseConfigured } from '../../../lib/supabase';
 import { useAuthGuard } from '../../../hooks/useAuthGuard';
 import { IMAGE_TAG_PRESETS, type HospitalImage } from '../../../lib/hospitalImageService';
+import { TEAM_DATA } from '../../../lib/teamData';
 
 type SortBy = 'newest' | 'most_used' | 'name';
 
@@ -23,7 +24,9 @@ export default function ImageLibraryPage() {
   const [saving, setSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const hospitals = [...new Set(images.map(img => img.hospitalName).filter(Boolean))] as string[];
+  const hospitals = useMemo(() =>
+    TEAM_DATA.flatMap(t => t.hospitals.map(h => h.name.replace(/ \(.*\)$/, ''))),
+  []);
 
   const loadImages = useCallback(async () => {
     try {
@@ -167,17 +170,15 @@ export default function ImageLibraryPage() {
         </div>
       </div>
 
-      {/* 병원 필터 */}
-      {hospitals.length > 0 && (
-        <div className="flex items-center gap-2">
-          <label className="text-xs font-bold text-slate-600">병원</label>
-          <select value={selectedHospital} onChange={e => setSelectedHospital(e.target.value)}
-            className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs bg-white text-slate-700">
-            <option value="">전체</option>
-            {hospitals.map(h => <option key={h} value={h}>{h}</option>)}
-          </select>
-        </div>
-      )}
+      {/* 병원 필터 — TEAM_DATA 기반 (항상 표시) */}
+      <div className="flex items-center gap-2">
+        <label className="text-xs font-bold text-slate-600">병원</label>
+        <select value={selectedHospital} onChange={e => setSelectedHospital(e.target.value)}
+          className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs bg-white text-slate-700">
+          <option value="">전체</option>
+          {hospitals.map(h => <option key={h} value={h}>{h}</option>)}
+        </select>
+      </div>
 
       {/* 태그 필터 + 정렬 */}
       <div className="flex flex-wrap items-center gap-2">
