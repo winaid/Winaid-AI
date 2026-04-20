@@ -255,7 +255,15 @@ export default function DiagnosticResult({ result, onResultUpdate }: DiagnosticR
             <h3 className="text-sm font-bold text-slate-700 mb-4">카테고리별 점수</h3>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
               {result.categories.map((c) => (
-                <ScoreRing key={c.id} score={c.score} size={90} label={c.name} />
+                <div key={c.id} className="flex flex-col items-center">
+                  <ScoreRing score={c.score} size={90} label={c.name} />
+                  {c.score < 50 && (
+                    <p className="mt-1 text-[10px] text-indigo-500 cursor-pointer hover:underline text-center"
+                       onClick={() => window.open('https://winai.kr', '_blank')}>
+                      💡 개선이 필요하면 WINAID에 맡겨보세요
+                    </p>
+                  )}
+                </div>
               ))}
             </div>
           </div>
@@ -474,6 +482,45 @@ export default function DiagnosticResult({ result, onResultUpdate }: DiagnosticR
 
       {/* 탭 4: 우선 조치 */}
       {tab === 'actions' && <ActionPlan actions={result.priorityActions} />}
+
+      {/* CTA — WINAID 대행 문의 */}
+      <div className="mt-8 rounded-2xl bg-gradient-to-r from-indigo-600 to-blue-600 p-8 text-white shadow-lg">
+        <div className="max-w-2xl mx-auto text-center">
+          <h2 className="text-xl font-black mb-3">
+            AI 검색에 우리 병원이 노출되게 하고 싶으신가요?
+          </h2>
+          <p className="text-indigo-100 text-sm leading-relaxed mb-2">
+            ChatGPT, Gemini에서 &quot;○○ 치과 추천&quot;을 검색하면
+            <strong className="text-white"> 우리 병원이 1위로 뜨게</strong> 만들어 드립니다.
+          </p>
+          <p className="text-indigo-200 text-[13px] mb-6">
+            AEO/GEO 최적화 · 블로그 콘텐츠 · 구조화 데이터 · 검색 노출 전략까지 원스톱 대행
+          </p>
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <a
+              href="https://winai.kr"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-6 py-3 bg-white text-indigo-700 font-bold rounded-xl hover:bg-indigo-50 transition-colors shadow-md"
+            >
+              📞 무료 상담 신청하기
+            </a>
+            <a
+              href="mailto:contact@winai.kr"
+              className="px-6 py-3 bg-indigo-500/30 text-white font-semibold rounded-xl hover:bg-indigo-500/50 transition-colors border border-indigo-400/30"
+            >
+              ✉ 이메일 문의
+            </a>
+          </div>
+
+          <div className="mt-6 flex flex-wrap justify-center gap-4 text-[12px] text-indigo-200">
+            <span>✅ 진단 결과 기반 맞춤 전략</span>
+            <span>✅ AI 검색 1위 노출 보장형</span>
+            <span>✅ 의료광고법 100% 준수</span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
