@@ -12,6 +12,7 @@ import { getHospitalStylePrompt } from '../../../lib/styleService';
 import { type ScoreBarData } from '../../../components/GenerationResult';
 import { getStyleById, getStylePromptForGeneration } from '../../../components/WritingStyleLearner';
 import type { BlogSection } from '../../../lib/types';
+import type { HospitalImage } from '../../../lib/hospitalImageService';
 import { parseBlogSections, replaceSectionHtml } from '../../../lib/blogSectionParser';
 import { stripDoctype } from '../../../lib/htmlUtils';
 import { downloadWord, downloadPDF } from '../../../lib/blogExport';
@@ -53,18 +54,20 @@ function BlogForm() {
   const [writingStyle, setWritingStyle] = useState<WritingStyle>('empathy');
   const [cssTheme, setCssTheme] = useState<CssTheme>('modern');
   const [imageStyle, setImageStyle] = useState<ImageStyle>('photo');
-  const [imageCount, setImageCount] = useState(2);
+  const [imageCount, setImageCount] = useState(6);
+  const [useImageLibrary, setUseImageLibrary] = useState(false);
+  const [selectedLibraryImages, setSelectedLibraryImages] = useState<HospitalImage[]>([]);
   const [imageAspectRatio, setImageAspectRatio] = useState<'4:3' | '16:9' | '1:1'>('4:3');
   const [textLength, setTextLength] = useState(1500);
 
   // 이미지 수량 자동 추천
   const imageCountManualRef = useRef(false);
   const recommendedImageCount = useMemo(() => {
-    if (textLength <= 1000) return 1;
-    if (textLength <= 1500) return 2;
-    if (textLength <= 2500) return 3;
-    if (textLength <= 3500) return 4;
-    return 5;
+    if (textLength <= 1000) return 4;
+    if (textLength <= 1500) return 6;
+    if (textLength <= 2500) return 8;
+    if (textLength <= 3500) return 10;
+    return 15;
   }, [textLength]);
 
   useEffect(() => {
@@ -816,6 +819,14 @@ JSON 형식으로 응답해주세요.`;
       } : undefined,
       referenceFacts: referenceResult?.facts || undefined,
       referenceSources: referenceResult?.sources || undefined,
+      libraryImages: useImageLibrary && selectedLibraryImages.length > 0
+        ? selectedLibraryImages.map(img => ({
+            id: img.id,
+            publicUrl: img.publicUrl || '',
+            altText: img.altText || '',
+            tags: img.tags || [],
+          }))
+        : undefined,
     };
 
     setIsGenerating(true);
@@ -1599,6 +1610,8 @@ Output ONLY the prompt. No explanation.`;
         topic={topic} blogTitle={blogTitle} keywords={keywords} keywordDensity={keywordDensity} disease={disease} category={category}
         persona={persona} tone={tone} audienceMode={audienceMode}
         imageStyle={imageStyle} imageCount={imageCount} imageAspectRatio={imageAspectRatio} textLength={textLength}
+        useImageLibrary={useImageLibrary} onToggleImageLibrary={setUseImageLibrary}
+        selectedLibraryImages={selectedLibraryImages} onLibrarySelectionChange={setSelectedLibraryImages}
         hospitalName={hospitalName} selectedTeam={selectedTeam}
         showHospitalDropdown={showHospitalDropdown} selectedManager={selectedManager}
         selectedHospitalAddress={selectedHospitalAddress}
