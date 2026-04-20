@@ -37,27 +37,44 @@ export default function AuthPage() {
       return;
     }
 
+    let mounted = true;
+
     const checkSession = async () => {
-      const hash = window.location.hash;
+      try {
+        const timeoutPromise = new Promise<null>((_, reject) =>
+          setTimeout(() => reject(new Error('session_check_timeout')), 5_000),
+        );
 
-      if (hash && (hash.includes('access_token') || hash.includes('refresh_token'))) {
-        const { data: { session } } = await supabase!.auth.getSession();
-        if (session) {
-          router.push('/app');
-          return;
-        }
+        const sessionPromise = (async () => {
+          const hash = window.location.hash;
+
+          if (hash && (hash.includes('access_token') || hash.includes('refresh_token'))) {
+            const { data: { session } } = await supabase!.auth.getSession();
+            if (session && mounted) {
+              router.push('/app');
+              return 'redirected';
+            }
+          }
+
+          const { data: { session } } = await supabase!.auth.getSession();
+          if (session && mounted) {
+            router.push('/app');
+            return 'redirected';
+          }
+          return null;
+        })();
+
+        await Promise.race([sessionPromise, timeoutPromise]);
+      } catch (err) {
+        console.warn('[auth] 세션 확인 실패:', (err as Error).message);
+      } finally {
+        if (mounted) setCheckingSession(false);
       }
-
-      const { data: { session } } = await supabase!.auth.getSession();
-      if (session) {
-        router.push('/app');
-        return;
-      }
-
-      setCheckingSession(false);
     };
 
     checkSession();
+
+    return () => { mounted = false; };
   }, [router]);
 
   // Supabase 미설정 시 안내 화면

@@ -30,20 +30,27 @@ export function useAuthGuard(): AuthGuardResult {
 
     const checkSession = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!mounted) return;
-        if (session?.user) {
-          setUser(session.user);
-        } else {
-          // 게스트 체험 모드: ?guest=1 파라미터가 있으면 리다이렉트 안 함
-          const isGuestMode = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('guest') === '1';
-          if (!isGuestMode && typeof window !== 'undefined') {
-            window.location.href = '/auth';
-            return;
+        const timeoutPromise = new Promise<null>((_, reject) =>
+          setTimeout(() => reject(new Error('auth_guard_timeout')), 5_000),
+        );
+
+        const sessionPromise = (async () => {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (!mounted) return;
+          if (session?.user) {
+            setUser(session.user);
+          } else {
+            const isGuestMode = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('guest') === '1';
+            if (!isGuestMode && typeof window !== 'undefined') {
+              window.location.href = '/auth';
+              return;
+            }
           }
-        }
-      } catch {
-        // Supabase 오류 시에도 guest로 진입
+        })();
+
+        await Promise.race([sessionPromise, timeoutPromise]);
+      } catch (err) {
+        console.warn('[useAuthGuard] 세션 확인 실패:', (err as Error).message);
       } finally {
         if (mounted) setLoading(false);
       }
