@@ -595,8 +595,8 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
                   </ul>
                 </details>
               </div>
-              {/* 이미지 비율 */}
-              {imageCount > 0 && (
+              {/* 이미지 비율 — AI 생성 모드에서만 */}
+              {!useImageLibrary && imageCount > 0 && (
                 <div>
                   <p className="text-[11px] font-semibold text-slate-500 mb-1.5">이미지 비율</p>
                   <div className="grid grid-cols-3 gap-1.5">
