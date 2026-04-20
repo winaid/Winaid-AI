@@ -321,6 +321,17 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
           <div>
             <label className={labelCls}>주요 키워드</label>
             <input type="text" value={keywords} onChange={e => setKeywords(e.target.value)} placeholder="예: 강남 치과, 임플란트 가격" className={inputCls} />
+            {keywords.trim() && (
+              <div className="flex items-center gap-2 mt-1.5">
+                <span className="text-[10px] text-slate-400 whitespace-nowrap">반복</span>
+                {(['auto', 3, 5, 7] as const).map(opt => (
+                  <button key={opt} type="button" onClick={() => setKeywordDensity(opt)}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all ${keywordDensity === opt ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
+                    {opt === 'auto' ? '자동' : `${opt}회`}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* 질환명·제목추천·트렌드 — next-app 에서 제거 (주제 하나로 통합) */}
@@ -391,18 +402,6 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
           {showAdvanced && (
           <div className="space-y-4 p-3 bg-slate-50 rounded-xl border border-slate-100">
             <div className="space-y-3">
-              {/* 키워드 반복 설정 (키워드 입력은 메인 영역으로 이동됨) */}
-              {keywords.trim() && (
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-slate-400 whitespace-nowrap">반복</span>
-                  {(['auto', 3, 5, 7] as const).map(opt => (
-                    <button key={opt} type="button" onClick={() => setKeywordDensity(opt)}
-                      className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all ${keywordDensity === opt ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
-                      {opt === 'auto' ? '자동' : `${opt}회`}
-                    </button>
-                  ))}
-                </div>
-              )}
               {showKeywordPanel && keywordStats.length > 0 && (
                 <div className="bg-white rounded-lg border border-slate-200 max-h-48 overflow-y-auto">
                   <div className="px-3 py-1.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
