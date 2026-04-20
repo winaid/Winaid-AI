@@ -212,11 +212,9 @@ export default function AdminPage() {
           if (manualRaw) {
             const manualKeywords = manualRaw.split(/[,，]/).map(k => k.trim()).filter(Boolean);
             for (const mk of manualKeywords) {
-              const clinicMatch = mk.match(/^(.+?(?:치과|의원|병원|한의원|피부과|내과|외과|안과|이비인후과|정형외과|소아과))/);
-              const keyword = clinicMatch ? clinicMatch[1] : mk;
-              if (!coreKeywords.includes(keyword) && !results.some(r => r.keyword === keyword)) {
-                const rank = await checkSingleRank(keyword, blogIds, hospitalName);
-                results.unshift({ keyword, rank });
+              if (!coreKeywords.includes(mk) && !results.some(r => r.keyword === mk)) {
+                const rank = await checkSingleRank(mk, blogIds, hospitalName);
+                results.unshift({ keyword: mk, rank });
                 await new Promise(r => setTimeout(r, 200));
               }
             }
