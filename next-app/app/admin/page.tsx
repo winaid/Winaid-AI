@@ -421,7 +421,12 @@ export default function AdminPage() {
 
   // URL 저장 (크롤링 없이)
   const handleSaveBlogUrl = useCallback(async (hospitalName: string, teamId: number) => {
-    const urls = blogUrlInputs[hospitalName] || [];
+    const profile = styleProfiles.find(p => p.hospital_name === hospitalName);
+    const hospital = TEAM_DATA.flatMap(t => t.hospitals).find(h => h.name.replace(/ \(.*\)$/, '') === hospitalName);
+    const urls = blogUrlInputs[hospitalName]
+      || (profile?.naver_blog_url ? profile.naver_blog_url.split(',').map(u => u.trim()).filter(Boolean) : null)
+      || (hospital?.naverBlogUrls?.length ? hospital.naverBlogUrls : null)
+      || [];
     const validUrls = urls.filter(u => u.trim() && u.includes('blog.naver.com'));
     if (validUrls.length === 0) {
       toast.warning('네이버 블로그 URL을 입력해주세요. (blog.naver.com/...)');
@@ -434,11 +439,16 @@ export default function AdminPage() {
     } catch (err: unknown) {
       toast.error((err as Error).message || 'URL 저장 실패');
     }
-  }, [blogUrlInputs, loadStyleProfiles]);
+  }, [blogUrlInputs, loadStyleProfiles, styleProfiles, TEAM_DATA]);
 
   // 크롤링 + 학습
   const handleCrawlAndLearn = useCallback(async (hospitalName: string, teamId: number) => {
-    const urls = blogUrlInputs[hospitalName] || [];
+    const profile = styleProfiles.find(p => p.hospital_name === hospitalName);
+    const hospital = TEAM_DATA.flatMap(t => t.hospitals).find(h => h.name.replace(/ \(.*\)$/, '') === hospitalName);
+    const urls = blogUrlInputs[hospitalName]
+      || (profile?.naver_blog_url ? profile.naver_blog_url.split(',').map(u => u.trim()).filter(Boolean) : null)
+      || (hospital?.naverBlogUrls?.length ? hospital.naverBlogUrls : null)
+      || [];
     const validUrls = urls.filter(u => u.trim() && u.includes('blog.naver.com'));
     if (validUrls.length === 0) {
       toast.warning('먼저 네이버 블로그 URL을 입력해주세요.');
@@ -488,7 +498,7 @@ export default function AdminPage() {
         [hospitalName]: { loading: false, progress: '', error: errMsg },
       }));
     }
-  }, [blogUrlInputs, loadStyleProfiles]);
+  }, [blogUrlInputs, loadStyleProfiles, styleProfiles, TEAM_DATA]);
 
   // 초기화
   const handleResetCrawlData = useCallback(async (hospitalName: string) => {
