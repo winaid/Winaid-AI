@@ -1100,7 +1100,7 @@ function buildUserInputBlock(req: GenerationRequest): string {
     `  <target_chars>${targetLength}</target_chars>`,
     `  <image_count>${imageCount}</image_count>`,
     `  <image_style>${getImageStyleGuide(req)}</image_style>`,
-    `  <include_faq>${req.includeFaq === true || targetLength >= 1500 ? 'true' : 'false'}</include_faq>`,
+    `  <include_faq>${req.includeFaq === true ? 'true' : 'false'}</include_faq>`,
     `  <faq_count>${req.faqCount ?? 3}</faq_count>`,
     '</user_input>',
   ];

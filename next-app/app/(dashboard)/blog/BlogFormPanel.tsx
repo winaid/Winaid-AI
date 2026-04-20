@@ -372,6 +372,34 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
             </button>
           )}
 
+          {/* FAQ 토글 — 항상 표시 */}
+          <div className="flex items-center justify-between p-3 bg-white rounded-xl border border-slate-200">
+            <div className="flex items-center gap-2">
+              <span className="text-sm">❓</span>
+              <div>
+                <span className="text-xs font-semibold text-slate-700">FAQ 섹션</span>
+                <p className="text-[10px] text-slate-400">자주 묻는 질문 3~5개 자동 생성</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {includeFaq && (
+                <div className="flex gap-0.5">
+                  {[3, 4, 5].map(num => (
+                    <button key={num} type="button" onClick={() => setFaqCount(num)}
+                      className={`w-7 h-7 rounded-md text-[10px] font-semibold transition-all ${faqCount === num ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+                    >{num}</button>
+                  ))}
+                </div>
+              )}
+              <button type="button" onClick={() => setIncludeFaq(!includeFaq)}
+                className={`relative rounded-full transition-colors ${includeFaq ? 'bg-blue-500' : 'bg-slate-300'}`}
+                style={{ width: 40, height: 22 }}
+              >
+                <span className={`absolute top-[3px] left-[3px] w-4 h-4 bg-white rounded-full shadow transition-all duration-200 ${includeFaq ? 'translate-x-[18px]' : 'translate-x-0'}`} />
+              </button>
+            </div>
+          </div>
+
           {/* 세부 옵션 토글 */}
           {(() => {
             const advancedCount = [
@@ -460,8 +488,26 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
                 />
               )}
 
-              {/* AI 이미지 수 */}
-              <div>
+              {/* 이미지 수 슬라이더 */}
+              {useImageLibrary ? (
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-semibold text-slate-500">이미지 수</label>
+                    <span className="text-xs text-slate-400">
+                      선택 {selectedLibraryImages?.length || 0} / {imageCount}장
+                    </span>
+                  </div>
+                  <input type="range" min={0} max={15} step={1} value={imageCount} onChange={e => setImageCount(Number(e.target.value))} className="w-full accent-blue-500 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer" />
+                  <div className="flex justify-between mt-1 text-[10px] text-slate-400"><span>0장</span><span className="text-blue-600 font-semibold">{imageCount}장</span><span>15장</span></div>
+                  {selectedLibraryImages && selectedLibraryImages.length < imageCount && (
+                    <p className="text-[10px] text-amber-500 mt-1">📸 {imageCount - selectedLibraryImages.length}장 더 선택하세요</p>
+                  )}
+                  {selectedLibraryImages && selectedLibraryImages.length > imageCount && (
+                    <p className="text-[10px] text-amber-500 mt-1">⚠ {selectedLibraryImages.length - imageCount}장 초과 — {imageCount}장만 사용됩니다</p>
+                  )}
+                </div>
+              ) : (
+                <div>
                 <div className="flex justify-between mb-1.5">
                   <label className="text-xs font-semibold text-slate-500">AI 이미지 수</label>
                   <span className="text-[10px] text-blue-500 font-normal">
@@ -483,6 +529,7 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
                   </ul>
                 </details>
               </div>
+              )}
               {/* 이미지 비율 — AI 생성 모드에서만 */}
               {!useImageLibrary && imageCount > 0 && (
                 <div>
@@ -502,34 +549,6 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
                   </div>
                 </div>
               )}
-              {/* FAQ 토글 */}
-              <div className="flex items-center justify-between p-3 bg-white rounded-xl border border-slate-200">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm">❓</span>
-                  <div>
-                    <span className="text-xs font-semibold text-slate-700">FAQ 섹션</span>
-                    <p className="text-[10px] text-slate-400">네이버 질문 + 의료 학회/기관 정보</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  {includeFaq && (
-                    <div className="flex gap-0.5">
-                      {[3, 4, 5].map(num => (
-                        <button key={num} type="button" onClick={() => setFaqCount(num)}
-                          className={`w-7 h-7 rounded-md text-[10px] font-semibold transition-all ${faqCount === num ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
-                        >{num}</button>
-                      ))}
-                    </div>
-                  )}
-                  <button type="button" onClick={() => setIncludeFaq(!includeFaq)}
-                    className={`relative rounded-full transition-colors ${includeFaq ? 'bg-blue-500' : 'bg-slate-300'}`}
-                    style={{ width: 40, height: 22 }}
-                  >
-                    <span className={`absolute top-[3px] left-[3px] w-4 h-4 bg-white rounded-full shadow transition-all duration-200 ${includeFaq ? 'translate-x-[18px]' : 'translate-x-0'}`} />
-                  </button>
-                </div>
-              </div>
-
               {/* 이미지 스타일 */}
               <div>
                 <p className="text-[11px] font-semibold text-slate-500 mb-1.5">이미지 스타일</p>
