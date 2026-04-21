@@ -65,8 +65,6 @@ export interface BlogFormPanelProps {
   // ── 이미지 라이브러리 ──
   useImageLibrary?: boolean;
   onToggleImageLibrary?: (v: boolean) => void;
-  selectedLibraryImages?: HospitalImage[];
-  onLibrarySelectionChange?: (imgs: HospitalImage[]) => void;
   // ── 생성 상태 ──
   isGenerating: boolean;
   // ── 폼 setter ──
@@ -128,7 +126,7 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
     seoTitles, trendingItems, isLoadingTitles, isLoadingTrends,
     isGenerating,
     isLoadingReference, referenceResult,
-    useImageLibrary, onToggleImageLibrary, selectedLibraryImages, onLibrarySelectionChange,
+    useImageLibrary, onToggleImageLibrary,
     setTopic, setBlogTitle, setKeywords, setKeywordDensity, setDisease, setCategory, setPersona, setTone, setAudienceMode,
     setImageStyle, setImageCount, setImageAspectRatio, setTextLength, setHospitalName,
     setSelectedHospitalAddress,
@@ -554,18 +552,11 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
                 </div>
               )}
 
-              {/* 이미지 라이브러리 */}
-              {useImageLibrary && onLibrarySelectionChange && (
+              {/* 이미지 라이브러리 — AI 자동 배치 안내 */}
+              {useImageLibrary && (
                 <ImageLibrary
                   enabled={!!useImageLibrary}
                   onToggle={onToggleImageLibrary || (() => {})}
-                  selectedImages={selectedLibraryImages || []}
-                  onSelectionChange={onLibrarySelectionChange}
-                  maxImages={imageCount}
-                  hospitalName={undefined}
-                  topic={topic}
-                  disease={disease}
-                  category={category}
                 />
               )}
 
@@ -602,18 +593,10 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
                     <label className="text-xs font-semibold text-slate-500">이미지 수</label>
-                    <span className="text-xs text-slate-400">
-                      선택 {selectedLibraryImages?.length || 0} / {imageCount}장
-                    </span>
+                    <span className="text-[10px] text-blue-500">AI 자동 배치 + 부족분 생성</span>
                   </div>
                   <input type="range" min={0} max={15} step={1} value={imageCount} onChange={e => setImageCount(Number(e.target.value))} className="w-full accent-blue-500 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer" />
                   <div className="flex justify-between mt-1 text-[10px] text-slate-400"><span>0장</span><span className="text-blue-600 font-semibold">{imageCount}장</span><span>15장</span></div>
-                  {selectedLibraryImages && selectedLibraryImages.length < imageCount && (
-                    <p className="text-[10px] text-amber-500 mt-1">📸 {selectedLibraryImages.length > 0 ? `${imageCount - selectedLibraryImages.length}장 더 선택하세요` : '이미지를 업로드하거나 선택하세요'}</p>
-                  )}
-                  {selectedLibraryImages && selectedLibraryImages.length > imageCount && (
-                    <p className="text-[10px] text-amber-500 mt-1">⚠ {selectedLibraryImages.length - imageCount}장 초과 — {imageCount}장만 사용됩니다</p>
-                  )}
                 </div>
               ) : (
                 <div>

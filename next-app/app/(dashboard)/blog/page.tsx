@@ -57,7 +57,6 @@ function BlogForm() {
   const [imageStyle, setImageStyle] = useState<ImageStyle>('photo');
   const [imageCount, setImageCount] = useState(6);
   const [useImageLibrary, setUseImageLibrary] = useState(false);
-  const [selectedLibraryImages, setSelectedLibraryImages] = useState<HospitalImage[]>([]);
   const [imageAspectRatio, setImageAspectRatio] = useState<'4:3' | '16:9' | '1:1'>('4:3');
   const [textLength, setTextLength] = useState(1500);
 
@@ -843,14 +842,7 @@ JSON 형식으로 응답해주세요.`;
       } : undefined,
       referenceFacts: referenceResult?.facts || undefined,
       referenceSources: referenceResult?.sources || undefined,
-      libraryImages: useImageLibrary && selectedLibraryImages.length > 0
-        ? selectedLibraryImages.map(img => ({
-            id: img.id,
-            publicUrl: img.publicUrl || '',
-            altText: img.altText || '',
-            tags: img.tags || [],
-          }))
-        : undefined,
+      // libraryImages 는 생성 후 클라이언트에서 alt 기반 자동 매칭
     };
 
     setIsGenerating(true);
@@ -1084,25 +1076,52 @@ JSON 형식으로 응답해주세요.`;
         }
       }
 
-      // 4) 라이브러리 이미지 즉시 교체 (AI 생성 불필요한 마커)
-      if (request.libraryImages && request.libraryImages.length > 0) {
-        for (let i = 0; i < request.libraryImages.length; i++) {
-          const markerIdx = i + 1;
-          const markerRe = new RegExp(`\\[IMG_${markerIdx}(?:\\s+alt="[^"]*")?[^\\]]*\\]`);
-          if (markerRe.test(blogText)) {
-            blogText = blogText.replace(
-              markerRe,
-              `<img src="${request.libraryImages[i].publicUrl}" alt="${request.libraryImages[i].altText || ''}" style="max-width:100%;border-radius:12px;" />`,
-            );
+      // 4) 라이브러리 이미지 alt 기반 자동 매칭 (useImageLibrary ON일 때)
+      if (useImageLibrary) {
+        const imgMarkers = [...blogText.matchAll(/\[IMG_(\d+)\s+alt="([^"]*)"\]/g)];
+        if (imgMarkers.length > 0) {
+          try {
+            const { userId: uid } = await getSessionSafe();
+            const qs = new URLSearchParams({ limit: '100' });
+            if (uid) qs.set('userId', uid);
+            const res = await fetch(`/api/hospital-images?${qs.toString()}`);
+            if (res.ok) {
+              const data = await res.json();
+              const libraryImages: HospitalImage[] = Array.isArray(data) ? data : (data.images || []);
+              const usedIds = new Set<string>();
+              let matched = 0;
+              for (const marker of imgMarkers) {
+                const [fullMatch, , altText] = marker;
+                const altWords = altText.toLowerCase().split(/\s+/).filter(w => w.length > 1);
+                const scored = libraryImages
+                  .filter(img => !usedIds.has(img.id))
+                  .map(img => {
+                    const imgText = [...(img.tags || []), img.altText || '', img.aiDescription || ''].join(' ').toLowerCase();
+                    const score = altWords.filter(w => imgText.includes(w)).length;
+                    return { img, score };
+                  })
+                  .sort((a, b) => b.score - a.score);
+                if (scored.length > 0 && scored[0].score > 0) {
+                  const best = scored[0].img;
+                  blogText = blogText.replace(
+                    fullMatch,
+                    `<img src="${best.publicUrl}" alt="${best.altText || altText}" style="max-width:100%;border-radius:12px;" />`,
+                  );
+                  usedIds.add(best.id);
+                  matched++;
+                }
+              }
+              console.info(`[BLOG] 라이브러리 자동 매칭: ${matched}/${imgMarkers.length}장 배치 (나머지는 AI 생성)`);
+            }
+          } catch (err) {
+            console.warn('[BLOG] 라이브러리 조회 실패:', (err as Error).message);
           }
         }
-        console.info(`[BLOG] 라이브러리 이미지 ${request.libraryImages.length}장 즉시 교체`);
       }
 
       // 남은 [IMG_N] 마커만 AI 이미지 생성 대상
       const remainingMarkers = blogText.match(/\[IMG_\d+[^\]]*\]/g) || [];
       const aiImageCount = remainingMarkers.length;
-      devLog('[BLOG] 남은 마커:', aiImageCount, remainingMarkers);
 
       // 5) 이미지 없으면 마커 strip 후 바로 표시
       if (aiImageCount === 0 || imagePrompts.length === 0) {
@@ -1655,7 +1674,6 @@ Output ONLY the prompt. No explanation.`;
         persona={persona} tone={tone} audienceMode={audienceMode}
         imageStyle={imageStyle} imageCount={imageCount} imageAspectRatio={imageAspectRatio} textLength={textLength}
         useImageLibrary={useImageLibrary} onToggleImageLibrary={setUseImageLibrary}
-        selectedLibraryImages={selectedLibraryImages} onLibrarySelectionChange={setSelectedLibraryImages}
         hospitalName={hospitalName} selectedTeam={selectedTeam}
         showHospitalDropdown={showHospitalDropdown} selectedManager={selectedManager}
         selectedHospitalAddress={selectedHospitalAddress}
