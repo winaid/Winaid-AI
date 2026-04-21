@@ -791,13 +791,16 @@ ${sampleText.substring(0, 6000)}
   "stylePrompt": "AI가 이 말투로 글을 쓸 때 반드시 지켜야 할 핵심 지침 (150-250자, 화자 태도 + 설명 흐름 + 의료 설명 방식 + 금지 패턴)"
 }`;
 
-  // 말투 분석은 미묘한 톤/패턴 추출이므로 flash 이상 필요
-  const res = await fetch(resolveApiUrl('/api/gemini'), {
+  // 말투 분석 — Claude Sonnet 4.6 (style_learn task)
+  const res = await fetch(resolveApiUrl('/api/llm'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
+      task: 'style_learn',
       prompt,
-      model: 'gemini-3.1-flash-lite-preview',
+      systemInstruction: '병원 마케팅 콘텐츠 전문 편집자. 문체·화자·의료 콘텐츠 전략을 정밀 분석. JSON으로만 출력.',
+      temperature: 0.2,
+      maxOutputTokens: 4096,
       responseType: 'json',
     }),
   });
@@ -925,13 +928,15 @@ ${sliced}
   "seo_issues": [{"item":"항목명","score":감점점수,"reason":"감점 사유"}]
 }`;
 
-  const res = await fetch(resolveApiUrl('/api/gemini'), {
+  const res = await fetch(resolveApiUrl('/api/llm'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
+      task: 'score_crawled_post',
       prompt,
-      model: 'gemini-3.1-flash-preview',
+      systemInstruction: '한국 의료 블로그 콘텐츠 채점 전문가. 맞춤법·의료법·SEO·가독성을 JSON으로만 평가.',
       temperature: 0.1,
+      maxOutputTokens: 4096,
       responseType: 'json',
       timeout: 60000,
     }),

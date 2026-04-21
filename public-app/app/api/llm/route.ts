@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic';
 
 const VALID_TASKS: Set<string> = new Set([
   'blog_title_recommend', 'blog_seo_eval', 'blog_image_prompt',
-  'refine_chat', 'refine_auto', 'style_learn',
+  'refine_chat', 'refine_auto', 'style_learn', 'score_crawled_post',
   'landing_chat', 'diagnostic_extract', 'diagnostic_narrative',
 ]);
 
