@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'supabase_not_configured' }, { status: 500 });
     }
 
-    const gate = gateGuestRequest(request, 10);
+    const gate = gateGuestRequest(request, 100);
     if (!gate.ok) return NextResponse.json({ error: gate.error }, { status: gate.status });
 
     const formData = await request.formData();

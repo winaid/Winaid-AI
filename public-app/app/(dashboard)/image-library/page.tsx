@@ -84,19 +84,23 @@ export default function ImageLibraryPage() {
             console.error(`[IMAGE] publicUrl 생성 실패:`, uploaded);
           }
 
-          try {
-            const tagRes = await fetch('/api/hospital-images/auto-tag', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ imageId: uploaded.id, imageUrl: uploaded.publicUrl }),
-            });
-            if (tagRes.ok) {
-              const tagged = (await tagRes.json()) as HospitalImage;
-              setImages(prev => [tagged, ...prev]);
-            } else {
+          if (uploaded.id && uploaded.publicUrl) {
+            try {
+              const tagRes = await fetch('/api/hospital-images/auto-tag', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ imageId: uploaded.id, imageUrl: uploaded.publicUrl }),
+              });
+              if (tagRes.ok) {
+                const tagged = (await tagRes.json()) as HospitalImage;
+                setImages(prev => [tagged, ...prev]);
+              } else {
+                setImages(prev => [uploaded, ...prev]);
+              }
+            } catch {
               setImages(prev => [uploaded, ...prev]);
             }
-          } catch {
+          } else {
             setImages(prev => [uploaded, ...prev]);
           }
           done++;
@@ -115,7 +119,7 @@ export default function ImageLibraryPage() {
 
       // 배치 간 500ms 딜레이 (rate limit 회피)
       if (batch + 5 < allFiles.length) {
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 2000));
       }
     }
 

@@ -20,7 +20,7 @@ const TAG_LIST = [
 ].join(', ');
 
 export async function POST(request: NextRequest) {
-  const gate = gateGuestRequest(request, 10);
+  const gate = gateGuestRequest(request, 100);
   if (!gate.ok) return NextResponse.json({ error: gate.error }, { status: gate.status });
 
   let body: { imageId?: string; imageUrl?: string };
