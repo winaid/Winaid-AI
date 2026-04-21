@@ -168,11 +168,10 @@ export async function callGemini(req: LLMRequest): Promise<LLMResponse> {
   const started = Date.now();
   let result = await fetchGemini(keys, model, apiBody, 60_000);
 
-  // PRO → FLASH 폴백 (googleSearch 요청은 품질 유지 위해 폴백 금지)
+  // PRO → FLASH 폴백 (googleSearch 포함 — 응답 불가보다 FLASH가 나음)
   if (
     !result.ok &&
     model === PRO &&
-    !req.googleSearch &&
     (result.status === 500 || result.status === 503 || result.status === 429 || result.status === 504)
   ) {
     console.warn(`[llm/gemini] FALLBACK ${model} ${result.status} → ${FLASH}`);

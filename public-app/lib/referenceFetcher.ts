@@ -89,12 +89,16 @@ function extractSources(text: string): string[] {
     /\(출처:\s*([^)]+)\)/g,
     /[-–]\s*출처:\s*(.+?)(?:\n|$)/g,
     /【([^】]+)】/g,
-    /(\S+(?:협회|포털|병원|학회|복지부|보건원|의학회))\S*(?:에\s*따르면|에서|의\s*권고|에\s*의하면)/g,
+    /(\S+(?:협회|포털|병원|학회|복지부|보건원|의학회))\S*(?:에\s*따르면|에서|의\s*권고|에\s*의하면|에\s*의\s*하면)/g,
+    /\*\*출처:?\*\*[：:\s]*([^\n*]+)/g,
+    /출처:\s*([^\n,()]+)/g,
+    /자료:\s*([^\n,()]+)/g,
+    /참고:\s*([^\n,()]+)/g,
   ];
   for (const re of patterns) {
     for (const m of text.matchAll(re)) {
-      const src = m[1].trim();
-      if (src.length >= 3 && src.length <= 30) allSources.add(src);
+      const src = m[1].trim().replace(/[.,;:]$/, '');
+      if (src.length >= 3 && src.length <= 40) allSources.add(src);
     }
   }
 
@@ -149,7 +153,8 @@ export async function fetchMedicalReference(
 4. 의료광고법에 저촉되지 않는 객관적 서술
 5. 500~800자
 6. 마크다운 금지, plain text
-7. 모든 문단에 최소 1개 (출처: 기관명). 출처 없이 정보만 나열하지 마세요.`,
+7. 모든 문단에 최소 1개 (출처: 기관명). 출처 없이 정보만 나열하지 마세요.
+8. 번호 각주([1], [2])나 굵은 글씨(**출처:**) 금지. 반드시 (출처: 기관명) 괄호 형식만 사용.`,
     maxOutputTokens: 2_000,
     googleSearch: true,
   });
