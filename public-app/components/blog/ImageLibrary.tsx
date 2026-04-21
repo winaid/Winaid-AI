@@ -56,7 +56,7 @@ export default function ImageLibrary({ enabled, userId }: ImageLibraryProps) {
     <div className="mt-2 space-y-2">
       <div className="p-3 bg-blue-50 rounded-lg text-[12px] text-blue-700 leading-relaxed">
         📸 글 내용에 맞는 이미지가 라이브러리에서 자동 배치됩니다.<br />
-        매칭되지 않는 자리는 AI가 새로 생성합니다.
+        매칭되지 않는 자리는 비워둡니다.
       </div>
       <div className="flex items-center gap-2">
         <button

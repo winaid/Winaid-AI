@@ -924,7 +924,9 @@ JSON 형식으로 응답해주세요.`;
     // 예상 시간 계산
     setGenerationStartTime(Date.now());
     let estimated = 25; // 텍스트 생성 (~20초) + 경쟁분석 병렬 (~5초)
-    if (request.imageCount && request.imageCount > 0) estimated += request.imageCount * 45;
+    if (!useImageLibrary && request.imageCount && request.imageCount > 0) {
+      estimated += request.imageCount * 45;
+    }
     setEstimatedTotalSeconds(estimated);
     setBlogSections([]);
     setRegeneratingSection(null);
@@ -1009,7 +1011,7 @@ JSON 형식으로 응답해주세요.`;
 
       // 이미지 즉시 병렬 생성 (review 와 동시에)
       let imageResultsPromise: Promise<{ index: number; url: string | null }[]> | null = null;
-      if (imagePrompts.length > 0 && imageCount > 0) {
+      if (!useImageLibrary && imagePrompts.length > 0 && imageCount > 0) {
         setDisplayStage(3);
         imageResultsPromise = Promise.all(
           imagePrompts.slice(0, imageCount).map((p, i) => {
@@ -1201,7 +1203,7 @@ JSON 형식으로 응답해주세요.`;
 
       // 남은 [IMG_N] 마커만 AI 이미지 생성 대상
       const remainingMarkers = blogText.match(/\[IMG_\d+[^\]]*\]/g) || [];
-      const aiImageCount = remainingMarkers.length;
+      const aiImageCount = useImageLibrary ? 0 : remainingMarkers.length;
 
       // 5) 이미지 없으면 마커 strip 후 바로 표시
       if (aiImageCount === 0 || imagePrompts.length === 0) {
