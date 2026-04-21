@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { devLog } from '../../../../lib/devLog';
 import { supabase } from '../../../../lib/supabase';
 import { gateGuestRequest } from '../../../../lib/guestRateLimit';
 import { ALLOWED_MIME_TYPES, MAX_FILE_SIZE, STORAGE_BUCKET, mimeToExt } from '../../../../lib/hospitalImageService';
@@ -23,7 +24,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'no_file' }, { status: 400 });
     }
 
-    console.log('[upload] start', { fileName: file.name, fileSize: file.size, fileType: file.type, userId });
+    devLog('[upload] start', { fileName: file.name, fileSize: file.size, fileType: file.type, userId });
 
     if (!ALLOWED_MIME_TYPES.includes(file.type)) {
       return NextResponse.json({ error: `invalid_mime: ${file.type}` }, { status: 400 });
@@ -34,7 +35,7 @@ export async function POST(request: NextRequest) {
 
     const ext = mimeToExt(file.type);
     const storagePath = `${userId}/${crypto.randomUUID()}.${ext}`;
-    console.log('[upload] storage path:', storagePath);
+    devLog('[upload] storage path:', storagePath);
 
     const buf = Buffer.from(await file.arrayBuffer());
     const { error: uploadErr } = await supabase.storage.from(STORAGE_BUCKET).upload(storagePath, buf, {
@@ -45,7 +46,7 @@ export async function POST(request: NextRequest) {
       console.error('[upload] storage error:', uploadErr);
       return NextResponse.json({ error: `storage_error: ${uploadErr.message}` }, { status: 500 });
     }
-    console.log('[upload] storage ok');
+    devLog('[upload] storage ok');
 
     const tags = (formData.get('tags') as string || '').split(',').map(t => t.trim()).filter(Boolean);
     const altText = (formData.get('altText') as string || '').trim();
@@ -70,7 +71,7 @@ export async function POST(request: NextRequest) {
       console.error('[upload] db error:', dbErr);
       return NextResponse.json({ error: `db_error: ${dbErr.message}` }, { status: 500 });
     }
-    console.log('[upload] db ok, id:', row.id);
+    devLog('[upload] db ok, id:', row.id);
 
     const { data: { publicUrl } } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(storagePath);
 

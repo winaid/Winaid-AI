@@ -1,4 +1,5 @@
 'use client';
+import { devLog } from '../../../lib/devLog';
 
 import { useState, useEffect, useMemo, useRef, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
@@ -835,14 +836,14 @@ JSON 형식으로 응답해주세요.`;
         const report = JSON.parse(seoData.text);
         report.total = (report.title?.score || 0) + (report.keyword_structure?.score || 0) + (report.user_retention?.score || 0) + (report.medical_safety?.score || 0) + (report.conversion?.score || 0);
 
-        console.log(`[BLOG] 📊 SEO 평가 완료 - 총점: ${report.total}점`);
-        console.log(`[BLOG]   ① 제목: ${report.title?.score || 0}/25  ② 키워드: ${report.keyword_structure?.score || 0}/25  ③ 체류: ${report.user_retention?.score || 0}/20  ④ 의료법: ${report.medical_safety?.score || 0}/20  ⑤ 전환: ${report.conversion?.score || 0}/10`);
+        devLog(`[BLOG] 📊 SEO 평가 완료 - 총점: ${report.total}점`);
+        devLog(`[BLOG]   ① 제목: ${report.title?.score || 0}/25  ② 키워드: ${report.keyword_structure?.score || 0}/25  ③ 체류: ${report.user_retention?.score || 0}/20  ④ 의료법: ${report.medical_safety?.score || 0}/20  ⑤ 전환: ${report.conversion?.score || 0}/10`);
 
         setSeoReport(report as SeoReport);
         setScores(prev => ({ ...prev, seoScore: report.total }));
 
         if (report.improvement_suggestions?.length) {
-          console.log(`[BLOG] 📝 SEO 개선 제안: ${report.improvement_suggestions.join(' | ')}`);
+          devLog(`[BLOG] 📝 SEO 개선 제안: ${report.improvement_suggestions.join(' | ')}`);
         }
       } else {
         console.error(`[BLOG] ❌ SEO 평가 불가: ${seoData.error || 'API 응답 없음'}`);
@@ -1376,7 +1377,7 @@ JSON 형식으로 응답해주세요.`;
         // conversion_score: 없거나 0이면 기본값 75
         if (!parsed.conversionScore || parsed.conversionScore === 0) {
           parsed.conversionScore = 75;
-          console.log('[BLOG] ⚠️ conversion_score 기본값 75점 설정 (AI 미반환)');
+          devLog('[BLOG] ⚠️ conversion_score 기본값 75점 설정 (AI 미반환)');
         }
         // safety_score: undefined/null이면 기본값 90
         if (parsed.safetyScore === undefined || parsed.safetyScore === null) {
@@ -1386,8 +1387,8 @@ JSON 형식으로 응답해주세요.`;
         const factScore = 85;
         const aiSmellScore = 12;
         const verifiedFactsCount = 5;
-        console.log('[BLOG] ⚠️ ai_smell_score 기본값 12점 설정 (AI 미반환)');
-        console.log(`[BLOG] 📊 fact_check 최종값: conversion_score=${parsed.conversionScore}, fact_score=${factScore}, safety_score=${parsed.safetyScore}, ai_smell_score=${aiSmellScore}, verified_facts_count=${verifiedFactsCount}`);
+        devLog('[BLOG] ⚠️ ai_smell_score 기본값 12점 설정 (AI 미반환)');
+        devLog(`[BLOG] 📊 fact_check 최종값: conversion_score=${parsed.conversionScore}, fact_score=${factScore}, safety_score=${parsed.safetyScore}, ai_smell_score=${aiSmellScore}, verified_facts_count=${verifiedFactsCount}`);
         // scores state 업데이트
         setScores({ ...parsed });
       }

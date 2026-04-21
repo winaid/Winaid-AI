@@ -5,6 +5,7 @@
  * responseModalities: ["IMAGE", "TEXT"] 사용.
  */
 import { NextRequest, NextResponse } from 'next/server';
+import { devLog } from '../../../lib/devLog';
 
 export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
@@ -643,7 +644,7 @@ ABSOLUTE PROHIBITIONS:
     }
 
     if (!stage1Image) {
-      console.log('[card_news] Stage 1 (Flash) failed, falling back to single-stage Pro');
+      devLog('[card_news] Stage 1 (Flash) failed, falling back to single-stage Pro');
     } else if (!hasTextToRender) {
       return NextResponse.json({ imageDataUrl: `data:${stage1Image.mimeType};base64,${stage1Image.data}`, mimeType: stage1Image.mimeType, model: 'flash(illustration)' });
     } else {
@@ -682,7 +683,7 @@ ABSOLUTE PROHIBITIONS:
         }
       }
 
-      console.log('[card_news] Stage 2 (Pro text) failed, returning Stage 1 image without text');
+      devLog('[card_news] Stage 2 (Pro text) failed, returning Stage 1 image without text');
       return NextResponse.json({ imageDataUrl: `data:${stage1Image.mimeType};base64,${stage1Image.data}`, mimeType: stage1Image.mimeType, model: 'flash(illustration-only)' });
     }
   }
