@@ -1084,16 +1084,11 @@ JSON 형식으로 응답해주세요.`;
       }
 
       // 4) 라이브러리 이미지 즉시 교체 (AI 생성 불필요한 마커)
-      console.log('[BLOG] useImageLibrary:', useImageLibrary, 'selectedLibraryImages:', selectedLibraryImages.length);
-      console.log('[BLOG] request.libraryImages:', request.libraryImages?.length || 0);
       if (request.libraryImages && request.libraryImages.length > 0) {
-        console.log('[BLOG] 라이브러리 이미지 교체 시작');
         for (let i = 0; i < request.libraryImages.length; i++) {
           const markerIdx = i + 1;
           const markerRe = new RegExp(`\\[IMG_${markerIdx}(?:\\s+alt="[^"]*")?[^\\]]*\\]`);
-          const found = markerRe.test(blogText);
-          console.log(`[BLOG] [IMG_${markerIdx}] 마커 존재: ${found}, URL: ${request.libraryImages[i].publicUrl?.slice(0, 80)}`);
-          if (found) {
+          if (markerRe.test(blogText)) {
             blogText = blogText.replace(
               markerRe,
               `<img src="${request.libraryImages[i].publicUrl}" alt="${request.libraryImages[i].altText || ''}" style="max-width:100%;border-radius:12px;" />`,

@@ -1448,13 +1448,11 @@ export function buildBlogPromptV3(
     systemBlocks.push({ type: 'text', text: topicGuideBlog, cacheable: true, cacheTtl: '5m' });
   }
   systemBlocks.push({ type: 'text', text: E_E_A_T_GUIDE, cacheable: true, cacheTtl: '1h' });
-  systemBlocks.push({ type: 'text', text: CITATION_PATTERN_GUIDE, cacheable: true, cacheTtl: '1h' });
+  // CITATION/MOBILE/AI_SNIPPET 제거 — BLOG_PERSONA 안 <e_e_a_t>/<ai_snippet>/<featured_snippet> + COMMON으로 충분
   const journeyGuide = JOURNEY_STAGE_GUIDES[inferJourneyStage(classifyTopicType(req.topic, req.disease))];
   if (journeyGuide) {
     systemBlocks.push({ type: 'text', text: journeyGuide, cacheable: true, cacheTtl: '5m' });
   }
-  systemBlocks.push({ type: 'text', text: MOBILE_READABILITY_GUIDE, cacheable: true, cacheTtl: '1h' });
-  systemBlocks.push({ type: 'text', text: AI_SNIPPET_GUIDE, cacheable: true, cacheTtl: '1h' });
   systemBlocks.push({ type: 'text', text: FAQ_SECTION_GUIDE, cacheable: true, cacheTtl: '1h' });
 
   const seasonal = getSeasonalContext(req.category || '');
