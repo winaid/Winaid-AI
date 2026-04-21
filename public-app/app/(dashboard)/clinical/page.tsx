@@ -48,6 +48,18 @@ export default function ClinicalPage() {
   const [pipelineStep, setPipelineStep] = useState<'upload' | 'configure' | 'result'>('upload');
   const [copyToast, setCopyToast] = useState(false);
 
+  // ── 개인정보 보호 동의 ──
+  const [privacyConsent, setPrivacyConsent] = useState(false);
+  const [showPrivacyNotice, setShowPrivacyNotice] = useState(false);
+
+  // 첫 방문 시 개인정보 주의 모달
+  useEffect(() => {
+    try {
+      const acked = localStorage.getItem('clinical_privacy_ack');
+      if (!acked) setShowPrivacyNotice(true);
+    } catch { /* ignore */ }
+  }, []);
+
   // 외부용: 프로필에서 병원명 로드
   useEffect(() => {
     (async () => {
@@ -311,6 +323,33 @@ JSON만 출력: { "analysis": "...", "topics": [{ "topic": "...", "title": "..."
   // ── UI ──
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
+      {/* 첫 방문 개인정보 보호 주의 모달 */}
+      {showPrivacyNotice && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm px-4">
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 space-y-4">
+            <div className="flex items-center gap-2">
+              <span className="text-2xl">⚠️</span>
+              <h2 className="text-lg font-black text-slate-800">임상 이미지 업로드 전 필독</h2>
+            </div>
+            <ul className="text-sm text-slate-600 leading-relaxed space-y-2 list-disc pl-5">
+              <li>업로드 전 <strong className="text-slate-800">환자 얼굴·이름·차트번호·생년월일</strong> 등 개인 식별 정보를 반드시 제거하세요.</li>
+              <li>환자 동의 없이 식별 가능한 이미지를 업로드하면 <strong className="text-slate-800">의료법·개인정보보호법상 법적 책임</strong>이 발생할 수 있습니다.</li>
+              <li>업로드된 이미지는 <strong className="text-slate-800">AI 분석 목적으로만</strong> 일회성 사용됩니다.</li>
+              <li>이미지는 서버에 <strong className="text-slate-800">저장되지 않으며</strong>, 분석 완료 후 즉시 폐기됩니다.</li>
+            </ul>
+            <button
+              onClick={() => {
+                try { localStorage.setItem('clinical_privacy_ack', '1'); } catch { /* ignore */ }
+                setShowPrivacyNotice(false);
+              }}
+              className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-colors"
+            >
+              이해했습니다
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* 헤더 */}
       <div className="mb-8">
         <h1 className="text-2xl font-black text-slate-800">🔬 임상글 작성</h1>
@@ -401,8 +440,22 @@ JSON만 출력: { "analysis": "...", "topics": [{ "topic": "...", "title": "..."
 
           {error && <p className="text-sm text-red-500">{error}</p>}
 
-          <button onClick={handleAnalyze} disabled={isAnalyzing || images.length === 0}
-            className="w-full py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-all flex items-center justify-center gap-2">
+          {/* 개인정보 보호 동의 */}
+          <label className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl cursor-pointer hover:bg-amber-100/60 transition-colors">
+            <input
+              type="checkbox"
+              checked={privacyConsent}
+              onChange={e => setPrivacyConsent(e.target.checked)}
+              className="mt-0.5 w-4 h-4 accent-amber-500 cursor-pointer"
+            />
+            <span className="text-xs text-amber-900 leading-relaxed">
+              <strong className="font-bold">환자 개인 식별 정보(얼굴·이름·차트번호·생년월일 등)가 제거된 이미지</strong>만 업로드하며,
+              환자 동의 없는 식별 이미지 업로드 시 법적 책임은 업로더에게 있음을 확인합니다.
+            </span>
+          </label>
+
+          <button onClick={handleAnalyze} disabled={isAnalyzing || images.length === 0 || !privacyConsent}
+            className="w-full py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2">
             {isAnalyzing ? (<><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />이미지 분석 중...</>) : '🔬 이미지 분석 시작'}
           </button>
         </div>
