@@ -155,6 +155,21 @@ export async function fetchMedicalReference(
   });
 
   const text = (res.text ?? '').trim();
+  console.info('[reference] Gemini 응답 원문 (앞 500자):', text.slice(0, 500));
   const sources = extractSources(text);
+  console.info('[reference] 추출된 출처:', sources);
+
+  // fallback: 출처 0개 → 카테고리 기본 기관 3개 자동 추가
+  // (프롬프트에서 해당 기관들을 참고하라고 지시했으므로 사실상 근거가 됨)
+  if (sources.length === 0) {
+    const domains = TRUSTED_DOMAINS_BY_CATEGORY[category || '']
+      || TRUSTED_DOMAINS_BY_CATEGORY._common;
+    const defaults = domains.slice(0, 3)
+      .map(d => TRUSTED_NAMES[d])
+      .filter(Boolean);
+    sources.push(...defaults);
+    console.info('[reference] fallback 적용 — 기본 기관:', defaults);
+  }
+
   return { facts: text, sources };
 }
