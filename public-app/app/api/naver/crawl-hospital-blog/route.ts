@@ -150,7 +150,14 @@ function parseNaverDate(raw: string): Date | null {
 
 const cleanHtml = (raw: string) =>
   raw
+    // 단락 태그 → 이중 줄바꿈 (단락 경계 보존)
+    .replace(/<\/p>\s*/gi, '\n\n')
+    .replace(/<\/h[1-6]>\s*/gi, '\n\n')
+    .replace(/<\/div>\s*/gi, '\n')
+    .replace(/<\/li>\s*/gi, '\n')
+    // <br> → 줄바꿈
     .replace(/<br\s*\/?>/gi, '\n')
+    // 나머지 태그 → 스페이스
     .replace(/<[^>]+>/g, ' ')
     .replace(/&nbsp;/g, ' ')
     .replace(/&lt;/g, '<')
@@ -171,10 +178,12 @@ const cleanHtml = (raw: string) =>
     .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
     .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCharCode(parseInt(h, 16)))
     .replace(/[ \t]+/g, ' ')
+    // 각 줄 trim — 빈 줄은 유지 (단락 간격 보존)
     .split('\n')
     .map((l) => l.trim())
-    .filter((l) => l.length > 0)
     .join('\n')
+    // 연속 3줄 이상 빈 줄을 2줄로 축소
+    .replace(/\n{3,}/g, '\n\n')
     .trim();
 
 // ── 1단계: 글 목록 수집 (RSS 우선, PostList fallback) ──
