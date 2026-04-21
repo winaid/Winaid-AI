@@ -52,12 +52,20 @@ export default function ImageLibraryPage() {
     setUploading(true);
     const allFiles = Array.from(files).slice(0, 100);
     const total = allFiles.length;
+    const totalBatches = Math.ceil(total / 5);
     let done = 0;
+    let succeeded = 0;
+    let failed = 0;
+
+    console.info(`[IMAGE] 업로드 시작: 총 ${total}장 (${totalBatches}배치)`);
 
     // 5장씩 배치 업로드
     for (let batch = 0; batch < allFiles.length; batch += 5) {
+      const batchIdx = Math.floor(batch / 5);
       const chunk = allFiles.slice(batch, batch + 5);
-      await Promise.all(chunk.map(async (file) => {
+      console.info(`[IMAGE] 배치 ${batchIdx + 1}/${totalBatches} 시작 (파일 ${batch + 1}~${batch + chunk.length})`);
+
+      const results = await Promise.all(chunk.map(async (file, i) => {
         setUploadProgress(`업로드 중... (${done + 1}/${total})`);
         try {
           const formData = new FormData();
@@ -65,28 +73,53 @@ export default function ImageLibraryPage() {
           formData.append('userId', userId);
           if (selectedHospital) formData.append('hospitalName', selectedHospital);
           const res = await fetch('/api/hospital-images/upload', { method: 'POST', body: formData });
-          if (!res.ok) { done++; return; }
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            console.error(`[IMAGE] 배치 ${batchIdx + 1} 파일 ${i + 1} 실패: ${res.status}`, errData);
+            done++;
+            return null;
+          }
           const uploaded = (await res.json()) as HospitalImage;
+          if (!uploaded.publicUrl) {
+            console.error(`[IMAGE] publicUrl 생성 실패:`, uploaded);
+          }
 
           try {
             const tagRes = await fetch('/api/hospital-images/auto-tag', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ imageId: uploaded.id, imageUrl: uploaded.publicUrl }),
-          });
-          if (tagRes.ok) {
-            const tagged = (await tagRes.json()) as HospitalImage;
-            setImages(prev => [tagged, ...prev]);
-          } else {
+            });
+            if (tagRes.ok) {
+              const tagged = (await tagRes.json()) as HospitalImage;
+              setImages(prev => [tagged, ...prev]);
+            } else {
+              setImages(prev => [uploaded, ...prev]);
+            }
+          } catch {
             setImages(prev => [uploaded, ...prev]);
           }
-        } catch {
-          setImages(prev => [uploaded, ...prev]);
+          done++;
+          return uploaded;
+        } catch (err) {
+          console.error(`[IMAGE] 배치 ${batchIdx + 1} 파일 ${i + 1} 예외:`, err);
+          done++;
+          return null;
         }
-      } catch { /* skip failed */ }
-      done++;
       }));
+
+      const batchSucceeded = results.filter(r => r !== null).length;
+      succeeded += batchSucceeded;
+      failed += chunk.length - batchSucceeded;
+      console.info(`[IMAGE] 배치 ${batchIdx + 1} 완료: ${batchSucceeded}/${chunk.length} 성공 (누적 ${succeeded}/${done})`);
+
+      // 배치 간 500ms 딜레이 (rate limit 회피)
+      if (batch + 5 < allFiles.length) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
     }
+
+    console.info(`[IMAGE] 업로드 종료: 총 ${succeeded}/${total} 성공, ${failed} 실패`);
     setUploading(false);
     setUploadProgress('');
   };
