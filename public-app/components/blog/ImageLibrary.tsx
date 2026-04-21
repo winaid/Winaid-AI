@@ -169,7 +169,7 @@ export default function ImageLibrary({
           ? <span className="text-[12px] text-blue-500 flex items-center justify-center gap-1">
               <span className="h-3 w-3 animate-spin rounded-full border-2 border-blue-400 border-t-transparent" /> 업로드 중…
             </span>
-          : <span className="text-[12px] text-slate-500">+ 이미지 업로드 (드래그 또는 클릭, 최대 5장)</span>
+          : <span className="text-[12px] text-slate-500">+ 이미지 업로드 (드래그 또는 클릭, 최대 100장)</span>
         }
       </div>
 
