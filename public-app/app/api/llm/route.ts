@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { gateGuestRequest } from '../../../lib/guestRateLimit';
 import { callLLM } from '../../../lib/llm';
+import { resolveRoute } from '../../../lib/llm/router';
 import type { LLMTaskKind } from '../../../lib/llm/types';
 
 export const maxDuration = 120;
@@ -42,6 +43,15 @@ export async function POST(request: NextRequest) {
   }
   if (!VALID_TASKS.has(body.task)) {
     return NextResponse.json({ error: `허용되지 않는 task: ${body.task}` }, { status: 400 });
+  }
+
+  // API 키 사전 확인
+  const route = resolveRoute(body.task as LLMTaskKind);
+  if (route.provider === 'claude' && !process.env.ANTHROPIC_API_KEY) {
+    return NextResponse.json({ error: 'ANTHROPIC_API_KEY 미설정', code: 'missing_api_key' }, { status: 500 });
+  }
+  if (route.provider === 'gemini' && !process.env.GEMINI_API_KEY) {
+    return NextResponse.json({ error: 'GEMINI_API_KEY 미설정', code: 'missing_api_key' }, { status: 500 });
   }
 
   const systemBlocks = body.systemInstruction
