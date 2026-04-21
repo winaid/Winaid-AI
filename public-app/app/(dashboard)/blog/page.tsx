@@ -878,7 +878,7 @@ JSON 형식으로 응답해주세요.`;
       topic: topic.trim(),
       blogTitle: blogTitle.trim() || undefined,
       keywords: keywords.trim(),
-      disease: disease.trim() || undefined,
+      disease: disease.trim() || topic.trim() || undefined,
       tone,
       audienceMode,
       persona,

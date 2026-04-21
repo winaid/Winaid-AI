@@ -436,21 +436,17 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
             )}
           </div>
 
-          {/* 질환명 */}
-          <div>
-            <label className={labelCls}>질환명</label>
-            <input type="text" value={disease} onChange={e => setDisease(e.target.value)} placeholder="예: 치주염, 충치 — 글의 실제 주제" className={inputCls} />
-          </div>
+          {/* 질환명 — public-app 에서 제거 (주제 하나로 통합, next-app 과 동일) */}
 
           {/* AI 제목 추천 + 트렌드 주제 (2버튼 가로) */}
           <div className="flex gap-2">
-            <button type="button" onClick={handleRecommendTitles} disabled={isLoadingTitles || !(topic || disease || keywords)}
+            <button type="button" onClick={handleRecommendTitles} disabled={isLoadingTitles || !(topic || keywords)}
               className="flex-1 py-2 bg-slate-100 text-slate-600 rounded-lg text-xs font-semibold hover:bg-slate-200 transition-all disabled:opacity-40 flex items-center justify-center gap-1">
               {isLoadingTitles ? <><div className="w-3 h-3 border-2 border-slate-400 border-t-slate-600 rounded-full animate-spin" />생성 중...</> : <>✨ AI 제목 추천</>}
             </button>
             <button type="button" onClick={handleRecommendTrends} disabled={isLoadingTrends}
               className="flex-1 py-2 bg-slate-100 text-slate-600 rounded-lg text-xs font-semibold hover:bg-slate-200 transition-all disabled:opacity-40 flex items-center justify-center gap-1">
-              {isLoadingTrends ? <><div className="w-3 h-3 border-2 border-slate-400 border-t-slate-600 rounded-full animate-spin" />검색 중...</> : (disease.trim() || topic.trim()) ? <>🔍 &ldquo;{(disease.trim() || topic.trim()).length > 8 ? (disease.trim() || topic.trim()).slice(0, 8) + '…' : (disease.trim() || topic.trim())}&rdquo; 관련 주제</> : <>🔥 트렌드 주제</>}
+              {isLoadingTrends ? <><div className="w-3 h-3 border-2 border-slate-400 border-t-slate-600 rounded-full animate-spin" />검색 중...</> : topic.trim() ? <>🔍 &ldquo;{topic.trim().length > 8 ? topic.trim().slice(0, 8) + '…' : topic.trim()}&rdquo; 관련 주제</> : <>🔥 트렌드 주제</>}
             </button>
           </div>
 
