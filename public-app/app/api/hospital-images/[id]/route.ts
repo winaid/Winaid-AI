@@ -3,6 +3,7 @@ import { supabase } from '../../../../lib/supabase';
 import { gateGuestRequest } from '../../../../lib/guestRateLimit';
 import { STORAGE_BUCKET } from '../../../../lib/hospitalImageService';
 import type { HospitalImage } from '../../../../lib/hospitalImageService';
+import { resolveImageOwner } from '../../../../lib/serverAuth';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,17 +15,22 @@ export async function DELETE(request: NextRequest, ctx: Ctx) {
   const gate = gateGuestRequest(request, 10);
   if (!gate.ok) return NextResponse.json({ error: gate.error }, { status: gate.status });
 
+  const owner = await resolveImageOwner(request);
   const { id } = await ctx.params;
   const { data: row } = await supabase
     .from('hospital_images')
-    .select('storage_path')
+    .select('storage_path, user_id')
     .eq('id', id)
     .single();
 
   if (!row) return NextResponse.json({ error: '이미지를 찾을 수 없습니다.' }, { status: 404 });
 
+  if (row.user_id !== owner) {
+    return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+  }
+
   await supabase.storage.from(STORAGE_BUCKET).remove([row.storage_path]);
-  await supabase.from('hospital_images').delete().eq('id', id);
+  await supabase.from('hospital_images').delete().eq('id', id).eq('user_id', owner);
 
   return NextResponse.json({ success: true });
 }
@@ -35,6 +41,7 @@ export async function PATCH(request: NextRequest, ctx: Ctx) {
   const gate = gateGuestRequest(request, 10);
   if (!gate.ok) return NextResponse.json({ error: gate.error }, { status: gate.status });
 
+  const owner = await resolveImageOwner(request);
   const { id } = await ctx.params;
   const body = (await request.json()) as { tags?: string[]; altText?: string };
 
@@ -46,6 +53,7 @@ export async function PATCH(request: NextRequest, ctx: Ctx) {
     .from('hospital_images')
     .update(updates)
     .eq('id', id)
+    .eq('user_id', owner)
     .select()
     .single();
 

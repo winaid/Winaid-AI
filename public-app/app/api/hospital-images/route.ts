@@ -3,6 +3,7 @@ import { supabase } from '../../../lib/supabase';
 import { gateGuestRequest } from '../../../lib/guestRateLimit';
 import { STORAGE_BUCKET } from '../../../lib/hospitalImageService';
 import type { HospitalImage } from '../../../lib/hospitalImageService';
+import { resolveImageOwner } from '../../../lib/serverAuth';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,8 +15,8 @@ export async function GET(request: NextRequest) {
   const gate = gateGuestRequest(request, 20);
   if (!gate.ok) return NextResponse.json({ error: gate.error }, { status: gate.status });
 
+  const owner = await resolveImageOwner(request);
   const params = request.nextUrl.searchParams;
-  const userId = params.get('userId');
   const hospitalName = params.get('hospitalName');
   const tagsParam = params.get('tags');
   const limit = Math.min(Math.max(parseInt(params.get('limit') || '50', 10) || 50, 1), 100);
@@ -24,12 +25,10 @@ export async function GET(request: NextRequest) {
   let query = supabase
     .from('hospital_images')
     .select('*', { count: 'exact' })
+    .eq('user_id', owner)
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1);
 
-  if (userId) {
-    query = query.eq('user_id', userId);
-  }
   if (hospitalName) {
     query = query.eq('hospital_name', hospitalName);
   }
@@ -43,7 +42,8 @@ export async function GET(request: NextRequest) {
 
   const { data: rows, error, count } = await query;
   if (error) {
-    return NextResponse.json({ error: `조회 실패: ${error.message}` }, { status: 500 });
+    console.error('[hospital-images/GET]', error.message);
+    return NextResponse.json({ error: '조회 실패' }, { status: 500 });
   }
 
   const images: HospitalImage[] = (rows || []).map((r) => {

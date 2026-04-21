@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '../../../../lib/supabase';
 import { gateGuestRequest } from '../../../../lib/guestRateLimit';
 import { callLLM } from '../../../../lib/llm';
+import { resolveImageOwner } from '../../../../lib/serverAuth';
 
 export const maxDuration = 30;
 export const dynamic = 'force-dynamic';
@@ -22,6 +23,8 @@ const TAG_LIST = [
 export async function POST(request: NextRequest) {
   const gate = gateGuestRequest(request, 100);
   if (!gate.ok) return NextResponse.json({ error: gate.error }, { status: gate.status });
+
+  const owner = await resolveImageOwner(request);
 
   let body: { imageId?: string; imageUrl?: string };
   try { body = await request.json(); } catch {
@@ -63,7 +66,7 @@ JSON 만 응답:
           tags: result.tags,
           alt_text: result.altText,
           ai_description: result.description,
-        }).eq('id', body.imageId);
+        }).eq('id', body.imageId).eq('user_id', owner);
       }
 
       return NextResponse.json(result);

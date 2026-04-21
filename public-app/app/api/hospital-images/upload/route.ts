@@ -3,6 +3,7 @@ import { devLog } from '../../../../lib/devLog';
 import { supabase } from '../../../../lib/supabase';
 import { gateGuestRequest } from '../../../../lib/guestRateLimit';
 import { ALLOWED_MIME_TYPES, MAX_FILE_SIZE, STORAGE_BUCKET, mimeToExt } from '../../../../lib/hospitalImageService';
+import { resolveImageOwner } from '../../../../lib/serverAuth';
 
 export const maxDuration = 30;
 export const dynamic = 'force-dynamic';
@@ -16,15 +17,15 @@ export async function POST(request: NextRequest) {
     const gate = gateGuestRequest(request, 100);
     if (!gate.ok) return NextResponse.json({ error: gate.error }, { status: gate.status });
 
+    const owner = await resolveImageOwner(request);
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
-    const userId = (formData.get('userId') as string || '').trim() || 'guest';
 
     if (!file) {
       return NextResponse.json({ error: 'no_file' }, { status: 400 });
     }
 
-    devLog('[upload] start', { fileName: file.name, fileSize: file.size, fileType: file.type, userId });
+    devLog('[upload] start', { fileName: file.name, fileSize: file.size, fileType: file.type, owner });
 
     if (!ALLOWED_MIME_TYPES.includes(file.type)) {
       return NextResponse.json({ error: `invalid_mime: ${file.type}` }, { status: 400 });
@@ -34,7 +35,7 @@ export async function POST(request: NextRequest) {
     }
 
     const ext = mimeToExt(file.type);
-    const storagePath = `${userId}/${crypto.randomUUID()}.${ext}`;
+    const storagePath = `${owner}/${crypto.randomUUID()}.${ext}`;
     devLog('[upload] storage path:', storagePath);
 
     const buf = Buffer.from(await file.arrayBuffer());
@@ -44,7 +45,7 @@ export async function POST(request: NextRequest) {
     });
     if (uploadErr) {
       console.error('[upload] storage error:', uploadErr);
-      return NextResponse.json({ error: `storage_error: ${uploadErr.message}` }, { status: 500 });
+      return NextResponse.json({ error: 'storage_error' }, { status: 500 });
     }
     devLog('[upload] storage ok');
 
@@ -55,7 +56,7 @@ export async function POST(request: NextRequest) {
     const { data: row, error: dbErr } = await supabase
       .from('hospital_images')
       .insert({
-        user_id: userId,
+        user_id: owner,
         hospital_name: hospitalName,
         storage_path: storagePath,
         original_filename: file.name,
@@ -69,7 +70,7 @@ export async function POST(request: NextRequest) {
 
     if (dbErr) {
       console.error('[upload] db error:', dbErr);
-      return NextResponse.json({ error: `db_error: ${dbErr.message}` }, { status: 500 });
+      return NextResponse.json({ error: 'db_error' }, { status: 500 });
     }
     devLog('[upload] db ok, id:', row.id);
 
@@ -93,6 +94,6 @@ export async function POST(request: NextRequest) {
     const message = err instanceof Error ? err.message : String(err);
     const stack = err instanceof Error ? err.stack?.slice(0, 500) : '';
     console.error('[upload] UNCAUGHT:', message, stack);
-    return NextResponse.json({ error: `uncaught: ${message}` }, { status: 500 });
+    return NextResponse.json({ error: 'uncaught' }, { status: 500 });
   }
 }
