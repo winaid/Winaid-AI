@@ -97,6 +97,32 @@ function extractSources(text: string): string[] {
       if (src.length >= 3 && src.length <= 30) allSources.add(src);
     }
   }
+
+  // TRUSTED_NAMES 14개 기관명 본문 전체 스캔
+  for (const name of Object.values(TRUSTED_NAMES)) {
+    if (text.includes(name)) allSources.add(name);
+  }
+
+  // 기관명 별칭 매핑 (Gemini가 줄여서 쓸 수 있음)
+  const ALIAS_MAP: Record<string, string> = {
+    '치협': '대한치과의사협회',
+    '대한치협': '대한치과의사협회',
+    '치과의사협회': '대한치과의사협회',
+    '건강정보포털': '국가건강정보포털',
+    '질병관리청': '국가건강정보포털',
+    '서울대병원': '서울대학교병원',
+    '서울아산': '서울아산병원',
+    '아산병원': '서울아산병원',
+    '심평원': '건강보험심사평가원',
+    '복지부': '보건복지부',
+    '의학회': '대한의학회',
+    '피부과학회': '대한피부과학회',
+    '정형외과학회': '대한정형외과학회',
+  };
+  for (const [alias, canonical] of Object.entries(ALIAS_MAP)) {
+    if (text.includes(alias)) allSources.add(canonical);
+  }
+
   return [...allSources];
 }
 
