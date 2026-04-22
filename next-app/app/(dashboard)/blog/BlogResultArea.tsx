@@ -147,11 +147,10 @@ export default function BlogResultArea({
             {(() => {
               if (stageInfo && stageInfo.total && stageInfo.completed && stageInfo.completed > 0 && elapsedSeconds > 0) {
                 const avgPerSection = elapsedSeconds / stageInfo.completed;
-                const remaining = Math.max(0, Math.round(avgPerSection * (stageInfo.total - stageInfo.completed)));
+                const sectionBased = Math.max(0, Math.round(avgPerSection * (stageInfo.total - stageInfo.completed)));
+                const estBased = Math.max(0, estimatedTotalSeconds - elapsedSeconds);
+                const remaining = Math.round(sectionBased * 0.7 + estBased * 0.3);
                 return remaining > 0 ? `약 ${remaining}초 남음` : '거의 다 됐어요!';
-              }
-              if (stageInfo?.name === 'outline_start' || stageInfo?.name === 'outline_done') {
-                return '잠시만 기다려주세요...';
               }
               const remaining = Math.max(0, estimatedTotalSeconds - elapsedSeconds);
               return remaining > 0 ? `약 ${remaining}초 남음` : '거의 다 됐어요!';
