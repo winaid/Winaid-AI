@@ -38,13 +38,23 @@ export async function POST(request: NextRequest) {
       };
 
       if (supabase && body.imageId) {
-        await supabase.from('hospital_images').update({
+        const { data: updated, error } = await supabase.from('hospital_images').update({
           tags: result.tags,
           alt_text: result.altText,
           ai_description: result.description,
         })
         .eq('id', body.imageId)
-        .eq('user_id', owner);  // 소유권 검증 — 타인 이미지 업데이트 방지
+        .eq('user_id', owner)  // 소유권 검증 — 타인 이미지 업데이트 방지
+        .select();
+
+        if (error) {
+          console.error('[auto-tag] update failed:', error.message);
+          return NextResponse.json({ error: 'db_update_failed' }, { status: 500 });
+        }
+        if (!updated || updated.length === 0) {
+          console.warn(`[auto-tag] no rows updated (id=${body.imageId} owner=${owner}) — ownership mismatch`);
+          return NextResponse.json({ error: 'ownership_mismatch', hint: 'image owner does not match current user' }, { status: 403 });
+        }
       }
 
       return NextResponse.json(result);
