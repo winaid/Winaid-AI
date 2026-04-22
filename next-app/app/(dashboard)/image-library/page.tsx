@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { isSupabaseConfigured } from '../../../lib/supabase';
 import { useAuthGuard } from '../../../hooks/useAuthGuard';
+import { authFetch } from '../../../lib/authFetch';
 import { IMAGE_TAG_PRESETS, type HospitalImage } from '../../../lib/hospitalImageService';
 import { TEAM_DATA } from '../../../lib/teamData';
 
@@ -36,7 +37,7 @@ export default function ImageLibraryPage() {
       if (filterTag) params.set('tags', filterTag);
       if (selectedHospital) params.set('hospitalName', selectedHospital);
       params.set('limit', '100');
-      const res = await fetch(`/api/hospital-images?${params.toString()}`);
+      const res = await authFetch(`/api/hospital-images?${params.toString()}`);
       if (!res.ok) return;
       const data = await res.json();
       setImages(Array.isArray(data) ? data : (data.images || []));
@@ -77,7 +78,7 @@ export default function ImageLibraryPage() {
           formData.append('file', file);
           formData.append('userId', userId);
           if (selectedHospital) formData.append('hospitalName', selectedHospital);
-          const res = await fetch('/api/hospital-images/upload', { method: 'POST', body: formData });
+          const res = await authFetch('/api/hospital-images/upload', { method: 'POST', body: formData });
           if (!res.ok) {
             const errData = await res.json().catch(() => ({}));
             console.error(`[IMAGE] 배치 ${batchIdx + 1} 파일 ${i + 1} 실패: ${res.status}`, errData);
@@ -91,7 +92,7 @@ export default function ImageLibraryPage() {
 
           if (uploaded.id && uploaded.publicUrl) {
             try {
-              const tagRes = await fetch('/api/hospital-images/auto-tag', {
+              const tagRes = await authFetch('/api/hospital-images/auto-tag', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ imageId: uploaded.id, imageUrl: uploaded.publicUrl }),
@@ -136,7 +137,7 @@ export default function ImageLibraryPage() {
   const handleDelete = async (id: string) => {
     if (!confirm('이 이미지를 삭제하시겠습니까?')) return;
     try {
-      await fetch(`/api/hospital-images/${id}`, { method: 'DELETE' });
+      await authFetch(`/api/hospital-images/${id}`, { method: 'DELETE' });
       setImages(prev => prev.filter(img => img.id !== id));
       if (editImage?.id === id) setEditImage(null);
     } catch { /* ignore */ }
@@ -146,7 +147,7 @@ export default function ImageLibraryPage() {
     if (!editImage) return;
     setSaving(true);
     try {
-      const res = await fetch(`/api/hospital-images/${editImage.id}`, {
+      const res = await authFetch(`/api/hospital-images/${editImage.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tags: editTags, altText: editAlt }),
@@ -164,7 +165,7 @@ export default function ImageLibraryPage() {
     if (!editImage) return;
     setSaving(true);
     try {
-      const res = await fetch('/api/hospital-images/auto-tag', {
+      const res = await authFetch('/api/hospital-images/auto-tag', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ imageId: editImage.id, imageUrl: editImage.publicUrl }),
@@ -194,7 +195,7 @@ export default function ImageLibraryPage() {
       const batch = images.slice(i, i + CONCURRENCY);
       const results = await Promise.allSettled(
         batch.map(async (img) => {
-          const res = await fetch('/api/hospital-images/auto-tag', {
+          const res = await authFetch('/api/hospital-images/auto-tag', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ imageId: img.id, imageUrl: img.publicUrl }),

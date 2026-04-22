@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useRef, useState } from 'react';
+import { authFetch } from '../../lib/authFetch';
 
 interface ImageLibraryProps {
   enabled: boolean;
@@ -26,13 +27,13 @@ export default function ImageLibrary({ enabled, userId }: ImageLibraryProps) {
           const fd = new FormData();
           fd.append('file', file);
           if (userId) fd.append('userId', userId);
-          const res = await fetch('/api/hospital-images/upload', { method: 'POST', body: fd });
+          const res = await authFetch('/api/hospital-images/upload', { method: 'POST', body: fd });
           if (!res.ok) { done++; return; }
           const img = await res.json();
           done++;
           if (img.id && img.publicUrl) {
             // AI 자동 태깅 (백그라운드)
-            fetch('/api/hospital-images/auto-tag', {
+            authFetch('/api/hospital-images/auto-tag', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ imageId: img.id, imageUrl: img.publicUrl }),

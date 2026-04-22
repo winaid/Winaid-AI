@@ -27,6 +27,7 @@ import BlogResultArea from './BlogResultArea';
 import BlogFormPanel from './BlogFormPanel';
 import { useCreditContext } from '../layout';
 import { useCredit as blogUseCredit } from '../../../lib/creditService';
+import { authFetch } from '../../../lib/authFetch';
 
 function BlogForm() {
   const creditCtx = useCreditContext();
@@ -1111,7 +1112,7 @@ JSON 형식으로 응답해주세요.`;
             const { userId: uid } = await getSessionSafe();
             const qs = new URLSearchParams({ limit: '100' });
             if (uid) qs.set('userId', uid);
-            const res = await fetch(`/api/hospital-images?${qs.toString()}`);
+            const res = await authFetch(`/api/hospital-images?${qs.toString()}`);
             if (res.ok) {
               const data = await res.json();
               const libraryImages: HospitalImage[] = Array.isArray(data) ? data : (data.images || []);
