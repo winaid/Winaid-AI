@@ -890,6 +890,11 @@ variable 블록의 greeting_type에 따라:
   "hospital_info" → 1인칭 인사 없이 공감 훅/질문형. 본문 중 3인칭 서술.
   "no_hospital"  → 병원명 언급 없이 공감 훅/질문형.
 수식구는 주제에 맞게 매번 새로 작성하세요.
+
+**수식구 생성 규칙**:
+- opening_style 블록이 있으면 그 안의 수식구를 **원문 그대로** 사용 (주제와 조금 안 맞아도 OK).
+- opening_style 이 없거나 수식구 미포함 시에만 주제 기반 수식구 생성.
+- 억지로 주제 단어를 욱여넣지 마세요. 자연스러움 > 주제 일치.
 </greeting_rules>
 
 <learned_style_override>
@@ -1188,7 +1193,7 @@ function buildGreetingRuleBlock(req: GenerationRequest): string {
 <hospital_name>${hospitalName}</hospital_name>
 <role>대표 원장</role>
 <required_format><p>안녕하세요. {수식구 15~35자} ${hospitalName} 대표 원장입니다.</p></required_format>
-<instruction>첫 p는 위 형식 한 문장. 수식구는 주제에 맞게 매번 새로 작성. 두 번째 문장부터 공감 훅으로 전환.</instruction>
+<instruction>첫 p는 위 형식 한 문장. opening_style 블록이 있으면 수식구를 원문 그대로 복사 (주제 변형 금지). opening_style 없을 때만 주제 기반 수식구 생성. 두 번째 문장부터 공감 훅으로 전환.</instruction>
 </greeting_rule>`;
   }
   if (req.persona === 'coordinator') {
