@@ -1628,6 +1628,8 @@ JSON 형식으로 응답해주세요.`;
 
   // ── 이미지 클릭 → 액션 모달 열기 ──
   const handleImageClick = useCallback((imageIndex: number) => {
+    // 내 이미지 사용 모드: 교체 모달이 처리 (handleResultClick)
+    if (useImageLibrary) return;
     const promptIdx = imageIndex - 1;
     const originalPrompt = savedImagePrompts[promptIdx];
     if (!originalPrompt) return;
@@ -1641,7 +1643,7 @@ JSON 형식으로 응답해주세요.`;
     setSelectedImgIndex(imageIndex);
     setRegenPrompt(originalPrompt);
     setImgActionModalOpen(true);
-  }, [savedImagePrompts, generatedContent]);
+  }, [useImageLibrary, savedImagePrompts, generatedContent]);
 
   // ── 이미지 다운로드 ──
   const handleImageDownload = useCallback((src: string, index: number) => {
