@@ -1910,7 +1910,7 @@ Output ONLY the prompt. No explanation.`;
 
       {/* ── 결과 영역 — BlogResultArea 컴포넌트로 분리 ── */}
       <div id="blog-result" />
-      <div onClick={handleResultClick}>
+      <div onClick={handleResultClick} style={{ display: 'contents' }}>
       <BlogResultArea
         isGenerating={isGenerating}
         displayStage={displayStage}
