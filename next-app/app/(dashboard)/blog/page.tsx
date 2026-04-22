@@ -263,6 +263,7 @@ function BlogForm() {
   // 생성 시간 추정
   const [generationStartTime, setGenerationStartTime] = useState<number>(0);
   const [estimatedTotalSeconds, setEstimatedTotalSeconds] = useState<number>(0);
+  const [stageInfo, setStageInfo] = useState<{ name: string; completed?: number; total?: number } | null>(null);
 
   // ── 블로그 섹션 상태 (소제목 재생성 + export) ──
   const [blogSections, setBlogSections] = useState<BlogSection[]>([]);
@@ -863,6 +864,7 @@ JSON 형식으로 응답해주세요.`;
 
     setIsGenerating(true);
     setDisplayStage(1);
+    setStageInfo(null);
     setRotationIdx(0);
     setError(null);
     setIsRetryable(false);
@@ -900,9 +902,9 @@ JSON 형식으로 응답해주세요.`;
     setPipelineStep('drafting');
 
     try {
-      // ═══ v4: Sonnet 4.6 통합 초안 (서버에서 프롬프트 조립 + callLLM) ═══
-      console.info(`[BLOG] [V4] Sonnet 4.6 통합 초안 요청`);
-      const draftRes = await fetch('/api/generate/blog', {
+      // ═══ v4: Sonnet 4.6 통합 초안 (SSE stream) ═══
+      console.info(`[BLOG] [V4] Sonnet 4.6 통합 초안 요청 (stream)`);
+      const draftRes = await fetch('/api/generate/blog?stream=1', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -920,10 +922,80 @@ JSON 형식으로 응답해주세요.`;
         setIsGenerating(false);
         setDisplayStage(0);
         setPipelineStep('error');
+        setStageInfo(null);
         return;
       }
 
-      const draftJson = await draftRes.json() as { text?: string; violations?: string[]; usage?: unknown; model?: string };
+      if (!draftRes.body) {
+        setError('stream 응답 없음');
+        setIsGenerating(false);
+        setDisplayStage(0);
+        setStageInfo(null);
+        return;
+      }
+
+      // SSE 스트림 읽기
+      const reader = draftRes.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let finalData: { text?: string; violations?: string[]; usage?: unknown; model?: string } | null = null;
+      let streamError: string | null = null;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        const events = buffer.split('\n\n');
+        buffer = events.pop() || '';
+
+        for (const evtBlock of events) {
+          let eventName = '';
+          let dataStr = '';
+          for (const line of evtBlock.split('\n')) {
+            if (line.startsWith('event:')) eventName = line.slice(6).trim();
+            else if (line.startsWith('data:')) dataStr = line.slice(5).trim();
+          }
+          if (!eventName || !dataStr) continue;
+
+          try {
+            const data = JSON.parse(dataStr);
+            if (eventName === 'stage') {
+              setStageInfo({
+                name: data.name as string,
+                completed: typeof data.completed === 'number' ? data.completed : undefined,
+                total: typeof data.total === 'number' ? data.total : undefined,
+              });
+              console.info(`[BLOG] [STAGE] ${data.name}`, data);
+            } else if (eventName === 'complete') {
+              finalData = { text: data.text, violations: data.violations, usage: data.usage, model: data.model };
+            } else if (eventName === 'error') {
+              streamError = (data.message as string) || 'stream error';
+            }
+          } catch (e) {
+            console.warn('[BLOG] SSE parse error:', e);
+          }
+        }
+      }
+
+      if (streamError) {
+        setError(streamError);
+        setIsGenerating(false);
+        setDisplayStage(0);
+        setPipelineStep('error');
+        setStageInfo(null);
+        return;
+      }
+
+      if (!finalData) {
+        setError('생성 응답 없음');
+        setIsGenerating(false);
+        setDisplayStage(0);
+        setStageInfo(null);
+        return;
+      }
+
+      const draftJson = finalData;
       const fullText = draftJson.text || '';
       const draftViolations = draftJson.violations || [];
       console.info(`[BLOG] [V4] Sonnet 초안 완료 — ${fullText.length}자, violations ${draftViolations.length}개 (model=${draftJson.model || '?'})`);
@@ -1429,6 +1501,7 @@ JSON 형식으로 응답해주세요.`;
     } finally {
       setIsGenerating(false);
       setDisplayStage(0);
+      setStageInfo(null);
     }
   };
 
@@ -1787,6 +1860,7 @@ Output ONLY the prompt. No explanation.`;
         rotationIdx={rotationIdx}
         generationStartTime={generationStartTime}
         estimatedTotalSeconds={estimatedTotalSeconds}
+        stageInfo={stageInfo}
         error={error}
         onDismissError={() => setError(null)}
         isRetryable={isRetryable}

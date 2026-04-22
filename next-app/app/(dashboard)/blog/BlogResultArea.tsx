@@ -14,6 +14,7 @@ export interface BlogResultAreaProps {
   rotationIdx: number;
   generationStartTime: number;
   estimatedTotalSeconds: number;
+  stageInfo?: { name: string; completed?: number; total?: number } | null;
   // 에러
   error: string | null;
   onDismissError: () => void;
@@ -50,6 +51,7 @@ export interface BlogResultAreaProps {
 /** 블로그 결과 영역 — 생성 중 / 에러 / 결과 / 빈 상태 4가지 렌더링 */
 export default function BlogResultArea({
   isGenerating, displayStage, rotationIdx, generationStartTime, estimatedTotalSeconds,
+  stageInfo = null,
   error, onDismissError, isRetryable, onRetry,
   generatedContent, saveStatus, scores, cssTheme,
   blogSections, regeneratingSection, sectionProgress,
@@ -74,9 +76,41 @@ export default function BlogResultArea({
   if (isGenerating) {
     const stage = BLOG_STAGES[displayStage] || BLOG_STAGES[1];
     const pool = BLOG_MESSAGE_POOL[displayStage] || BLOG_MESSAGE_POOL[1];
-    const displayMsg = pool[rotationIdx % pool.length];
-    const remaining = Math.max(0, estimatedTotalSeconds - elapsedSeconds);
-    const progressPct = estimatedTotalSeconds > 0 ? Math.min(95, (elapsedSeconds / estimatedTotalSeconds) * 100) : 0;
+
+    let displayMsg: string;
+    let progressPct: number;
+
+    if (stageInfo) {
+      const { name, completed, total } = stageInfo;
+      if (name === 'outline_start') {
+        displayMsg = '아웃라인 작성 중...';
+        progressPct = 5;
+      } else if (name === 'outline_done') {
+        displayMsg = '섹션 작성 준비 중...';
+        progressPct = 15;
+      } else if (name === 'sections_start') {
+        displayMsg = `섹션 0/${total ?? '?'} 작성 시작...`;
+        progressPct = 20;
+      } else if (name === 'section_done' && total) {
+        const pct = (completed ?? 0) / total;
+        displayMsg = `섹션 ${completed}/${total} 작성 중...`;
+        progressPct = 20 + pct * 60;
+      } else if (name === 'section_failed' && total) {
+        displayMsg = `섹션 ${completed}/${total} (일부 실패, 계속 진행)`;
+        progressPct = 20 + ((completed ?? 0) / total) * 60;
+      } else if (name === 'fallback_1pass') {
+        displayMsg = '1-pass 모드로 전환 중...';
+        progressPct = 30;
+      } else {
+        displayMsg = pool[rotationIdx % pool.length];
+        progressPct = 50;
+      }
+    } else {
+      displayMsg = pool[rotationIdx % pool.length];
+      progressPct = estimatedTotalSeconds > 0
+        ? Math.min(95, (elapsedSeconds / estimatedTotalSeconds) * 100)
+        : 0;
+    }
 
     return (
       <div className="flex-1 min-w-0">
@@ -109,8 +143,11 @@ export default function BlogResultArea({
             {displayMsg}
           </p>
           {/* 카운트다운 */}
-          <p className={`text-xs text-blue-400 mb-1 ${remaining === 0 ? 'animate-pulse' : ''}`}>
-            {remaining > 0 ? `약 ${remaining}초 남음` : '거의 완료...'}
+          <p className="text-xs text-blue-400 mb-1">
+            {`${elapsedSeconds}초 경과`}
+            {stageInfo && stageInfo.total != null && stageInfo.completed != null && (
+              <span className="ml-2 text-blue-500">· {stageInfo.completed}/{stageInfo.total}</span>
+            )}
           </p>
           <p className="text-xs text-slate-400 max-w-xs">
             {stage.hint}
