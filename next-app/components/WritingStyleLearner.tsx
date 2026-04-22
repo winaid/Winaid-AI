@@ -192,7 +192,7 @@ export default function WritingStyleLearner({
         const res = await fetch('/api/naver/crawl-hospital-blog', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ blogUrl: urlInput.trim(), maxPosts: 5 }),
+          body: JSON.stringify({ blogUrl: urlInput.trim(), maxPosts: 2 }),
         });
         if (!res.ok) throw new Error('크롤링 실패');
         const data = (await res.json()) as { posts?: { content?: string }[] };
@@ -200,7 +200,7 @@ export default function WritingStyleLearner({
           .map(p => (p.content || '').trim())
           .filter(t => t.length > 30)
           .join('\n\n---\n\n')
-          .slice(0, 12000);
+          .slice(0, 40000);
       } else {
         const res = await fetch('/api/crawler', {
           method: 'POST',
@@ -209,7 +209,7 @@ export default function WritingStyleLearner({
         });
         if (!res.ok) throw new Error('크롤링 실패');
         const data = (await res.json()) as { content?: string };
-        content = (data.content || '').trim().slice(0, 12000);
+        content = (data.content || '').trim().slice(0, 40000);
       }
       if (content.length < 100) {
         setError('크롤링된 텍스트가 너무 짧습니다. 다른 URL을 시도해주세요.');
