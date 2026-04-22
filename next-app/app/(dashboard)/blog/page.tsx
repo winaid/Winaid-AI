@@ -212,21 +212,21 @@ function BlogForm() {
   const applySettings = useCallback((raw: string) => {
     try {
       const s = JSON.parse(raw);
-      if (s.category) setCategory(s.category);
-      if (s.hospitalName) setHospitalName(s.hospitalName);
-      if (s.selectedHospitalAddress) setSelectedHospitalAddress(s.selectedHospitalAddress);
-      if (s.homepageUrl) setHomepageUrl(s.homepageUrl);
-      if (s.textLength) setTextLength(s.textLength);
+      if (s.category !== undefined) setCategory(s.category);
+      if (s.hospitalName !== undefined) setHospitalName(s.hospitalName);
+      if (s.selectedHospitalAddress !== undefined) setSelectedHospitalAddress(s.selectedHospitalAddress);
+      if (s.homepageUrl !== undefined) setHomepageUrl(s.homepageUrl);
+      if (s.textLength !== undefined) setTextLength(s.textLength);
       if (s.imageCount !== undefined) setImageCount(s.imageCount);
-      if (s.imageAspectRatio) setImageAspectRatio(s.imageAspectRatio);
-      if (s.imageStyle) setImageStyle(s.imageStyle);
-      if (s.audienceMode) setAudienceMode(s.audienceMode);
-      if (s.persona) setPersona(s.persona);
-      if (s.tone) setTone(s.tone);
-      if (s.writingStyle) setWritingStyle(s.writingStyle);
-      if (s.medicalLawMode) setMedicalLawMode(s.medicalLawMode);
+      if (s.imageAspectRatio !== undefined) setImageAspectRatio(s.imageAspectRatio);
+      if (s.imageStyle !== undefined) setImageStyle(s.imageStyle);
+      if (s.audienceMode !== undefined) setAudienceMode(s.audienceMode);
+      if (s.persona !== undefined) setPersona(s.persona);
+      if (s.tone !== undefined) setTone(s.tone);
+      if (s.writingStyle !== undefined) setWritingStyle(s.writingStyle);
+      if (s.medicalLawMode !== undefined) setMedicalLawMode(s.medicalLawMode);
       if (s.includeFaq !== undefined) setIncludeFaq(s.includeFaq);
-      if (s.faqCount) setFaqCount(s.faqCount);
+      if (s.faqCount !== undefined) setFaqCount(s.faqCount);
       // includeHospitalIntro 항상 true — skip
       return true;
     } catch { return false; }
