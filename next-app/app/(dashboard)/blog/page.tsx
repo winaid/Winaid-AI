@@ -1257,6 +1257,21 @@ JSON 형식으로 응답해주세요.`;
         } else {
           blogText = blogText.replace(/\[IMG_\d+[^\]]*\]\n*/g, '');
         }
+
+        // 최종 hard cap: <img> + placeholder 총합 imageCount 초과분 제거
+        let imgOrSlotCount = 0;
+        blogText = blogText.replace(
+          /(<img[^>]*data-image-index="\d+"[^>]*\/?>|<div[^>]*class="content-image-wrapper"[^>]*>\s*<div[^>]*data-img-slot="\d+"[\s\S]*?<\/div>\s*<\/div>)/g,
+          (match) => {
+            imgOrSlotCount++;
+            return imgOrSlotCount > imageCount ? '' : match;
+          },
+        );
+        blogText = blogText.replace(/<div[^>]*class="content-image-wrapper"[^>]*>\s*<\/div>/g, '');
+        const finalImgCount = (blogText.match(/<img[^>]*data-image-index="\d+"/g) || []).length;
+        const finalPhCount = (blogText.match(/data-img-slot="\d+"/g) || []).length;
+        console.info(`[BLOG] 최종 이미지 수: <img>=${finalImgCount}, placeholder=${finalPhCount}, 목표=${imageCount}`);
+
         setGeneratedContent(blogText);
         setScores(parsed);
       } else {
