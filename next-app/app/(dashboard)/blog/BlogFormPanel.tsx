@@ -302,19 +302,6 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
               maxLength={30}
               className={inputCls}
             />
-            {isLoadingReference && (
-              <p className="mt-1 text-[11px] text-blue-500 flex items-center gap-1">
-                <span className="h-3 w-3 animate-spin rounded-full border-2 border-blue-400 border-t-transparent" />
-                의학 참고 자료를 찾고 있어요…
-              </p>
-            )}
-            {!isLoadingReference && referenceResult && (
-              <p className="mt-1 text-[11px] text-emerald-600">
-                ✅ 참고 자료 수집 완료 ({referenceResult.sources.length > 0
-                  ? `${referenceResult.sources[0]} 외 ${Math.max(0, referenceResult.sources.length - 1)}개 기관`
-                  : '신뢰 의료 기관'})
-              </p>
-            )}
           </div>
 
           {/* 주요 키워드 */}
