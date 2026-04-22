@@ -316,7 +316,7 @@ JSON 객체 하나만 출력하세요. JSON 밖의 텍스트는 포함하지 마
     "doubleBreakFrequency": "low | medium | high",
     "paragraphLengthPattern": "단락 길이 리듬 서술"
   },
-  "representativeParagraphs": ["원문에서 그대로 복사한 대표 단락 5개, 줄바꿈 포함, 각 200~500자"],
+  "representativeParagraphs": ["원문에서 그대로 복사한 대표 단락 3개, 줄바꿈 포함, 각 200~500자"],
   "description": "이 말투를 한 줄로 설명",
   "stylePrompt": "AI가 이 말투로 글을 쓸 때 반드시 지켜야 할 핵심 지침 (150~250자)"
 }
@@ -327,7 +327,7 @@ JSON 객체 하나만 출력하세요. JSON 밖의 텍스트는 포함하지 마
 2. representativeParagraphs: 반드시 source_text에서 그대로 복사. 줄바꿈(\\n, \\n\\n) 포함.
 3. paragraphStats: 원문을 실제로 세서 계산. 추측이나 평균적인 숫자 금지.
 4. badExamples: 원문에 없는 "이렇게 쓰면 안 되는" 예시를 새로 작성.
-5. representativeParagraphs는 5개. 다양한 위치에서 선택.
+5. representativeParagraphs는 3개. 다양한 위치(도입/중간/마무리)에서 선택.
 </critical_rules>`;
 
       const res = await fetch('/api/llm', {
@@ -338,7 +338,7 @@ JSON 객체 하나만 출력하세요. JSON 밖의 텍스트는 포함하지 마
           prompt,
           systemInstruction: '당신은 병원 마케팅 콘텐츠 전문 편집자입니다. 문체·화자 캐릭터·의료 콘텐츠 전략을 정밀 분석합니다. JSON으로만 출력하세요.',
           temperature: 0.2,
-          maxOutputTokens: 4096,
+          maxOutputTokens: 8192,
           responseType: 'json',
         }),
       });
