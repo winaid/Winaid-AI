@@ -830,7 +830,7 @@ ${sampleText.substring(0, 20000)}
       task: 'style_learn',
       prompt,
       temperature: 0.3,
-      maxOutputTokens: 8192,
+      maxOutputTokens: 16384,  // 8192→16384: representativeParagraphs + openingStyle + tableOfContents 합산 시 초과 위험
       responseType: 'json',
     }),
   });
@@ -845,10 +845,12 @@ ${sampleText.substring(0, 20000)}
   try {
     // API 응답에서 JSON 추출
     let text = responseData.text || '';
+    console.info(`[style-learn] Claude 응답 길이: ${text.length}자`);
     // ```json ... ``` 패턴 제거
     const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
     if (jsonMatch) text = jsonMatch[1];
     result = JSON.parse(text.trim());
+    console.info(`[style-learn] openingStyle 길이: ${(result.openingStyle as string || '').length}자, tableOfContents 길이: ${(result.tableOfContents as string || '').length}자`);
   } catch {
     throw new Error('말투 분석 결과 파싱 실패');
   }
