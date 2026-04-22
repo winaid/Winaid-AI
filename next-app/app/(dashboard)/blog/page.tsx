@@ -1182,9 +1182,12 @@ JSON 형식으로 응답해주세요.`;
       blogText = blogText.replace(/(\n\s*){3,}/g, '\n\n');
 
       // 4) imageCount 초과 마커 제거 — 모든 모드 공통 (Claude 가 초과 부여한 경우)
+      const beforeStrip = (blogText.match(/\[IMG_\d+/g) || []).length;
       blogText = blogText.replace(/\[IMG_(\d+)[^\]]*\]/g, (match, num) => {
         return Number(num) > imageCount ? '' : match;
       });
+      const afterStrip = (blogText.match(/\[IMG_\d+/g) || []).length;
+      console.info(`[BLOG] strip: ${beforeStrip}→${afterStrip} (imageCount=${imageCount})`);
 
       // 4-1) 라이브러리 이미지 alt 기반 자동 매칭 (useImageLibrary ON일 때)
       if (useImageLibrary) {
@@ -1205,7 +1208,7 @@ JSON 형식으로 응답해주세요.`;
               const diseaseKeywords = (disease || '').split(/[\s,]+/).filter(w => w.length >= 2);
               const coreKeywords = [...new Set([...topicKeywords, ...diseaseKeywords])];
               for (const marker of imgMarkers) {
-                const [fullMatch, , altText] = marker;
+                const [fullMatch, num, altText] = marker;
                 const scored = libraryImages
                   .filter(img => !usedIds.has(img.id))
                   .map(img => {
@@ -1229,7 +1232,7 @@ JSON 형식으로 응답해주세요.`;
                   const best = scored[0].img;
                   blogText = blogText.replace(
                     fullMatch,
-                    `<img src="${best.publicUrl}" alt="${best.altText || altText}" style="max-width:100%;border-radius:12px;" />`,
+                    `<img src="${best.publicUrl}" alt="${best.altText || altText}" data-image-index="${num}" style="max-width:100%;border-radius:12px;" />`,
                   );
                   usedIds.add(best.id);
                   matched++;
