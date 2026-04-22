@@ -1088,6 +1088,36 @@ export const SECTION_REGEN_PERSONA = `<role>
 // Part E — 빌더 함수 (Claude 최적화 XML 태그 기반)
 // ═══════════════════════════════════════════════════════════════════
 
+function buildKeywordDensityBlock(
+  keywords: string | undefined,
+  density: number | 'auto' | undefined,
+  textLength: number,
+): string {
+  if (!keywords?.trim()) return '';
+  const primary = keywords.split(',')[0].trim();
+  if (!primary) return '';
+
+  let instruction: string;
+  if (density === 'auto' || density === undefined) {
+    const auto = Math.max(3, Math.min(7, Math.round(textLength / 500)));
+    instruction = `글 길이(${textLength}자) 기준 자연스러운 밀도로 **${auto}회 내외** 사용 (SEO 1~2%). 숫자에 집착하지 말고 자연스러움 우선.`;
+  } else {
+    instruction = `본문 전체에서 정확히 **${density}회** 사용. 같은 문단에 연속 금지 (최소 2문장 간격).`;
+  }
+
+  return `<keyword_density priority="high">
+  <primary>${primary}</primary>
+  <repetitions>${density ?? 'auto'}</repetitions>
+  <instruction>
+  "${primary}" 를 ${instruction}
+  - 자연스러운 문장에 녹여서 사용
+  - 같은 문단 연속 등장 금지
+  - 소제목(h3) 에는 직접 노출 금지 (별도 규칙)
+  - 블로그 제목/메인 제목엔 포함 OK
+  </instruction>
+</keyword_density>`;
+}
+
 /** 공통 user_input XML 블록 — 주제·키워드·병원·어조 등 기본 입력 */
 function buildUserInputBlock(req: GenerationRequest): string {
   const topic = sanitizePromptInput(req.topic, 500);
@@ -1313,6 +1343,9 @@ export function buildOutlinePrompt(
   const clinic = buildClinicContextBlock(req);
   if (clinic) parts.push('', clinic);
 
+  const kdBlock = buildKeywordDensityBlock(req.keywords, req.keywordDensity, req.textLength || 1500);
+  if (kdBlock) parts.push('', kdBlock);
+
   const targetLength = req.textLength || 1500;
   const imageCount = req.imageCount ?? 0;
   parts.push(
@@ -1415,6 +1448,9 @@ ${allHeadings}
   </all_headings>
 </outline_context>`,
   );
+
+  const kdBlockSection = buildKeywordDensityBlock(req.keywords, req.keywordDensity, req.textLength || 1500);
+  if (kdBlockSection) parts.push('', kdBlockSection);
 
   // 대상 섹션 상세
   const prevHeading = sectionIndex > 0 ? outline.sections[sectionIndex - 1]?.heading : undefined;
@@ -1562,6 +1598,9 @@ ${safeSubheadings}
 </custom_subheadings>`,
     );
   }
+
+  const kdBlockV3 = buildKeywordDensityBlock(req.keywords, req.keywordDensity, req.textLength || 1500);
+  if (kdBlockV3) parts.push('', kdBlockV3);
 
   // FAQ
   if (req.includeFaq) {
