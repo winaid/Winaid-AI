@@ -150,6 +150,10 @@ function parseNaverDate(raw: string): Date | null {
 
 const cleanHtml = (raw: string) =>
   raw
+    .replace(/<\/p>\s*/gi, '\n\n')
+    .replace(/<\/h[1-6]>\s*/gi, '\n\n')
+    .replace(/<\/div>\s*/gi, '\n')
+    .replace(/<\/li>\s*/gi, '\n')
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<[^>]+>/g, ' ')
     .replace(/&nbsp;/g, ' ')
@@ -173,8 +177,8 @@ const cleanHtml = (raw: string) =>
     .replace(/[ \t]+/g, ' ')
     .split('\n')
     .map((l) => l.trim())
-    .filter((l) => l.length > 0)
     .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
     .trim();
 
 // ── 1단계: 글 목록 수집 (RSS 우선, PostList fallback) ──

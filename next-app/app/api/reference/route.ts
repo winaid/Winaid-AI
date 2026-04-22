@@ -32,7 +32,17 @@ export async function POST(request: NextRequest) {
     const result = await fetchMedicalReference(topic, category);
     return NextResponse.json(result);
   } catch (e) {
-    console.warn(`[reference] ${(e as Error).message.slice(0, 200)}`);
-    return NextResponse.json({ error: 'reference fetch failed' }, { status: 500 });
+    const msg = (e as Error).message || 'unknown';
+    console.error(`[reference] FAIL topic="${topic}" category="${category}" err=${msg.slice(0, 500)}`);
+    const match = msg.match(/Gemini error \((\d+)\)/);
+    const upstreamStatus = match ? Number(match[1]) : null;
+    const hint = upstreamStatus === 429 ? 'rate_limited'
+      : upstreamStatus === 503 ? 'gemini_unavailable'
+      : upstreamStatus === 504 ? 'gemini_timeout'
+      : 'internal';
+    return NextResponse.json(
+      { error: 'reference fetch failed', hint, upstreamStatus },
+      { status: 500 },
+    );
   }
 }

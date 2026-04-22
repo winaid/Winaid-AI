@@ -496,13 +496,13 @@ export async function crawlAndLearnHospitalStyle(
     const joined = allPosts
       .map((p, idx) => `[글 #${idx + 1}]\n${p.content}`)
       .join('\n\n');
-    if (joined.length <= 8000) return joined;
-    const hardCut = joined.slice(0, 8000);
+    if (joined.length <= 16000) return joined;
+    const hardCut = joined.slice(0, 16000);
     // 가장 가까운 단락 경계(\n\n)에서 자른다. 못 찾으면 마지막 줄바꿈, 그것도 없으면 hardCut 그대로.
     const lastDoubleBreak = hardCut.lastIndexOf('\n\n');
-    if (lastDoubleBreak >= 6000) return hardCut.slice(0, lastDoubleBreak);
+    if (lastDoubleBreak >= 13000) return hardCut.slice(0, lastDoubleBreak);
     const lastBreak = hardCut.lastIndexOf('\n');
-    if (lastBreak >= 7000) return hardCut.slice(0, lastBreak);
+    if (lastBreak >= 14500) return hardCut.slice(0, lastBreak);
     return hardCut;
   })();
   const analyzedStyle = await analyzeWritingStyleViaApi(combinedText, hospitalName);
@@ -528,7 +528,7 @@ export async function crawlAndLearnHospitalStyle(
         naver_blog_url: blogUrls.join(','),
         crawled_posts_count: dbPostCount,
         style_profile: analyzedStyle,
-        raw_sample_text: combinedText.slice(0, 10000),
+        raw_sample_text: combinedText.slice(0, 16000),
         last_crawled_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       },
@@ -675,7 +675,7 @@ async function analyzeWritingStyleViaApi(
 그 문체를 재현하는 편집자 역할을 수행한다.
 
 [분석할 텍스트]
-${sampleText.substring(0, 6000)}
+${sampleText.substring(0, 12000)}
 
 ⚠️ 핵심 원칙 — 원문에서 직접 추출해라:
 - goodExamples는 반드시 원문에서 문장을 그대로 복사-붙여넣기해라. 한 글자도 수정하지 마라!
@@ -798,8 +798,7 @@ ${sampleText.substring(0, 6000)}
     body: JSON.stringify({
       task: 'style_learn',
       prompt,
-      systemInstruction: '병원 마케팅 콘텐츠 전문 편집자. 문체·화자·의료 콘텐츠 전략을 정밀 분석. JSON으로만 출력.',
-      temperature: 0.2,
+      temperature: 0.3,
       maxOutputTokens: 4096,
       responseType: 'json',
     }),
@@ -1366,12 +1365,12 @@ export async function crawlAndScoreAllHospitals(
           const joined = allContents
             .map((c, idx) => `[글 #${idx + 1}]\n${c}`)
             .join('\n\n');
-          if (joined.length <= 8000) return joined;
-          const hardCut = joined.slice(0, 8000);
+          if (joined.length <= 16000) return joined;
+          const hardCut = joined.slice(0, 16000);
           const lastDoubleBreak = hardCut.lastIndexOf('\n\n');
-          if (lastDoubleBreak >= 6000) return hardCut.slice(0, lastDoubleBreak);
+          if (lastDoubleBreak >= 13000) return hardCut.slice(0, lastDoubleBreak);
           const lastBreak = hardCut.lastIndexOf('\n');
-          if (lastBreak >= 7000) return hardCut.slice(0, lastBreak);
+          if (lastBreak >= 14500) return hardCut.slice(0, lastBreak);
           return hardCut;
         })();
         analyzedStyle = await analyzeWritingStyleViaApi(combinedText, name);
@@ -1395,7 +1394,7 @@ export async function crawlAndScoreAllHospitals(
         profileData.raw_sample_text = allContents
           .map((c, idx) => `[글 #${idx + 1}]\n${c}`)
           .join('\n\n')
-          .slice(0, 10000);
+          .slice(0, 16000);
       }
       await (supabase.from('hospital_style_profiles') as any).upsert(
         profileData,
