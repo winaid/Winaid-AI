@@ -1101,6 +1101,10 @@ JSON 형식으로 응답해주세요.`;
 
       // 4) 라이브러리 이미지 alt 기반 자동 매칭 (useImageLibrary ON일 때)
       if (useImageLibrary) {
+        // imageCount 초과 마커 제거 (Claude가 지시보다 많이 생성한 경우)
+        blogText = blogText.replace(/\[IMG_(\d+)[^\]]*\]/g, (match, num) => {
+          return Number(num) > imageCount ? '' : match;
+        });
         const imgMarkers = [...blogText.matchAll(/\[IMG_(\d+)\s+alt="([^"]*)"\]/g)];
         if (imgMarkers.length > 0) {
           try {
@@ -1113,27 +1117,32 @@ JSON 형식으로 응답해주세요.`;
               const libraryImages: HospitalImage[] = Array.isArray(data) ? data : (data.images || []);
               const usedIds = new Set<string>();
               let matched = 0;
-              // 한글 매칭용 — topic/disease/keywords/category 에서 단어 추출 (공백/콤마로 split)
-              const blogKoreanWords = [topic, disease, keywords, category]
-                .filter(Boolean)
-                .join(' ')
-                .split(/[\s,、]+/)
-                .map(w => w.trim())
-                .filter(w => w.length >= 2);
+              // 핵심 키워드만 추출 (topic + disease, 길이 2 이상, 최대 3개씩)
+              const topicKeywords = (topic || '').split(/[\s,]+/).filter(w => w.length >= 2).slice(0, 3);
+              const diseaseKeywords = (disease || '').split(/[\s,]+/).filter(w => w.length >= 2);
+              const coreKeywords = [...new Set([...topicKeywords, ...diseaseKeywords])];
               for (const marker of imgMarkers) {
                 const [fullMatch, , altText] = marker;
-                const altWords = altText.toLowerCase().split(/\s+/).filter(w => w.length > 1);
-                // 영문 alt 단어 + 한글 topic/disease/keywords 를 모두 매칭 풀에 포함
-                const matchWords = [...altWords, ...blogKoreanWords];
                 const scored = libraryImages
                   .filter(img => !usedIds.has(img.id))
                   .map(img => {
-                    const imgText = [...(img.tags || []), img.altText || '', img.aiDescription || ''].join(' ').toLowerCase();
-                    const score = matchWords.filter(w => imgText.includes(w.toLowerCase())).length;
-                    return { img, score };
+                    const tags = (img.tags || []).map(t => t.toLowerCase());
+                    // 1차: tags 배열 직접 매칭 (가중치 10) — 가장 정확
+                    const tagScore = coreKeywords.filter(kw =>
+                      tags.some(tag => tag.includes(kw.toLowerCase()) || kw.toLowerCase().includes(tag))
+                    ).length * 10;
+                    // 2차: altText/aiDescription 에 핵심 키워드 포함 (가중치 3)
+                    const descText = [img.altText || '', img.aiDescription || ''].join(' ').toLowerCase();
+                    const descScore = coreKeywords.filter(kw => descText.includes(kw.toLowerCase())).length * 3;
+                    // 3차: 영문 alt 보조 매칭 (가중치 1)
+                    const altWords = altText.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+                    const fullText = [...tags, descText].join(' ');
+                    const altScore = altWords.filter(w => fullText.includes(w)).length;
+                    return { img, score: tagScore + descScore + altScore };
                   })
                   .sort((a, b) => b.score - a.score);
-                if (scored.length > 0 && scored[0].score > 0) {
+                // threshold: score >= 3 (최소 description 매칭 1개 또는 영문 alt 3개 이상)
+                if (scored.length > 0 && scored[0].score >= 3) {
                   const best = scored[0].img;
                   blogText = blogText.replace(
                     fullMatch,
