@@ -1144,7 +1144,7 @@ JSON 형식으로 응답해주세요.`;
 
       // 5) 이미지 없으면 마커 strip 후 바로 표시
       if (aiImageCount === 0 || imagePrompts.length === 0) {
-        blogText = blogText.replace(/\[IMG_\d+\]\n*/g, '');
+        blogText = blogText.replace(/\[IMG_\d+[^\]]*\]\n*/g, '');
         setGeneratedContent(blogText);
         setScores(parsed);
       } else {
