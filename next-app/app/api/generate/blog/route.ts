@@ -69,6 +69,13 @@ export async function POST(request: NextRequest) {
     });
   }
 
+  const url = new URL(request.url);
+  const isStream = url.searchParams.get('stream') === '1';
+
+  if (isStream) {
+    return streamResponse(req, hospitalStyleBlock, userId);
+  }
+
   try {
     const result = await generate2Pass(req, hospitalStyleBlock, userId);
     const detected = filterMedicalLawViolations(result.text);
@@ -206,5 +213,149 @@ async function generate1Pass(
     usage: resp.usage,
     model: resp.model,
     mode: '1pass',
+  };
+}
+
+// ── SSE 스트림 모드 ──
+
+type ProgressSend = (event: string, data: Record<string, unknown>) => void;
+
+function streamResponse(
+  req: GenerationRequest,
+  hospitalStyleBlock: string | null,
+  userId: string | null,
+): Response {
+  const encoder = new TextEncoder();
+  const startTime = Date.now();
+
+  const stream = new ReadableStream({
+    async start(controller) {
+      const send: ProgressSend = (event, data) => {
+        const payload = JSON.stringify({ ...data, elapsedMs: Date.now() - startTime });
+        controller.enqueue(encoder.encode(`event: ${event}\ndata: ${payload}\n\n`));
+      };
+
+      try {
+        const result = await generate2PassWithProgress(req, hospitalStyleBlock, userId, send);
+        const detected = filterMedicalLawViolations(result.text);
+        send('complete', {
+          text: result.text,
+          violations: detected.foundTerms,
+          usage: result.usage,
+          model: result.model,
+          mode: result.mode,
+        });
+      } catch (err) {
+        send('error', { message: ((err as Error).message || 'unknown').slice(0, 200) });
+      } finally {
+        controller.close();
+      }
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache, no-transform',
+      'Connection': 'keep-alive',
+      'X-Accel-Buffering': 'no',
+    },
+  });
+}
+
+async function generate2PassWithProgress(
+  req: GenerationRequest,
+  hospitalStyleBlock: string | null,
+  userId: string | null,
+  send: ProgressSend,
+): Promise<{ text: string; usage: { inputTokens: number; outputTokens: number; costUsd: number }; model: string; mode: '2pass' | '1pass' }> {
+  send('stage', { name: 'outline_start' });
+
+  let outline: BlogOutline | null = null;
+  try {
+    const outlinePrompt = buildOutlinePrompt(req);
+    const outlineResp = await callLLM({
+      task: 'blog_outline',
+      systemBlocks: outlinePrompt.systemBlocks,
+      userPrompt: outlinePrompt.userPrompt,
+      temperature: 0.4,
+      maxOutputTokens: 2048,
+      userId,
+    });
+    outline = parseOutlineJson(outlineResp.text);
+  } catch (err) {
+    console.error('[generate/blog][stream] outline FAILED:', (err as Error).message);
+  }
+
+  send('stage', { name: 'outline_done', success: !!outline });
+
+  if (!outline) {
+    send('stage', { name: 'fallback_1pass' });
+    return generate1Pass(req, hospitalStyleBlock, userId);
+  }
+
+  const totalSections = outline.sections.length;
+  send('stage', { name: 'sections_start', total: totalSections });
+
+  let completedCount = 0;
+  const sectionPromises = outline.sections.map((section, idx) => {
+    const prompt = buildSectionFromOutlinePrompt({
+      section,
+      sectionIndex: idx,
+      outline: outline!,
+      req,
+      hospitalStyleBlock,
+    });
+    return callLLM({
+      task: 'blog_unified',
+      systemBlocks: prompt.systemBlocks,
+      userPrompt: prompt.userPrompt,
+      temperature: 0.8,
+      maxOutputTokens: 4096,
+      userId,
+    })
+      .then(result => {
+        completedCount++;
+        send('stage', { name: 'section_done', index: idx, completed: completedCount, total: totalSections });
+        return { status: 'fulfilled' as const, value: result };
+      })
+      .catch(reason => {
+        completedCount++;
+        send('stage', { name: 'section_failed', index: idx, completed: completedCount, total: totalSections });
+        return { status: 'rejected' as const, reason };
+      });
+  });
+
+  const results = await Promise.all(sectionPromises);
+
+  const htmlParts: string[] = [];
+  let totalInput = 0;
+  let totalOutput = 0;
+  let totalCost = 0;
+  let model = '';
+  let failedCount = 0;
+
+  for (const r of results) {
+    if (r.status === 'fulfilled') {
+      htmlParts.push(r.value.text.trim());
+      totalInput += r.value.usage.inputTokens;
+      totalOutput += r.value.usage.outputTokens;
+      totalCost += r.value.usage.costUsd;
+      if (!model) model = r.value.model;
+    } else {
+      failedCount++;
+    }
+  }
+
+  if (failedCount > results.length / 2) {
+    send('stage', { name: 'fallback_1pass_too_many_failures' });
+    return generate1Pass(req, hospitalStyleBlock, userId);
+  }
+
+  return {
+    text: htmlParts.join('\n\n'),
+    usage: { inputTokens: totalInput, outputTokens: totalOutput, costUsd: totalCost },
+    model: model || 'claude-sonnet-4-6',
+    mode: '2pass',
   };
 }
