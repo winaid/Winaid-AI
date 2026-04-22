@@ -62,6 +62,7 @@ function BlogForm() {
 
   // 이미지 수량 자동 추천
   const imageCountManualRef = useRef(false);
+  const isRestoringSettingsRef = useRef(false);
   const recommendedImageCount = useMemo(() => {
     if (textLength <= 1000) return 4;
     if (textLength <= 1500) return 6;
@@ -74,7 +75,9 @@ function BlogForm() {
     if (!imageCountManualRef.current) setImageCount(recommendedImageCount);
   }, [recommendedImageCount]);
 
-  useEffect(() => { imageCountManualRef.current = false; }, [textLength]);
+  useEffect(() => {
+    if (!isRestoringSettingsRef.current) imageCountManualRef.current = false;
+  }, [textLength]);
 
   const handleImageCountChange = useCallback((count: number) => {
     imageCountManualRef.current = true;
@@ -212,12 +215,16 @@ function BlogForm() {
   const applySettings = useCallback((raw: string) => {
     try {
       const s = JSON.parse(raw);
+      isRestoringSettingsRef.current = true;
       if (s.category !== undefined) setCategory(s.category);
       if (s.hospitalName !== undefined) setHospitalName(s.hospitalName);
       if (s.selectedHospitalAddress !== undefined) setSelectedHospitalAddress(s.selectedHospitalAddress);
       if (s.homepageUrl !== undefined) setHomepageUrl(s.homepageUrl);
       if (s.textLength !== undefined) setTextLength(s.textLength);
-      if (s.imageCount !== undefined) setImageCount(s.imageCount);
+      if (s.imageCount !== undefined) {
+        imageCountManualRef.current = true;
+        setImageCount(s.imageCount);
+      }
       if (s.imageAspectRatio !== undefined) setImageAspectRatio(s.imageAspectRatio);
       if (s.imageStyle !== undefined) setImageStyle(s.imageStyle);
       if (s.useImageLibrary !== undefined) setUseImageLibrary(s.useImageLibrary);
@@ -230,8 +237,13 @@ function BlogForm() {
       if (s.includeFaq !== undefined) setIncludeFaq(s.includeFaq);
       if (s.faqCount !== undefined) setFaqCount(s.faqCount);
       // includeHospitalIntro 항상 true — skip
+      // isRestoringSettingsRef는 다음 렌더(textLength effect) 이후 해제
+      setTimeout(() => { isRestoringSettingsRef.current = false; }, 0);
       return true;
-    } catch { return false; }
+    } catch {
+      isRestoringSettingsRef.current = false;
+      return false;
+    }
   }, []);
 
   const handleLoadSettings = useCallback(() => {
