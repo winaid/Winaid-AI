@@ -388,28 +388,28 @@ async function fetchPostContent(
   const paragraphs: string[] = [];
   let m: RegExpExecArray | null;
 
-  // 1) se-text-paragraph (스마트에디터 3 / ONE)
+  // 1) se-text-paragraph (스마트에디터 3 / ONE) — 빈 단락도 보존 (줄 간격)
   const r1 = /<[^>]*class="[^"]*se-text-paragraph[^"]*"[^>]*>([\s\S]*?)<\/[^>]+>/g;
   while ((m = r1.exec(html)) !== null) {
     const text = cleanHtml(m[1]);
-    if (text.length > 5) paragraphs.push(text);
+    paragraphs.push(text);
   }
 
-  // 2) se-module-text
+  // 2) se-module-text — 빈 단락 보존
   if (paragraphs.length === 0) {
     const r2 = /<div[^>]*class="[^"]*se-module-text[^"]*"[^>]*>([\s\S]*?)<\/div>/g;
     while ((m = r2.exec(html)) !== null) {
       const text = cleanHtml(m[1]);
-      if (text.length > 5) paragraphs.push(text);
+      paragraphs.push(text);
     }
   }
 
-  // 3) se_component_text
+  // 3) se_component_text — 빈 단락 보존
   if (paragraphs.length === 0) {
     const r3 = /<div[^>]*class="[^"]*se_component_text[^"]*"[^>]*>([\s\S]*?)<\/div>/g;
     while ((m = r3.exec(html)) !== null) {
       const text = cleanHtml(m[1]);
-      if (text.length > 5) paragraphs.push(text);
+      paragraphs.push(text);
     }
   }
 
@@ -461,7 +461,8 @@ async function fetchPostContent(
     paragraphs.push(entry.summary);
   }
 
-  const content = paragraphs.join('\n\n');
+  // 빈 단락 보존 후 연속 3+ 빈 줄은 2개로 축소 (과한 공백 방지)
+  const content = paragraphs.join('\n\n').replace(/(\n{2,}\s*){3,}/g, '\n\n\n');
   if (content.length <= 30) {
     return null;
   }
