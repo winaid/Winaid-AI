@@ -41,6 +41,7 @@ export interface AnalyzedStyle {
   };
   representativeParagraphs?: string[];
   openingStyle?: string;
+  tableOfContents?: string;
 }
 
 export interface LearnedWritingStyle {
@@ -213,12 +214,20 @@ ${as_.openingStyle}
 **반드시 이 도입부 구조 전체를 재현하세요**:
 1. 인사 단락 ("안녕하세요,..." 포함 여부 + 줄바꿈 패턴)
 2. 공감/훅 문장 (환자 상황·질문)
-3. 목차 블록 (원본에 있으면 "<목차>" 표기 + 번호 리스트 전체 — 생략 금지)
+3. 목차 블록은 아래 table_of_contents 블록에서 별도 지시
 4. 본문 시작 직전의 전환 문장
 
-원본에 목차가 있으면 생성 블로그에도 반드시 목차 포함.
 줄바꿈·빈 줄 간격까지 원본 구조 그대로. greeting_rules 기본 형식보다 이 블록이 우선합니다.
 </opening_style>`
+    : '';
+
+  const tocBlock = as_.tableOfContents?.trim()
+    ? `<table_of_contents priority="highest">
+${as_.tableOfContents}
+
+**반드시 위 목차 블록을 인사/훅 직후, 첫 소제목(h3) 직전에 원문 그대로 재현하세요.**
+번호 리스트 형식·빈 줄 간격 보존. 생략 절대 금지.
+</table_of_contents>`
     : '';
 
   let referenceBlock = '';
@@ -289,6 +298,7 @@ ${uniqueSentences.map(s => `<sentence>${s}</sentence>`).join('\n')}
 </instruction>
 
 ${openingBlock}
+${tocBlock}
 ${toneBlock}
 ${characterBlock}
 ${dnaBlock}
@@ -675,6 +685,7 @@ export function createLearnedWritingStyle(
         ? (result.representativeParagraphs as unknown[]).filter((x): x is string => typeof x === 'string').slice(0, 3)
         : undefined,
       openingStyle: typeof result.openingStyle === 'string' ? result.openingStyle : undefined,
+      tableOfContents: typeof result.tableOfContents === 'string' ? result.tableOfContents : '',
     },
     stylePrompt: (result.stylePrompt as string) || '',
     createdAt: new Date().toISOString(),
@@ -805,7 +816,8 @@ ${sampleText.substring(0, 20000)}
     "paragraphLengthPattern": "단락 길이 리듬 서술 (예: 짧게 2개 → 길게 1개 → 짧은 마무리)"
   },
   "representativeParagraphs": ["원문에서 그대로 복사한 단락 3개, 줄바꿈(\\n, \\n\\n) 포함, 각 200~500자"],
-  "openingStyle": "**본문 시작 전까지의 도입부 전체**를 원문에서 그대로 복사. 포함 범위: (1) 인사 1줄 (\"안녕하세요, [수식구] [병원명] [직책]입니다.\"), (2) 공감/훅 문장 (계절·증상·질문 언급 1~3줄), (3) 목차 블록 (원문에 있으면 \"<목차>\" 표기 + 번호 리스트 전체 — ⚠️ 절대 생략 금지), (4) 본문 첫 소제목 직전의 전환 문장. 줄바꿈(\\n, \\n\\n) 그대로 보존. 인사가 없으면 훅/목차부터. 원본에 목차 없으면 (3) 생략. 예: \"안녕하세요,\\n\\n[병원명] [직책]입니다.\\n\\n[공감/훅 1~3줄]\\n\\n<목차>\\n\\n1) ...\\n2) ...\\n3) ...\\n\\n[전환 문장]\"",
+  "openingStyle": "**목차 제외한** 도입부(인사 + 공감/훅 + 전환 문장)를 원문에서 그대로 복사. 줄바꿈(\\n, \\n\\n) 그대로 보존. 목차는 tableOfContents 에 분리해서 넣으세요. 예: \"안녕하세요,\\n\\n[병원명] [직책]입니다.\\n\\n[공감/훅 1~3줄]\\n\\n[전환 문장]\"",
+  "tableOfContents": "원본에 '<목차>', '목차', 'INDEX', '목 차' 등으로 표시된 목차 블록이 있으면 번호 리스트 전체를 원문 그대로 복사 (헤더 + 번호 리스트 + 줄바꿈 포함). 없으면 빈 문자열 \"\". 예: \"<목차>\\n\\n1) 임플란트가 정확히 무엇인가요?\\n2) 빠진 치아, 왜 빨리 치료해야 할까요?\\n3) 치료는 어떤 순서로 진행되나요?\\n4) 많이 아프지 않을까요?\\n5) 임플란트 후 관리, 어떻게 해야 오래 쓸 수 있나요?\"",
   "description": "이 말투를 한 줄로 설명 (화자 캐릭터 + 독자 관계 + 설득 구조 포함)",
   "stylePrompt": "AI가 이 말투로 글을 쓸 때 반드시 지켜야 할 핵심 지침 (150-250자, 화자 태도 + 설명 흐름 + 의료 설명 방식 + 금지 패턴)"
 }`;
