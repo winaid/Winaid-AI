@@ -354,6 +354,16 @@ JSON 객체 하나만 출력하세요. JSON 밖의 텍스트는 포함하지 마
 
       const newStyle = createLearnedWritingStyle(result, textInput, styleName);
 
+      // textInput 에서 목차 블록 직접 추출 (Claude 보장 X 대비)
+      const tocRegex = /<목차>[\s\S]*?(?=\n{3,}|\n\s*\n(?![\d①②③④⑤⑥⑦⑧⑨⑩\-\s]))/;
+      const tocMatch = textInput.match(tocRegex);
+      if (tocMatch && tocMatch[0].length > 10) {
+        newStyle.analyzedStyle.tableOfContents = tocMatch[0].trim();
+        console.info(`[style-learn] 목차 정규식 추출 성공 (${tocMatch[0].length}자): ${tocMatch[0].slice(0, 100)}...`);
+      } else {
+        console.info(`[style-learn] 원본에 <목차> 블록 없음 (Claude 결과 유지: ${(newStyle.analyzedStyle.tableOfContents || '').length}자)`);
+      }
+
       clearInterval(rotateTimer);
       setPhase('saving');
       setProgressStep(3);
