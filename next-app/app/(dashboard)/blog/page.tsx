@@ -858,7 +858,10 @@ JSON 형식으로 응답해주세요.`;
     // 예상 시간 계산
     setGenerationStartTime(Date.now());
     let estimated = 25; // 텍스트 생성 (~20초) + 경쟁분석 병렬 (~5초)
-    if (request.imageCount && request.imageCount > 0) estimated += request.imageCount * 45;
+    // "내 이미지 사용" 모드는 AI 생성 스킵이라 시간 제외
+    if (!useImageLibrary && request.imageCount && request.imageCount > 0) {
+      estimated += request.imageCount * 45;
+    }
     setEstimatedTotalSeconds(estimated);
     setBlogSections([]);
     setRegeneratingSection(null);
@@ -1121,7 +1124,8 @@ JSON 형식으로 응답해주세요.`;
 
       // 남은 [IMG_N] 마커만 AI 이미지 생성 대상
       const remainingMarkers = blogText.match(/\[IMG_\d+[^\]]*\]/g) || [];
-      const aiImageCount = remainingMarkers.length;
+      // "내 이미지 사용" 모드: 매칭되지 않은 자리는 AI 생성 대신 비워둠
+      const aiImageCount = useImageLibrary ? 0 : remainingMarkers.length;
 
       // 5) 이미지 없으면 마커 strip 후 바로 표시
       if (aiImageCount === 0 || imagePrompts.length === 0) {
@@ -1368,6 +1372,16 @@ JSON 형식으로 응답해주세요.`;
       }
 
       console.info(`[BLOG] ========== 블로그 생성 완료 (v4) ==========`);
+
+      // 생성 완료 시 결과 영역으로 스크롤 이동
+      setTimeout(() => {
+        const resultSection = document.getElementById('blog-result');
+        if (resultSection) {
+          resultSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      }, 100);
     } catch (err: unknown) {
       const { message, retryable } = classifyError(err);
       console.error(`[BLOG] ❌ 생성 실패: ${message}`, err);
@@ -1727,6 +1741,7 @@ Output ONLY the prompt. No explanation.`;
       />
 
       {/* ── 결과 영역 — BlogResultArea 컴포넌트로 분리 ── */}
+      <div id="blog-result" />
       <BlogResultArea
         isGenerating={isGenerating}
         displayStage={displayStage}
