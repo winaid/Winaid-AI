@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '../../../../lib/supabase';
 import { checkAuth } from '../../../../lib/apiAuth';
+import { resolveImageOwner } from '../../../../lib/serverAuth';
 
 export const maxDuration = 30;
 export const dynamic = 'force-dynamic';
@@ -14,6 +15,8 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: NextRequest) {
   const auth = await checkAuth(request);
   if (auth) return auth;
+
+  const owner = await resolveImageOwner(request);
 
   let body: { imageId?: string; imageUrl?: string };
   try { body = await request.json(); } catch {
@@ -39,7 +42,9 @@ export async function POST(request: NextRequest) {
           tags: result.tags,
           alt_text: result.altText,
           ai_description: result.description,
-        }).eq('id', body.imageId);
+        })
+        .eq('id', body.imageId)
+        .eq('user_id', owner);  // 소유권 검증 — 타인 이미지 업데이트 방지
       }
 
       return NextResponse.json(result);
