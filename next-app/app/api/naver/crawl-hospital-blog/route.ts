@@ -389,9 +389,9 @@ async function fetchPostContent(
   let m: RegExpExecArray | null;
 
   // 1) se-text-paragraph (스마트에디터 3 / ONE) — 빈 단락도 보존 (줄 간격)
-  const r1 = /<[^>]*class="[^"]*se-text-paragraph[^"]*"[^>]*>([\s\S]*?)<\/[^>]+>/g;
+  const r1 = /<(div|p)[^>]*class="[^"]*se-text-paragraph[^"]*"[^>]*>([\s\S]*?)<\/\1>/g;
   while ((m = r1.exec(html)) !== null) {
-    const text = cleanHtml(m[1]);
+    const text = cleanHtml(m[2]);
     paragraphs.push(text);
   }
 
