@@ -203,11 +203,11 @@ function BlogForm() {
   const getSettingsKey = () => selectedTeam ? `winaid_blog_settings_team_${selectedTeam}` : 'winaid_blog_settings';
 
   const handleSaveSettings = useCallback(() => {
-    const s = { category, hospitalName, selectedHospitalAddress, homepageUrl, textLength, imageCount, imageAspectRatio, imageStyle, useImageLibrary, audienceMode, persona, tone, writingStyle, medicalLawMode, includeFaq, faqCount, includeHospitalIntro };
+    const s = { category, hospitalName, selectedHospitalAddress, homepageUrl, textLength, imageCount, imageAspectRatio, imageStyle, useImageLibrary, audienceMode, persona, tone, writingStyle, medicalLawMode, includeFaq, faqCount, includeHospitalIntro, learnedStyleId };
     localStorage.setItem(getSettingsKey(), JSON.stringify(s));
     setSettingsToast('💾 설정 저장됨');
     setTimeout(() => setSettingsToast(''), 1500);
-  }, [category, hospitalName, selectedHospitalAddress, homepageUrl, textLength, imageCount, imageAspectRatio, imageStyle, useImageLibrary, audienceMode, persona, tone, writingStyle, medicalLawMode, includeFaq, faqCount, includeHospitalIntro, selectedTeam]);
+  }, [category, hospitalName, selectedHospitalAddress, homepageUrl, textLength, imageCount, imageAspectRatio, imageStyle, useImageLibrary, audienceMode, persona, tone, writingStyle, medicalLawMode, includeFaq, faqCount, includeHospitalIntro, learnedStyleId, selectedTeam]);
 
   const applySettings = useCallback((raw: string) => {
     try {
@@ -221,6 +221,7 @@ function BlogForm() {
       if (s.imageAspectRatio !== undefined) setImageAspectRatio(s.imageAspectRatio);
       if (s.imageStyle !== undefined) setImageStyle(s.imageStyle);
       if (s.useImageLibrary !== undefined) setUseImageLibrary(s.useImageLibrary);
+      if (s.learnedStyleId !== undefined) setLearnedStyleId(s.learnedStyleId);
       if (s.audienceMode !== undefined) setAudienceMode(s.audienceMode);
       if (s.persona !== undefined) setPersona(s.persona);
       if (s.tone !== undefined) setTone(s.tone);
@@ -239,9 +240,10 @@ function BlogForm() {
     if (applySettings(raw)) { setSettingsToast('📂 설정 불러옴'); setTimeout(() => setSettingsToast(''), 1500); }
   }, [applySettings, selectedTeam]);
 
-  // 페이지 진입 시 자동 불러오기
+  // 페이지 진입 시 자동 불러오기 — 팀별 키 없으면 기본 키로 폴백
   useEffect(() => {
-    const raw = localStorage.getItem(getSettingsKey());
+    const teamKey = selectedTeam ? `winaid_blog_settings_team_${selectedTeam}` : null;
+    const raw = (teamKey && localStorage.getItem(teamKey)) || localStorage.getItem('winaid_blog_settings');
     if (raw) applySettings(raw);
   }, [selectedTeam]); // eslint-disable-line react-hooks/exhaustive-deps
   const [isChatRefining, setIsChatRefining] = useState(false);
