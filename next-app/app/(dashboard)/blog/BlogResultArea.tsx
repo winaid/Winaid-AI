@@ -145,15 +145,26 @@ export default function BlogResultArea({
           {/* 카운트다운 */}
           <p className="text-xs text-blue-400 mb-1">
             {(() => {
-              if (stageInfo && stageInfo.total && stageInfo.completed && stageInfo.completed > 0 && elapsedSeconds > 0) {
-                const avgPerSection = elapsedSeconds / stageInfo.completed;
-                const sectionBased = Math.max(0, Math.round(avgPerSection * (stageInfo.total - stageInfo.completed)));
-                const estBased = Math.max(0, estimatedTotalSeconds - elapsedSeconds);
-                const remaining = Math.round(sectionBased * 0.7 + estBased * 0.3);
-                return remaining > 0 ? `약 ${remaining}초 남음` : '거의 다 됐어요!';
+              // 1) sections 진행률 80% 이상 + elapsed > 10s 일 때만 "거의 다 됐어요!" 허용
+              if (stageInfo && stageInfo.total && stageInfo.completed !== undefined) {
+                const progress = stageInfo.completed / stageInfo.total;
+                if (progress >= 0.8 && elapsedSeconds > 10 && stageInfo.completed > 0) {
+                  const avgPerSection = elapsedSeconds / stageInfo.completed;
+                  const remaining = Math.max(0, Math.round(avgPerSection * (stageInfo.total - stageInfo.completed)));
+                  return remaining > 5 ? `약 ${remaining}초 남음` : '거의 다 됐어요!';
+                }
+                // 섹션 진행 중 (1개 이상 완료): 최소 5초 floor
+                if (stageInfo.completed > 0 && elapsedSeconds > 0) {
+                  const avgPerSection = elapsedSeconds / stageInfo.completed;
+                  const remaining = Math.max(5, Math.round(avgPerSection * (stageInfo.total - stageInfo.completed)));
+                  return `약 ${remaining}초 남음`;
+                }
               }
-              const remaining = Math.max(0, estimatedTotalSeconds - elapsedSeconds);
-              return remaining > 0 ? `약 ${remaining}초 남음` : '거의 다 됐어요!';
+              // 2) 초기 단계 (outline / sections_start) — estimated 기반
+              const remaining = estimatedTotalSeconds - elapsedSeconds;
+              if (remaining > 5) return `약 ${remaining}초 남음`;
+              // estimated 초과해도 실제 진행률 낮으면 거짓 "거의 다" 억제
+              return '조금만 더 기다려주세요...';
             })()}
           </p>
           <p className="text-xs text-slate-400 max-w-xs">

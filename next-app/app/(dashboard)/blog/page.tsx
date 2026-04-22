@@ -879,10 +879,12 @@ JSON 형식으로 응답해주세요.`;
     setSaveStatus(null);
     // 예상 시간 계산
     setGenerationStartTime(Date.now());
-    let estimated = 25; // 텍스트 생성 (~20초) + 경쟁분석 병렬 (~5초)
+    // 텍스트(outline ~15초 + sections 병렬 ~40초) + Opus 검수(~15초) = 60~70초 기본
+    let estimated = 70;
     // "내 이미지 사용" 모드는 AI 생성 스킵이라 시간 제외
     if (!useImageLibrary && request.imageCount && request.imageCount > 0) {
-      estimated += request.imageCount * 45;
+      // AI 이미지 병렬 생성: 병렬이라 imageCount 증가가 작게 반영
+      estimated += Math.min(45 + request.imageCount * 5, 90);
     }
     setEstimatedTotalSeconds(estimated);
     setBlogSections([]);
