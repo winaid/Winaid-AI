@@ -18,6 +18,7 @@ import { parseBlogSections, replaceSectionHtml } from '../../../lib/blogSectionP
 import { stripDoctype } from '../../../lib/htmlUtils';
 import { downloadWord, downloadPDF } from '../../../lib/blogExport';
 import { ImageActionModal, ImageRegenModal } from '../../../components/ImageRegenModal';
+import ImageReplaceModal from '../../../components/blog/ImageReplaceModal';
 import { analyzeHospitalKeywords, loadMoreKeywords, checkKeywordRankings, MAX_KEYWORDS, type KeywordStat, type KeywordRankResult } from '../../../lib/keywordAnalysisService';
 import { analyzeClinicContent, type ClinicContext } from '../../../lib/clinicContextService';
 import { BLOG_STAGES, BLOG_MESSAGE_POOL, MSG_ROTATION_INTERVAL } from './blogConstants';
@@ -188,6 +189,9 @@ function BlogForm() {
   const [imgRegenModalOpen, setImgRegenModalOpen] = useState(false);
   const [selectedImgIndex, setSelectedImgIndex] = useState(0);
   const [selectedImgSrc, setSelectedImgSrc] = useState('');
+  const [replaceModalOpen, setReplaceModalOpen] = useState(false);
+  const [replaceSlotIndex, setReplaceSlotIndex] = useState<number | null>(null);
+  const [replaceCurrentUrl, setReplaceCurrentUrl] = useState<string | undefined>(undefined);
   const [regenPrompt, setRegenPrompt] = useState('');
   const [isRecommendingPrompt, setIsRecommendingPrompt] = useState(false);
   const [scores, setScores] = useState<ScoreBarData | undefined>(undefined);
@@ -1238,9 +1242,15 @@ JSON 형식으로 응답해주세요.`;
       // "내 이미지 사용" 모드: 매칭되지 않은 자리는 AI 생성 대신 비워둠
       const aiImageCount = useImageLibrary ? 0 : remainingMarkers.length;
 
-      // 5) 이미지 없으면 마커 strip 후 바로 표시
+      // 5) 이미지 없으면 (라이브러리 모드: 빈 자리 placeholder / AI 모드: 마커 strip)
       if (aiImageCount === 0 || imagePrompts.length === 0) {
-        blogText = blogText.replace(/\[IMG_\d+[^\]]*\]\n*/g, '');
+        if (useImageLibrary) {
+          blogText = blogText.replace(/\[IMG_(\d+)[^\]]*\]/g, (_m, num) =>
+            `<div class="content-image-wrapper"><div data-img-slot="${num}" style="cursor:pointer;text-align:center;padding:32px;border:2px dashed #cbd5e1;border-radius:12px;color:#64748b;font-size:13px;transition:all 0.2s;">📸 클릭해서 이미지 선택 (${num}번 자리)</div></div>`
+          );
+        } else {
+          blogText = blogText.replace(/\[IMG_\d+[^\]]*\]\n*/g, '');
+        }
         setGeneratedContent(blogText);
         setScores(parsed);
       } else {
@@ -1503,6 +1513,52 @@ JSON 형식으로 응답해주세요.`;
       setDisplayStage(0);
       setStageInfo(null);
     }
+  };
+
+  // ── 이미지 교체 모달 (useImageLibrary 모드 전용) ──
+  const handleResultClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!useImageLibrary) return;
+    const target = e.target as HTMLElement;
+    const img = target.closest('img[data-image-index]') as HTMLImageElement | null;
+    const placeholder = target.closest('[data-img-slot]') as HTMLElement | null;
+
+    let slotIndex: number | null = null;
+    let currentUrl: string | undefined = undefined;
+    if (img) {
+      slotIndex = Number(img.getAttribute('data-image-index'));
+      currentUrl = img.src;
+    } else if (placeholder) {
+      slotIndex = Number(placeholder.getAttribute('data-img-slot'));
+    }
+
+    if (slotIndex !== null && !Number.isNaN(slotIndex)) {
+      setReplaceSlotIndex(slotIndex);
+      setReplaceCurrentUrl(currentUrl);
+      setReplaceModalOpen(true);
+    }
+  };
+
+  const handleImageReplace = (selected: HospitalImage) => {
+    if (replaceSlotIndex === null) return;
+    const idx = replaceSlotIndex;
+    setGeneratedContent((prev) => {
+      if (!prev) return prev;
+      const newImg = `<img src="${selected.publicUrl}" alt="${selected.altText || ''}" data-image-index="${idx}" style="max-width:100%;height:auto;border-radius:12px;" />`;
+
+      const imgRegex = new RegExp(`<img[^>]*data-image-index="${idx}"[^>]*\\/?>`, 'i');
+      if (imgRegex.test(prev)) {
+        return prev.replace(imgRegex, newImg);
+      }
+
+      const phRegex = new RegExp(
+        `<div[^>]*class="content-image-wrapper"[^>]*>\\s*<div[^>]*data-img-slot="${idx}"[^>]*>[\\s\\S]*?<\\/div>\\s*<\\/div>`
+      );
+      if (phRegex.test(prev)) {
+        return prev.replace(phRegex, `<div class="content-image-wrapper">${newImg}</div>`);
+      }
+
+      return prev;
+    });
   };
 
   // ── 인라인 채팅 수정 (결과 화면에서 바로 수정) ──
@@ -1854,6 +1910,7 @@ Output ONLY the prompt. No explanation.`;
 
       {/* ── 결과 영역 — BlogResultArea 컴포넌트로 분리 ── */}
       <div id="blog-result" />
+      <div onClick={handleResultClick}>
       <BlogResultArea
         isGenerating={isGenerating}
         displayStage={displayStage}
@@ -1885,6 +1942,7 @@ Output ONLY the prompt. No explanation.`;
         isChatRefining={isChatRefining}
         onChatRefine={handleChatRefine}
       />
+      </div>
 
       {/* ── 블로그 이미지 액션 모달 (다운로드/재생성 선택) ── */}
       <ImageActionModal
@@ -1909,6 +1967,18 @@ Output ONLY the prompt. No explanation.`;
         onRecommend={handleRecommendPrompt}
         imageHistory={imageHistory[selectedImgIndex] || []}
         onSelectHistoryImage={(url) => { handleSelectHistoryImage(selectedImgIndex, url); setImgRegenModalOpen(false); }}
+      />
+
+      {/* ── 라이브러리 이미지 교체 모달 (내 이미지 사용 모드) ── */}
+      <ImageReplaceModal
+        open={replaceModalOpen}
+        onClose={() => {
+          setReplaceModalOpen(false);
+          setReplaceSlotIndex(null);
+          setReplaceCurrentUrl(undefined);
+        }}
+        onSelect={handleImageReplace}
+        currentImageUrl={replaceCurrentUrl}
       />
     </div>
   );
