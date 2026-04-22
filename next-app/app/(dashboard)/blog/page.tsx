@@ -203,11 +203,11 @@ function BlogForm() {
   const getSettingsKey = () => selectedTeam ? `winaid_blog_settings_team_${selectedTeam}` : 'winaid_blog_settings';
 
   const handleSaveSettings = useCallback(() => {
-    const s = { category, hospitalName, selectedHospitalAddress, homepageUrl, textLength, imageCount, imageAspectRatio, imageStyle, audienceMode, persona, tone, writingStyle, medicalLawMode, includeFaq, faqCount, includeHospitalIntro };
+    const s = { category, hospitalName, selectedHospitalAddress, homepageUrl, textLength, imageCount, imageAspectRatio, imageStyle, useImageLibrary, audienceMode, persona, tone, writingStyle, medicalLawMode, includeFaq, faqCount, includeHospitalIntro };
     localStorage.setItem(getSettingsKey(), JSON.stringify(s));
     setSettingsToast('💾 설정 저장됨');
     setTimeout(() => setSettingsToast(''), 1500);
-  }, [category, hospitalName, selectedHospitalAddress, homepageUrl, textLength, imageCount, imageAspectRatio, imageStyle, audienceMode, persona, tone, writingStyle, medicalLawMode, includeFaq, faqCount, includeHospitalIntro, selectedTeam]);
+  }, [category, hospitalName, selectedHospitalAddress, homepageUrl, textLength, imageCount, imageAspectRatio, imageStyle, useImageLibrary, audienceMode, persona, tone, writingStyle, medicalLawMode, includeFaq, faqCount, includeHospitalIntro, selectedTeam]);
 
   const applySettings = useCallback((raw: string) => {
     try {
@@ -220,6 +220,7 @@ function BlogForm() {
       if (s.imageCount !== undefined) setImageCount(s.imageCount);
       if (s.imageAspectRatio !== undefined) setImageAspectRatio(s.imageAspectRatio);
       if (s.imageStyle !== undefined) setImageStyle(s.imageStyle);
+      if (s.useImageLibrary !== undefined) setUseImageLibrary(s.useImageLibrary);
       if (s.audienceMode !== undefined) setAudienceMode(s.audienceMode);
       if (s.persona !== undefined) setPersona(s.persona);
       if (s.tone !== undefined) setTone(s.tone);
