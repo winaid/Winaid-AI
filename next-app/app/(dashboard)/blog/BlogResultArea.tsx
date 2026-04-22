@@ -83,23 +83,23 @@ export default function BlogResultArea({
     if (stageInfo) {
       const { name, completed, total } = stageInfo;
       if (name === 'outline_start') {
-        displayMsg = '아웃라인 작성 중...';
+        displayMsg = '글 구조를 짜고 있어요...';
         progressPct = 5;
       } else if (name === 'outline_done') {
-        displayMsg = '섹션 작성 준비 중...';
+        displayMsg = '구조 완성! 본문 작성 시작합니다...';
         progressPct = 15;
       } else if (name === 'sections_start') {
-        displayMsg = `섹션 0/${total ?? '?'} 작성 시작...`;
+        displayMsg = '도입부와 본문을 채우고 있어요...';
         progressPct = 20;
       } else if (name === 'section_done' && total) {
         const pct = (completed ?? 0) / total;
-        displayMsg = `섹션 ${completed}/${total} 작성 중...`;
+        displayMsg = `본문 작성 중... (${completed}/${total})`;
         progressPct = 20 + pct * 60;
       } else if (name === 'section_failed' && total) {
-        displayMsg = `섹션 ${completed}/${total} (일부 실패, 계속 진행)`;
+        displayMsg = `본문 작성 중... (${completed}/${total})`;
         progressPct = 20 + ((completed ?? 0) / total) * 60;
       } else if (name === 'fallback_1pass') {
-        displayMsg = '1-pass 모드로 전환 중...';
+        displayMsg = '글을 작성하고 있어요...';
         progressPct = 30;
       } else {
         displayMsg = pool[rotationIdx % pool.length];
@@ -144,10 +144,18 @@ export default function BlogResultArea({
           </p>
           {/* 카운트다운 */}
           <p className="text-xs text-blue-400 mb-1">
-            {`${elapsedSeconds}초 경과`}
-            {stageInfo && stageInfo.total != null && stageInfo.completed != null && (
-              <span className="ml-2 text-blue-500">· {stageInfo.completed}/{stageInfo.total}</span>
-            )}
+            {(() => {
+              if (stageInfo && stageInfo.total && stageInfo.completed && stageInfo.completed > 0 && elapsedSeconds > 0) {
+                const avgPerSection = elapsedSeconds / stageInfo.completed;
+                const remaining = Math.max(0, Math.round(avgPerSection * (stageInfo.total - stageInfo.completed)));
+                return remaining > 0 ? `약 ${remaining}초 남음` : '거의 다 됐어요!';
+              }
+              if (stageInfo?.name === 'outline_start' || stageInfo?.name === 'outline_done') {
+                return '잠시만 기다려주세요...';
+              }
+              const remaining = Math.max(0, estimatedTotalSeconds - elapsedSeconds);
+              return remaining > 0 ? `약 ${remaining}초 남음` : '거의 다 됐어요!';
+            })()}
           </p>
           <p className="text-xs text-slate-400 max-w-xs">
             {stage.hint}
