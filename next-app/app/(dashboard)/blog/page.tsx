@@ -1181,12 +1181,13 @@ JSON 형식으로 응답해주세요.`;
       blogText = blogText.replace(/<p[^>]*>[^<]*(?:☎|전화|Tel)[\s:]*\d{2,4}[\s-]*\d{3,4}[\s-]*\d{3,4}[^<]*<\/p>/gi, '');
       blogText = blogText.replace(/(\n\s*){3,}/g, '\n\n');
 
-      // 4) 라이브러리 이미지 alt 기반 자동 매칭 (useImageLibrary ON일 때)
+      // 4) imageCount 초과 마커 제거 — 모든 모드 공통 (Claude 가 초과 부여한 경우)
+      blogText = blogText.replace(/\[IMG_(\d+)[^\]]*\]/g, (match, num) => {
+        return Number(num) > imageCount ? '' : match;
+      });
+
+      // 4-1) 라이브러리 이미지 alt 기반 자동 매칭 (useImageLibrary ON일 때)
       if (useImageLibrary) {
-        // imageCount 초과 마커 제거 (Claude가 지시보다 많이 생성한 경우)
-        blogText = blogText.replace(/\[IMG_(\d+)[^\]]*\]/g, (match, num) => {
-          return Number(num) > imageCount ? '' : match;
-        });
         const imgMarkers = [...blogText.matchAll(/\[IMG_(\d+)\s+alt="([^"]*)"\]/g)];
         if (imgMarkers.length > 0) {
           try {

@@ -936,7 +936,10 @@ JSON 객체 하나만 출력하세요. JSON 밖의 텍스트는 포함하지 마
 2. section 수: 1500자 이하→3개, ~2500자→4개, ~3500자→5개, 3500자+→6개
 3. charTarget 합 ≈ totalCharTarget (±10%). intro/outro 각 ≈200자
 4. 소제목: 검색형 구어체 10~25자. **키워드 직접 노출 금지** — 질문형·경험형·공감형으로만 작성. SEO 키워드는 본문에만 자연스럽게 포함.
-5. imageIndex: 이미지 배치할 섹션에만 1부터 순서대로. 0장이면 전부 생략
+5. imageIndex: **정확히 image_count 개 섹션에만** 1부터 순서대로 부여.
+   - image_count=3 이면 imageIndex 1,2,3 만 3개 섹션에. 4번째 이상 절대 금지
+   - image_count=0 이면 imageIndex 전부 생략
+   - intro/outro 포함 총 섹션 중 image_count 개만 골라서 배정
 6. summary: 구체적 내용 방향. 막연한 서술 피하세요
 7. intro → sections → outro 자연스러운 논리 순서
 8. variable 블록의 topic_type이 제공되면 해당 유형의 구조 가이드를 반영해 아웃라인 설계
@@ -1359,7 +1362,8 @@ export function buildOutlinePrompt(
     `<task>
 위 정보를 바탕으로 블로그 아웃라인을 JSON으로만 출력하세요.
 - 목표 글자수 ${targetLength}자에 맞춰 section 개수와 각 charTarget 결정
-- 이미지 ${imageCount}장이면 해당 섹션에만 imageIndex를 1부터 순서대로 부여
+- 이미지 **정확히 ${imageCount}장** — imageIndex 는 1부터 ${imageCount}까지만 부여 (초과 절대 금지)
+- ${imageCount}개 섹션 선택 후 imageIndex 1~${imageCount} 할당, 나머지 섹션은 imageIndex 생략
 - 소제목은 검색형 구어체 10~25자. 키워드 직접 노출 금지 (질문형·경험형·공감형). SEO 키워드는 본문에만.
 - intro/outro 각 charTarget ≈ 200자
 - summary에 이 섹션이 다룰 구체적 내용을 1~2문장으로 작성
