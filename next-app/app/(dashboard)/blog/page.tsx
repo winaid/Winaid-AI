@@ -1113,14 +1113,23 @@ JSON 형식으로 응답해주세요.`;
               const libraryImages: HospitalImage[] = Array.isArray(data) ? data : (data.images || []);
               const usedIds = new Set<string>();
               let matched = 0;
+              // 한글 매칭용 — topic/disease/keywords/category 에서 단어 추출 (공백/콤마로 split)
+              const blogKoreanWords = [topic, disease, keywords, category]
+                .filter(Boolean)
+                .join(' ')
+                .split(/[\s,、]+/)
+                .map(w => w.trim())
+                .filter(w => w.length >= 2);
               for (const marker of imgMarkers) {
                 const [fullMatch, , altText] = marker;
                 const altWords = altText.toLowerCase().split(/\s+/).filter(w => w.length > 1);
+                // 영문 alt 단어 + 한글 topic/disease/keywords 를 모두 매칭 풀에 포함
+                const matchWords = [...altWords, ...blogKoreanWords];
                 const scored = libraryImages
                   .filter(img => !usedIds.has(img.id))
                   .map(img => {
                     const imgText = [...(img.tags || []), img.altText || '', img.aiDescription || ''].join(' ').toLowerCase();
-                    const score = altWords.filter(w => imgText.includes(w)).length;
+                    const score = matchWords.filter(w => imgText.includes(w.toLowerCase())).length;
                     return { img, score };
                   })
                   .sort((a, b) => b.score - a.score);
