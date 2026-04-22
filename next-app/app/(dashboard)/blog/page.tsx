@@ -882,6 +882,11 @@ JSON 형식으로 응답해주세요.`;
     setRegeneratingSection(null);
     setSectionProgress('');
 
+    // 렌더 사이클 이후 확실히 최상단 이동 (state 업데이트로 인한 레이아웃 변화 후)
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
     // ── 로그: 요청 시작 ──
     console.info(`[BLOG] ========== 블로그 생성 시작 ==========`);
     console.info(`[BLOG] topic="${request.topic}" disease="${request.disease || '없음'}" imageCount=${request.imageCount} textLength=${request.textLength}`);
