@@ -359,11 +359,13 @@ async function fetchPostData(blogId, logNo) {
           .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCharCode(parseInt(h, 16)))
           .replace(/\s+/g, ' ')
           .trim();
-        if (text.length > 5) paragraphs.push(text);
+        // 빈 단락(<p>&nbsp;</p>)도 빈 문자열로 보존 — 단락 간 빈 줄 간격 유지용
+        paragraphs.push(text);
       }
 
       // se-text-paragraph 없으면 postViewArea fallback
-      let content = paragraphs.join('\n\n');
+      // 연속 3개 이상 빈 단락은 2개로 축소 (과한 공백 방지)
+      let content = paragraphs.join('\n\n').replace(/(\n{2,}\s*){3,}/g, '\n\n\n');
       if (content.length < 100) {
         const areaMatch = html.match(/id="postViewArea"[^>]*>([\s\S]*?)<\/div>/i);
         if (areaMatch) {
