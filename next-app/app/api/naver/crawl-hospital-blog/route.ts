@@ -155,7 +155,7 @@ const cleanHtml = (raw: string) =>
     .replace(/<\/div>\s*/gi, '\n')
     .replace(/<\/li>\s*/gi, '\n')
     .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<[^>]+>/g, ' ')
+    .replace(/<[a-zA-Z/!][^>]*>/g, ' ')
     .replace(/&nbsp;/g, ' ')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
