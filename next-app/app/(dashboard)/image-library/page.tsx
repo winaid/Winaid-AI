@@ -22,6 +22,8 @@ export default function ImageLibraryPage() {
   const [editTags, setEditTags] = useState<string[]>([]);
   const [editAlt, setEditAlt] = useState('');
   const [saving, setSaving] = useState(false);
+  const [retaggingAll, setRetaggingAll] = useState(false);
+  const [retagProgress, setRetagProgress] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const hospitals = useMemo(() =>
@@ -177,6 +179,47 @@ export default function ImageLibraryPage() {
     finally { setSaving(false); }
   };
 
+  const handleRetagAll = async () => {
+    if (images.length === 0) return;
+    if (!confirm(`${images.length}장 전체 재태그를 진행할까요?\nGemini Vision API 를 각 이미지마다 호출하므로 시간이 걸립니다 (약 ${Math.ceil(images.length * 1.5)}초).`)) return;
+
+    setRetaggingAll(true);
+    setRetagProgress(`재태그 중 0/${images.length}...`);
+
+    const CONCURRENCY = 5;
+    let done = 0;
+    const updatedMap = new Map<string, HospitalImage>();
+
+    for (let i = 0; i < images.length; i += CONCURRENCY) {
+      const batch = images.slice(i, i + CONCURRENCY);
+      const results = await Promise.allSettled(
+        batch.map(async (img) => {
+          const res = await fetch('/api/hospital-images/auto-tag', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ imageId: img.id, imageUrl: img.publicUrl }),
+          });
+          if (!res.ok) throw new Error(`${res.status}`);
+          const data = await res.json() as { tags: string[]; altText: string; description: string };
+          return { ...img, tags: data.tags, altText: data.altText, aiDescription: data.description };
+        })
+      );
+      results.forEach((r, idx) => {
+        done++;
+        if (r.status === 'fulfilled') updatedMap.set(r.value.id, r.value);
+        else updatedMap.set(batch[idx].id, batch[idx]); // 실패 → 원본 유지
+      });
+      setRetagProgress(`재태그 중 ${done}/${images.length}...`);
+      if (i + CONCURRENCY < images.length) {
+        await new Promise(r => setTimeout(r, 1000));
+      }
+    }
+
+    setImages(prev => prev.map(img => updatedMap.get(img.id) || img));
+    setRetaggingAll(false);
+    setRetagProgress('');
+  };
+
   const openEdit = (img: HospitalImage) => {
     setEditImage(img);
     setEditTags([...img.tags]);
@@ -202,7 +245,13 @@ export default function ImageLibraryPage() {
         <h1 className="text-lg font-bold text-slate-800">📸 이미지 관리</h1>
         <div className="flex items-center gap-2">
           <span className="text-xs text-slate-400">총 {images.length}장</span>
-          <button onClick={() => fileInputRef.current?.click()} disabled={uploading}
+          {images.length > 0 && (
+            <button onClick={handleRetagAll} disabled={retaggingAll || uploading}
+              className="px-3 py-2 bg-purple-100 text-purple-700 text-xs font-bold rounded-xl hover:bg-purple-200 disabled:opacity-50 transition-all whitespace-nowrap">
+              {retaggingAll ? retagProgress : '🔄 전체 재태그'}
+            </button>
+          )}
+          <button onClick={() => fileInputRef.current?.click()} disabled={uploading || retaggingAll}
             className="px-4 py-2 bg-blue-600 text-white text-xs font-bold rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-all">
             {uploading ? uploadProgress : '+ 이미지 업로드'}
           </button>
