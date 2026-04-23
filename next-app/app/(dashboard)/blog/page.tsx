@@ -1185,11 +1185,15 @@ JSON 형식으로 응답해주세요.`;
 
       // 4) imageCount 초과 마커 제거 — 모든 모드 공통 (Claude 가 초과 부여한 경우)
       const beforeStrip = (blogText.match(/\[IMG_\d+/g) || []).length;
+      console.info(`[BLOG] strip 시작: ${beforeStrip}개 마커, imageCount=${imageCount} (type=${typeof imageCount})`);
       blogText = blogText.replace(/\[IMG_(\d+)[^\]]*\]/g, (match, num) => {
-        return Number(num) > imageCount ? '' : match;
+        const n = parseInt(num, 10);
+        const keep = n <= imageCount;
+        if (!keep) console.info(`[BLOG] strip 제거: [IMG_${num}] (${n} > ${imageCount})`);
+        return keep ? match : '';
       });
       const afterStrip = (blogText.match(/\[IMG_\d+/g) || []).length;
-      console.info(`[BLOG] strip: ${beforeStrip}→${afterStrip} (imageCount=${imageCount})`);
+      console.info(`[BLOG] strip 완료: ${beforeStrip}→${afterStrip}`);
 
       // 4-1) 라이브러리 이미지 alt 기반 자동 매칭 (useImageLibrary ON일 때)
       if (useImageLibrary) {
@@ -1261,6 +1265,21 @@ JSON 형식으로 응답해주세요.`;
           );
         } else {
           blogText = blogText.replace(/\[IMG_\d+[^\]]*\]\n*/g, '');
+        }
+
+        // 목차 강제 삽입: 학습된 tableOfContents 가 있으면 첫 h3 직전에 삽입
+        if (learnedStyleId) {
+          const learnedForToc = getStyleById(learnedStyleId);
+          const toc = learnedForToc?.analyzedStyle?.tableOfContents?.trim();
+          if (toc && toc.length > 10) {
+            const firstH3Idx = blogText.indexOf('<h3');
+            if (firstH3Idx > 0) {
+              const tocLines = toc.split('\n').filter(l => l.trim());
+              const tocHtml = '\n' + tocLines.map(l => `<p>${l}</p>`).join('\n') + '\n\n';
+              blogText = blogText.substring(0, firstH3Idx) + tocHtml + blogText.substring(firstH3Idx);
+              console.info(`[BLOG] 목차 강제 삽입 (${tocLines.length}줄, 첫 h3 직전)`);
+            }
+          }
         }
 
         // 최종 hard cap: <img> + placeholder 총합 imageCount 초과분 제거
