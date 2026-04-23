@@ -154,13 +154,19 @@ div { border: none !important; box-shadow: none !important; border-radius: 0 !im
 
 /** PDF 다운로드 (인쇄 창) — root useDocumentExport.handleDownloadPDF 동일 */
 export function downloadPDF(html: string): void {
-  const printWindow = window.open('', '_blank');
-  if (!printWindow) {
-    alert('팝업이 차단되었습니다. 팝업을 허용해주세요.');
+  const iframe = document.createElement('iframe');
+  iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:none;';
+  document.body.appendChild(iframe);
+
+  const doc = iframe.contentDocument || iframe.contentWindow?.document;
+  if (!doc || !iframe.contentWindow) {
+    document.body.removeChild(iframe);
+    alert('PDF 생성에 실패했습니다.');
     return;
   }
 
-  printWindow.document.write(`<!DOCTYPE html>
+  doc.open();
+  doc.write(`<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>WINAI Blog - PDF</title>
 <style>
 @page { size: A4; margin: 2cm; }
@@ -186,22 +192,30 @@ img { max-width: 100%; height: auto; margin: 25px auto; display: block; border-r
 <div style="text-align:center;padding:12px 0 0;font-size:12px;color:#94a3b8;">
   💡 PDF로 저장하려면 인쇄 대화상자에서 "PDF로 저장"을 선택하세요
 </div>
-<script>
-window.onload = function() {
-  var imgs = document.querySelectorAll('img');
-  var loaded = 0, total = imgs.length;
-  function tryPrint() {
-    setTimeout(function() { window.print(); }, 500);
-  }
+</body></html>`);
+  doc.close();
+
+  const tryPrint = () => {
+    setTimeout(() => {
+      iframe.contentWindow?.print();
+      setTimeout(() => {
+        try { document.body.removeChild(iframe); } catch { /* already removed */ }
+      }, 1000);
+    }, 500);
+  };
+
+  const imgs = doc.querySelectorAll('img');
+  let loaded = 0;
+  const total = imgs.length;
   if (total === 0) { tryPrint(); return; }
-  for (var i = 0; i < imgs.length; i++) {
-    if (imgs[i].complete) { loaded++; }
-    else { imgs[i].onload = imgs[i].onerror = function() { loaded++; if (loaded >= total) tryPrint(); }; }
-  }
+  imgs.forEach(img => {
+    if (img.complete) { loaded++; }
+    else {
+      img.onload = img.onerror = () => {
+        loaded++;
+        if (loaded >= total) tryPrint();
+      };
+    }
+  });
   if (loaded >= total) tryPrint();
-  setTimeout(function() { window.print(); }, 5000);
-};
-window.onafterprint = function() { window.close(); };
-<\/script></body></html>`);
-  printWindow.document.close();
 }
