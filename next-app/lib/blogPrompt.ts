@@ -1457,10 +1457,12 @@ ${nextHeading ? `  <next_heading>${sanitizePromptInput(nextHeading, 100)}</next_
   );
 
   const typeLabel = section.type === 'intro' ? '도입부' : section.type === 'outro' ? '마무리' : `"${section.heading || ''}"`;
+  const charLimit = section.charTarget ?? 300;
   parts.push(
     '',
     `<task>
 target_section의 HTML만 출력하세요. 소제목 heading을 <h2>로 사용하고 아래 2~4개 <p> 문단.
+**글자수 제한: 이 섹션은 ${charLimit}자 이내. 초과 금지.**
 ${section.imageIndex ? `이미지 마커 [IMG_${section.imageIndex}]를 적절한 위치에 포함하세요.` : ''}
 prev_heading과 next_heading이 있으면 문맥이 자연스럽게 이어지도록.
 ${typeLabel} 섹션의 HTML만 출력. 설명/코드펜스/마크다운 금지.
