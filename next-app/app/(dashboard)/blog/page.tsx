@@ -1183,6 +1183,25 @@ JSON 형식으로 응답해주세요.`;
       blogText = blogText.replace(/<p[^>]*>[^<]*(?:☎|전화|Tel)[\s:]*\d{2,4}[\s-]*\d{3,4}[\s-]*\d{3,4}[^<]*<\/p>/gi, '');
       blogText = blogText.replace(/(\n\s*){3,}/g, '\n\n');
 
+      // 3.10) 키워드 반복 제한 후처리: N회 초과분은 짧은 대체어로
+      if (request.keywordDensity && typeof request.keywordDensity === 'number' && request.keywords?.trim()) {
+        const keyword = request.keywords.split(',')[0].trim();
+        if (keyword && keyword.length >= 2) {
+          const maxCount = request.keywordDensity;
+          let kwCount = 0;
+          const words = keyword.split(/\s+/);
+          const shortForm = words.length > 1 ? words[words.length - 1] : '';
+          const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          blogText = blogText.replace(new RegExp(escaped, 'g'), (match) => {
+            kwCount++;
+            return kwCount <= maxCount ? match : (shortForm || match);
+          });
+          if (kwCount > maxCount) {
+            console.info(`[BLOG] 키워드 "${keyword}" 후처리: ${kwCount}회 → ${maxCount}회 (초과 ${kwCount - maxCount}개 → "${shortForm || keyword}")`);
+          }
+        }
+      }
+
       // 4) imageCount 초과 마커 제거 — 모든 모드 공통 (Claude 가 초과 부여한 경우)
       const beforeStrip = (blogText.match(/\[IMG_\d+/g) || []).length;
       console.info(`[BLOG] strip 시작: ${beforeStrip}개 마커, imageCount=${imageCount} (type=${typeof imageCount})`);
