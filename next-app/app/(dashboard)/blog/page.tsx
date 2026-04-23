@@ -1213,6 +1213,15 @@ JSON 형식으로 응답해주세요.`;
         }
       }
 
+      // 3.12) 줄 간격 후처리: 학습 스타일이 airy/mixed 면 </p><p> 사이에 빈 p 삽입
+      if (learnedStyleId) {
+        const learnedSpacing = getStyleById(learnedStyleId)?.analyzedStyle?.paragraphStats?.lineBreakStyle;
+        if (learnedSpacing === 'airy' || learnedSpacing === 'mixed') {
+          blogText = blogText.replace(/<\/p>\s*<p(?!>\s*&nbsp;)/g, '</p>\n<p>&nbsp;</p>\n<p');
+          console.info(`[BLOG] 줄 간격 후처리: ${learnedSpacing} → 빈 p 삽입`);
+        }
+      }
+
       // 4) imageCount 초과 마커 제거 — 모든 모드 공통 (Claude 가 초과 부여한 경우)
       const beforeStrip = (blogText.match(/\[IMG_\d+/g) || []).length;
       console.info(`[BLOG] strip 시작: ${beforeStrip}개 마커, imageCount=${imageCount} (type=${typeof imageCount})`);
