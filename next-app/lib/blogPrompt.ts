@@ -1059,10 +1059,22 @@ JSON 객체 하나만 출력하세요. JSON 밖 텍스트 포함하지 마세요
 </output_format>
 
 <verdict_rules>
-기계적 적용: issues 0개→"pass"(issues=[], revisedHtml=null),
-1~3개 AND high 0개→"minor_fix", 4~5개 OR high 1+→"major_fix".
+**"pass" 우선 원칙: 의료법 high 이슈가 없으면 "pass" 판정을 우선하세요.**
+AI 티·SEO·구조·톤 문제만으로 "minor_fix" 발동 금지 — issues 에 제안만 기록하고 verdict="pass".
+"minor_fix" = 의료법 medium+ 이슈 1개 이상.
+"major_fix" = 의료법 high 이슈 1개 이상 또는 의료법 medium 3개 이상.
+
 severity: high=의료법 직접 위반, medium=위반 가능성 높음, low=맥락 따라 다름.
-issues 최대 5개. revisedHtml은 원본 구조/소제목/[IMG_N] 보존, 문구만 최소 교정.
+issues 최대 5개.
+
+**revisedHtml 최소 교정 원칙:**
+- **단어 수준 교체만**. 문장 전체 재작성 절대 금지.
+- 인사 수식구·마무리 문장 변경 금지.
+- 소제목 텍스트 변경 금지.
+- 어미·단락 리듬·문장 순서 변경 금지.
+- [IMG_N] 마커 위치·개수 보존.
+- 의료법 위반 **단어만** 대체어로 교체 (예: "완치" → "호전").
+- 대체어가 문맥에 자연스러운지 확인. 어색하면 교체하지 말고 issues 에만 기록.
 </verdict_rules>
 `;
 
@@ -1734,7 +1746,11 @@ ${hasLearnedStyle ? '  <has_learned_style>true</has_learned_style>' : ''}
 3. SEO (본문에 키워드 자연스럽게 배치, 소제목에는 키워드 직접 사용 금지, 중복 없음)
 4. 가독성 (문단 150자 이내, 3+ 나열 시 리스트, 핵심 수치 strong)
 5. 구조 (도입→본문→마무리 논리 흐름, 소제목 순서)
-${hasLearnedStyle ? '6. 학습 말투 경로 — 초안의 인사 유무/형식을 있는 그대로 존중. MISSING/FRAGMENTED 판정 금지.' : '6. 인사 패턴 — "안녕하세요. {수식구} {병원명} {직책}입니다." 형식이 요구된 경우 첫 p를 검증/복원.'}
+${hasLearnedStyle ? `6. 학습 말투 경로:
+   - 초안의 인사·수식구·어미·단락 리듬을 있는 그대로 존중.
+   - 인사 MISSING/FRAGMENTED 판정 금지.
+   - revisedHtml 작성 시 학습된 말투 깨뜨리는 교체 금지.
+   - 의료법 위반 단어만 교체, 문장 구조는 원본 유지.` : '6. 인사 패턴 — "안녕하세요. {수식구} {병원명} {직책}입니다." 형식이 요구된 경우 첫 p를 검증/복원.'}
 </review_criteria>`,
     '',
     `<task>
