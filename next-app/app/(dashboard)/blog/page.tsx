@@ -1214,12 +1214,17 @@ JSON 형식으로 응답해주세요.`;
         }
       }
 
-      // 3.12) 줄 간격 후처리: 학습 스타일이 airy/mixed 면 </p><p> 사이에 빈 p 삽입
+      // 3.12) 줄 간격 후처리: airy→매 2번째, mixed→매 3번째 </p><p> 에만 빈 p 삽입
       if (learnedStyleId) {
         const learnedSpacing = getStyleById(learnedStyleId)?.analyzedStyle?.paragraphStats?.lineBreakStyle;
         if (learnedSpacing === 'airy' || learnedSpacing === 'mixed') {
-          blogText = blogText.replace(/<\/p>\s*<p(?!>\s*&nbsp;)/g, '</p>\n<p>&nbsp;</p>\n<p');
-          console.info(`[BLOG] 줄 간격 후처리: ${learnedSpacing} → 빈 p 삽입`);
+          const interval = learnedSpacing === 'airy' ? 2 : 3;
+          let pGapCount = 0;
+          blogText = blogText.replace(/<\/p>\s*<p(?!>\s*&nbsp;)/g, (match) => {
+            pGapCount++;
+            return pGapCount % interval === 0 ? '</p>\n<p>&nbsp;</p>\n<p' : match;
+          });
+          console.info(`[BLOG] 줄 간격 후처리: ${learnedSpacing} interval=${interval} → ${Math.floor(pGapCount / interval)}개 빈 p 삽입 (전체 ${pGapCount}개 중)`);
         }
       }
 
@@ -1312,32 +1317,27 @@ JSON 형식으로 응답해주세요.`;
           blogText = blogText.replace(/\[IMG_\d+[^\]]*\]\n*/g, '');
         }
 
-        // 인사 강제 삽입: openingStyle 있는데 결과에 "안녕하세요" 없으면 제목 직후 삽입
-        if (learnedStyleId) {
-          const learnedForGreeting = getStyleById(learnedStyleId);
-          const openingStyle = learnedForGreeting?.analyzedStyle?.openingStyle?.trim();
-          if (openingStyle && openingStyle.length > 5 && !blogText.includes('안녕하세요')) {
-            const greetingLines = openingStyle.split('\n').filter(l => l.trim());
-            const greetingHtml = greetingLines.map(l => `<p>${l}</p>`).join('\n') + '\n';
-            const titleEnd = blogText.indexOf('</h2>');
-            if (titleEnd > 0) {
-              blogText = blogText.substring(0, titleEnd + 5) + '\n' + greetingHtml + blogText.substring(titleEnd + 5);
-              console.info(`[BLOG] 인사 강제 삽입 (${greetingLines.length}줄)`);
-            }
-          }
-        }
+        // 인사: Claude의 opening_style/greeting_rules 프롬프트에 위임
+        // (강제 삽입 시 원본 인사가 모든 주제 글에 복사되는 치명적 버그)
 
-        // 목차 강제 삽입: 학습된 tableOfContents 가 있으면 첫 h3 직전에 삽입
+        // 목차 자동 생성: 학습 원본에 tableOfContents 있으면 → 생성된 글의 h3 기반으로 구성
+        // (원본 목차 복사 시 임플란트 목차가 턱관절 글에 나오는 치명적 버그 방지)
         if (learnedStyleId) {
           const learnedForToc = getStyleById(learnedStyleId);
-          const toc = learnedForToc?.analyzedStyle?.tableOfContents?.trim();
-          if (toc && toc.length > 10) {
-            const firstH3Idx = blogText.indexOf('<h3');
-            if (firstH3Idx > 0) {
-              const tocLines = toc.split('\n').filter(l => l.trim());
-              const tocHtml = '\n' + tocLines.map(l => `<p>${l}</p>`).join('\n') + '\n\n';
-              blogText = blogText.substring(0, firstH3Idx) + tocHtml + blogText.substring(firstH3Idx);
-              console.info(`[BLOG] 목차 강제 삽입 (${tocLines.length}줄, 첫 h3 직전)`);
+          const hasToc = learnedForToc?.analyzedStyle?.tableOfContents?.trim();
+          if (hasToc && hasToc.length > 10) {
+            const h3Matches = [...blogText.matchAll(/<h3[^>]*>([\s\S]*?)<\/h3>/gi)];
+            if (h3Matches.length >= 3) {
+              const firstH3Idx = blogText.indexOf('<h3');
+              if (firstH3Idx > 0) {
+                const tocItems = h3Matches.map((m, i) => {
+                  const title = m[1].replace(/<[^>]+>/g, '').trim();
+                  return `<p>${i + 1}) ${title}</p>`;
+                });
+                const tocHtml = '\n<p>&nbsp;</p>\n' + tocItems.join('\n') + '\n<p>&nbsp;</p>\n\n';
+                blogText = blogText.substring(0, firstH3Idx) + tocHtml + blogText.substring(firstH3Idx);
+                console.info(`[BLOG] 목차 자동 생성 (${h3Matches.length}개 소제목 기반)`);
+              }
             }
           }
         }
