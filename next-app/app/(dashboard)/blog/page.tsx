@@ -1192,7 +1192,8 @@ JSON 형식으로 응답해주세요.`;
           const words = keyword.split(/\s+/);
           const shortForm = words.length > 1 ? words[words.length - 1] : '';
           const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-          blogText = blogText.replace(new RegExp(escaped, 'g'), (match) => {
+          // 한글 단어 경계: 키워드 뒤에 조사 또는 공백/구두점만 허용 (부분 매칭 방지)
+          blogText = blogText.replace(new RegExp(escaped + '(?=[을를의이가은는에도로와과서 ,.<>()\\n]|$)', 'g'), (match) => {
             kwCount++;
             return kwCount <= maxCount ? match : (shortForm || match);
           });
@@ -1223,16 +1224,17 @@ JSON 형식으로 응답해주세요.`;
       }
 
       // 4) imageCount 초과 마커 제거 — 모든 모드 공통 (Claude 가 초과 부여한 경우)
+      const targetImageCount = request.imageCount ?? imageCount;
       const beforeStrip = (blogText.match(/\[IMG_\d+/g) || []).length;
-      console.info(`[BLOG] strip 시작: ${beforeStrip}개 마커, imageCount=${imageCount} (type=${typeof imageCount})`);
+      console.info(`[BLOG] strip 시작: ${beforeStrip}개 마커, target=${targetImageCount}, state=${imageCount}`);
       blogText = blogText.replace(/\[IMG_(\d+)[^\]]*\]/g, (match, num) => {
         const n = parseInt(num, 10);
-        const keep = n <= imageCount;
-        if (!keep) console.info(`[BLOG] strip 제거: [IMG_${num}] (${n} > ${imageCount})`);
+        const keep = n <= targetImageCount;
+        if (!keep) console.info(`[BLOG] strip 제거: [IMG_${num}] (${n} > ${targetImageCount})`);
         return keep ? match : '';
       });
       const afterStrip = (blogText.match(/\[IMG_\d+/g) || []).length;
-      console.info(`[BLOG] strip 완료: ${beforeStrip}→${afterStrip}`);
+      console.info(`[BLOG] strip 완료: ${beforeStrip}→${afterStrip} (target=${targetImageCount}, state=${imageCount})`);
 
       // 4-1) 라이브러리 이미지 alt 기반 자동 매칭 (useImageLibrary ON일 때)
       if (useImageLibrary) {
@@ -1331,7 +1333,7 @@ JSON 형식으로 응답해주세요.`;
           /(<img[^>]*data-image-index="\d+"[^>]*\/?>|<div[^>]*class="content-image-wrapper"[^>]*>\s*<div[^>]*data-img-slot="\d+"[\s\S]*?<\/div>\s*<\/div>)/g,
           (match) => {
             imgOrSlotCount++;
-            return imgOrSlotCount > imageCount ? '' : match;
+            return imgOrSlotCount > targetImageCount ? '' : match;
           },
         );
         blogText = blogText.replace(/<div[^>]*class="content-image-wrapper"[^>]*>\s*<\/div>/g, '');
