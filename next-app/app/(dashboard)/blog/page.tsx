@@ -1269,7 +1269,11 @@ JSON 형식으로 응답해주세요.`;
                     const altWords = altText.toLowerCase().split(/\s+/).filter(w => w.length > 2);
                     const fullText = [...tags, descText].join(' ');
                     const altScore = altWords.filter(w => fullText.includes(w)).length;
-                    return { img, score: tagScore + descScore + altScore };
+                    // 범용 태그(일반/로고/외관/대기실)만 달린 이미지는 점수 감점 (뉴스 기사 등 부적절 매칭 방지)
+                    const lowPriorityTags = new Set(['일반', '로고', '외관', '대기실']);
+                    const rawScore = tagScore + descScore + altScore;
+                    const onlyLowPriority = tags.length > 0 && tags.every(t => lowPriorityTags.has(t));
+                    return { img, score: onlyLowPriority ? Math.floor(rawScore * 0.3) : rawScore };
                   })
                   .sort((a, b) => b.score - a.score);
                 // threshold: score >= 3 (최소 description 매칭 1개 또는 영문 alt 3개 이상)
