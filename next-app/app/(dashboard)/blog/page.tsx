@@ -1202,6 +1202,17 @@ JSON 형식으로 응답해주세요.`;
         }
       }
 
+      // 3.11) 마무리 인사 삽입 (없으면 기본 문구)
+      if (!blogText.includes('감사합니다') && !blogText.includes('감사드립니다')) {
+        const lastPIdx = blogText.lastIndexOf('</p>');
+        if (lastPIdx > 0) {
+          blogText = blogText.substring(0, lastPIdx + 4)
+            + '\n<p>&nbsp;</p>\n<p>긴 글 읽어주셔서 감사합니다.</p>'
+            + blogText.substring(lastPIdx + 4);
+          console.info('[BLOG] 마무리 인사 자동 삽입');
+        }
+      }
+
       // 4) imageCount 초과 마커 제거 — 모든 모드 공통 (Claude 가 초과 부여한 경우)
       const beforeStrip = (blogText.match(/\[IMG_\d+/g) || []).length;
       console.info(`[BLOG] strip 시작: ${beforeStrip}개 마커, imageCount=${imageCount} (type=${typeof imageCount})`);
