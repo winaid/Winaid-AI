@@ -1179,7 +1179,7 @@ JSON 형식으로 응답해주세요.`;
       }
 
       // 3.9) 병원 운영 정보 자동 삽입 제거 (Claude 가 학습 패턴 따라 생성한 경우)
-      blogText = blogText.replace(/<p[^>]*>[^<]*진료\s*시간[^<]*?(?:평일|오전|오후)[\s\S]{0,500}?<\/p>/gi, '');
+      blogText = blogText.replace(/<p[^>]*>[^<]*진료\s*시간[^<]*?(?:평일|오전|오후)[^<]{0,200}?<\/p>/gi, '');
       blogText = blogText.replace(/<p[^>]*>[^<]*(?:☎|전화|Tel)[\s:]*\d{2,4}[\s-]*\d{3,4}[\s-]*\d{3,4}[^<]*<\/p>/gi, '');
       blogText = blogText.replace(/(\n\s*){3,}/g, '\n\n');
 
