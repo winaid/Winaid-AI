@@ -1327,35 +1327,9 @@ export function buildOutlinePrompt(
   if (topicGuideOutline) {
     systemBlocks.push({ type: 'text', text: topicGuideOutline, cacheable: true, cacheTtl: '5m' });
   }
-  systemBlocks.push({ type: 'text', text: E_E_A_T_GUIDE, cacheable: true, cacheTtl: '1h' });
-  // 아웃라인은 JSON 구조만 — CITATION/MOBILE/AI_SNIPPET/FAQ/IMAGE 불필요
-  const journeyGuideO = JOURNEY_STAGE_GUIDES[inferJourneyStage(classifyTopicType(req.topic, req.disease))];
-  if (journeyGuideO) {
-    systemBlocks.push({ type: 'text', text: journeyGuideO, cacheable: true, cacheTtl: '5m' });
-  }
-
-  const seasonal = getSeasonalContext(req.category || '');
-  if (seasonal) {
-    systemBlocks.push({ type: 'text', text: seasonal, cacheable: true, cacheTtl: '5m' });
-  }
-
-  const learnedStyle = buildLearnedStyleBlock(req, opts.hospitalStyleBlock);
-  if (learnedStyle) {
-    systemBlocks.push({ type: 'text', text: learnedStyle, cacheable: true, cacheTtl: '5m' });
-  }
+  // outline 은 JSON 구조만 출력 — E-E-A-T, journey, seasonal, learnedStyle, reference, kd 불필요
 
   const parts: string[] = [buildUserInputBlock(req)];
-
-  const reference = buildReferenceBlock(req);
-  if (reference) parts.push('', reference);
-  const noRefWarning = buildNoReferenceWarningBlock(req);
-  if (noRefWarning) parts.push('', noRefWarning);
-
-  const clinic = buildClinicContextBlock(req);
-  if (clinic) parts.push('', clinic);
-
-  const kdBlock = buildKeywordDensityBlock(req.keywords, req.keywordDensity, req.textLength || 1500);
-  if (kdBlock) parts.push('', kdBlock);
 
   const targetLength = req.textLength || 1500;
   const imageCount = req.imageCount ?? 0;
