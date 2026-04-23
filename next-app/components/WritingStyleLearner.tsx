@@ -354,14 +354,39 @@ JSON 객체 하나만 출력하세요. JSON 밖의 텍스트는 포함하지 마
 
       const newStyle = createLearnedWritingStyle(result, textInput, styleName);
 
-      // textInput 에서 목차 블록 직접 추출 (Claude 보장 X 대비)
-      const tocRegex = /<목차>[\s\S]*?(?=\n{3,}|\n\s*\n(?![\d①②③④⑤⑥⑦⑧⑨⑩\-\s]))/;
-      const tocMatch = textInput.match(tocRegex);
-      if (tocMatch && tocMatch[0].length > 10) {
-        newStyle.analyzedStyle.tableOfContents = tocMatch[0].trim();
-        console.info(`[style-learn] 목차 정규식 추출 성공 (${tocMatch[0].length}자): ${tocMatch[0].slice(0, 100)}...`);
+      // 목차 추출: <목차> 헤더 찾고 → 빈 줄 건너뛰고 → 마지막 번호 항목까지
+      let extractedTOC = '';
+
+      const tocIdx = textInput.indexOf('<목차>');
+      if (tocIdx !== -1) {
+        const afterToc = textInput.substring(tocIdx);
+        const lines = afterToc.split('\n');
+        let lastNumberedLine = -1;
+        for (let i = 0; i < Math.min(lines.length, 30); i++) {
+          if (/^\s*\d+[\)\.]\s+/.test(lines[i])) {
+            lastNumberedLine = i;
+          }
+        }
+        if (lastNumberedLine > 0) {
+          extractedTOC = lines.slice(0, lastNumberedLine + 1).join('\n').trim();
+        }
+      }
+
+      // <목차> 없으면 도입부 번호 리스트 3개+ 감지
+      if (!extractedTOC) {
+        const introSection = textInput.substring(0, Math.floor(textInput.length * 0.3));
+        const numberedListRegex = /((?:(?:^|\n)\s*\d+[\)\.]\s+[^\n]+\n?){3,})/m;
+        const numMatch = introSection.match(numberedListRegex);
+        if (numMatch && numMatch[0].trim().length > 30) {
+          extractedTOC = numMatch[0].trim();
+        }
+      }
+
+      if (extractedTOC.length > 10) {
+        newStyle.analyzedStyle.tableOfContents = extractedTOC;
+        console.info(`[style-learn] 목차 추출 성공 (${extractedTOC.length}자): ${extractedTOC.slice(0, 100)}...`);
       } else {
-        console.info(`[style-learn] 원본에 <목차> 블록 없음 (Claude 결과 유지: ${(newStyle.analyzedStyle.tableOfContents || '').length}자)`);
+        console.info(`[style-learn] 원본에 목차 블록 없음 (Claude 결과 유지: ${(newStyle.analyzedStyle.tableOfContents || '').length}자)`);
       }
 
       clearInterval(rotateTimer);
