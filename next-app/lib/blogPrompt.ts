@@ -1439,8 +1439,7 @@ ${allHeadings}
 </outline_context>`,
   );
 
-  const kdBlockSection = buildKeywordDensityBlock(req.keywords, req.keywordDensity, req.textLength || 1500);
-  if (kdBlockSection) parts.push('', kdBlockSection);
+  // keywordDensity 블록 제거: section 은 전체 글을 모르므로 "전체 N회" 밀도 지시 무의미 (1-pass 에서만 유지)
 
   // 대상 섹션 상세
   const prevHeading = sectionIndex > 0 ? outline.sections[sectionIndex - 1]?.heading : undefined;
