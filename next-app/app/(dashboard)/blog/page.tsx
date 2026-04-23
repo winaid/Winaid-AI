@@ -1204,7 +1204,7 @@ JSON 형식으로 응답해주세요.`;
       }
 
       // 3.11) 마무리 인사 삽입 (없으면 기본 문구)
-      if (!blogText.includes('감사합니다') && !blogText.includes('감사드립니다')) {
+      if (!/감사합니다|감사드립니다|감사해요|감사하거든요/.test(blogText)) {
         const lastPIdx = blogText.lastIndexOf('</p>');
         if (lastPIdx > 0) {
           blogText = blogText.substring(0, lastPIdx + 4)
