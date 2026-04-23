@@ -144,18 +144,35 @@ async function analyzeImageWithGemini(
     return null;
   }
 
-  // URL 확장자로 mimeType 추정 (다운로드 없이 URL 직접 전달)
-  const ext = imageUrl.split('?')[0].split('.').pop()?.toLowerCase() ?? '';
-  const mimeMap: Record<string, string> = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', gif: 'image/gif' };
-  const mimeType = mimeMap[ext] ?? 'image/jpeg';
+  // 1) 이미지 fetch → base64
+  let base64: string;
+  let mimeType: string;
+  try {
+    const imgRes = await fetch(imageUrl, { signal: AbortSignal.timeout(10_000) });
+    if (!imgRes.ok) {
+      console.warn(`[auto-tag] image fetch ${imgRes.status}`);
+      return null;
+    }
+    mimeType = imgRes.headers.get('content-type') || 'image/jpeg';
+    if (!mimeType.startsWith('image/')) mimeType = 'image/jpeg';
+    const buffer = await imgRes.arrayBuffer();
+    base64 = Buffer.from(buffer).toString('base64');
+    if (base64.length > 26_000_000) {
+      console.warn('[auto-tag] image too large');
+      return null;
+    }
+  } catch (e) {
+    console.error('[auto-tag] image fetch failed:', (e as Error).message);
+    return null;
+  }
 
-  // Gemini Vision 호출 — fileData(URL 직접 전달, base64 변환 없음)
-  const model = 'gemini-2.5-flash-preview-04-17';
+  // 2) Gemini Vision 호출 (multimodal inlineData)
+  const model = 'gemini-3.1-pro-preview';
   const apiBody = {
     contents: [{
       role: 'user',
       parts: [
-        { fileData: { mimeType, fileUri: imageUrl } },
+        { inlineData: { mimeType, data: base64 } },
         { text: '이 이미지를 실제로 보고 분류해주세요.' },
       ],
     }],
@@ -175,7 +192,7 @@ async function analyzeImageWithGemini(
         'x-goog-api-key': apiKey,
       },
       body: JSON.stringify(apiBody),
-      signal: AbortSignal.timeout(25_000),
+      signal: AbortSignal.timeout(18_000),
     });
     if (!resp.ok) {
       const errText = (await resp.text()).slice(0, 300);
