@@ -163,7 +163,7 @@ async function analyzeImageWithGemini(
   }
 
   // 2) Gemini Vision 호출 (multimodal inlineData)
-  const model = 'gemini-3.1-flash-preview';
+  const model = 'gemini-3.1-pro-preview';
   const apiBody = {
     contents: [{
       role: 'user',
