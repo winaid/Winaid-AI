@@ -562,6 +562,8 @@ export const COMMON_WRITING_STYLE = `<common_writing_style>
 - 이런 사실 정보는 시스템이 별도로 관리합니다
 
 <sentence>
+⚠️ learned_style 블록이 있으면 아래 문장 길이 규칙보다 학습된 리듬이 우선합니다.
+
 1. 첫 문장은 두괄식 — 새로운 정보를 전달하세요.
 2. 한 문장 최대 60자 (모바일에서 약 2줄). 초과 시 분리.
 3. 매 문장 끝 어미를 다양하게: ~합니다, ~이에요, ~거든요, ~인데요.
@@ -571,6 +573,8 @@ export const COMMON_WRITING_STYLE = `<common_writing_style>
 </sentence>
 
 <paragraph>
+⚠️ learned_style 또는 opening_style 블록이 있으면 아래 기본 규칙보다 학습된 단락 리듬(paragraph_rhythm)이 우선합니다. 이 블록은 학습 데이터 없을 때의 기본값입니다.
+
 1. 문단당 최대 4문장, 150자 이내 (모바일 5줄 기준).
 2. **증상·주의사항·관리법·치료 단계는 반드시 단락 서술**. 리스트(ul/li) 금지.
    ❌ "증상 — 설명 / 증상 — 설명" 패턴
