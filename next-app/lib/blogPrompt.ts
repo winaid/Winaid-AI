@@ -889,12 +889,9 @@ variable 블록의 greeting_type에 따라:
   "coordinator"  → 첫 p: "안녕하세요. {수식구 15~35자} {병원명} 상담실장입니다."
   "hospital_info" → 1인칭 인사 없이 공감 훅/질문형. 본문 중 3인칭 서술.
   "no_hospital"  → 병원명 언급 없이 공감 훅/질문형.
-수식구는 주제에 맞게 매번 새로 작성하세요.
 
-**수식구 생성 규칙**:
-- opening_style 블록이 있으면 그 안의 수식구를 **원문 그대로** 사용 (주제와 조금 안 맞아도 OK).
-- opening_style 이 없거나 수식구 미포함 시에만 주제 기반 수식구 생성.
-- 억지로 주제 단어를 욱여넣지 마세요. 자연스러움 > 주제 일치.
+**수식구 규칙**: opening_style 블록이 있으면 그 안의 수식구를 원문 그대로 사용.
+opening_style 없을 때만 자연스러운 수식구 생성 (주제 단어 억지 삽입 금지).
 </greeting_rules>
 
 <learned_style_override>
