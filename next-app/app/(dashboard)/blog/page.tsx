@@ -1312,6 +1312,21 @@ JSON 형식으로 응답해주세요.`;
           blogText = blogText.replace(/\[IMG_\d+[^\]]*\]\n*/g, '');
         }
 
+        // 인사 강제 삽입: openingStyle 있는데 결과에 "안녕하세요" 없으면 제목 직후 삽입
+        if (learnedStyleId) {
+          const learnedForGreeting = getStyleById(learnedStyleId);
+          const openingStyle = learnedForGreeting?.analyzedStyle?.openingStyle?.trim();
+          if (openingStyle && openingStyle.length > 5 && !blogText.includes('안녕하세요')) {
+            const greetingLines = openingStyle.split('\n').filter(l => l.trim());
+            const greetingHtml = greetingLines.map(l => `<p>${l}</p>`).join('\n') + '\n';
+            const titleEnd = blogText.indexOf('</h2>');
+            if (titleEnd > 0) {
+              blogText = blogText.substring(0, titleEnd + 5) + '\n' + greetingHtml + blogText.substring(titleEnd + 5);
+              console.info(`[BLOG] 인사 강제 삽입 (${greetingLines.length}줄)`);
+            }
+          }
+        }
+
         // 목차 강제 삽입: 학습된 tableOfContents 가 있으면 첫 h3 직전에 삽입
         if (learnedStyleId) {
           const learnedForToc = getStyleById(learnedStyleId);
