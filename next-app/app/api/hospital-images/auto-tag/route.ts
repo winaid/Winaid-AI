@@ -147,8 +147,9 @@ async function analyzeImageWithGemini(
   // 1) 이미지 fetch → base64
   let base64: string;
   let mimeType: string;
+  const t0 = Date.now();
   try {
-    const imgRes = await fetch(imageUrl, { signal: AbortSignal.timeout(10_000) });
+    const imgRes = await fetch(imageUrl, { signal: AbortSignal.timeout(8_000) });
     if (!imgRes.ok) {
       console.warn(`[auto-tag] image fetch ${imgRes.status}`);
       return null;
@@ -157,6 +158,7 @@ async function analyzeImageWithGemini(
     if (!mimeType.startsWith('image/')) mimeType = 'image/jpeg';
     const buffer = await imgRes.arrayBuffer();
     base64 = Buffer.from(buffer).toString('base64');
+    console.log(`[auto-tag] image fetch ${Date.now() - t0}ms, base64 ${Math.round(base64.length / 1024)}KB`);
     if (base64.length > 26_000_000) {
       console.warn('[auto-tag] image too large');
       return null;
@@ -166,9 +168,8 @@ async function analyzeImageWithGemini(
     return null;
   }
 
-  // 2) Gemini Vision 호출 (multimodal inlineData)
-  const model = 'gemini-3.1-pro-preview';
-  const apiBody = {
+  // 2) Gemini Vision 호출 — Pro 먼저, 타임아웃 시 Flash-Lite 폴백
+  const makeBody = (model: string) => ({
     contents: [{
       role: 'user',
       parts: [
@@ -177,42 +178,42 @@ async function analyzeImageWithGemini(
       ],
     }],
     systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
-    generationConfig: {
-      temperature: 0.2,
-      maxOutputTokens: 500,
-    },
-  };
+    generationConfig: { temperature: 0.2, maxOutputTokens: 300 },
+  });
 
-  try {
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
-    const resp = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': apiKey,
-      },
-      body: JSON.stringify(apiBody),
-      signal: AbortSignal.timeout(18_000),
-    });
-    if (!resp.ok) {
-      const errText = (await resp.text()).slice(0, 300);
-      console.warn(`[auto-tag] gemini ${resp.status}: ${errText}`);
-      return null;
+  for (const [model, timeout] of [
+    ['gemini-3.1-pro-preview', 13_000],
+    ['gemini-3.1-flash-lite-preview', 8_000],
+  ] as [string, number][]) {
+    const t1 = Date.now();
+    try {
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+      const resp = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+        body: JSON.stringify(makeBody(model)),
+        signal: AbortSignal.timeout(timeout),
+      });
+      if (!resp.ok) {
+        const errText = (await resp.text()).slice(0, 300);
+        console.warn(`[auto-tag] ${model} ${resp.status}: ${errText}`);
+        continue;
+      }
+      const data = await resp.json() as {
+        candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+      };
+      const text = (data.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('');
+      const start = text.indexOf('{');
+      const end = text.lastIndexOf('}');
+      if (start < 0 || end <= start) {
+        console.warn(`[auto-tag] ${model} no JSON in output`);
+        continue;
+      }
+      console.log(`[auto-tag] ${model} OK ${Date.now() - t1}ms`);
+      return JSON.parse(text.slice(start, end + 1));
+    } catch (e) {
+      console.warn(`[auto-tag] ${model} failed (${Date.now() - t1}ms): ${(e as Error).message}`);
     }
-    const data = await resp.json() as {
-      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-    };
-    const text = (data.candidates?.[0]?.content?.parts || [])
-      .map(p => p.text || '').join('');
-    const start = text.indexOf('{');
-    const end = text.lastIndexOf('}');
-    if (start < 0 || end <= start) {
-      console.warn('[auto-tag] gemini output no JSON');
-      return null;
-    }
-    return JSON.parse(text.slice(start, end + 1));
-  } catch (e) {
-    console.error('[auto-tag] gemini call failed:', (e as Error).message);
-    return null;
   }
+  return null;
 }
