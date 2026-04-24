@@ -20,6 +20,7 @@ import { stripDoctype } from '../../../lib/htmlUtils';
 import { downloadWord, downloadPDF } from '../../../lib/blogExport';
 import { ImageActionModal, ImageRegenModal } from '../../../components/ImageRegenModal';
 import ImageReplaceModal from '../../../components/blog/ImageReplaceModal';
+import ImageInsertModal from '../../../components/ImageInsertModal';
 import { analyzeHospitalKeywords, loadMoreKeywords, checkKeywordRankings, MAX_KEYWORDS, type KeywordStat, type KeywordRankResult } from '../../../lib/keywordAnalysisService';
 import { analyzeClinicContent, type ClinicContext } from '../../../lib/clinicContextService';
 import { BLOG_STAGES, BLOG_MESSAGE_POOL, MSG_ROTATION_INTERVAL } from './blogConstants';
@@ -193,6 +194,10 @@ function BlogForm() {
   const [replaceModalOpen, setReplaceModalOpen] = useState(false);
   const [replaceSlotIndex, setReplaceSlotIndex] = useState<number | null>(null);
   const [replaceCurrentUrl, setReplaceCurrentUrl] = useState<string | undefined>(undefined);
+  // 단락 hover [+] 이미지 삽입 모달 state
+  const [insertModalOpen, setInsertModalOpen] = useState(false);
+  const [insertAfterElement, setInsertAfterElement] = useState<HTMLElement | null>(null);
+  const [insertHintText, setInsertHintText] = useState('');
   const [regenPrompt, setRegenPrompt] = useState('');
   const [isRecommendingPrompt, setIsRecommendingPrompt] = useState(false);
   const [scores, setScores] = useState<ScoreBarData | undefined>(undefined);
@@ -1828,6 +1833,42 @@ Output ONLY the prompt. No explanation.`;
   }, [generatedContent, selectedImgIndex, isRecommendingPrompt]);
 
   // ── 이미지 히스토리에서 선택 → HTML 교체 ──
+  // 단락 hover [+] 버튼 클릭 — 해당 단락 뒤에 이미지 삽입 모달 오픈
+  const handleRequestImageInsert = useCallback((afterElement: HTMLElement) => {
+    setInsertAfterElement(afterElement);
+    // 단락 텍스트 요약 (모달 AI 탭 기본 프롬프트)
+    const hint = (afterElement.textContent || '').trim().slice(0, 60);
+    setInsertHintText(hint);
+    setInsertModalOpen(true);
+  }, []);
+
+  // 이미지 삽입 실행 — insertAfterElement 기준 DOM 직접 삽입 + state 즉시 동기화
+  const handleInsertImage = useCallback((imageUrl: string, alt: string, prompt?: string) => {
+    if (!insertAfterElement) return;
+    // 현재 최대 data-image-index +1 계산
+    const editor = insertAfterElement.closest('article[contenteditable]') as HTMLElement | null;
+    if (!editor) return;
+    const existingIndices = Array.from(editor.querySelectorAll('[data-image-index]'))
+      .map(el => Number(el.getAttribute('data-image-index')))
+      .filter(n => !Number.isNaN(n));
+    const newIdx = existingIndices.length > 0 ? Math.max(...existingIndices) + 1 : 1;
+    const safeAlt = alt.replace(/"/g, '&quot;');
+    const html = `<div class="content-image-wrapper"><img src="${imageUrl}" alt="${safeAlt}" data-image-index="${newIdx}" style="max-width:100%;border-radius:12px;" /></div>`;
+    insertAfterElement.insertAdjacentHTML('afterend', html);
+    // state 즉시 동기화 (debounce 우회)
+    setGeneratedContent(editor.innerHTML);
+    // AI 생성 이미지면 prompt 저장 (이후 재생성 시 활용)
+    if (prompt) {
+      setSavedImagePrompts(prev => {
+        const next = [...prev];
+        next[newIdx - 1] = prompt;
+        return next;
+      });
+    }
+    setInsertAfterElement(null);
+    console.info(`[BLOG] 이미지 삽입: index=${newIdx} ${prompt ? '(AI 생성)' : '(라이브러리)'}`);
+  }, [insertAfterElement]);
+
   const handleSelectHistoryImage = useCallback((imageIndex: number, url: string) => {
     setGeneratedContent(prev => {
       if (!prev) return prev;
@@ -2119,6 +2160,7 @@ Output ONLY the prompt. No explanation.`;
         isChatRefining={isChatRefining}
         onChatRefine={handleChatRefine}
         onContentChange={setGeneratedContent}
+        onRequestImageInsert={handleRequestImageInsert}
       />
       </div>
 
@@ -2157,6 +2199,17 @@ Output ONLY the prompt. No explanation.`;
         }}
         onSelect={handleImageReplace}
         currentImageUrl={replaceCurrentUrl}
+      />
+
+      {/* ── 단락 hover [+] 버튼 → 이미지 삽입 모달 (라이브러리/AI 생성) ── */}
+      <ImageInsertModal
+        open={insertModalOpen}
+        onClose={() => { setInsertModalOpen(false); setInsertAfterElement(null); }}
+        onInsert={handleInsertImage}
+        category={category || ''}
+        topic={topic}
+        hospitalName={hospitalName}
+        defaultPromptHint={insertHintText}
       />
     </div>
   );

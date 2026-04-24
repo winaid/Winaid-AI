@@ -3,6 +3,7 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import type { BlogSection } from '../lib/types';
 import { sanitizeHtml } from '../lib/sanitize';
+import ImageInsertButton from './ImageInsertButton';
 
 // ── 간이 Markdown → HTML 변환 ──
 
@@ -264,6 +265,8 @@ interface ResultPanelProps {
   regeneratingImage?: number | null;
   /** contentEditable 편집 내용을 부모 state 로 동기화 (debounce 500ms) */
   onContentChange?: (html: string) => void;
+  /** 단락 hover [+] 버튼 클릭 시 호출 — afterElement 기준으로 이미지 삽입 */
+  onRequestImageInsert?: (afterElement: HTMLElement) => void;
 }
 
 export function ResultPanel({
@@ -282,6 +285,7 @@ export function ResultPanel({
   onImageRegenerate,
   regeneratingImage,
   onContentChange,
+  onRequestImageInsert,
 }: ResultPanelProps) {
   const [copyFeedback, setCopyFeedback] = useState(false);
   const [activeTab, setActiveTab] = useState<'preview' | 'html'>('preview');
@@ -659,6 +663,9 @@ export function ResultPanel({
                 }
               }}
             />
+            {onRequestImageInsert && (
+              <ImageInsertButton editorRef={editorRef} onInsert={onRequestImageInsert} />
+            )}
             {/* 이미지 재생성 오버레이는 useEffect로 해당 이미지 위에 표시 */}
           </div>
         )}

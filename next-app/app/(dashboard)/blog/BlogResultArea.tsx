@@ -48,6 +48,8 @@ export interface BlogResultAreaProps {
   onChatRefine?: () => void;
   // contentEditable 편집 → 부모 state 동기화
   onContentChange?: (html: string) => void;
+  // 단락 hover [+] 버튼 클릭 → 이미지 삽입 모달
+  onRequestImageInsert?: (afterElement: HTMLElement) => void;
 }
 
 /** 블로그 결과 영역 — 생성 중 / 에러 / 결과 / 빈 상태 4가지 렌더링 */
@@ -63,6 +65,7 @@ export default function BlogResultArea({
   topic,
   chatInput = '', setChatInput, isChatRefining = false, onChatRefine,
   onContentChange,
+  onRequestImageInsert,
 }: BlogResultAreaProps) {
 
   // ── 카운트다운 타이머 (생성 중에만 동작) ──
@@ -215,6 +218,7 @@ export default function BlogResultArea({
           onImageRegenerate={onImageRegenerate}
           regeneratingImage={regeneratingImage}
           onContentChange={onContentChange}
+          onRequestImageInsert={onRequestImageInsert}
         />
 
         {/* 인라인 수정 채팅 */}
