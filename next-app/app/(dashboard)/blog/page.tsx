@@ -183,6 +183,8 @@ function BlogForm() {
   // ── 생성 상태 ──
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedContent, setGeneratedContent] = useState<string | null>(null);
+  // 드래프트 자동 저장 / 복구
+  const [draftRestore, setDraftRestore] = useState<null | { content: string; topic: string; hospitalName?: string; category?: string; savedAt: number }>(null);
   const [savedImagePrompts, setSavedImagePrompts] = useState<string[]>([]);
   const [regeneratingImage, setRegeneratingImage] = useState<number | null>(null);
   const [imageHistory, setImageHistory] = useState<Record<number, string[]>>({});
@@ -277,6 +279,55 @@ function BlogForm() {
     const raw = (teamKey && localStorage.getItem(teamKey)) || localStorage.getItem('winaid_blog_settings');
     if (raw) applySettings(raw);
   }, [selectedTeam]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── 편집 손실 방지: beforeunload 경고 + 드래프트 자동 저장 + 복구 ──
+  const DRAFT_KEY = 'winaid_blog_draft_v1';
+  const DRAFT_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7일
+
+  // 1) beforeunload — 생성 중이거나 작성된 글이 있을 때
+  useEffect(() => {
+    const hasUnsaved = isGenerating || !!(generatedContent && generatedContent.length > 0);
+    if (!hasUnsaved) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [isGenerating, generatedContent]);
+
+  // 2) 드래프트 자동 저장 (3초 debounce) — 편집된 내용을 localStorage 에 백업
+  useEffect(() => {
+    if (!generatedContent) return;
+    const timer = setTimeout(() => {
+      try {
+        localStorage.setItem(DRAFT_KEY, JSON.stringify({
+          content: generatedContent,
+          topic,
+          hospitalName,
+          category,
+          savedAt: Date.now(),
+        }));
+      } catch { /* quota exceeded 등 무시 */ }
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [generatedContent, topic, hospitalName, category]);
+
+  // 3) 마운트 시 복구 후보 확인 (1회)
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if (!raw) return;
+      const draft = JSON.parse(raw);
+      if (!draft.content || !draft.savedAt) return;
+      if (Date.now() - draft.savedAt > DRAFT_TTL_MS) {
+        localStorage.removeItem(DRAFT_KEY);
+        return;
+      }
+      setDraftRestore(draft);
+    } catch { /* ignore */ }
+  }, []);
+
   const [isChatRefining, setIsChatRefining] = useState(false);
   // 생성 시간 추정
   const [generationStartTime, setGenerationStartTime] = useState<number>(0);
@@ -2170,6 +2221,34 @@ Output ONLY the prompt. No explanation.`;
         onLoadSettings={handleLoadSettings}
         settingsToast={settingsToast}
       />
+
+      {/* ── 드래프트 복구 토스트 (마운트 시 이전 편집 감지) ── */}
+      {draftRestore && !generatedContent && (
+        <div className="mb-4 p-3 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-between gap-3">
+          <div className="text-xs text-blue-700">
+            📝 이전 작성 중이던 글이 있습니다 ({new Date(draftRestore.savedAt).toLocaleString()})
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setGeneratedContent(draftRestore.content);
+                if (draftRestore.topic) setTopic(draftRestore.topic);
+                setDraftRestore(null);
+              }}
+              className="px-3 py-1 rounded-lg bg-blue-500 text-white text-xs font-bold hover:bg-blue-600"
+            >복구</button>
+            <button
+              type="button"
+              onClick={() => {
+                localStorage.removeItem(DRAFT_KEY);
+                setDraftRestore(null);
+              }}
+              className="px-3 py-1 rounded-lg bg-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-300"
+            >삭제</button>
+          </div>
+        </div>
+      )}
 
       {/* ── 결과 영역 — BlogResultArea 컴포넌트로 분리 ── */}
       <div id="blog-result" />
