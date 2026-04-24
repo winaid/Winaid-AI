@@ -1075,7 +1075,15 @@ JSON 형식으로 응답해주세요.`;
                 customImagePrompt: imageStyle === 'custom' ? (customPrompt?.trim() || undefined) : undefined,
               }),
             }).then(r => r.ok ? r.json() : null)
-              .then(d => ({ index, url: (d?.imageDataUrl as string | undefined) || null }))
+              .then(d => {
+                const dataUrl = d?.imageDataUrl as string | undefined;
+                // base64 HTML embed 한도 — Storage 업로드 실패 시 블로그 비대화 방지
+                if (dataUrl && dataUrl.length > 700 * 1024) {
+                  console.warn(`[image] base64 too large, skip embed: ${Math.round(dataUrl.length / 1024)}KB`);
+                  return { index, url: null as string | null };
+                }
+                return { index, url: dataUrl || null };
+              })
               .catch(() => ({ index, url: null as string | null }));
           })
         );
@@ -1474,6 +1482,11 @@ JSON 형식으로 응답해주세요.`;
             const imgData = await imgRes.json() as { imageDataUrl?: string };
             const dataUrl = imgData.imageDataUrl;
             if (!dataUrl) return { index, url: null };
+            // base64 HTML embed 한도 — Storage 업로드 실패 시 폴백 embed 크기 제한
+            if (dataUrl.length > 700 * 1024) {
+              console.warn(`[image] base64 too large, skip embed: ${Math.round(dataUrl.length / 1024)}KB`);
+              return { index, url: null };
+            }
 
             // 6b) base64 → Supabase Storage 업로드
             if (supabase) {
@@ -1942,6 +1955,9 @@ Output ONLY the prompt. No explanation.`;
 
       const imgData = await imgRes.json() as { imageDataUrl?: string };
       if (!imgData.imageDataUrl) throw new Error('이미지 데이터 없음');
+      if (imgData.imageDataUrl.length > 700 * 1024) {
+        console.warn(`[image] base64 too large: ${Math.round(imgData.imageDataUrl.length / 1024)}KB — Storage 업로드 필수`);
+      }
 
       // Supabase Storage 업로드
       if (supabase) {

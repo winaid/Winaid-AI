@@ -33,11 +33,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'file_too_large' }, { status: 400 });
     }
 
+    const buf = Buffer.from(await file.arrayBuffer());
+
+    // 매직 넘버 검증 (실제 이미지 포맷) — 확장자 위조 방어
+    const isPng = buf.length >= 4 && buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4E && buf[3] === 0x47;
+    const isJpeg = buf.length >= 3 && buf[0] === 0xFF && buf[1] === 0xD8 && buf[2] === 0xFF;
+    const isWebP = buf.length >= 12 && buf[8] === 0x57 && buf[9] === 0x45 && buf[10] === 0x42 && buf[11] === 0x50;
+    const isGif = buf.length >= 6 && buf[0] === 0x47 && buf[1] === 0x49 && buf[2] === 0x46;
+    if (!isPng && !isJpeg && !isWebP && !isGif) {
+      return NextResponse.json({ error: 'invalid_image_format' }, { status: 400 });
+    }
+
+    // 최소 크기 하한 (너무 작은 파일은 placeholder·corrupt 가능성)
+    if (buf.length < 5 * 1024) {
+      return NextResponse.json({ error: 'image_too_small' }, { status: 400 });
+    }
+
     const ext = mimeToExt(file.type);
     const storagePath = `${userId}/${crypto.randomUUID()}.${ext}`;
     devLog('[upload] storage path:', storagePath);
-
-    const buf = Buffer.from(await file.arrayBuffer());
     const { error: uploadErr } = await supabase.storage.from(STORAGE_BUCKET).upload(storagePath, buf, {
       contentType: file.type,
       upsert: false,
