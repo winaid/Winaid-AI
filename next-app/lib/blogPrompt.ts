@@ -1346,11 +1346,12 @@ export function buildOutlinePrompt(
   systemBlocks.push({ type: 'text', text: OUTLINE_PERSONA, cacheable: true, cacheTtl: '1h' });
   systemBlocks.push({ type: 'text', text: MEDICAL_LAW_CONSTRAINTS, cacheable: true, cacheTtl: '1h' });
 
+  // static 상수 블록 → 1h 캐시 (프로세스 종료 전까지 불변, 캐시 히트율 ↑)
   if (req.category && CATEGORY_DEPTH_GUIDES[req.category]) {
-    systemBlocks.push({ type: 'text', text: CATEGORY_DEPTH_GUIDES[req.category], cacheable: true, cacheTtl: '5m' });
+    systemBlocks.push({ type: 'text', text: CATEGORY_DEPTH_GUIDES[req.category], cacheable: true, cacheTtl: '1h' });
   }
   if (req.category === '치과' && isProstheticTopic(req.topic, req.disease)) {
-    systemBlocks.push({ type: 'text', text: DENTAL_PROSTHETIC_GUIDE, cacheable: true, cacheTtl: '5m' });
+    systemBlocks.push({ type: 'text', text: DENTAL_PROSTHETIC_GUIDE, cacheable: true, cacheTtl: '1h' });
   }
   const termGuideOutline = TERMINOLOGY_GUIDE[req.category || ''];
   if (termGuideOutline) {
@@ -1358,7 +1359,7 @@ export function buildOutlinePrompt(
   }
   const topicGuideOutline = TOPIC_TYPE_GUIDES[classifyTopicType(req.topic, req.disease)];
   if (topicGuideOutline) {
-    systemBlocks.push({ type: 'text', text: topicGuideOutline, cacheable: true, cacheTtl: '5m' });
+    systemBlocks.push({ type: 'text', text: topicGuideOutline, cacheable: true, cacheTtl: '1h' });
   }
   // outline 은 JSON 구조만 출력 — E-E-A-T, journey, seasonal, learnedStyle, reference, kd 불필요
 
@@ -1412,10 +1413,10 @@ export function buildSectionFromOutlinePrompt(
   // Claude attention 가중치가 후순위 블록에 더 강하므로 learned_style 의 금지어 재현 방지 강화.
 
   if (req.category && CATEGORY_DEPTH_GUIDES[req.category]) {
-    systemBlocks.push({ type: 'text', text: CATEGORY_DEPTH_GUIDES[req.category], cacheable: true, cacheTtl: '5m' });
+    systemBlocks.push({ type: 'text', text: CATEGORY_DEPTH_GUIDES[req.category], cacheable: true, cacheTtl: '1h' });
   }
   if (req.category === '치과' && isProstheticTopic(req.topic, req.disease)) {
-    systemBlocks.push({ type: 'text', text: DENTAL_PROSTHETIC_GUIDE, cacheable: true, cacheTtl: '5m' });
+    systemBlocks.push({ type: 'text', text: DENTAL_PROSTHETIC_GUIDE, cacheable: true, cacheTtl: '1h' });
   }
   const termGuide = TERMINOLOGY_GUIDE[req.category || ''];
   if (termGuide) {
@@ -1423,12 +1424,12 @@ export function buildSectionFromOutlinePrompt(
   }
   const topicGuideSection = TOPIC_TYPE_GUIDES[classifyTopicType(req.topic, req.disease)];
   if (topicGuideSection) {
-    systemBlocks.push({ type: 'text', text: topicGuideSection, cacheable: true, cacheTtl: '5m' });
+    systemBlocks.push({ type: 'text', text: topicGuideSection, cacheable: true, cacheTtl: '1h' });
   }
   // E-E-A-T/CITATION/MOBILE/AI_SNIPPET 제거 — SECTION_PERSONA 항목 5 + COMMON으로 충분
   const journeyGuide = JOURNEY_STAGE_GUIDES[inferJourneyStage(classifyTopicType(req.topic, req.disease))];
   if (journeyGuide) {
-    systemBlocks.push({ type: 'text', text: journeyGuide, cacheable: true, cacheTtl: '5m' });
+    systemBlocks.push({ type: 'text', text: journeyGuide, cacheable: true, cacheTtl: '1h' });
   }
   // FAQ 섹션에만 FAQ_SECTION_GUIDE 주입
   if (section.heading?.includes('자주 묻는 질문')) {
@@ -1559,10 +1560,10 @@ export function buildBlogPromptV3(
   // Claude attention 가중치가 후순위 블록에 더 강하므로 learned_style 의 금지어 재현 방지 강화.
 
   if (req.category && CATEGORY_DEPTH_GUIDES[req.category]) {
-    systemBlocks.push({ type: 'text', text: CATEGORY_DEPTH_GUIDES[req.category], cacheable: true, cacheTtl: '5m' });
+    systemBlocks.push({ type: 'text', text: CATEGORY_DEPTH_GUIDES[req.category], cacheable: true, cacheTtl: '1h' });
   }
   if (req.category === '치과' && isProstheticTopic(req.topic, req.disease)) {
-    systemBlocks.push({ type: 'text', text: DENTAL_PROSTHETIC_GUIDE, cacheable: true, cacheTtl: '5m' });
+    systemBlocks.push({ type: 'text', text: DENTAL_PROSTHETIC_GUIDE, cacheable: true, cacheTtl: '1h' });
   }
   const termGuide = TERMINOLOGY_GUIDE[req.category || ''];
   if (termGuide) {
@@ -1570,19 +1571,19 @@ export function buildBlogPromptV3(
   }
   const topicGuideBlog = TOPIC_TYPE_GUIDES[classifyTopicType(req.topic, req.disease)];
   if (topicGuideBlog) {
-    systemBlocks.push({ type: 'text', text: topicGuideBlog, cacheable: true, cacheTtl: '5m' });
+    systemBlocks.push({ type: 'text', text: topicGuideBlog, cacheable: true, cacheTtl: '1h' });
   }
   systemBlocks.push({ type: 'text', text: E_E_A_T_GUIDE, cacheable: true, cacheTtl: '1h' });
   // CITATION/MOBILE/AI_SNIPPET 제거 — BLOG_PERSONA 안 <e_e_a_t>/<ai_snippet>/<featured_snippet> + COMMON으로 충분
   const journeyGuide = JOURNEY_STAGE_GUIDES[inferJourneyStage(classifyTopicType(req.topic, req.disease))];
   if (journeyGuide) {
-    systemBlocks.push({ type: 'text', text: journeyGuide, cacheable: true, cacheTtl: '5m' });
+    systemBlocks.push({ type: 'text', text: journeyGuide, cacheable: true, cacheTtl: '1h' });
   }
   systemBlocks.push({ type: 'text', text: FAQ_SECTION_GUIDE, cacheable: true, cacheTtl: '1h' });
 
   const seasonal = getSeasonalContext(req.category || '');
   if (seasonal) {
-    systemBlocks.push({ type: 'text', text: seasonal, cacheable: true, cacheTtl: '5m' });
+    systemBlocks.push({ type: 'text', text: seasonal, cacheable: true, cacheTtl: '1h' });
   }
 
   const learnedStyle = buildLearnedStyleBlock(req, opts.hospitalStyleBlock);
@@ -1705,7 +1706,7 @@ export function buildBlogSectionPromptV3(
   systemBlocks.push({ type: 'text', text: MEDICAL_LAW_CONSTRAINTS, cacheable: true, cacheTtl: '1h' });
 
   if (input.category && CATEGORY_DEPTH_GUIDES[input.category]) {
-    systemBlocks.push({ type: 'text', text: CATEGORY_DEPTH_GUIDES[input.category], cacheable: true, cacheTtl: '5m' });
+    systemBlocks.push({ type: 'text', text: CATEGORY_DEPTH_GUIDES[input.category], cacheable: true, cacheTtl: '1h' });
   }
 
   if (input.stylePromptText?.trim()) {
@@ -1775,7 +1776,7 @@ export function buildBlogReviewPrompt(
   systemBlocks.push({ type: 'text', text: MEDICAL_LAW_CONSTRAINTS, cacheable: true, cacheTtl: '1h' });
 
   if (ctx.category && CATEGORY_DEPTH_GUIDES[ctx.category]) {
-    systemBlocks.push({ type: 'text', text: CATEGORY_DEPTH_GUIDES[ctx.category], cacheable: true, cacheTtl: '5m' });
+    systemBlocks.push({ type: 'text', text: CATEGORY_DEPTH_GUIDES[ctx.category], cacheable: true, cacheTtl: '1h' });
   }
 
   const hasLearnedStyle = !!(ctx.stylePromptText?.trim() || ctx.hospitalStyleBlock?.trim());
