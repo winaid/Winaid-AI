@@ -1247,7 +1247,7 @@ JSON 형식으로 응답해주세요.`;
         if (imgMarkers.length > 0) {
           try {
             const { userId: uid } = await getSessionSafe();
-            const qs = new URLSearchParams({ limit: '100' });
+            const qs = new URLSearchParams({ limit: '200' });
             if (uid) qs.set('userId', uid);
             const res = await authFetch(`/api/hospital-images?${qs.toString()}`);
             if (res.ok) {
@@ -1255,41 +1255,50 @@ JSON 형식으로 응답해주세요.`;
               const libraryImages: HospitalImage[] = Array.isArray(data) ? data : (data.images || []);
               const usedIds = new Set<string>();
               let matched = 0;
-              // 핵심 키워드: topic + disease (길이 2 이상, 최대 3개씩)
-              const topicKeywords = (topic || '').split(/[\s,]+/).filter(w => w.length >= 2).slice(0, 3);
+              // 핵심 키워드: topic + disease (길이 2 이상, 전부 사용)
+              const topicKeywords = (topic || '').split(/[\s,]+/).filter(w => w.length >= 2);
               const diseaseKeywords = (disease || '').split(/[\s,]+/).filter(w => w.length >= 2);
               const baseCoreKeywords = [...new Set([...topicKeywords, ...diseaseKeywords])];
+              const lowPriorityTags = new Set(['일반', '로고', '외관', '대기실']);
+
+              const scoreImage = (img: HospitalImage, coreKeywords: string[]) => {
+                const tags = (img.tags || []).map(t => t.toLowerCase());
+                const tagScore = coreKeywords.filter(kw =>
+                  tags.some(tag => tag.includes(kw.toLowerCase()) || kw.toLowerCase().includes(tag))
+                ).length * 10;
+                const descText = [img.altText || '', img.aiDescription || ''].join(' ').toLowerCase();
+                const descScore = coreKeywords.filter(kw => descText.includes(kw.toLowerCase())).length * 3;
+                const altWords = coreKeywords.map(w => w.toLowerCase()).filter(w => w.length > 2);
+                const fullText = [...tags, descText].join(' ');
+                const altScore = altWords.filter(w => fullText.includes(w)).length;
+                const rawScore = tagScore + descScore + altScore;
+                const onlyLowPriority = tags.length > 0 && tags.every(t => lowPriorityTags.has(t));
+                return onlyLowPriority ? Math.floor(rawScore * 0.3) : rawScore;
+              };
+
               for (const marker of imgMarkers) {
                 const [fullMatch, num, altText] = marker;
-                // 마커 alt 텍스트의 한국어 명사(2자 이상)도 키워드로 추가 활용
+                // 마커 alt 텍스트 한국어 명사도 키워드로 추가
                 const altKeywords = altText.split(/[\s,]+/).filter(w => w.length >= 2);
                 const coreKeywords = [...new Set([...baseCoreKeywords, ...altKeywords])];
-                const lowPriorityTags = new Set(['일반', '로고', '외관', '대기실']);
-                const scored = libraryImages
+
+                // 1차: 아직 사용되지 않은 이미지에서 best match
+                let candidates = libraryImages
                   .filter(img => !usedIds.has(img.id))
-                  .map(img => {
-                    const tags = (img.tags || []).map(t => t.toLowerCase());
-                    // 1차: tags 배열 직접 매칭 (가중치 10)
-                    const tagScore = coreKeywords.filter(kw =>
-                      tags.some(tag => tag.includes(kw.toLowerCase()) || kw.toLowerCase().includes(tag))
-                    ).length * 10;
-                    // 2차: altText/aiDescription 에 핵심 키워드 포함 (가중치 3)
-                    const descText = [img.altText || '', img.aiDescription || ''].join(' ').toLowerCase();
-                    const descScore = coreKeywords.filter(kw => descText.includes(kw.toLowerCase())).length * 3;
-                    // 3차: 마커 alt 단어 보조 매칭 (가중치 1)
-                    const altWords = altText.toLowerCase().split(/\s+/).filter(w => w.length > 2);
-                    const fullText = [...tags, descText].join(' ');
-                    const altScore = altWords.filter(w => fullText.includes(w)).length;
-                    const rawScore = tagScore + descScore + altScore;
-                    // 범용 태그만 달린 이미지는 점수 감점 (부적절 매칭 방지)
-                    const onlyLowPriority = tags.length > 0 && tags.every(t => lowPriorityTags.has(t));
-                    return { img, score: onlyLowPriority ? Math.floor(rawScore * 0.3) : rawScore };
-                  })
+                  .map(img => ({ img, score: scoreImage(img, coreKeywords) }))
                   .sort((a, b) => b.score - a.score);
-                // 1순위: score >= 3 (의미 있는 매칭)
-                // 2순위 fallback: score >= 1 (라이브러리에 이미지 있으면 최선의 이미지 삽입)
-                const bestCandidate = scored[0];
-                if (bestCandidate && (bestCandidate.score >= 3 || (bestCandidate.score >= 1 && libraryImages.length > 0))) {
+
+                // 2차: 사용 가능한 이미지가 소진된 경우 전체에서 재사용 허용
+                if (candidates.length === 0 && libraryImages.length > 0) {
+                  candidates = libraryImages
+                    .map(img => ({ img, score: scoreImage(img, coreKeywords) }))
+                    .sort((a, b) => b.score - a.score);
+                  console.info(`[BLOG] IMG_${num}: 이미지 소진 → 재사용 허용`);
+                }
+
+                const bestCandidate = candidates[0];
+                // score >= 3: 의미 있는 매칭 / score >= 1: 라이브러리 있으면 최선의 이미지
+                if (bestCandidate && bestCandidate.score >= 1) {
                   const best = bestCandidate.img;
                   blogText = blogText.replace(
                     fullMatch,
@@ -1297,10 +1306,10 @@ JSON 형식으로 응답해주세요.`;
                   );
                   usedIds.add(best.id);
                   matched++;
-                  console.info(`[BLOG] IMG_${num} 매칭: score=${bestCandidate.score} (${best.tags?.join(',')})`);
+                  console.info(`[BLOG] IMG_${num} 매칭: score=${bestCandidate.score} tags=[${best.tags?.join(',')}]`);
                 }
               }
-              console.info(`[BLOG] 라이브러리 자동 매칭: ${matched}/${imgMarkers.length}장 배치 (나머지는 AI 생성)`);
+              console.info(`[BLOG] 라이브러리 자동 매칭: ${matched}/${imgMarkers.length}장 배치`);
             }
           } catch (err) {
             console.warn('[BLOG] 라이브러리 조회 실패:', (err as Error).message);
