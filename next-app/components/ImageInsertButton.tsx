@@ -18,13 +18,17 @@ interface ImageInsertButtonProps {
 }
 
 const TARGET_SELECTOR = 'p, h2, h3, h4, ul, ol, .content-image-wrapper';
-const HIDE_DELAY_MS = 200;
+const HIDE_DELAY_MS = 400;
+const BUTTON_SIZE = 24;
 
 export default function ImageInsertButton({ editorRef, onInsert }: ImageInsertButtonProps) {
   const [target, setTarget] = useState<HTMLElement | null>(null);
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
   const [mounted, setMounted] = useState(false);
   const hideTimerRef = useRef<number | null>(null);
+  // closure 에서 최신 pos 참조 (handleMouseLeave 에서 사용)
+  const posRef = useRef<{ top: number; left: number } | null>(null);
+  useEffect(() => { posRef.current = pos; }, [pos]);
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -54,11 +58,24 @@ export default function ImageInsertButton({ editorRef, onInsert }: ImageInsertBu
       const r = found.getBoundingClientRect();
       setPos({
         top: r.top + window.scrollY + r.height / 2 - 12,
-        left: r.left + window.scrollX - 34,
+        // -34 → -28: article 과 버튼 사이 공백을 10px → 4px 로 축소 (사라짐 방지)
+        left: r.left + window.scrollX - 28,
       });
     };
 
-    const handleMouseLeave = () => scheduleHide();
+    const handleMouseLeave = (e: MouseEvent) => {
+      // 마우스가 버튼 영역 근처면 숨기지 않음 (버튼으로 이동 중 케이스)
+      const p = posRef.current;
+      if (p) {
+        const buttonLeft = p.left - window.scrollX;
+        const buttonTop = p.top - window.scrollY;
+        const nearButton =
+          e.clientX >= buttonLeft - 8 && e.clientX <= buttonLeft + BUTTON_SIZE + 8 &&
+          e.clientY >= buttonTop - 8 && e.clientY <= buttonTop + BUTTON_SIZE + 8;
+        if (nearButton) return;
+      }
+      scheduleHide();
+    };
 
     editor.addEventListener('mousemove', handleMouseMove);
     editor.addEventListener('mouseleave', handleMouseLeave);
