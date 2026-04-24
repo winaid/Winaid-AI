@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '../../../../lib/supabase';
 import { checkAuth } from '../../../../lib/apiAuth';
+import { resolveImageOwner } from '../../../../lib/serverAuth';
 import { STORAGE_BUCKET } from '../../../../lib/hospitalImageService';
 import type { HospitalImage } from '../../../../lib/hospitalImageService';
 
@@ -14,17 +15,31 @@ export async function DELETE(request: NextRequest, ctx: Ctx) {
   const auth = await checkAuth(request);
   if (auth) return auth;
 
+  const owner = await resolveImageOwner(request);
   const { id } = await ctx.params;
   const { data: row } = await supabase
     .from('hospital_images')
     .select('storage_path')
     .eq('id', id)
+    .eq('user_id', owner)
     .single();
 
-  if (!row) return NextResponse.json({ error: '이미지를 찾을 수 없습니다.' }, { status: 404 });
+  if (!row) {
+    console.warn(`[hospital-images/DELETE] not found or ownership mismatch (id=${id} owner=${owner})`);
+    return NextResponse.json({ error: '이미지를 찾을 수 없습니다.' }, { status: 404 });
+  }
 
   await supabase.storage.from(STORAGE_BUCKET).remove([row.storage_path]);
-  await supabase.from('hospital_images').delete().eq('id', id);
+  const { data: deleted } = await supabase
+    .from('hospital_images')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', owner)
+    .select();
+
+  if (!deleted || deleted.length === 0) {
+    return NextResponse.json({ error: 'ownership_mismatch' }, { status: 403 });
+  }
 
   return NextResponse.json({ success: true });
 }
@@ -35,6 +50,7 @@ export async function PATCH(request: NextRequest, ctx: Ctx) {
   const auth = await checkAuth(request);
   if (auth) return auth;
 
+  const owner = await resolveImageOwner(request);
   const { id } = await ctx.params;
   const body = (await request.json()) as { tags?: string[]; altText?: string };
 
@@ -46,10 +62,15 @@ export async function PATCH(request: NextRequest, ctx: Ctx) {
     .from('hospital_images')
     .update(updates)
     .eq('id', id)
+    .eq('user_id', owner)
     .select()
     .single();
 
-  if (error || !row) return NextResponse.json({ error: '수정 실패' }, { status: error ? 500 : 404 });
+  if (error) return NextResponse.json({ error: '수정 실패' }, { status: 500 });
+  if (!row) {
+    console.warn(`[hospital-images/PATCH] not found or ownership mismatch (id=${id} owner=${owner})`);
+    return NextResponse.json({ error: '이미지를 찾을 수 없습니다.' }, { status: 404 });
+  }
 
   const { data: { publicUrl } } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(row.storage_path);
   const image: HospitalImage = {
