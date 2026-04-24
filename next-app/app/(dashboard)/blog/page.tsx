@@ -1261,6 +1261,11 @@ JSON 형식으로 응답해주세요.`;
         } else {
           console.info(`[BLOG] ✅ 글자수 적정: 목표=${textLength}자, 실제=${charCountNoSpaces}자 (${deviation >= 0 ? '+' : ''}${deviation}자)`);
         }
+        // char_budget 기준 측정 (공백 포함, ±10% 허용)
+        const plainCharCount = blogText.replace(/<[^>]+>/g, '').length;
+        const pct = Math.round((plainCharCount / textLength) * 100);
+        const withinTolerance = pct >= 90 && pct <= 110;
+        console.info(`[BLOG] 글자수 예산: 목표 ${textLength}자, 실제 ${plainCharCount}자 (${pct}%) ${withinTolerance ? '✓' : '⚠️ 범위 밖'}`);
       }
 
       // 3.8) 의료광고법 금지어 자동 대체 + 출력 아티팩트 필터 (lib/medicalLawFilter.ts)
