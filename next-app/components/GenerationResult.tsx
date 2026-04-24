@@ -553,7 +553,7 @@ export function ResultPanel({
               .rp-preview h1:not([class]) { font-size: 32px; font-weight: 900; margin: 30px 0 15px; line-height: 1.4; color: #1a1a1a; }
               .rp-preview h2:not([class]) { font-size: 24px; font-weight: 700; margin: 25px 0 12px; line-height: 1.35; color: #1a1a1a; }
               .rp-preview h3:not([class]) { font-size: 19px; font-weight: bold; margin: 30px 0 15px 0; padding: 12px 0 12px 16px; border-left: 4px solid #787fff; color: #1e40af; line-height: 1.5; }
-              .rp-preview p:not([class]) { font-size: 17px; color: #333; margin-bottom: 25px; line-height: 1.85; }
+              .rp-preview p:not([class]) { font-size: 17px; color: #333; margin-bottom: 8px; line-height: 1.85; }
 
               /* ── content-image-wrapper ── */
               .rp-preview .content-image-wrapper { margin: 30px 0; text-align: center; }

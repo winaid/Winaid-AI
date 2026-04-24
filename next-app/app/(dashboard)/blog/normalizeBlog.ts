@@ -87,8 +87,8 @@ export function normalizeBlogStructure(html: string, topicFallback: string): { h
     .replace(/[\u{1F000}-\u{1F02F}]/gu, '');
 
   // 6) 빈 p 태그 남용 방지 — 학습 말투 경로에서 단락 간 빈 줄 재현용 1개는 보존.
-  //    연속 2개 이상만 1개로 축소.
-  out = out.replace(/(?:<p>\s*<\/p>\s*){2,}/g, '<p></p>');
+  //    <p></p> 와 <p>&nbsp;</p> 모두 처리. 연속 2개 이상만 1개로 축소 (nbsp 형태로 통일).
+  out = out.replace(/(?:<p>(?:&nbsp;|\s)*<\/p>\s*){2,}/g, '<p>&nbsp;</p>\n');
 
   // 7) h3 개수 확인 — 최소 5개 보장
   const h3Matches = out.match(/<h3[^>]*>[\s\S]*?<\/h3>/gi) || [];
