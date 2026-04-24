@@ -1124,6 +1124,8 @@ function buildKeywordDensityBlock(
   const primary = keywords.split(',')[0].trim();
   if (!primary) return '';
 
+  const isCompound = !/\s/.test(primary);
+
   let instruction: string;
   if (density === 'auto' || density === undefined) {
     const auto = Math.max(3, Math.min(7, Math.round(textLength / 500)));
@@ -1132,7 +1134,11 @@ function buildKeywordDensityBlock(
     instruction = `본문 전체에서 정확히 **${density}회** 사용. 같은 문단에 연속 금지 (최소 2문장 간격).`;
   }
 
-  return `<keyword_density priority="high">
+  const exactFormBlock = isCompound
+    ? `\n  <exact_form_required>true</exact_form_required>`
+    : '';
+
+  return `<keyword_density priority="high">${exactFormBlock}
   <primary>${primary}</primary>
   <repetitions>${density ?? 'auto'}</repetitions>
   <instruction>
@@ -1140,7 +1146,8 @@ function buildKeywordDensityBlock(
   - 자연스러운 문장에 녹여서 사용
   - 같은 문단 연속 등장 금지
   - 소제목(h3) 에는 직접 노출 금지 (별도 규칙)
-  - 블로그 제목/메인 제목엔 포함 OK
+  - 블로그 제목/메인 제목엔 포함 OK${isCompound ? `
+  - **"${primary}" 는 반드시 이 형태 그대로 붙여서 사용. 절대 띄어쓰지 말 것. 띄어 쓰면 SEO 키워드 매칭이 깨집니다.**` : ''}
   </instruction>
 </keyword_density>`;
 }

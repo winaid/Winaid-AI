@@ -1183,22 +1183,37 @@ JSON 형식으로 응답해주세요.`;
       blogText = blogText.replace(/<p[^>]*>[^<]*(?:☎|전화|Tel)[\s:]*\d{2,4}[\s-]*\d{3,4}[\s-]*\d{3,4}[^<]*<\/p>/gi, '');
       blogText = blogText.replace(/(\n\s*){3,}/g, '\n\n');
 
-      // 3.10) 키워드 반복 제한 후처리: N회 초과분은 짧은 대체어로
+      // 3.10) 키워드 반복 제한 후처리: 띄어쓰기 변형 normalize + N회 초과분 대체
       if (request.keywordDensity && typeof request.keywordDensity === 'number' && request.keywords?.trim()) {
         const keyword = request.keywords.split(',')[0].trim();
         if (keyword && keyword.length >= 2) {
           const maxCount = request.keywordDensity;
           let kwCount = 0;
+          let normalizedCount = 0;
           const words = keyword.split(/\s+/);
           const shortForm = words.length > 1 ? words[words.length - 1] : '';
-          const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-          // 한글 단어 경계: 키워드 뒤에 조사 또는 공백/구두점만 허용 (부분 매칭 방지)
-          blogText = blogText.replace(new RegExp(escaped + '(?=[을를의이가은는에도로와과서 ,.<>()\\n]|$)', 'g'), (match) => {
-            kwCount++;
-            return kwCount <= maxCount ? match : (shortForm || match);
-          });
+          const isCompound = !/\s/.test(keyword);
+          // 합성어: 글자 사이 \s* 허용 ("충남임플란트" → /충\s*남\s*임\s*플\s*란\s*트/)
+          // 다어절: 단어 사이 \s+ 허용 ("서울 임플란트" → /서울\s+임플란트/)
+          const pattern = isCompound
+            ? keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').split('').join('\\s*')
+            : words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('\\s+');
+          blogText = blogText.replace(
+            new RegExp(pattern + '(?=[을를의이가은는에도로와과서 ,.<>()\\n]|$)', 'g'),
+            (match) => {
+              kwCount++;
+              if (match !== keyword) normalizedCount++;
+              return kwCount <= maxCount ? keyword : (shortForm || keyword);
+            }
+          );
+          if (normalizedCount > 0) {
+            console.info(`[BLOG] 키워드 normalize: ${normalizedCount}건 (띄어쓰기 변형 → "${keyword}")`);
+          }
           if (kwCount > maxCount) {
             console.info(`[BLOG] 키워드 "${keyword}" 후처리: ${kwCount}회 → ${maxCount}회 (초과 ${kwCount - maxCount}개 → "${shortForm || keyword}")`);
+          }
+          if (kwCount < maxCount) {
+            console.warn(`[BLOG] 키워드 부족: ${kwCount}/${maxCount}회 (목표 미달)`);
           }
         }
       }
@@ -1297,7 +1312,7 @@ JSON 형식으로 응답해주세요.`;
                 }
 
                 const bestCandidate = candidates[0];
-                // score >= 3: 의미 있는 매칭 / score >= 1: 라이브러리 있으면 최선의 이미지
+                // score >= 1: 라이브러리에 이미지가 있으면 최선의 매칭을 항상 삽입
                 if (bestCandidate && bestCandidate.score >= 1) {
                   const best = bestCandidate.img;
                   blogText = blogText.replace(
