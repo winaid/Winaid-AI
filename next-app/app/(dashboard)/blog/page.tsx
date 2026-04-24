@@ -1969,6 +1969,53 @@ Output ONLY the prompt. No explanation.`;
     console.info(`[BLOG] 이미지 ${insertMode === 'replace' ? '교체' : '삽입'}: index=${newIdx} ${prompt ? '(AI 생성)' : '(라이브러리)'}`);
   }, [insertTargetElement, insertMode]);
 
+  // ImageInsertModal AI 탭 프롬프트 추천 — 단락 텍스트 + 전체 블로그 컨텍스트 기반
+  const handleInsertModalRecommend = useCallback(async (paragraphHint: string): Promise<string> => {
+    let bodyText = '';
+    if (insertTargetElement) {
+      const editor = insertTargetElement.closest('article[contenteditable]') as HTMLElement | null;
+      if (editor) bodyText = editor.innerText.slice(0, 2000);
+    }
+    if (!bodyText && generatedContent) {
+      bodyText = generatedContent.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 2000);
+    }
+
+    const imgPromptText = `You are a medical blog image prompt specialist.
+Write ONE English image prompt for an image to be inserted in the Korean hospital blog below.
+
+[PARAGRAPH HINT - where the image will be placed]
+${paragraphHint}
+
+[RULES]
+- Write in English. Minimum 40 words.
+- Include: location (where), people (who, Korean, expression), action (doing what), props (surrounding objects), atmosphere (lighting, color)
+- End with: "no text, no watermark, no logo"
+- Camera angle: specify eye-level, slightly elevated, or over-the-shoulder
+- No direct eye contact with camera
+- No text/labels/signage in the image
+- Korean medical clinic setting: clean white walls, modern minimalist, warm lighting
+
+[BLOG CONTENT]
+${bodyText}
+
+Output ONLY the prompt. No explanation.`;
+
+    const res = await fetch('/api/llm', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        task: 'blog_image_prompt',
+        prompt: imgPromptText,
+        systemInstruction: 'Medical blog image prompt specialist. Output only the prompt.',
+        temperature: 0.7,
+        maxOutputTokens: 500,
+      }),
+    });
+    if (!res.ok) throw new Error(`LLM ${res.status}`);
+    const data = await res.json() as { text?: string };
+    return (data.text || '').trim();
+  }, [insertTargetElement, generatedContent]);
+
   const handleSelectHistoryImage = useCallback((imageIndex: number, url: string) => {
     setGeneratedContent(prev => {
       if (!prev) return prev;
@@ -2341,6 +2388,7 @@ Output ONLY the prompt. No explanation.`;
         topic={topic}
         hospitalName={hospitalName}
         defaultPromptHint={insertHintText}
+        onRecommendPrompt={handleInsertModalRecommend}
       />
     </div>
   );

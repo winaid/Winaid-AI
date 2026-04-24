@@ -19,13 +19,15 @@ interface ImageInsertModalProps {
   topic: string;
   hospitalName?: string;
   defaultPromptHint?: string;
+  /** AI 탭 프롬프트 추천 (LLM 호출) — 없으면 버튼 숨김 */
+  onRecommendPrompt?: (paragraphHint: string) => Promise<string>;
 }
 
 type Tab = 'library' | 'ai';
 type ImageStyle = 'photo' | 'illustration' | 'medical';
 
 export default function ImageInsertModal({
-  open, onClose, onInsert, category, topic, hospitalName, defaultPromptHint,
+  open, onClose, onInsert, category, topic, hospitalName, defaultPromptHint, onRecommendPrompt,
 }: ImageInsertModalProps) {
   const [tab, setTab] = useState<Tab>('library');
   // 라이브러리 state
@@ -36,6 +38,7 @@ export default function ImageInsertModal({
   const [prompt, setPrompt] = useState('');
   const [style, setStyle] = useState<ImageStyle>('photo');
   const [generating, setGenerating] = useState(false);
+  const [recommending, setRecommending] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
 
   // 모달 열릴 때 기본 프롬프트 세팅 + 이미지 로드
@@ -115,6 +118,21 @@ export default function ImageInsertModal({
     }
   }, [prompt, style, category, hospitalName, onInsert, onClose]);
 
+  const handleRecommend = useCallback(async () => {
+    if (!onRecommendPrompt || recommending) return;
+    setRecommending(true);
+    setAiError(null);
+    try {
+      const hint = prompt.trim() || defaultPromptHint?.trim() || topic.trim();
+      const recommended = await onRecommendPrompt(hint);
+      if (recommended) setPrompt(recommended);
+    } catch (err) {
+      setAiError('추천 실패: ' + ((err as Error).message || 'unknown'));
+    } finally {
+      setRecommending(false);
+    }
+  }, [onRecommendPrompt, prompt, defaultPromptHint, topic, recommending]);
+
   if (!open) return null;
 
   const filteredImages = tagFilter === '전체'
@@ -185,12 +203,22 @@ export default function ImageInsertModal({
           ) : (
             <div className="p-6 space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">프롬프트</label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-bold text-slate-700">프롬프트</label>
+                  {onRecommendPrompt && (
+                    <button type="button" onClick={handleRecommend} disabled={recommending}
+                      className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-violet-100 text-violet-600 hover:bg-violet-200 disabled:opacity-50 transition-colors flex items-center gap-1">
+                      {recommending ? (
+                        <><span className="inline-block w-3 h-3 border-2 border-violet-300 border-t-violet-600 rounded-full animate-spin" /> 추천 중...</>
+                      ) : <>✨ 추천받기</>}
+                    </button>
+                  )}
+                </div>
                 <textarea value={prompt} onChange={e => setPrompt(e.target.value)}
-                  rows={3} maxLength={200}
+                  rows={3} maxLength={500}
                   className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                   placeholder="이미지 설명 (예: 치과 의료진이 환자에게 설명하는 장면)" />
-                <div className="text-[11px] text-slate-400 mt-1">{prompt.length}/200자 · 한국어 OK</div>
+                <div className="text-[11px] text-slate-400 mt-1">{prompt.length}/500자 · 한국어/영문 OK</div>
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5">스타일</label>
