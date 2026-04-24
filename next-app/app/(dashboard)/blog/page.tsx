@@ -5,7 +5,7 @@ import { useState, useEffect, useMemo, useRef, useCallback, Suspense } from 'rea
 import { useSearchParams } from 'next/navigation';
 import { CATEGORIES, PERSONAS, TONES } from '../../../lib/constants';
 import { TEAM_DATA } from '../../../lib/teamData';
-import { ContentCategory, type GenerationRequest, type AudienceMode, type ImageStyle, type WritingStyle, type CssTheme, type TrendingItem, type SeoTitleItem, type SeoReport } from '../../../lib/types';
+import { ContentCategory, type GenerationRequest, type AudienceMode, type ImageStyle, type ImageSourceMode, type WritingStyle, type CssTheme, type TrendingItem, type SeoTitleItem, type SeoReport } from '../../../lib/types';
 import { applyContentFilters } from '../../../lib/medicalLawFilter';
 import { savePost } from '../../../lib/postStorage';
 import { getSessionSafe, supabase } from '../../../lib/supabase';
@@ -60,7 +60,7 @@ function BlogForm() {
   const [cssTheme, setCssTheme] = useState<CssTheme>('modern');
   const [imageStyle, setImageStyle] = useState<ImageStyle>('photo');
   const [imageCount, setImageCount] = useState(6);
-  const [useImageLibrary, setUseImageLibrary] = useState(false);
+  const [imageSourceMode, setImageSourceMode] = useState<ImageSourceMode>('hybrid');
   const [imageAspectRatio, setImageAspectRatio] = useState<'4:3' | '16:9' | '1:1'>('4:3');
   const [textLength, setTextLength] = useState(1500);
 
@@ -218,11 +218,11 @@ function BlogForm() {
   const getSettingsKey = () => selectedTeam ? `winaid_blog_settings_team_${selectedTeam}` : 'winaid_blog_settings';
 
   const handleSaveSettings = useCallback(() => {
-    const s = { category, hospitalName, selectedHospitalAddress, homepageUrl, textLength, imageCount, imageAspectRatio, imageStyle, useImageLibrary, audienceMode, persona, tone, writingStyle, medicalLawMode, includeFaq, faqCount, includeHospitalIntro, learnedStyleId };
+    const s = { category, hospitalName, selectedHospitalAddress, homepageUrl, textLength, imageCount, imageAspectRatio, imageStyle, imageSourceMode, audienceMode, persona, tone, writingStyle, medicalLawMode, includeFaq, faqCount, includeHospitalIntro, learnedStyleId };
     localStorage.setItem(getSettingsKey(), JSON.stringify(s));
     setSettingsToast('💾 설정 저장됨');
     setTimeout(() => setSettingsToast(''), 1500);
-  }, [category, hospitalName, selectedHospitalAddress, homepageUrl, textLength, imageCount, imageAspectRatio, imageStyle, useImageLibrary, audienceMode, persona, tone, writingStyle, medicalLawMode, includeFaq, faqCount, includeHospitalIntro, learnedStyleId, selectedTeam]);
+  }, [category, hospitalName, selectedHospitalAddress, homepageUrl, textLength, imageCount, imageAspectRatio, imageStyle, imageSourceMode, audienceMode, persona, tone, writingStyle, medicalLawMode, includeFaq, faqCount, includeHospitalIntro, learnedStyleId, selectedTeam]);
 
   const applySettings = useCallback((raw: string) => {
     try {
@@ -239,7 +239,14 @@ function BlogForm() {
       }
       if (s.imageAspectRatio !== undefined) setImageAspectRatio(s.imageAspectRatio);
       if (s.imageStyle !== undefined) setImageStyle(s.imageStyle);
-      if (s.useImageLibrary !== undefined) setUseImageLibrary(s.useImageLibrary);
+      // 이미지 소스 모드 마이그레이션: 기존 useImageLibrary boolean 에서 3-way 로 자동 변환
+      if (s.imageSourceMode !== undefined) {
+        setImageSourceMode(s.imageSourceMode);
+      } else if (s.useImageLibrary !== undefined) {
+        const migrated: ImageSourceMode = s.useImageLibrary ? 'library' : 'ai';
+        setImageSourceMode(migrated);
+        console.info(`[BLOG] 이미지 소스 모드 마이그레이션: useImageLibrary=${s.useImageLibrary} → ${migrated}`);
+      }
       if (s.learnedStyleId !== undefined) setLearnedStyleId(s.learnedStyleId);
       if (s.audienceMode !== undefined) setAudienceMode(s.audienceMode);
       if (s.persona !== undefined) setPersona(s.persona);
@@ -889,8 +896,8 @@ JSON 형식으로 응답해주세요.`;
     // 텍스트(outline ~15초 + sections 병렬 ~40초) + Opus 검수(~15초) = 60~70초 기본
     let estimated = 70;
     // "내 이미지 사용" 모드는 AI 생성 스킵이라 시간 제외
-    if (!useImageLibrary && request.imageCount && request.imageCount > 0) {
-      // AI 이미지 병렬 생성: 병렬이라 imageCount 증가가 작게 반영
+    if (imageSourceMode !== 'library' && request.imageCount && request.imageCount > 0) {
+      // AI 이미지 병렬 생성 (hybrid 모드 폴백 포함): 병렬이라 imageCount 증가가 작게 반영
       estimated += Math.min(45 + request.imageCount * 5, 90);
     }
     setEstimatedTotalSeconds(estimated);
@@ -1283,8 +1290,8 @@ JSON 형식으로 응답해주세요.`;
       const afterStrip = (blogText.match(/\[IMG_\d+/g) || []).length;
       console.info(`[BLOG] strip 완료: ${beforeStrip}→${afterStrip} (target=${targetImageCount}, state=${imageCount})`);
 
-      // 4-1) 라이브러리 이미지 alt 기반 자동 매칭 (useImageLibrary ON일 때)
-      if (useImageLibrary) {
+      // 4-1) 라이브러리 이미지 alt 기반 자동 매칭 (library / hybrid 모드)
+      if (imageSourceMode !== 'ai') {
         const imgMarkers = [...blogText.matchAll(/\[IMG_(\d+)\s+alt="([^"]*)"\]/g)];
         if (imgMarkers.length > 0) {
           try {
@@ -1359,14 +1366,16 @@ JSON 형식으로 응답해주세요.`;
         }
       }
 
-      // 남은 [IMG_N] 마커만 AI 이미지 생성 대상
+      // 남은 [IMG_N] 마커 — library: placeholder / ai+hybrid: AI 생성 대상
       const remainingMarkers = blogText.match(/\[IMG_\d+[^\]]*\]/g) || [];
-      // "내 이미지 사용" 모드: 매칭되지 않은 자리는 AI 생성 대신 비워둠
-      const aiImageCount = useImageLibrary ? 0 : remainingMarkers.length;
+      const aiImageCount = imageSourceMode === 'library' ? 0 : remainingMarkers.length;
+      if (imageSourceMode === 'hybrid' && remainingMarkers.length > 0) {
+        console.info(`[BLOG] 하이브리드: 라이브러리 매칭 후 ${remainingMarkers.length}장 AI 생성 폴백`);
+      }
 
-      // 5) 이미지 없으면 (라이브러리 모드: 빈 자리 placeholder / AI 모드: 마커 strip)
+      // 5) 이미지 없으면 (library: 빈 자리 placeholder / ai+hybrid: 마커 strip)
       if (aiImageCount === 0 || imagePrompts.length === 0) {
-        if (useImageLibrary) {
+        if (imageSourceMode === 'library') {
           blogText = blogText.replace(/\[IMG_(\d+)[^\]]*\]/g, (_m, num) =>
             `<div class="content-image-wrapper"><div data-img-slot="${num}" style="cursor:pointer;text-align:center;padding:32px;border:2px dashed #cbd5e1;border-radius:12px;color:#64748b;font-size:13px;transition:all 0.2s;">📸 클릭해서 이미지 선택 (${num}번 자리)</div></div>`
           );
@@ -1689,9 +1698,9 @@ JSON 형식으로 응답해주세요.`;
     }
   };
 
-  // ── 이미지 교체 모달 (useImageLibrary 모드 전용) ──
+  // ── 이미지 교체 모달 (library / hybrid 모드) ──
   const handleResultClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!useImageLibrary) return;
+    if (imageSourceMode === 'ai') return;
     const target = e.target as HTMLElement;
     const img = target.closest('img[data-image-index]') as HTMLImageElement | null;
     const placeholder = target.closest('[data-img-slot]') as HTMLElement | null;
@@ -1776,8 +1785,8 @@ JSON 형식으로 응답해주세요.`;
 
   // ── 이미지 클릭 → 액션 모달 열기 ──
   const handleImageClick = useCallback((imageIndex: number) => {
-    // 내 이미지 사용 모드: 교체 모달이 처리 (handleResultClick)
-    if (useImageLibrary) return;
+    // library 모드: 교체 모달이 처리 (handleResultClick). hybrid 는 AI 생성 이미지만 여기서 처리.
+    if (imageSourceMode === 'library') return;
     const promptIdx = imageIndex - 1;
     const originalPrompt = savedImagePrompts[promptIdx];
     if (!originalPrompt) return;
@@ -1791,7 +1800,7 @@ JSON 형식으로 응답해주세요.`;
     setSelectedImgIndex(imageIndex);
     setRegenPrompt(originalPrompt);
     setImgActionModalOpen(true);
-  }, [useImageLibrary, savedImagePrompts, generatedContent]);
+  }, [imageSourceMode, savedImagePrompts, generatedContent]);
 
   // ── 이미지 다운로드 ──
   const handleImageDownload = useCallback((src: string, index: number) => {
@@ -2083,7 +2092,7 @@ Output ONLY the prompt. No explanation.`;
         topic={topic} blogTitle={blogTitle} keywords={keywords} keywordDensity={keywordDensity} disease={disease} category={category}
         persona={persona} tone={tone} audienceMode={audienceMode}
         imageStyle={imageStyle} imageCount={imageCount} imageAspectRatio={imageAspectRatio} textLength={textLength}
-        useImageLibrary={useImageLibrary} onToggleImageLibrary={setUseImageLibrary}
+        imageSourceMode={imageSourceMode} onChangeImageSourceMode={setImageSourceMode}
         hospitalName={hospitalName} selectedTeam={selectedTeam}
         showHospitalDropdown={showHospitalDropdown} selectedManager={selectedManager}
         selectedHospitalAddress={selectedHospitalAddress}

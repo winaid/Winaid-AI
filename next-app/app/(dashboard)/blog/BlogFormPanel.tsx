@@ -2,7 +2,7 @@
 
 import { CATEGORIES, PERSONAS, TONES } from '../../../lib/constants';
 import { TEAM_DATA } from '../../../lib/teamData';
-import type { ContentCategory, AudienceMode, ImageStyle, CssTheme } from '../../../lib/types';
+import type { ContentCategory, AudienceMode, ImageStyle, ImageSourceMode, CssTheme } from '../../../lib/types';
 import type { KeywordStat, KeywordRankResult } from '../../../lib/keywordAnalysisService';
 import type { HospitalImage } from '../../../lib/hospitalImageService';
 import ImageLibrary from '../../../components/blog/ImageLibrary';
@@ -67,9 +67,9 @@ export interface BlogFormPanelProps {
   // ── 참고 자료 상태 ──
   isLoadingReference?: boolean;
   referenceResult?: { facts: string; sources: string[] } | null;
-  // ── 이미지 라이브러리 ──
-  useImageLibrary?: boolean;
-  onToggleImageLibrary?: (v: boolean) => void;
+  // ── 이미지 소스 모드 (ai / library / hybrid) ──
+  imageSourceMode?: ImageSourceMode;
+  onChangeImageSourceMode?: (v: ImageSourceMode) => void;
   // ── 생성 상태 ──
   isGenerating: boolean;
   // ── 폼 setter ──
@@ -134,7 +134,7 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
     seoTitles, trendingItems, isLoadingTitles, isLoadingTrends,
     isGenerating,
     isLoadingReference, referenceResult,
-    useImageLibrary, onToggleImageLibrary,
+    imageSourceMode = 'hybrid', onChangeImageSourceMode,
     setTopic, setBlogTitle, setKeywords, setKeywordDensity, setDisease, setCategory, setPersona, setTone, setAudienceMode,
     setImageStyle, setImageCount, setImageAspectRatio, setTextLength, setHospitalName, setSelectedTeam,
     setShowHospitalDropdown, setSelectedManager, setSelectedHospitalAddress,
@@ -423,23 +423,38 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
                   ))}
                 </div>
               </div>
-              {/* 이미지 소스 토글 */}
-              {onToggleImageLibrary && (
-                <div className="flex gap-2 mb-2">
-                  <button type="button" onClick={() => onToggleImageLibrary(false)}
-                    className={`flex-1 py-1.5 rounded-lg text-[11px] font-semibold transition-all ${!useImageLibrary ? 'bg-blue-100 text-blue-700 border border-blue-300' : 'bg-slate-50 text-slate-500 border border-slate-200'}`}>
-                    🎨 AI 생성
-                  </button>
-                  <button type="button" onClick={() => onToggleImageLibrary(true)}
-                    className={`flex-1 py-1.5 rounded-lg text-[11px] font-semibold transition-all ${useImageLibrary ? 'bg-blue-100 text-blue-700 border border-blue-300' : 'bg-slate-50 text-slate-500 border border-slate-200'}`}>
-                    📸 내 이미지 사용
-                  </button>
+              {/* 이미지 소스 모드 — 3-way: ai / library / hybrid */}
+              {onChangeImageSourceMode && (
+                <div className="mb-2">
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {([
+                      { id: 'ai' as const, icon: '🤖', label: 'AI 생성', desc: '모든 이미지 AI' },
+                      { id: 'library' as const, icon: '📚', label: '내 이미지만', desc: '라이브러리 매칭' },
+                      { id: 'hybrid' as const, icon: '⚡', label: '스마트', desc: '라이브러리+AI 보완', badge: '추천' },
+                    ]).map(opt => {
+                      const active = imageSourceMode === opt.id;
+                      return (
+                        <button key={opt.id} type="button" onClick={() => onChangeImageSourceMode(opt.id)}
+                          className={`relative py-2 px-1 rounded-lg text-center transition-all ${active ? 'bg-blue-100 text-blue-700 border border-blue-300' : 'bg-slate-50 text-slate-500 border border-slate-200 hover:bg-slate-100'}`}>
+                          {opt.badge && (
+                            <span className="absolute -top-1.5 -right-1 px-1.5 py-0.5 rounded-full text-[8px] font-black bg-amber-400 text-white shadow">{opt.badge}</span>
+                          )}
+                          <div className="text-sm">{opt.icon}</div>
+                          <div className="text-[11px] font-semibold mt-0.5">{opt.label}</div>
+                          <div className={`text-[9px] ${active ? 'text-blue-500' : 'text-slate-400'} mt-0.5`}>{opt.desc}</div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {imageSourceMode === 'hybrid' && (
+                    <p className="text-[10px] text-slate-500 mt-1.5">💡 라이브러리에서 우선 매칭하고 부족분은 AI 로 생성합니다 (AI 이미지는 크레딧 소모).</p>
+                  )}
                 </div>
               )}
-              {useImageLibrary && (
+              {imageSourceMode !== 'ai' && onChangeImageSourceMode && (
                 <ImageLibrary
-                  enabled={!!useImageLibrary}
-                  onToggle={onToggleImageLibrary || (() => {})}
+                  enabled={imageSourceMode !== 'ai'}
+                  onToggle={() => {}}
                 />
               )}
 
@@ -472,11 +487,11 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
               </div>
 
               {/* 이미지 수 슬라이더 */}
-              {useImageLibrary ? (
+              {imageSourceMode !== 'ai' ? (
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
                     <label className="text-xs font-semibold text-slate-500">이미지 수</label>
-                    <span className="text-[10px] text-blue-500">AI 자동 배치 + 부족분 생성</span>
+                    <span className="text-[10px] text-blue-500">{imageSourceMode === 'hybrid' ? '라이브러리 매칭 + AI 보완' : '라이브러리 매칭 (부족 시 빈칸)'}</span>
                   </div>
                   <input type="range" min={0} max={15} step={1} value={imageCount} onChange={e => setImageCount(Number(e.target.value))} className="w-full accent-blue-500 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer" />
                   <div className="flex justify-between mt-1 text-[10px] text-slate-400"><span>0장</span><span className="text-blue-600 font-semibold">{imageCount}장</span><span>15장</span></div>
@@ -506,7 +521,7 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
               </div>
               )}
               {/* 이미지 비율 — AI 생성 모드에서만 */}
-              {!useImageLibrary && imageCount > 0 && (
+              {imageSourceMode !== 'library' && imageCount > 0 && (
                 <div>
                   <p className="text-[11px] font-semibold text-slate-500 mb-1.5">이미지 비율</p>
                   <div className="grid grid-cols-3 gap-1.5">

@@ -17,6 +17,8 @@ export type AudienceMode =
   | '전문가용(신뢰/정보)';
 
 export type ImageStyle = 'photo' | 'illustration' | 'medical' | 'custom';
+/** 블로그 이미지 소스 모드 — ai: 전부 AI 생성 / library: 라이브러리만 (매칭 실패 시 placeholder) / hybrid: 라이브러리 우선 + 부족분 AI 생성 */
+export type ImageSourceMode = 'ai' | 'library' | 'hybrid';
 export type PostType = 'blog' | 'card_news' | 'press_release';
 export type WorkflowType = 'generate' | 'refine';
 export type CssTheme = 'modern' | 'premium' | 'minimal' | 'warm' | 'professional';
