@@ -10,6 +10,7 @@ import { applyContentFilters } from '../../../lib/medicalLawFilter';
 import { savePost } from '../../../lib/postStorage';
 import { getSessionSafe, supabase } from '../../../lib/supabase';
 import { getHospitalStylePrompt } from '../../../lib/styleService';
+import { buildImagePrompt } from '../../../lib/blogPrompt';
 import { type ScoreBarData } from '../../../components/GenerationResult';
 import { getStyleById, getStylePromptForGeneration } from '../../../components/WritingStyleLearner';
 import type { BlogSection } from '../../../lib/types';
@@ -1010,9 +1011,17 @@ JSON 형식으로 응답해주세요.`;
       for (let i = 1; i <= imageCount; i++) {
         const m = fullText.match(new RegExp(`\\[IMG_${i}(?:\\s+alt="([^"]*)")?[^\\]]*\\]`));
         const alt = m?.[1]?.trim() || '';
-        imagePrompts.push(alt || `${topic.trim()} ${request.category}`);
+        imagePrompts.push(buildImagePrompt({
+          altText: alt,
+          imageStyle,
+          category: request.category,
+          topic: topic.trim(),
+          hospitalName,
+          disease,
+          customImagePrompt: imageStyle === 'custom' ? (customPrompt?.trim() || undefined) : undefined,
+        }));
       }
-      console.info(`[BLOG] [V4] 이미지 프롬프트 추출: ${imagePrompts.length}개`);
+      console.info(`[BLOG] [V4] 이미지 프롬프트 추출: ${imagePrompts.length}개 (buildImagePrompt 적용)`);
 
       setPipelineStep('reviewing_and_images');
       setDisplayStage(2);

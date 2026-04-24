@@ -73,6 +73,56 @@ export function isProstheticTopic(topic: string, disease?: string): boolean {
   return /보철|임플란트|크라운|브릿지|틀니|인레이|온레이|기공|지르코니아|PFM|올세라믹|라미네이트/.test(`${topic} ${disease || ''}`);
 }
 
+/**
+ * 이미지 생성용 프롬프트 빌더 — alt 텍스트 + 카테고리/주제 컨텍스트 결합.
+ *
+ * 역할 분담:
+ * - 이 함수: "무엇을 보여줄지" (subject + 도메인 setting + 환자 컨텍스트)
+ * - /api/image 의 BLOG_STYLE_INSTRUCTIONS: "어떻게 보여줄지" (photo/illustration/medical 스타일)
+ *
+ * LLM 호출 없이 템플릿 기반 — 비용/지연 0. altText 가 비거나 너무 짧으면 topic fallback.
+ */
+export function buildImagePrompt(args: {
+  altText: string;
+  imageStyle: 'photo' | 'illustration' | 'medical' | 'custom';
+  category: string;
+  topic: string;
+  hospitalName?: string;
+  disease?: string;
+  customImagePrompt?: string;
+}): string {
+  const { altText, imageStyle, category, topic, disease, customImagePrompt } = args;
+
+  // 카테고리별 subject hint
+  const categoryHints: Record<string, string> = {
+    '치과': 'dental clinic setting, modern minimalist Korean dental office',
+    '피부과': 'dermatology clinic, skincare treatment environment',
+    '정형외과': 'orthopedic clinic with examination area',
+    '한의원': 'Korean oriental medicine clinic, traditional yet modern',
+    '한방': 'Korean oriental medicine clinic, traditional yet modern',
+    '성형외과': 'plastic surgery consultation environment, clean modern interior',
+    '안과': 'ophthalmology clinic, eye examination setting',
+    '이비인후과': 'ENT clinic, examination environment',
+    '내과': 'internal medicine clinic, professional consultation setting',
+    '소아과': 'pediatric clinic, warm child-friendly atmosphere',
+    '산부인과': 'obstetrics clinic, comfortable examination setting',
+  };
+  const subjectHint = categoryHints[category] || 'Korean medical clinic interior';
+
+  // alt 가 너무 짧으면 topic + disease fallback
+  const trimmedAlt = altText.trim();
+  const subject = trimmedAlt.length >= 5
+    ? trimmedAlt
+    : `${topic}${disease ? ` (${disease})` : ''}`;
+
+  // custom 스타일일 때 customImagePrompt 는 alt 를 보강 (스타일은 route 에서 처리)
+  const customBoost = imageStyle === 'custom' && customImagePrompt?.trim()
+    ? `, ${customImagePrompt.trim()}`
+    : '';
+
+  return `${subjectHint}, ${subject}${customBoost}, Korean patient context, warm approachable atmosphere`;
+}
+
 export type TopicType = 'info' | 'compare' | 'aftercare' | 'symptom' | 'qna' | 'general';
 
 export function classifyTopicType(topic: string, disease?: string): TopicType {
