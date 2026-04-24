@@ -1359,6 +1359,16 @@ JSON 형식으로 응답해주세요.`;
                 }
               }
               console.info(`[BLOG] 라이브러리 자동 매칭: ${matched}/${imgMarkers.length}장 배치`);
+
+              // 사용된 라이브러리 이미지의 usage_count 증가 (fire-and-forget)
+              const usedLibraryImageIds = Array.from(usedIds);
+              if (usedLibraryImageIds.length > 0) {
+                authFetch('/api/hospital-images/usage', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ imageIds: usedLibraryImageIds }),
+                }).catch(err => console.warn('[BLOG] usage tracking failed:', err.message));
+              }
             }
           } catch (err) {
             console.warn('[BLOG] 라이브러리 조회 실패:', (err as Error).message);

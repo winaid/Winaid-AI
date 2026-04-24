@@ -17,28 +17,24 @@ export async function DELETE(request: NextRequest, ctx: Ctx) {
 
   const owner = await resolveImageOwner(request);
   const { id } = await ctx.params;
-  const { data: row } = await supabase
+
+  // soft delete: is_deleted=true 로 표시만. 파일 물리 삭제는 관리자 전용 cleanup 작업
+  // (별도). 기존 블로그의 <img src> 는 Storage 파일 유지되므로 계속 유효.
+  const { data: updated, error } = await supabase
     .from('hospital_images')
-    .select('storage_path')
+    .update({ is_deleted: true, updated_at: new Date().toISOString() })
     .eq('id', id)
     .eq('user_id', owner)
-    .single();
-
-  if (!row) {
-    console.warn(`[hospital-images/DELETE] not found or ownership mismatch (id=${id} owner=${owner})`);
-    return NextResponse.json({ error: '이미지를 찾을 수 없습니다.' }, { status: 404 });
-  }
-
-  await supabase.storage.from(STORAGE_BUCKET).remove([row.storage_path]);
-  const { data: deleted } = await supabase
-    .from('hospital_images')
-    .delete()
-    .eq('id', id)
-    .eq('user_id', owner)
+    .eq('is_deleted', false)
     .select();
 
-  if (!deleted || deleted.length === 0) {
-    return NextResponse.json({ error: 'ownership_mismatch' }, { status: 403 });
+  if (error) {
+    console.error(`[hospital-images/DELETE] update failed: ${error.message}`);
+    return NextResponse.json({ error: 'db_update_failed' }, { status: 500 });
+  }
+  if (!updated || updated.length === 0) {
+    console.warn(`[hospital-images/DELETE] not found or ownership mismatch (id=${id} owner=${owner})`);
+    return NextResponse.json({ error: '이미지를 찾을 수 없습니다.' }, { status: 404 });
   }
 
   return NextResponse.json({ success: true });
