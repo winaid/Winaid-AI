@@ -46,6 +46,8 @@ export interface BlogResultAreaProps {
   setChatInput?: (v: string) => void;
   isChatRefining?: boolean;
   onChatRefine?: () => void;
+  // contentEditable 편집 → 부모 state 동기화
+  onContentChange?: (html: string) => void;
 }
 
 /** 블로그 결과 영역 — 생성 중 / 에러 / 결과 / 빈 상태 4가지 렌더링 */
@@ -60,6 +62,7 @@ export default function BlogResultArea({
   seoReport, isSeoLoading,
   topic,
   chatInput = '', setChatInput, isChatRefining = false, onChatRefine,
+  onContentChange,
 }: BlogResultAreaProps) {
 
   // ── 카운트다운 타이머 (생성 중에만 동작) ──
@@ -211,6 +214,7 @@ export default function BlogResultArea({
           onDownloadPDF={onDownloadPDF}
           onImageRegenerate={onImageRegenerate}
           regeneratingImage={regeneratingImage}
+          onContentChange={onContentChange}
         />
 
         {/* 인라인 수정 채팅 */}

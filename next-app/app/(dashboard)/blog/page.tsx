@@ -2118,6 +2118,7 @@ Output ONLY the prompt. No explanation.`;
         setChatInput={setChatInput}
         isChatRefining={isChatRefining}
         onChatRefine={handleChatRefine}
+        onContentChange={setGeneratedContent}
       />
       </div>
 

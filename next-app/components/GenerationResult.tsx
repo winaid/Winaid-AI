@@ -262,6 +262,8 @@ interface ResultPanelProps {
   onDownloadPDF?: () => void;
   onImageRegenerate?: (imageIndex: number) => void;
   regeneratingImage?: number | null;
+  /** contentEditable 편집 내용을 부모 state 로 동기화 (debounce 500ms) */
+  onContentChange?: (html: string) => void;
 }
 
 export function ResultPanel({
@@ -279,6 +281,7 @@ export function ResultPanel({
   onDownloadPDF,
   onImageRegenerate,
   regeneratingImage,
+  onContentChange,
 }: ResultPanelProps) {
   const [copyFeedback, setCopyFeedback] = useState(false);
   const [activeTab, setActiveTab] = useState<'preview' | 'html'>('preview');
@@ -287,10 +290,30 @@ export function ResultPanel({
   const [linkUrl, setLinkUrl] = useState('');
   const editorRef = useRef<HTMLDivElement>(null);
 
+  // ── contentEditable 편집 → 부모 state 동기화 (debounce 500ms) ──
+  const internalChangeRef = useRef(false);
+  const debounceTimerRef = useRef<number | null>(null);
+  const onContentChangeRef = useRef(onContentChange);
+  useEffect(() => { onContentChangeRef.current = onContentChange; }, [onContentChange]);
+
   // ── 서식 명령 ──
   const execFormat = useCallback((command: string, value?: string) => {
     editorRef.current?.focus();
     document.execCommand(command, false, value);
+  }, []);
+
+  const handleContentInput = useCallback(() => {
+    if (debounceTimerRef.current !== null) window.clearTimeout(debounceTimerRef.current);
+    debounceTimerRef.current = window.setTimeout(() => {
+      if (!editorRef.current) return;
+      internalChangeRef.current = true;
+      onContentChangeRef.current?.(editorRef.current.innerHTML);
+    }, 500);
+  }, []);
+
+  // cleanup: unmount 시 debounce timer 제거
+  useEffect(() => () => {
+    if (debounceTimerRef.current !== null) window.clearTimeout(debounceTimerRef.current);
   }, []);
 
   const handleInsertLink = useCallback(() => {
@@ -345,6 +368,17 @@ export function ResultPanel({
     () => sanitizeHtml(isHtml ? content : markdownToHtml(content)),
     [content, isHtml],
   );
+
+  // 외부 content 변경 시에만 innerHTML 설정 — 내부 편집(onInput)은 skip
+  useEffect(() => {
+    if (internalChangeRef.current) {
+      internalChangeRef.current = false;
+      return;
+    }
+    if (!editorRef.current) return;
+    editorRef.current.innerHTML = renderedHtml;
+  }, [renderedHtml]);
+
   const charCount = useMemo(() => content.replace(/<[^>]+>/g, '').replace(/\s/g, '').length, [content]);
 
   const charLabel = charCount < 1500 ? '짧음' : charCount < 4000 ? '적당' : '길음';
@@ -613,7 +647,7 @@ export function ResultPanel({
               contentEditable
               suppressContentEditableWarning
               className={`rp-preview rp-theme-${cssTheme} max-w-none outline-none`}
-              dangerouslySetInnerHTML={{ __html: renderedHtml }}
+              onInput={handleContentInput}
               onClick={(e) => {
                 const target = e.target as HTMLElement;
                 if (target.tagName === 'IMG' && onImageRegenerate) {
