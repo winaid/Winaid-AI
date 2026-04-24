@@ -1499,16 +1499,27 @@ ${nextHeading ? `  <next_heading>${sanitizePromptInput(nextHeading, 100)}</next_
   const typeLabel = section.type === 'intro' ? '도입부' : section.type === 'outro' ? '마무리' : `"${section.heading || ''}"`;
   const charLimit = section.charTarget ?? 300;
 
-  // 키워드 섹션별 분배 계산
+  // 키워드 섹션별 분배 계산 — 본문(section) 만 분배 대상, intro/outro 는 가볍게 언급만
   const safeKeywords = sanitizePromptInput(req.keywords, 300);
   const primaryKeyword = safeKeywords.split(',')[0].trim();
   const isCompound = primaryKeyword ? !/\s/.test(primaryKeyword) : false;
-  const sectionCount = totalSections ?? outline.sections.length;
   let keywordInstruction = '';
   if (primaryKeyword) {
     if (typeof density === 'number') {
-      const perSection = Math.max(1, Math.ceil(density / sectionCount));
-      keywordInstruction = `- 키워드 "${primaryKeyword}" 를 본 섹션에 정확히 ${perSection}회 자연 포함 (전체 글 목표 ${density}회 ÷ ${sectionCount}개 섹션 분배). 같은 문단 연속 금지.${isCompound ? ` 띄어쓰기 금지 — "${primaryKeyword}" 형태 그대로 사용.` : ''}`;
+      if (section.type === 'section') {
+        // 본문 섹션: 균등 분배. body 섹션 순번 기준으로 base + bonus 계산.
+        const bodyCount = Math.max(1, outline.sections.filter(s => s.type === 'section').length);
+        const bodyIndex = outline.sections.slice(0, sectionIndex).filter(s => s.type === 'section').length;
+        const base = Math.floor(density / bodyCount);
+        const bonus = density % bodyCount;
+        const perSection = base + (bodyIndex < bonus ? 1 : 0);
+        keywordInstruction = perSection > 0
+          ? `- 키워드 "${primaryKeyword}" 를 본 섹션에 정확히 ${perSection}회 자연 포함 (전체 글 목표 ${density}회 ÷ 본문 ${bodyCount}섹션 균등 분배, 본 섹션 할당 ${perSection}). 같은 문단 연속 금지.${isCompound ? ` 띄어쓰기 금지 — "${primaryKeyword}" 형태 그대로 사용.` : ''}`
+          : `- 키워드 "${primaryKeyword}" 는 본 섹션에서 언급 불필요 (다른 본문 섹션에서 충분히 다룸)`;
+      } else {
+        // intro / outro: 가볍게 언급만
+        keywordInstruction = `- 키워드 "${primaryKeyword}" 는 가볍게 언급만 (0~1회). 본 섹션은 분배 대상 아님.${isCompound ? ` 띄어쓸 때는 "${primaryKeyword}" 형태 그대로 사용.` : ''}`;
+      }
     } else {
       keywordInstruction = `- 키워드 "${primaryKeyword}" 를 본 섹션에 1~2회 자연 포함`;
     }

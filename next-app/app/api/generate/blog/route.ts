@@ -97,17 +97,37 @@ export async function POST(request: NextRequest) {
   }
 }
 
-function parseOutlineJson(raw: string): BlogOutline | null {
+function parseOutlineJson(raw: string, imageCount: number): BlogOutline | null {
+  // 1) pure JSON 먼저 시도 (Claude 가 정상적으로 JSON 만 반환한 경우 최적)
+  let parsed: BlogOutline | null = null;
   try {
-    const match = raw.match(/[\[{][\s\S]*[}\]]/);
-    const json = match ? match[0] : raw;
-    const parsed = JSON.parse(json) as BlogOutline;
-    if (!parsed.sections || !Array.isArray(parsed.sections) || parsed.sections.length < 3) return null;
-    if (!parsed.keyMessage || !parsed.totalCharTarget) return null;
-    return parsed;
+    parsed = JSON.parse(raw.trim()) as BlogOutline;
   } catch {
-    return null;
+    // 2) 첫 { ... } 블록 추출해서 parse (마크다운/코멘트 뒤따라올 때 대응)
+    const match = raw.match(/\{[\s\S]*\}/);
+    if (!match) return null;
+    try {
+      parsed = JSON.parse(match[0]) as BlogOutline;
+    } catch {
+      return null;
+    }
   }
+
+  // 3) 구조 검증
+  if (!parsed || !Array.isArray(parsed.sections) || parsed.sections.length < 3) return null;
+  if (!parsed.keyMessage || !parsed.totalCharTarget) return null;
+
+  // 4) imageIndex 검증: imageCount 초과 또는 0 이하면 제거
+  for (const sec of parsed.sections) {
+    if (typeof sec.imageIndex === 'number') {
+      if (sec.imageIndex < 1 || sec.imageIndex > imageCount) {
+        console.warn(`[outline] imageIndex ${sec.imageIndex} out of range (imageCount=${imageCount}) — removed`);
+        delete sec.imageIndex;
+      }
+    }
+  }
+
+  return parsed;
 }
 
 async function generate2Pass(
@@ -126,7 +146,7 @@ async function generate2Pass(
       maxOutputTokens: 2048,
       userId,
     });
-    outline = parseOutlineJson(outlineResp.text);
+    outline = parseOutlineJson(outlineResp.text, req.imageCount ?? 0);
     if (!outline) {
       console.error('[generate/blog] outline parse FAILED. Raw response:', outlineResp.text?.slice(0, 500));
     } else {
@@ -143,8 +163,11 @@ async function generate2Pass(
 
   const totalSectionsForDistribution = outline.sections.length;
   if (typeof req.keywordDensity === 'number' && req.keywords?.trim()) {
-    const perSec = Math.max(1, Math.ceil(req.keywordDensity / totalSectionsForDistribution));
-    console.info(`[BLOG] 키워드 분배: 전체 ${req.keywordDensity}회 → ${totalSectionsForDistribution}섹션 × ${perSec}회`);
+    const bodyCount = Math.max(1, outline.sections.filter(s => s.type === 'section').length);
+    const base = Math.floor(req.keywordDensity / bodyCount);
+    const bonus = req.keywordDensity % bodyCount;
+    const distribution = Array.from({ length: bodyCount }, (_, i) => base + (i < bonus ? 1 : 0));
+    console.info(`[BLOG] 키워드 분배: density=${req.keywordDensity} bodyCount=${bodyCount} base=${base} bonusCount=${bonus} → 본문 섹션별 [${distribution.join(',')}] / intro·outro 는 0~1회`);
   }
   const sectionPromises = outline.sections.map((section, idx) => {
     const prompt = buildSectionFromOutlinePrompt({
@@ -289,7 +312,7 @@ async function generate2PassWithProgress(
       maxOutputTokens: 2048,
       userId,
     });
-    outline = parseOutlineJson(outlineResp.text);
+    outline = parseOutlineJson(outlineResp.text, req.imageCount ?? 0);
   } catch (err) {
     console.error('[generate/blog][stream] outline FAILED:', (err as Error).message);
   }
@@ -305,8 +328,11 @@ async function generate2PassWithProgress(
   send('stage', { name: 'sections_start', total: totalSections });
 
   if (typeof req.keywordDensity === 'number' && req.keywords?.trim()) {
-    const perSec = Math.max(1, Math.ceil(req.keywordDensity / totalSections));
-    console.info(`[BLOG] 키워드 분배: 전체 ${req.keywordDensity}회 → ${totalSections}섹션 × ${perSec}회`);
+    const bodyCount = Math.max(1, outline.sections.filter(s => s.type === 'section').length);
+    const base = Math.floor(req.keywordDensity / bodyCount);
+    const bonus = req.keywordDensity % bodyCount;
+    const distribution = Array.from({ length: bodyCount }, (_, i) => base + (i < bonus ? 1 : 0));
+    console.info(`[BLOG] 키워드 분배: density=${req.keywordDensity} bodyCount=${bodyCount} base=${base} bonusCount=${bonus} → 본문 섹션별 [${distribution.join(',')}] / intro·outro 는 0~1회`);
   }
 
   let completedCount = 0;
