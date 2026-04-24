@@ -57,6 +57,7 @@ export default function ImageInsertModal({
         const { userId } = await getSessionSafe();
         const qs = new URLSearchParams({ limit: '200' });
         if (userId) qs.set('userId', userId);
+        if (hospitalName) qs.set('hospitalName', hospitalName);
         const res = await authFetch(`/api/hospital-images?${qs.toString()}`);
         if (res.ok) {
           const data = await res.json();
@@ -65,7 +66,7 @@ export default function ImageInsertModal({
       } catch { /* ignore */ }
       finally { setLoading(false); }
     })();
-  }, [open, tab]);
+  }, [open, tab, hospitalName]);
 
   // ESC 닫기
   useEffect(() => {
@@ -180,7 +181,9 @@ export default function ImageInsertModal({
                 <div className="text-center py-12 text-sm text-slate-500">이미지 불러오는 중...</div>
               ) : filteredImages.length === 0 ? (
                 <div className="text-center py-12 text-sm text-slate-500">
-                  {tagFilter === '전체' ? '등록된 이미지가 없습니다. 먼저 이미지 라이브러리에 업로드하세요.' : `"${tagFilter}" 태그 이미지가 없습니다.`}
+                  {tagFilter === '전체'
+                    ? (hospitalName ? `${hospitalName} 이미지가 없습니다. 이미지 라이브러리에서 업로드하세요.` : '등록된 이미지가 없습니다. 먼저 이미지 라이브러리에 업로드하세요.')
+                    : `"${tagFilter}" 태그 이미지가 없습니다.`}
                 </div>
               ) : (
                 <div className="grid grid-cols-4 gap-3">
