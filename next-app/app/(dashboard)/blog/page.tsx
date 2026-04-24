@@ -1045,7 +1045,13 @@ JSON 형식으로 응답해주세요.`;
             return fetch('/api/image', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ prompt: p, aspectRatio: imageAspectRatio, mode: 'blog' as const }),
+              body: JSON.stringify({
+                prompt: p,
+                aspectRatio: imageAspectRatio,
+                mode: 'blog' as const,
+                imageStyle,
+                customImagePrompt: imageStyle === 'custom' ? (customPrompt?.trim() || undefined) : undefined,
+              }),
             }).then(r => r.ok ? r.json() : null)
               .then(d => ({ index, url: (d?.imageDataUrl as string | undefined) || null }))
               .catch(() => ({ index, url: null as string | null }));
@@ -1422,7 +1428,13 @@ JSON 형식으로 응답해주세요.`;
             const imgRes = await fetch('/api/image', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ prompt, aspectRatio: imageAspectRatio, mode: 'blog' as const }),
+              body: JSON.stringify({
+                prompt,
+                aspectRatio: imageAspectRatio,
+                mode: 'blog' as const,
+                imageStyle,
+                customImagePrompt: imageStyle === 'custom' ? (customPrompt?.trim() || undefined) : undefined,
+              }),
             });
             if (!imgRes.ok) return { index, url: null };
             const imgData = await imgRes.json() as { imageDataUrl?: string };
@@ -1838,7 +1850,14 @@ Output ONLY the prompt. No explanation.`;
       const imgRes = await fetch('/api/image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: newPrompt, aspectRatio: imageAspectRatio, mode: 'blog', ...(referenceImage ? { referenceImage } : {}) }),
+        body: JSON.stringify({
+          prompt: newPrompt,
+          aspectRatio: imageAspectRatio,
+          mode: 'blog',
+          imageStyle,
+          customImagePrompt: imageStyle === 'custom' ? (customPrompt?.trim() || undefined) : undefined,
+          ...(referenceImage ? { referenceImage } : {}),
+        }),
       });
       if (!imgRes.ok) throw new Error('이미지 생성 실패');
 

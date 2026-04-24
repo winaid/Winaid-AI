@@ -452,7 +452,8 @@ interface ImageRequestBody {
   prompt: string;
   aspectRatio?: AspectRatio;
   mode?: 'blog' | 'card_news' | 'default';
-  imageStyle?: string;       // card_news: illustration | photo | medical
+  imageStyle?: 'photo' | 'illustration' | 'medical' | 'custom';
+  customImagePrompt?: string; // imageStyle='custom'일 때 사용자 스타일 지시문
   logoInstruction?: string;
   hospitalInfo?: string;
   brandColors?: string;
@@ -535,11 +536,26 @@ ABSOLUTE PROHIBITIONS:
 - Rule of thirds, breathing room around subjects, foreground/midground/background depth
 - Natural eye-level or slightly elevated angle, no dead center placement`;
 
+  // Blog 모드 스타일별 instruction (UI 의 imageStyle 선택 → 실제 생성에 반영)
+  const BLOG_STYLE_INSTRUCTIONS: Record<'photo' | 'illustration' | 'medical' | 'custom', string> = {
+    photo: 'DSLR-grade realistic photograph, Korean clinic interior, natural warm lighting, professional medical environment, photojournalism style.',
+    illustration: 'Soft pastel 3D illustration, semi-realistic, friendly approachable tone, smooth gradients.',
+    medical: 'Anatomical illustration, clinical precision, scientific accuracy, soft medical lighting.',
+    custom: '',
+  };
+  const blogStyle = body.imageStyle && ['photo', 'illustration', 'medical', 'custom'].includes(body.imageStyle)
+    ? body.imageStyle as 'photo' | 'illustration' | 'medical' | 'custom'
+    : 'photo';
+  const blogStyleInstruction = blogStyle === 'custom'
+    ? (body.customImagePrompt?.trim() || BLOG_STYLE_INSTRUCTIONS.photo)
+    : BLOG_STYLE_INSTRUCTIONS[blogStyle];
+
   const fullPrompt = isCardNewsMode
     ? buildCardNewsPromptFull(body)
     : isBlogMode
     ? [
         BLOG_IMAGE_RULE,
+        `[STYLE] ${blogStyleInstruction}`,
         body.prompt.trim(),
         getAspectInstructionEn(aspectRatio),
         'Generate at high resolution. Sharp edges, no blur, no compression artifacts.',

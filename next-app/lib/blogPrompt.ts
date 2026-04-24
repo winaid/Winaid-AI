@@ -54,6 +54,11 @@ export const STYLE_GUIDES: Record<string, string> = {
   conversion: '상담/문의를 자연스럽게 유도',
 };
 
+/**
+ * Claude 프롬프트용 이미지 스타일 힌트 (한국어 간단 설명).
+ * 실제 이미지 생성 시의 스타일 지시는 /api/image 의 BLOG_STYLE_INSTRUCTIONS 참조.
+ * 여기는 Claude 가 본문 맥락에 맞는 이미지 마커를 배치할 때 참고용.
+ */
 export function getImageStyleGuide(req: GenerationRequest): string {
   const custom = sanitizePromptInput(req.customImagePrompt, 300);
   if (custom) return `커스텀: ${custom}`;
