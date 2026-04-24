@@ -1229,19 +1229,25 @@ JSON 형식으로 응답해주세요.`;
         }
       }
 
-      // 3.12) 줄 간격 후처리: airy→매 2번째, mixed→매 3번째 </p><p> 에만 빈 p 삽입
+      // 3.12) 줄 간격 후처리: doubleBreakFrequency=high → 전체, airy → 2번째, mixed → 3번째
       if (learnedStyleId) {
-        const learnedSpacing = getStyleById(learnedStyleId)?.analyzedStyle?.paragraphStats?.lineBreakStyle;
-        if (learnedSpacing === 'airy' || learnedSpacing === 'mixed') {
-          const interval = learnedSpacing === 'airy' ? 2 : 3;
+        const paragraphStats = getStyleById(learnedStyleId)?.analyzedStyle?.paragraphStats;
+        const learnedSpacing = paragraphStats?.lineBreakStyle;
+        const doubleBreakFreq = paragraphStats?.doubleBreakFrequency;
+        const needsSpacing = learnedSpacing === 'airy' || learnedSpacing === 'mixed' || doubleBreakFreq === 'high';
+        if (needsSpacing) {
+          // high: 모든 사이 / airy: 매 2번째 / mixed: 매 3번째
+          const interval = doubleBreakFreq === 'high' ? 1 : learnedSpacing === 'airy' ? 2 : 3;
           let pGapCount = 0;
           blogText = blogText.replace(/<\/p>\s*<p(?!>\s*&nbsp;)/g, (match) => {
             pGapCount++;
             return pGapCount % interval === 0 ? '</p>\n<p>&nbsp;</p>\n<p' : match;
           });
-          console.info(`[BLOG] 줄 간격 후처리: ${learnedSpacing} interval=${interval} → ${Math.floor(pGapCount / interval)}개 빈 p 삽입 (전체 ${pGapCount}개 중)`);
+          console.info(`[BLOG] 줄 간격 후처리: ${learnedSpacing}/${doubleBreakFreq} interval=${interval} → ${Math.floor(pGapCount / interval)}개 빈 p 삽입`);
         }
       }
+      // 빈 p 2개 이상 연속 → 1개로 축약
+      blogText = blogText.replace(/(<p>&nbsp;<\/p>\s*){2,}/g, '<p>&nbsp;</p>\n');
 
       // 4) imageCount 초과 마커 제거 — 모든 모드 공통 (Claude 가 초과 부여한 경우)
       const targetImageCount = request.imageCount ?? imageCount;
@@ -1354,19 +1360,25 @@ JSON 형식으로 응답해주세요.`;
         // (원본 목차 복사 시 임플란트 목차가 턱관절 글에 나오는 치명적 버그 방지)
         if (learnedStyleId) {
           const learnedForToc = getStyleById(learnedStyleId);
-          const hasToc = learnedForToc?.analyzedStyle?.tableOfContents?.trim();
-          if (hasToc && hasToc.length > 10) {
+          const rawToc = learnedForToc?.analyzedStyle?.tableOfContents?.trim();
+          if (rawToc && rawToc.length > 10) {
             const h3Matches = [...blogText.matchAll(/<h3[^>]*>([\s\S]*?)<\/h3>/gi)];
             if (h3Matches.length >= 3) {
               const firstH3Idx = blogText.indexOf('<h3');
               if (firstH3Idx > 0) {
+                // 학습 데이터 첫 줄에서 헤더 라벨 추출 (없으면 <목차> fallback)
+                const firstLine = rawToc.split('\n')[0].trim();
+                const headerLabel = /목차|INDEX|차례|contents/i.test(firstLine) ? firstLine : '<목차>';
                 const tocItems = h3Matches.map((m, i) => {
                   const title = m[1].replace(/<[^>]+>/g, '').trim();
                   return `<p>${i + 1}) ${title}</p>`;
                 });
-                const tocHtml = '\n<p>&nbsp;</p>\n' + tocItems.join('\n') + '\n<p>&nbsp;</p>\n\n';
+                const tocHtml = '\n<p>&nbsp;</p>\n<p>' + headerLabel + '</p>\n'
+                  + tocItems.join('\n') + '\n<p>&nbsp;</p>\n\n';
                 blogText = blogText.substring(0, firstH3Idx) + tocHtml + blogText.substring(firstH3Idx);
-                console.info(`[BLOG] 목차 자동 생성 (${h3Matches.length}개 소제목 기반)`);
+                // 목차 삽입 후 빈 p 중복 재정리
+                blogText = blogText.replace(/(<p>&nbsp;<\/p>\s*){2,}/g, '<p>&nbsp;</p>\n');
+                console.info(`[BLOG] 목차 자동 생성: 헤더="${headerLabel}" ${h3Matches.length}개 소제목`);
               }
             }
           }
