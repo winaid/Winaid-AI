@@ -453,7 +453,7 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
               )}
               {imageSourceMode !== 'ai' && onChangeImageSourceMode && (
                 <ImageLibrary
-                  enabled={imageSourceMode !== 'ai'}
+                  enabled={true}
                   onToggle={() => {}}
                 />
               )}
