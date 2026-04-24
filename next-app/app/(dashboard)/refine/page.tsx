@@ -335,7 +335,7 @@ export default function RefinePage() {
               </p>
             </div>
             <div className="mt-8 flex flex-col items-center gap-2">
-              {['자연스러운 문체 교정', 'AI 냄새 제거', '의료광고법 검증', 'SEO 최적화 보정', '채팅으로 세밀하게 수정'].map(text => (
+              {['자연스러운 문체 교정', 'AI 느낌 제거', '의료광고법 검증', 'SEO 최적화 보정', '채팅으로 세밀하게 수정'].map(text => (
                 <div key={text} className="flex items-center gap-3 px-4 py-2 rounded-lg text-xs text-slate-400">
                   <span className="text-[10px] text-violet-400">✦</span>
                   {text}
