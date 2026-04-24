@@ -141,6 +141,11 @@ async function generate2Pass(
     return generate1Pass(req, hospitalStyleBlock, userId);
   }
 
+  const totalSectionsForDistribution = outline.sections.length;
+  if (typeof req.keywordDensity === 'number' && req.keywords?.trim()) {
+    const perSec = Math.max(1, Math.ceil(req.keywordDensity / totalSectionsForDistribution));
+    console.info(`[BLOG] 키워드 분배: 전체 ${req.keywordDensity}회 → ${totalSectionsForDistribution}섹션 × ${perSec}회`);
+  }
   const sectionPromises = outline.sections.map((section, idx) => {
     const prompt = buildSectionFromOutlinePrompt({
       section,
@@ -148,6 +153,8 @@ async function generate2Pass(
       outline,
       req,
       hospitalStyleBlock,
+      density: req.keywordDensity,
+      totalSections: totalSectionsForDistribution,
     });
     return callLLM({
       task: 'blog_unified',
@@ -297,6 +304,11 @@ async function generate2PassWithProgress(
   const totalSections = outline.sections.length;
   send('stage', { name: 'sections_start', total: totalSections });
 
+  if (typeof req.keywordDensity === 'number' && req.keywords?.trim()) {
+    const perSec = Math.max(1, Math.ceil(req.keywordDensity / totalSections));
+    console.info(`[BLOG] 키워드 분배: 전체 ${req.keywordDensity}회 → ${totalSections}섹션 × ${perSec}회`);
+  }
+
   let completedCount = 0;
   const sectionPromises = outline.sections.map((section, idx) => {
     const prompt = buildSectionFromOutlinePrompt({
@@ -305,6 +317,8 @@ async function generate2PassWithProgress(
       outline: outline!,
       req,
       hospitalStyleBlock,
+      density: req.keywordDensity,
+      totalSections,
     });
     return callLLM({
       task: 'blog_unified',
