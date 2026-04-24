@@ -265,8 +265,8 @@ interface ResultPanelProps {
   regeneratingImage?: number | null;
   /** contentEditable 편집 내용을 부모 state 로 동기화 (debounce 500ms) */
   onContentChange?: (html: string) => void;
-  /** 단락 hover [+] 버튼 클릭 시 호출 — afterElement 기준으로 이미지 삽입 */
-  onRequestImageInsert?: (afterElement: HTMLElement) => void;
+  /** 단락 hover [+] 버튼 / placeholder 클릭 시 호출 — mode 로 삽입 방식 분기 */
+  onRequestImageInsert?: (target: HTMLElement, mode: 'after' | 'replace') => void;
 }
 
 export function ResultPanel({
@@ -654,6 +654,17 @@ export function ResultPanel({
               onInput={handleContentInput}
               onClick={(e) => {
                 const target = e.target as HTMLElement;
+
+                // 1) placeholder 클릭 (라이브러리 매칭 실패 자리) — 이미지 클릭보다 우선
+                const slot = target.closest('[data-img-slot]') as HTMLElement | null;
+                if (slot && onRequestImageInsert) {
+                  e.preventDefault();
+                  const wrapper = slot.closest('.content-image-wrapper') as HTMLElement | null;
+                  onRequestImageInsert(wrapper || slot, 'replace');
+                  return;
+                }
+
+                // 2) 기존 이미지 클릭 → 재생성
                 if (target.tagName === 'IMG' && onImageRegenerate) {
                   const idx = target.getAttribute('data-image-index');
                   if (idx) {
@@ -664,7 +675,10 @@ export function ResultPanel({
               }}
             />
             {onRequestImageInsert && (
-              <ImageInsertButton editorRef={editorRef} onInsert={onRequestImageInsert} />
+              <ImageInsertButton
+                editorRef={editorRef}
+                onInsert={(afterElement) => onRequestImageInsert(afterElement, 'after')}
+              />
             )}
             {/* 이미지 재생성 오버레이는 useEffect로 해당 이미지 위에 표시 */}
           </div>

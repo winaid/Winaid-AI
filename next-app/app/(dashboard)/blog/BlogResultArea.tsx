@@ -48,8 +48,8 @@ export interface BlogResultAreaProps {
   onChatRefine?: () => void;
   // contentEditable 편집 → 부모 state 동기화
   onContentChange?: (html: string) => void;
-  // 단락 hover [+] 버튼 클릭 → 이미지 삽입 모달
-  onRequestImageInsert?: (afterElement: HTMLElement) => void;
+  // 단락 hover [+] 버튼 / placeholder 클릭 → 이미지 삽입 모달
+  onRequestImageInsert?: (target: HTMLElement, mode: 'after' | 'replace') => void;
 }
 
 /** 블로그 결과 영역 — 생성 중 / 에러 / 결과 / 빈 상태 4가지 렌더링 */

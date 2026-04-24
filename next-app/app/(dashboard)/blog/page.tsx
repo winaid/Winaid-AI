@@ -194,9 +194,10 @@ function BlogForm() {
   const [replaceModalOpen, setReplaceModalOpen] = useState(false);
   const [replaceSlotIndex, setReplaceSlotIndex] = useState<number | null>(null);
   const [replaceCurrentUrl, setReplaceCurrentUrl] = useState<string | undefined>(undefined);
-  // 단락 hover [+] 이미지 삽입 모달 state
+  // 단락 hover [+] / placeholder 클릭 이미지 삽입 모달 state
   const [insertModalOpen, setInsertModalOpen] = useState(false);
-  const [insertAfterElement, setInsertAfterElement] = useState<HTMLElement | null>(null);
+  const [insertTargetElement, setInsertTargetElement] = useState<HTMLElement | null>(null);
+  const [insertMode, setInsertMode] = useState<'after' | 'replace'>('after');
   const [insertHintText, setInsertHintText] = useState('');
   const [regenPrompt, setRegenPrompt] = useState('');
   const [isRecommendingPrompt, setIsRecommendingPrompt] = useState(false);
@@ -1833,28 +1834,37 @@ Output ONLY the prompt. No explanation.`;
   }, [generatedContent, selectedImgIndex, isRecommendingPrompt]);
 
   // ── 이미지 히스토리에서 선택 → HTML 교체 ──
-  // 단락 hover [+] 버튼 클릭 — 해당 단락 뒤에 이미지 삽입 모달 오픈
-  const handleRequestImageInsert = useCallback((afterElement: HTMLElement) => {
-    setInsertAfterElement(afterElement);
-    // 단락 텍스트 요약 (모달 AI 탭 기본 프롬프트)
-    const hint = (afterElement.textContent || '').trim().slice(0, 60);
+  // 단락 hover [+] 버튼 / placeholder 클릭 — 모드별 이미지 삽입 모달 오픈
+  const handleRequestImageInsert = useCallback((target: HTMLElement, mode: 'after' | 'replace') => {
+    setInsertTargetElement(target);
+    setInsertMode(mode);
+    // 단락/placeholder 텍스트 요약 (모달 AI 탭 기본 프롬프트)
+    const hint = (target.textContent || '').trim().slice(0, 60);
     setInsertHintText(hint);
     setInsertModalOpen(true);
   }, []);
 
-  // 이미지 삽입 실행 — insertAfterElement 기준 DOM 직접 삽입 + state 즉시 동기화
+  // 이미지 삽입 실행 — after: 단락 뒤에 추가, replace: placeholder wrapper 교체
   const handleInsertImage = useCallback((imageUrl: string, alt: string, prompt?: string) => {
-    if (!insertAfterElement) return;
-    // 현재 최대 data-image-index +1 계산
-    const editor = insertAfterElement.closest('article[contenteditable]') as HTMLElement | null;
+    if (!insertTargetElement) return;
+    const editor = insertTargetElement.closest('article[contenteditable]') as HTMLElement | null;
     if (!editor) return;
+    // 현재 최대 data-image-index +1 계산 (placeholder 는 index 없음)
     const existingIndices = Array.from(editor.querySelectorAll('[data-image-index]'))
       .map(el => Number(el.getAttribute('data-image-index')))
       .filter(n => !Number.isNaN(n));
     const newIdx = existingIndices.length > 0 ? Math.max(...existingIndices) + 1 : 1;
     const safeAlt = alt.replace(/"/g, '&quot;');
     const html = `<div class="content-image-wrapper"><img src="${imageUrl}" alt="${safeAlt}" data-image-index="${newIdx}" style="max-width:100%;border-radius:12px;" /></div>`;
-    insertAfterElement.insertAdjacentHTML('afterend', html);
+
+    if (insertMode === 'replace') {
+      // placeholder wrapper 자체를 <img> 로 교체 (outerHTML)
+      insertTargetElement.outerHTML = html;
+    } else {
+      // 'after': 단락 뒤에 삽입
+      insertTargetElement.insertAdjacentHTML('afterend', html);
+    }
+
     // state 즉시 동기화 (debounce 우회)
     setGeneratedContent(editor.innerHTML);
     // AI 생성 이미지면 prompt 저장 (이후 재생성 시 활용)
@@ -1865,9 +1875,9 @@ Output ONLY the prompt. No explanation.`;
         return next;
       });
     }
-    setInsertAfterElement(null);
-    console.info(`[BLOG] 이미지 삽입: index=${newIdx} ${prompt ? '(AI 생성)' : '(라이브러리)'}`);
-  }, [insertAfterElement]);
+    setInsertTargetElement(null);
+    console.info(`[BLOG] 이미지 ${insertMode === 'replace' ? '교체' : '삽입'}: index=${newIdx} ${prompt ? '(AI 생성)' : '(라이브러리)'}`);
+  }, [insertTargetElement, insertMode]);
 
   const handleSelectHistoryImage = useCallback((imageIndex: number, url: string) => {
     setGeneratedContent(prev => {
@@ -2201,10 +2211,10 @@ Output ONLY the prompt. No explanation.`;
         currentImageUrl={replaceCurrentUrl}
       />
 
-      {/* ── 단락 hover [+] 버튼 → 이미지 삽입 모달 (라이브러리/AI 생성) ── */}
+      {/* ── 단락 hover [+] / placeholder 클릭 → 이미지 삽입 모달 (라이브러리/AI) ── */}
       <ImageInsertModal
         open={insertModalOpen}
-        onClose={() => { setInsertModalOpen(false); setInsertAfterElement(null); }}
+        onClose={() => { setInsertModalOpen(false); setInsertTargetElement(null); }}
         onInsert={handleInsertImage}
         category={category || ''}
         topic={topic}
