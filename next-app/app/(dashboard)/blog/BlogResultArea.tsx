@@ -80,31 +80,33 @@ export default function BlogResultArea({
 
   // ── (1) 생성 중 ──
   if (isGenerating) {
-    const stage = BLOG_STAGES[displayStage] || BLOG_STAGES[1];
-    const pool = BLOG_MESSAGE_POOL[displayStage] || BLOG_MESSAGE_POOL[1];
-
+    // stageInfo.name 이 있으면 그걸 기준으로 라벨 stage 결정 (라벨/메시지 단일 source 통일)
+    let stageForLabel = displayStage;
     let displayMsg: string;
     let progressPct: number;
+    const pool = BLOG_MESSAGE_POOL[displayStage] || BLOG_MESSAGE_POOL[1];
 
     if (stageInfo) {
       const { name, completed, total } = stageInfo;
       if (name === 'outline_start') {
+        stageForLabel = 0;
         displayMsg = '글 구조를 짜고 있어요...';
-        progressPct = 5;
+        progressPct = 8;
       } else if (name === 'outline_done') {
+        stageForLabel = 0;
         displayMsg = '구조 완성! 본문 작성 시작합니다...';
         progressPct = 15;
       } else if (name === 'sections_start') {
+        stageForLabel = 1;
         displayMsg = '도입부와 본문을 채우고 있어요...';
-        progressPct = 20;
-      } else if (name === 'section_done' && total) {
+        progressPct = 22;
+      } else if ((name === 'section_done' || name === 'section_failed') && total) {
+        stageForLabel = 1;
         const pct = (completed ?? 0) / total;
         displayMsg = `본문 작성 중... (${completed}/${total})`;
-        progressPct = 20 + pct * 60;
-      } else if (name === 'section_failed' && total) {
-        displayMsg = `본문 작성 중... (${completed}/${total})`;
-        progressPct = 20 + ((completed ?? 0) / total) * 60;
+        progressPct = 22 + pct * 55;
       } else if (name === 'fallback_1pass') {
+        stageForLabel = 0;
         displayMsg = '글을 작성하고 있어요...';
         progressPct = 30;
       } else {
@@ -113,15 +115,21 @@ export default function BlogResultArea({
       }
     } else {
       displayMsg = pool[rotationIdx % pool.length];
-      progressPct = estimatedTotalSeconds > 0
-        ? Math.min(95, (elapsedSeconds / estimatedTotalSeconds) * 100)
-        : 0;
+      progressPct = 0;
     }
+
+    // 시간 경과 기반 최소 진행률 — stage 매칭 안 돼도 뒤로 안 가고 시간만큼 전진
+    const timeBasedPct = estimatedTotalSeconds > 0
+      ? Math.min(90, (elapsedSeconds / estimatedTotalSeconds) * 100)
+      : 0;
+    progressPct = Math.max(progressPct, timeBasedPct);
+
+    const stage = BLOG_STAGES[stageForLabel] || BLOG_STAGES[1];
 
     return (
       <div className="flex-1 min-w-0">
         <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-12 flex flex-col items-center justify-center text-center min-h-[480px]">
-          {/* 상단: 현재 단계 배지 */}
+          {/* 상단: 현재 단계 배지 (stageForLabel 기준 — 메시지와 항상 일치) */}
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold mb-6 bg-blue-50 text-blue-600 border border-blue-100">
             <span>{stage.icon}</span>
             <span>{stage.label}</span>
@@ -166,10 +174,14 @@ export default function BlogResultArea({
                   return `약 ${remaining}초 남음`;
                 }
               }
-              // 2) 초기 단계 (outline / sections_start) — estimated 기반
+              // 2) progressPct 기반 역산 (시간 경과가 쌓이면서 자연 감소 보장)
+              if (progressPct > 10 && progressPct < 95) {
+                const remaining = Math.max(5, Math.round(elapsedSeconds * (100 - progressPct) / progressPct));
+                return `약 ${remaining}초 남음`;
+              }
+              // 3) 극초기 (progressPct ≤ 10) — estimated fallback
               const remaining = estimatedTotalSeconds - elapsedSeconds;
               if (remaining > 5) return `약 ${remaining}초 남음`;
-              // estimated 초과해도 실제 진행률 낮으면 거짓 "거의 다" 억제
               return '조금만 더 기다려주세요...';
             })()}
           </p>

@@ -932,7 +932,7 @@ JSON 형식으로 응답해주세요.`;
     };
 
     setIsGenerating(true);
-    setDisplayStage(1);
+    setDisplayStage(0);  // 0: 글 설계 중 (outline 단계)
     setStageInfo(null);
     setRotationIdx(0);
     setError(null);
@@ -1032,12 +1032,19 @@ JSON 형식으로 응답해주세요.`;
           try {
             const data = JSON.parse(dataStr);
             if (eventName === 'stage') {
+              const stageName = data.name as string;
               setStageInfo({
-                name: data.name as string,
+                name: stageName,
                 completed: typeof data.completed === 'number' ? data.completed : undefined,
                 total: typeof data.total === 'number' ? data.total : undefined,
               });
-              console.info(`[BLOG] [STAGE] ${data.name}`, data);
+              console.info(`[BLOG] [STAGE] ${stageName}`, data);
+              // SSE stage 이름에 따라 displayStage 자동 전환 (라벨/힌트 동기화)
+              if (stageName === 'outline_start' || stageName === 'outline_done' || stageName === 'fallback_1pass') {
+                setDisplayStage(0); // 글 설계 중
+              } else if (stageName === 'sections_start' || stageName === 'section_done' || stageName === 'section_failed') {
+                setDisplayStage(1); // 본문 작성 중
+              }
             } else if (eventName === 'complete') {
               finalData = { text: data.text, violations: data.violations, usage: data.usage, model: data.model };
             } else if (eventName === 'error') {
