@@ -2,10 +2,20 @@
  * AEO/GEO 진단 — HTML 크롤링 + cheerio 파싱
  *
  * 서버에서만 실행 (클라이언트는 CORS). UA 는 실제 Chrome 으로 위장해 WAF 회피.
- * 타임아웃 기본 10초.
+ * 타임아웃 기본 30초.
  */
 
 import * as cheerio from 'cheerio';
+import * as nodeHttps from 'node:https';
+import * as nodeHttp from 'node:http';
+
+// node:http IncomingMessage 최소 인터페이스 — @types/node 없이 사용하기 위함
+interface NodeIncomingMessage {
+  statusCode?: number;
+  rawHeaders?: string[];
+  setEncoding(enc: string): void;
+  on(event: string, cb: (...args: unknown[]) => void): this;
+}
 import type { CrawlResult, CrawlImage, CrawlLink, CrawlHeading } from './types';
 import { checkRobotsTxt, checkSitemap, parseAiCrawlerPolicy, checkLlmsTxt } from './robotsSitemap';
 
@@ -13,7 +23,73 @@ import { checkRobotsTxt, checkSitemap, parseAiCrawlerPolicy, checkLlmsTxt } from
 const USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 
-const DEFAULT_TIMEOUT_MS = 10_000;
+// 만료·자체 서명 SSL 인증서 허용 Agent (의료 도메인에 흔히 발생)
+const insecureHttpsAgent = new nodeHttps.Agent({ rejectUnauthorized: false });
+
+const DEFAULT_TIMEOUT_MS = 30_000;
+
+const BASE_HEADERS = {
+  'User-Agent': USER_AGENT,
+  Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'Accept-Language': 'ko,en-US;q=0.9,en;q=0.8',
+} as const;
+
+/** node:https/http 기반 SSL-완화 fetch — 표준 fetch SSL 에러 후 fallback. 리다이렉트 5회 추적. */
+async function fetchInsecure(targetUrl: string, timeoutMs: number): Promise<Response> {
+  let url = targetUrl;
+  for (let i = 0; i < 6; i++) {
+    const parsed = new URL(url);
+    const isHttps = parsed.protocol === 'https:';
+
+    const { statusCode, headers, body } = await new Promise<{
+      statusCode: number;
+      headers: Record<string, string>;
+      body: string;
+    }>((resolve, reject) => {
+      const options = {
+        method: 'GET',
+        headers: { ...BASE_HEADERS },
+        ...(isHttps ? { agent: insecureHttpsAgent } : {}),
+      };
+
+      const onResponse = (res: NodeIncomingMessage) => {
+        let bodyStr = '';
+        res.setEncoding('utf-8');
+        res.on('data', (chunk: unknown) => { bodyStr += String(chunk); });
+        res.on('end', () => {
+          const flat: Record<string, string> = {};
+          const raw = res.rawHeaders ?? [];
+          for (let j = 0; j < raw.length; j += 2) {
+            flat[raw[j].toLowerCase()] = raw[j + 1];
+          }
+          resolve({ statusCode: res.statusCode ?? 200, headers: flat, body: bodyStr });
+        });
+        res.on('error', reject);
+      };
+
+      const req = isHttps
+        ? nodeHttps.request(url, options, onResponse)
+        : nodeHttp.request(url, options, onResponse);
+
+      req.setTimeout(timeoutMs, () => { req.destroy(); reject(new Error('Request timeout')); });
+      req.on('error', reject);
+      req.end();
+    });
+
+    if (statusCode >= 300 && statusCode < 400 && headers['location']) {
+      const loc = headers['location'];
+      url = loc.startsWith('http') ? loc : new URL(loc, url).toString();
+      continue;
+    }
+
+    const respHeaders = new Headers();
+    for (const [k, v] of Object.entries(headers)) {
+      if (v) respHeaders.set(k, v);
+    }
+    return new Response(body, { status: statusCode, headers: respHeaders });
+  }
+  throw new Error('Too many redirects');
+}
 
 // ── 의료/치과 특화 키워드 ──────────────────────────────────
 
@@ -42,24 +118,49 @@ const KOREAN_ADDRESS_PATTERN =
 // 한국 전화번호 (02-xxxx-xxxx, 031-xxxx-xxxx, 1588-xxxx 등)
 const PHONE_PATTERN = /(?:\+?82-?)?(?:0\d{1,2}|1\d{3})[-.\s]?\d{3,4}[-.\s]?\d{4}/;
 
-// ── fetch 헬퍼 ──────────────────────────────────────────────
+// ── fetch 헬퍼 (3단계 fallback) ───────────────────────────
 
 export async function fetchWithTimeout(
   url: string,
   timeoutMs: number = DEFAULT_TIMEOUT_MS,
   init?: RequestInit,
 ): Promise<Response> {
-  return fetch(url, {
+  const baseInit: RequestInit = {
     ...init,
     signal: AbortSignal.timeout(timeoutMs),
-    headers: {
-      'User-Agent': USER_AGENT,
-      Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      'Accept-Language': 'ko,en-US;q=0.9,en;q=0.8',
-      ...(init?.headers ?? {}),
-    },
+    headers: { ...BASE_HEADERS, ...(init?.headers ?? {}) },
     redirect: 'follow',
-  });
+  };
+
+  // 1차: 표준 fetch
+  try {
+    return await fetch(url, baseInit);
+  } catch (rawErr) {
+    const msg = (rawErr as Error).message || '';
+
+    // 2차: SSL 에러 → node:https 검증 완화 재시도 (만료·자체 서명 인증서)
+    if (/CERT_|certificate|SSL|TLS|UNABLE_TO_VERIFY|ERR_TLS/i.test(msg)) {
+      console.warn(`[diagnostic] SSL relaxed retry: ${url} (${msg.slice(0, 80)})`);
+      try {
+        return await fetchInsecure(url, timeoutMs);
+      } catch {
+        // 완화도 실패 → HTTP fallback 으로 계속
+      }
+    }
+
+    // 3차: HTTPS 실패 → HTTP 재시도 (HTTPS 미설정 사이트)
+    if (url.startsWith('https://')) {
+      const httpUrl = url.replace(/^https:\/\//, 'http://');
+      console.warn(`[diagnostic] HTTPS failed, HTTP fallback: ${httpUrl} (${msg.slice(0, 80)})`);
+      try {
+        return await fetch(httpUrl, { ...baseInit, signal: AbortSignal.timeout(timeoutMs) });
+      } catch {
+        /* 원래 에러 throw */
+      }
+    }
+
+    throw rawErr;
+  }
 }
 
 // ── 메인 크롤러 ────────────────────────────────────────────
@@ -77,8 +178,18 @@ export async function crawlSite(targetUrl: string, options: CrawlOptions = {}): 
   const origin = parsedUrl.origin;
 
   // 1) 메인 페이지
-  const res = await fetchWithTimeout(targetUrl, timeoutMs);
+  let res: Response;
+  try {
+    res = await fetchWithTimeout(targetUrl, timeoutMs);
+  } catch (fetchErr) {
+    const msg = (fetchErr as Error).message || '';
+    if (/aborted|timeout/i.test(msg)) throw new Error('TIMEOUT');
+    if (/CERT_|SSL|TLS|certificate/i.test(msg)) throw new Error('SSL_ERROR');
+    if (/ENOTFOUND|EAI_AGAIN|getaddrinfo/i.test(msg)) throw new Error('DNS_ERROR');
+    throw new Error(`FETCH_FAILED:${msg.slice(0, 120)}`);
+  }
   if (!res.ok) {
+    if (res.status === 403 || res.status === 429) throw new Error(`BOT_BLOCKED:${res.status}`);
     throw new Error(`UNREACHABLE:${res.status}`);
   }
   const html = await res.text();

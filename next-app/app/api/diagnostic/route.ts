@@ -83,11 +83,23 @@ function deriveSiteName(title: string, finalUrl: string): string {
 function classifyCrawlError(e: unknown): { code: ErrCode; status: number; message: string } {
   const msg = (e as Error)?.message || 'unknown';
   const name = (e as Error)?.name || '';
-  if (/^UNREACHABLE/.test(msg)) {
-    return { code: 'UNREACHABLE', status: 502, message: `사이트에 접근할 수 없습니다 (${msg}).` };
+  if (msg === 'TIMEOUT' || name === 'TimeoutError' || name === 'AbortError' || /timeout/i.test(msg)) {
+    return { code: 'TIMEOUT', status: 504, message: '사이트 응답 시간이 초과되었습니다 (30초). 사이트가 매우 느리거나 일시적으로 불안정합니다.' };
   }
-  if (name === 'TimeoutError' || name === 'AbortError' || /timeout/i.test(msg)) {
-    return { code: 'TIMEOUT', status: 504, message: '사이트 응답 시간이 초과되었습니다.' };
+  if (msg === 'SSL_ERROR') {
+    return { code: 'UNREACHABLE', status: 502, message: 'SSL 인증서 문제로 사이트에 접근할 수 없습니다. 브라우저에서도 "주의 요함" 경고가 뜰 수 있습니다.' };
+  }
+  if (msg === 'DNS_ERROR') {
+    return { code: 'UNREACHABLE', status: 502, message: '도메인을 찾을 수 없습니다. URL 을 다시 확인해 주세요.' };
+  }
+  if (/^BOT_BLOCKED/.test(msg)) {
+    return { code: 'UNREACHABLE', status: 502, message: '사이트가 자동 진단 도구를 차단하고 있습니다 (Cloudflare 또는 봇 차단 설정).' };
+  }
+  if (/^FETCH_FAILED/.test(msg)) {
+    return { code: 'UNREACHABLE', status: 502, message: `사이트에 접근할 수 없습니다: ${msg.replace('FETCH_FAILED:', '').slice(0, 120)}` };
+  }
+  if (/^UNREACHABLE/.test(msg)) {
+    return { code: 'UNREACHABLE', status: 502, message: `사이트가 응답하지 않습니다 (${msg.replace('UNREACHABLE:', 'HTTP ')}).` };
   }
   if (/parse|cheerio|syntax/i.test(msg)) {
     return { code: 'PARSE_ERROR', status: 500, message: 'HTML 파싱에 실패했습니다.' };
