@@ -93,6 +93,22 @@ export interface CrawlResult {
     srcsetCount: number;
     totalImages: number;
   };
+
+  // ── Phase 1 확장 필드 ────────────────────────────────────
+  /** HTTP 응답 상태 코드 (메인 페이지 최종 응답) */
+  httpStatus?: number;
+  /** HTTP 보안 헤더 — 메인 페이지 응답에서 추출 */
+  securityHeaders?: {
+    csp: string | null;
+    hsts: string | null;
+    xFrame: string | null;
+    xContentType: string | null;
+    referrer: string | null;
+  };
+  /** 파비콘 URL (<link rel="icon"> 등) */
+  favicon?: string;
+  /** Twitter Card 메타 태그 (meta name="twitter:*") */
+  twitterTags?: Record<string, string>;
 }
 
 // ── PSI 결과 ────────────────────────────────────────────────

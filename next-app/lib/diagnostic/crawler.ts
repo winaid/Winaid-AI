@@ -86,6 +86,16 @@ export async function crawlSite(targetUrl: string, options: CrawlOptions = {}): 
 
   const result = parseHtml(html, origin, finalUrl);
 
+  // HTTP 보안 헤더 + 응답 상태 (Phase 1)
+  result.httpStatus = res.status;
+  result.securityHeaders = {
+    csp: res.headers.get('content-security-policy'),
+    hsts: res.headers.get('strict-transport-security'),
+    xFrame: res.headers.get('x-frame-options'),
+    xContentType: res.headers.get('x-content-type-options'),
+    referrer: res.headers.get('referrer-policy'),
+  };
+
   // 2) robots.txt / sitemap.xml — robotsSitemap.ts 에 위임.
   //    robots.txt 에 Sitemap: 디렉티브가 있으면 그 URL 도 sitemap 존재 확인에 사용.
   const robots = await checkRobotsTxt(origin, timeoutMs);
@@ -141,6 +151,21 @@ function parseHtml(html: string, origin: string, finalUrl: string): CrawlResult 
     const content = $(el).attr('content');
     if (prop && content) ogTags[prop] = content.trim();
   });
+
+  // Twitter Card 메타 태그 (Phase 1)
+  const twitterTags: Record<string, string> = {};
+  $('meta[name^="twitter:"]').each((_, el) => {
+    const name = $(el).attr('name');
+    const content = $(el).attr('content');
+    if (name && content) twitterTags[name] = content.trim();
+  });
+
+  // 파비콘 (Phase 1)
+  const favicon =
+    $('link[rel="icon"]').attr('href')?.trim() ||
+    $('link[rel="shortcut icon"]').attr('href')?.trim() ||
+    $('link[rel="apple-touch-icon"]').attr('href')?.trim() ||
+    undefined;
 
   // 헤딩
   const h1: string[] = [];
@@ -313,6 +338,11 @@ function parseHtml(html: string, origin: string, finalUrl: string): CrawlResult 
     dateModified: dateModified || schemaDateMod,
     author: author || schemaAuthor,
     imageOptimization: { webpCount, lazyCount, srcsetCount, totalImages },
+
+    // Phase 1 확장 필드
+    twitterTags: Object.keys(twitterTags).length > 0 ? twitterTags : undefined,
+    favicon,
+    // httpStatus / securityHeaders 는 crawlSite() 에서 응답 헤더로 주입
   };
 }
 

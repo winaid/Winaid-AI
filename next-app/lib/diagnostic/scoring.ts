@@ -64,15 +64,31 @@ export const LABELS = {
   llms_txt: 'llms.txt 파일',
   review_schema: 'Review/평점 스키마',
   howto_schema: 'HowTo 스키마',
+  // Phase 1 — security_tech 추가 항목
+  canonical: 'Canonical URL 선언',
+  // Phase 1 — content_quality 추가 항목
+  favicon: '파비콘(사이트 아이콘)',
+  // Phase 1 — external_channels 추가 항목
+  og_bundle: 'OG 소셜 미리보기 (og:title·description·image)',
+  twitter_card: 'Twitter Card 메타태그',
+  charset_utf8: '문자 인코딩 (UTF-8)',
+  // Phase 1 — security_headers 카테고리 (신규)
+  response_status: 'HTTP 응답 상태 (200)',
+  csp_header: 'Content-Security-Policy 헤더',
+  hsts_header: 'Strict-Transport-Security 헤더',
+  x_frame_header: 'X-Frame-Options 헤더',
+  x_content_type_header: 'X-Content-Type-Options 헤더',
+  referrer_policy_header: 'Referrer-Policy 헤더',
 } as const;
 
 export type LabelKey = keyof typeof LABELS;
 
 const WEIGHTS: Record<string, number> = {
-  security_tech: 15,
-  site_structure: 25,
+  security_tech: 12,
+  security_headers: 8,
+  site_structure: 22,
   structured_data: 12,
-  content_quality: 25,
+  content_quality: 23,
   external_channels: 13,
   aeo_geo: 10,
 };
@@ -120,6 +136,18 @@ const RECOMMENDATIONS: Record<string, string> = {
   [LABELS.address_text]: '주소가 이미지로만 있거나 누락되면 AI 위치 검색에서 탈락합니다. 관리자 모드에서 푸터에 "{시/도} {구/군} {동/로}" 텍스트 직접 입력.',
   [LABELS.hours_text]: '"지금 여는 치과" 같은 AI 질문에 답하려면 영업시간 데이터가 필요합니다. 관리자 모드에서 진료시간·점심시간·휴진일 표로 표시.',
   [LABELS.blog_searchable]: '네이버 블로그가 기본적으로 검색 차단되어 있으면 AI 답변에 인용 안 됩니다. 병원 담당자가 네이버 블로그 관리자 > 기본설정 에서 "전체공개 + 외부 검색허용" 스위치 켜기.',
+  // Phase 1 추가
+  [LABELS.canonical]: '중복 URL 문제가 생길 수 있습니다. 제작사에 "각 페이지 head 에 canonical link 태그를 추가해주세요" 요청하세요.',
+  [LABELS.favicon]: '파비콘이 없으면 브라우저 탭·즐겨찾기에 아이콘이 없어 신뢰도가 낮아 보입니다. 제작사에 "favicon.ico 또는 PNG 파비콘 추가" 요청하세요.',
+  [LABELS.og_bundle]: 'OG 태그가 부족해 카카오·페이스북 등에 링크를 공유했을 때 미리보기가 제대로 안 나옵니다. 제작사에 "og:title·og:description·og:image 메타 태그 추가" 요청하세요.',
+  [LABELS.twitter_card]: 'Twitter(X) 에 공유했을 때 카드가 나오지 않습니다. 제작사에 "meta name=\'twitter:card\' content=\'summary_large_image\' 추가" 요청하세요.',
+  [LABELS.charset_utf8]: '문자 인코딩 선언이 없거나 UTF-8 이 아닙니다. 제작사에 "<meta charset=\'UTF-8\'> 을 head 맨 위에 추가" 요청하세요.',
+  [LABELS.response_status]: 'HTTP 응답이 비정상입니다. 제작사에 메인 페이지가 200 OK 를 반환하는지 확인 요청하세요.',
+  [LABELS.csp_header]: 'Content-Security-Policy(CSP) 헤더가 없어 XSS 공격에 취약할 수 있습니다. 제작사에 "응답 헤더에 Content-Security-Policy 설정" 요청하세요.',
+  [LABELS.hsts_header]: 'Strict-Transport-Security(HSTS) 헤더가 없습니다. HTTPS 가 있어도 첫 접속 시 HTTP 로 잠시 노출될 수 있습니다. 제작사에 "HSTS 헤더 추가 (max-age=31536000)" 요청하세요.',
+  [LABELS.x_frame_header]: 'X-Frame-Options 헤더가 없어 클릭재킹(Clickjacking) 공격에 취약할 수 있습니다. 제작사에 "X-Frame-Options: DENY 또는 SAMEORIGIN 헤더 추가" 요청하세요.',
+  [LABELS.x_content_type_header]: 'X-Content-Type-Options 헤더가 없습니다. 브라우저의 MIME 스니핑이 활성화되어 취약점이 생길 수 있습니다. 제작사에 "X-Content-Type-Options: nosniff 헤더 추가" 요청하세요.',
+  [LABELS.referrer_policy_header]: 'Referrer-Policy 헤더가 없습니다. 외부 링크 클릭 시 불필요한 정보가 전달될 수 있습니다. 제작사에 "Referrer-Policy: no-referrer-when-downgrade 헤더 추가" 요청하세요.',
 };
 
 // ── 헬퍼 ───────────────────────────────────────────────────
@@ -230,7 +258,52 @@ function scoreSecurityTech(crawl: CrawlResult, psi: PsiResult | null, hasRobotsT
     items.push(makeItem(LABELS.psi, 25, 5, 'fail', `저조 (${psi.score}/100) — 즉시 개선 필요.`, String(psi.score)));
   }
 
+  // canonical (Phase 1)
+  items.push(crawl.canonical
+    ? makeItem(LABELS.canonical, 10, 10, 'pass', `canonical: ${crawl.canonical}`, crawl.canonical)
+    : makeItem(LABELS.canonical, 10, 0, 'fail', 'canonical link 없음 — 중복 URL 발생 시 SEO 불이익.'));
+
   return toCategoryScore('security_tech', '보안 및 기술 기반', items);
+}
+
+// ── ⑦ security_headers (Phase 1) ─────────────────────────
+
+function scoreSecurityHeaders(crawl: CrawlResult): CategoryScore {
+  const items: CategoryItem[] = [];
+  const sh = crawl.securityHeaders;
+
+  // HTTP 응답 상태 — 크롤 성공 시 항상 2xx. httpStatus 없으면 200 으로 가정.
+  const status = crawl.httpStatus ?? 200;
+  items.push(status >= 200 && status < 300
+    ? makeItem(LABELS.response_status, 15, 15, 'pass', `HTTP ${status} — 정상 응답.`, String(status))
+    : makeItem(LABELS.response_status, 15, 0, 'fail', `HTTP ${status} — 비정상 응답.`, String(status)));
+
+  // CSP
+  items.push(sh?.csp
+    ? makeItem(LABELS.csp_header, 20, 20, 'pass', 'Content-Security-Policy 헤더 설정됨.')
+    : makeItem(LABELS.csp_header, 20, 0, 'fail', 'Content-Security-Policy 없음 — XSS 취약 가능성.'));
+
+  // HSTS
+  items.push(sh?.hsts
+    ? makeItem(LABELS.hsts_header, 20, 20, 'pass', `Strict-Transport-Security: ${sh.hsts}`)
+    : makeItem(LABELS.hsts_header, 20, 0, 'fail', 'Strict-Transport-Security 없음 — HTTPS 강제 미적용.'));
+
+  // X-Frame-Options
+  items.push(sh?.xFrame
+    ? makeItem(LABELS.x_frame_header, 15, 15, 'pass', `X-Frame-Options: ${sh.xFrame}`)
+    : makeItem(LABELS.x_frame_header, 15, 0, 'fail', 'X-Frame-Options 없음 — Clickjacking 취약 가능성.'));
+
+  // X-Content-Type-Options
+  items.push(sh?.xContentType
+    ? makeItem(LABELS.x_content_type_header, 15, 15, 'pass', `X-Content-Type-Options: ${sh.xContentType}`)
+    : makeItem(LABELS.x_content_type_header, 15, 0, 'fail', 'X-Content-Type-Options 없음 — MIME 스니핑 취약 가능성.'));
+
+  // Referrer-Policy
+  items.push(sh?.referrer
+    ? makeItem(LABELS.referrer_policy_header, 15, 15, 'pass', `Referrer-Policy: ${sh.referrer}`)
+    : makeItem(LABELS.referrer_policy_header, 15, 0, 'fail', 'Referrer-Policy 없음 — 브라우저 기본값 사용 중.'));
+
+  return toCategoryScore('security_headers', '보안 헤더', items);
 }
 
 // ── ② site_structure ──────────────────────────────────────
@@ -446,6 +519,11 @@ function scoreContentQuality(crawl: CrawlResult): CategoryScore {
     items.push(makeItem(LABELS.image_optimization, 10, 0, 'unknown', '이미지가 없거나 분석할 수 없습니다.'));
   }
 
+  // favicon (Phase 1)
+  items.push(crawl.favicon
+    ? makeItem(LABELS.favicon, 8, 8, 'pass', `파비콘 감지: ${crawl.favicon}`, crawl.favicon)
+    : makeItem(LABELS.favicon, 8, 0, 'warning', '파비콘 없음 — 브라우저 탭·북마크에 아이콘이 없어 신뢰도가 낮아 보임.'));
+
   return toCategoryScore('content_quality', '콘텐츠 품질', items);
 }
 
@@ -493,6 +571,36 @@ function scoreExternalChannels(crawl: CrawlResult): CategoryScore {
     items.push(makeItem(LABELS.owned_channels_diversity, 20, 10, 'warning', `공식 채널 ${channelPassCount}개 — 3개 이상 권장.`, `${channelPassCount}/5`));
   } else {
     items.push(makeItem(LABELS.owned_channels_diversity, 20, 0, 'fail', '공식 채널 0개 — 네이버 플레이스/GBP/카카오 등록 필요.', '0/5'));
+  }
+
+  // OG 번들 (Phase 1)
+  const ogHasTitle = !!crawl.ogTags['og:title'];
+  const ogHasDesc = !!crawl.ogTags['og:description'];
+  const ogHasImage = !!crawl.ogTags['og:image'];
+  const ogScore = (ogHasTitle ? 1 : 0) + (ogHasDesc ? 1 : 0) + (ogHasImage ? 1 : 0);
+  if (ogScore === 3) {
+    items.push(makeItem(LABELS.og_bundle, 10, 10, 'pass', 'og:title·description·image 모두 설정됨.'));
+  } else if (ogScore >= 1) {
+    const missing = ['og:title', 'og:description', 'og:image'].filter(k => !crawl.ogTags[k]).join(', ');
+    items.push(makeItem(LABELS.og_bundle, 10, 5, 'warning', `OG 태그 일부 누락 (${missing}).`));
+  } else {
+    items.push(makeItem(LABELS.og_bundle, 10, 0, 'fail', 'OG 태그 없음 — 소셜 미리보기 불가.'));
+  }
+
+  // Twitter Card (Phase 1)
+  const hasTwitterCard = !!(crawl.twitterTags?.['twitter:card']);
+  items.push(hasTwitterCard
+    ? makeItem(LABELS.twitter_card, 8, 8, 'pass', `twitter:card="${crawl.twitterTags!['twitter:card']}" 설정됨.`)
+    : makeItem(LABELS.twitter_card, 8, 0, 'fail', 'Twitter Card 메타태그 없음 — X(트위터) 공유 미리보기 불가.'));
+
+  // charset (Phase 1)
+  const charsetVal = crawl.charset || '';
+  if (/utf-?8/i.test(charsetVal)) {
+    items.push(makeItem(LABELS.charset_utf8, 5, 5, 'pass', `charset: ${crawl.charset}`, crawl.charset));
+  } else if (charsetVal) {
+    items.push(makeItem(LABELS.charset_utf8, 5, 2, 'warning', `charset: ${crawl.charset} — UTF-8 권장.`, crawl.charset));
+  } else {
+    items.push(makeItem(LABELS.charset_utf8, 5, 0, 'fail', 'charset 선언 없음 — 한글 깨짐 가능성.'));
   }
 
   return toCategoryScore('external_channels', '외부 채널 연결', items);
@@ -566,6 +674,7 @@ export function scoreCategories(args: {
 }): CategoryScore[] {
   return [
     scoreSecurityTech(args.crawl, args.psi, args.hasRobotsTxt, args.hasSitemap),
+    scoreSecurityHeaders(args.crawl),
     scoreSiteStructure(args.crawl),
     scoreStructuredData(args.crawl),
     scoreContentQuality(args.crawl),
