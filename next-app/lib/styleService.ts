@@ -608,7 +608,7 @@ export async function crawlAndLearnHospitalStyle(
         hospital_name: hospitalName,
         naver_blog_url: blogUrls.join(','),
         crawled_posts_count: dbPostCount,
-        style_profile: sanitizeAnalyzedStylePii(analyzedStyle),
+        style_profile: { ...analyzedStyle, analyzedStyle: sanitizeAnalyzedStylePii(analyzedStyle.analyzedStyle) },
         raw_sample_text: (() => {
           const pii = stripPii(combinedText);
           if (pii.removedCount > 0) console.warn(`[style-learn] PII ${pii.removedCount}건 마스킹 from "${hospitalName}"`);
@@ -1480,7 +1480,7 @@ export async function crawlAndScoreAllHospitals(
         updated_at: new Date().toISOString(),
       };
       if (analyzedStyle) {
-        profileData.style_profile = sanitizeAnalyzedStylePii(analyzedStyle);
+        profileData.style_profile = { ...analyzedStyle, analyzedStyle: sanitizeAnalyzedStylePii(analyzedStyle.analyzedStyle) };
         // Phase 2D Tier 2-A: 단락 경계 보존 (DB 저장용 raw sample)
         const rawJoined = allContents.map((c, idx) => `[글 #${idx + 1}]\n${c}`).join('\n\n');
         const pii = stripPii(rawJoined);
