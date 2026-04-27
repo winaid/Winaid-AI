@@ -1382,6 +1382,14 @@ ${countingRules}
 </char_budget>`;
 }
 
+function isCompoundKeyword(keyword: string): boolean {
+  if (!keyword) return false;
+  if (!/\s/.test(keyword)) return true;
+  // 한글로만 구성 + 2어절 이하 ("임플란트 시술", "강남 치과") → compound 취급
+  if (/^[가-힣\s]+$/.test(keyword) && keyword.split(/\s+/).length <= 2) return true;
+  return false;
+}
+
 function buildKeywordDensityBlock(
   keywords: string | undefined,
   density: number | 'auto' | undefined,
@@ -1391,7 +1399,7 @@ function buildKeywordDensityBlock(
   const primary = keywords.split(',')[0].trim();
   if (!primary) return '';
 
-  const isCompound = !/\s/.test(primary);
+  const isCompound = isCompoundKeyword(primary);
 
   let instruction: string;
   if (density === 'auto' || density === undefined) {
@@ -1777,7 +1785,7 @@ ${nextHeading ? `  <next_heading>${sanitizePromptInput(nextHeading, 100)}</next_
   // 키워드 섹션별 분배 계산 — 본문(section) 만 분배 대상, intro/outro 는 가볍게 언급만
   const safeKeywords = sanitizePromptInput(req.keywords, 300);
   const primaryKeyword = safeKeywords.split(',')[0].trim();
-  const isCompound = primaryKeyword ? !/\s/.test(primaryKeyword) : false;
+  const isCompound = primaryKeyword ? isCompoundKeyword(primaryKeyword) : false;
   let keywordInstruction = '';
   if (primaryKeyword) {
     if (typeof density === 'number') {
