@@ -1601,6 +1601,7 @@ export function buildOutlinePrompt(
   const systemBlocks: CacheableBlock[] = [];
 
   systemBlocks.push({ type: 'text', text: OUTLINE_PERSONA, cacheable: true, cacheTtl: '1h' });
+  systemBlocks.push({ type: 'text', text: E_E_A_T_GUIDE, cacheable: true, cacheTtl: '1h' });
   systemBlocks.push({ type: 'text', text: MEDICAL_LAW_CONSTRAINTS, cacheable: true, cacheTtl: '1h' });
 
   // static 상수 블록 → 1h 캐시 (프로세스 종료 전까지 불변, 캐시 히트율 ↑)
@@ -1689,7 +1690,6 @@ export function buildSectionFromOutlinePrompt(
   if (topicGuideSection) {
     systemBlocks.push({ type: 'text', text: topicGuideSection, cacheable: true, cacheTtl: '1h' });
   }
-  // E-E-A-T/CITATION/MOBILE/AI_SNIPPET 제거 — SECTION_PERSONA 항목 5 + COMMON으로 충분
   const journeyGuide = JOURNEY_STAGE_GUIDES[inferJourneyStage(classifyTopicType(req.topic, req.disease))];
   if (journeyGuide) {
     systemBlocks.push({ type: 'text', text: journeyGuide, cacheable: true, cacheTtl: '1h' });
@@ -1698,6 +1698,7 @@ export function buildSectionFromOutlinePrompt(
   if (section.heading?.includes('자주 묻는 질문')) {
     systemBlocks.push({ type: 'text', text: FAQ_SECTION_GUIDE, cacheable: true, cacheTtl: '1h' });
   }
+  systemBlocks.push({ type: 'text', text: E_E_A_T_GUIDE, cacheable: true, cacheTtl: '1h' });
 
   const learnedStyle = buildLearnedStyleBlock(req, hospitalStyleBlock);
   if (learnedStyle) {
