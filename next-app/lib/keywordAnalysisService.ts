@@ -260,9 +260,10 @@ ${existingBlogTitles.map(t => `- ${t}`).join('\n')}
 진료과: ${category || '치과'}
 ${existingBlock}${buildClinicContextBlock(clinicCtx)}
 규칙:
-1. 반드시 2단어 조합만 (예: "불당동 치과", "불당동 임플란트")
+1. 반드시 2단어 조합만 (예: "강남구역삼동 치과", "논산반월동 임플란트")
 2. "{지역명} {진료과/시술}" 패턴만 허용
-3. 지역명: 주소에서 동/구/읍/면 추출 (지하철역 사용 금지 — 잘못된 역명 위험)
+3. 지역명: 복합형 우선 사용 (구+동=강남구역삼동, 시코어+동=논산반월동). 동 단독 금지 — 전국 동명 충돌 위험
+   광역시/특별시: 구+동 조합. 지방시(구 없음): 시이름+동 조합. 구 있으면: 구+동 조합
 4. 시술: ${getCategoryProcedures(category)}
 5. 절대 3단어 이상 금지
 6. 병원명은 포함하지 않는다
@@ -342,22 +343,46 @@ JSON 배열로만 응답하세요:
 
 // ── 폴백: 정적 파싱으로 키워드 생성 ──
 
-/** 주소에서 지역명(구/동/읍/면) 추출 */
+const MEGA_CITY_PROVINCE = /특별시|광역시|특별자치시/;
+const METRO_CITY_CORES = new Set(['서울', '부산', '대구', '인천', '광주', '대전', '울산', '세종']);
+
+/**
+ * 주소에서 지역명 추출 — 동명 충돌 방지를 위해 복합형 우선 반환.
+ * 수도권/광역시: 구+동 조합 (강남구역삼동)
+ * 지방 시: 시코어+동 조합 (논산반월동)
+ * 구 있으면: 구+동 조합 (상록구반월동)
+ */
 function extractLocations(address: string): string[] {
-  const locations: string[] = [];
-  const guMatch = address.match(/([가-힣]+[구군시])(?=[^가-힣]|$)/g);
-  if (guMatch) {
-    for (const gu of guMatch) {
-      if (!/^(서울|부산|대구|인천|광주|대전|울산|세종)$/.test(gu)) locations.push(gu);
+  const isMegaCity = MEGA_CITY_PROVINCE.test(address);
+
+  const guMatches = (address.match(/([가-힣]+[구군])(?=[^가-힣]|$)/g) ?? [])
+    .filter((g) => g.length >= 2 && g.length <= 5);
+
+  const dongMatches = (address.match(/([가-힣]+[동읍면])(?=[^가-힣]|$)/g) ?? [])
+    .filter((d) => d.length >= 2 && d.length <= 6);
+
+  const siCores = (address.match(/([가-힣]{1,5})시(?=[^가-힣]|$)/g) ?? [])
+    .filter((s) => !MEGA_CITY_PROVINCE.test(s))
+    .map((s) => s.replace(/시$/, ''))
+    .filter((core) => !METRO_CITY_CORES.has(core));
+
+  const gu = guMatches[0];
+  const dong = dongMatches[0];
+  const siCore = siCores[0];
+
+  const results: string[] = [];
+  if (dong) {
+    if (gu) {
+      results.push(`${gu}${dong}`);  // 강남구역삼동, 상록구반월동
+      results.push(gu);
+    } else if (!isMegaCity && siCore) {
+      results.push(`${siCore}${dong}`);  // 논산반월동
     }
+    results.push(dong);
+  } else if (gu) {
+    results.push(gu);
   }
-  const dongMatch = address.match(/([가-힣]+[동읍면])(?=[^가-힣]|$)/g);
-  if (dongMatch) {
-    for (const dong of dongMatch) {
-      if (dong.length >= 2 && dong.length <= 6) locations.push(dong);
-    }
-  }
-  return [...new Set(locations)];
+  return [...new Set(results)];
 }
 
 function fallbackKeywordGeneration(address: string, category?: string): string[] {
@@ -477,6 +502,14 @@ export async function analyzeHospitalKeywords(
       for (const loc of locations.slice(0, 3)) {
         localSeeds.push(`${loc} ${svc}`);
       }
+    }
+  }
+
+  // clinicCtx.locationSignals — 사이트에서 추출한 지역명으로 추가 시드
+  if (clinicCtx?.locationSignals?.length) {
+    const baseTerms = category ? [category] : ['병원'];
+    for (const loc of clinicCtx.locationSignals.slice(0, 3)) {
+      for (const term of baseTerms) localSeeds.push(`${loc} ${term}`);
     }
   }
 
