@@ -22,8 +22,6 @@ function getKeys(): string[] {
   return keys;
 }
 
-let keyIndex = 0;
-
 type AspectRatio = '1:1' | '4:5' | 'A4' | '16:9' | '3:4' | '9:16' | '4:3' | 'auto';
 
 function getAspectInstruction(ratio: AspectRatio): string {
@@ -470,6 +468,8 @@ export async function POST(request: NextRequest) {
     console.error('[api/image] GEMINI_API_KEY not configured');
     return NextResponse.json({ error: 'configuration_error' }, { status: 500 });
   }
+  // race-condition 방지: 모듈 레벨 keyIndex 제거, 요청마다 random start
+  let keyIndex = Math.floor(Math.random() * keys.length);
 
   let body: ImageRequestBody;
   try {

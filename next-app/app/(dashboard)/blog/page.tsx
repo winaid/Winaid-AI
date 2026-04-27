@@ -1146,7 +1146,8 @@ JSON 형식으로 응답해주세요.`;
             }).then(r => r.ok ? r.json() : null)
               .then(d => {
                 const dataUrl = d?.imageDataUrl as string | undefined;
-                // base64 HTML embed 한도 — Storage 업로드 실패 시 블로그 비대화 방지
+                // base64 HTML embed 한도 — 이 조기 경로는 Storage 업로드 없이 직접 embed
+                // 너무 큰 경우 null 반환 → generateAndUpload 가 정식 Storage 경로로 재생성
                 if (dataUrl && dataUrl.length > 700 * 1024) {
                   console.warn(`[image] base64 too large, skip embed: ${Math.round(dataUrl.length / 1024)}KB`);
                   return { index, url: null as string | null };
@@ -1556,11 +1557,6 @@ JSON 형식으로 응답해주세요.`;
             const imgData = await imgRes.json() as { imageDataUrl?: string };
             const dataUrl = imgData.imageDataUrl;
             if (!dataUrl) return { index, url: null };
-            // base64 HTML embed 한도 — Storage 업로드 실패 시 폴백 embed 크기 제한
-            if (dataUrl.length > 700 * 1024) {
-              console.warn(`[image] base64 too large, skip embed: ${Math.round(dataUrl.length / 1024)}KB`);
-              return { index, url: null };
-            }
 
             // 6b) base64 → Supabase Storage 업로드
             if (supabase) {
@@ -1597,7 +1593,11 @@ JSON 형식으로 응답해주세요.`;
               }
             }
 
-            // 6c) Storage 실패 시 base64 fallback
+            // 6c) Storage 실패 시 base64 fallback — 단 700KB 초과는 HTML 비대화 방지로 차단
+            if (dataUrl.length > 700 * 1024) {
+              console.warn(`[image] Storage 실패 + base64 ${Math.round(dataUrl.length / 1024)}KB 초과 — embed skip`);
+              return { index, url: null };
+            }
             return { index, url: dataUrl };
           } catch {
             return { index, url: null };
@@ -2096,10 +2096,6 @@ Output ONLY the prompt. No explanation.`;
 
       const imgData = await imgRes.json() as { imageDataUrl?: string };
       if (!imgData.imageDataUrl) throw new Error('이미지 데이터 없음');
-      if (imgData.imageDataUrl.length > 700 * 1024) {
-        console.warn(`[image] base64 too large (${Math.round(imgData.imageDataUrl.length / 1024)}KB > 700KB) — embed 차단`);
-        throw new Error('이미지가 너무 큽니다. 다시 생성해 주세요.');
-      }
 
       // Supabase Storage 업로드
       if (supabase) {
@@ -2140,6 +2136,12 @@ Output ONLY the prompt. No explanation.`;
             }
           }
         } catch { /* Storage 실패 → base64 fallback */ }
+      }
+
+      // Storage 실패 → base64 fallback. 단 700KB 초과는 HTML 비대화 방지
+      if (imgData.imageDataUrl.length > 700 * 1024) {
+        console.warn(`[image] Storage 실패 + base64 ${Math.round(imgData.imageDataUrl.length / 1024)}KB 초과 — 차단`);
+        throw new Error('이미지가 너무 큽니다. 다시 생성해 주세요.');
       }
 
       // base64 fallback
