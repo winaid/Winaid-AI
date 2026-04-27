@@ -25,12 +25,7 @@ Structure: decorative header/frame (30-40%) + calendar grid (50-60%) + footer ON
 The poster must have visual identity: background texture, decorative elements, branded header.
 DO NOT make the calendar grid fill 100% of the image.
 ⛔ STRICT CONTENT RULES:
-- ⛔ STRICT CONTENT RULES:
 - DO NOT add any information the user did not provide.
-- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
-- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
-- DO NOT invent hospital names, phone numbers, addresses, or medical information.
-- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
 - DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
 - DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
 - DO NOT invent hospital names, phone numbers, addresses, or medical information.
@@ -66,12 +61,7 @@ Structure: decorative header/frame (30-40%) + calendar grid (50-60%) + footer ON
 The poster must have visual identity: background texture, decorative elements, branded header.
 DO NOT make the calendar grid fill 100% of the image.
 ⛔ STRICT CONTENT RULES:
-- ⛔ STRICT CONTENT RULES:
 - DO NOT add any information the user did not provide.
-- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
-- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
-- DO NOT invent hospital names, phone numbers, addresses, or medical information.
-- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
 - DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
 - DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
 - DO NOT invent hospital names, phone numbers, addresses, or medical information.
@@ -105,12 +95,7 @@ Structure: decorative header/frame (30-40%) + calendar grid (50-60%) + footer ON
 The poster must have visual identity: background texture, decorative elements, branded header.
 DO NOT make the calendar grid fill 100% of the image.
 ⛔ STRICT CONTENT RULES:
-- ⛔ STRICT CONTENT RULES:
 - DO NOT add any information the user did not provide.
-- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
-- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
-- DO NOT invent hospital names, phone numbers, addresses, or medical information.
-- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
 - DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
 - DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
 - DO NOT invent hospital names, phone numbers, addresses, or medical information.
@@ -163,12 +148,7 @@ Structure: decorative header/frame (30-40%) + calendar grid (50-60%) + footer ON
 The poster must have visual identity: background texture, decorative elements, branded header.
 DO NOT make the calendar grid fill 100% of the image.
 ⛔ STRICT CONTENT RULES:
-- ⛔ STRICT CONTENT RULES:
 - DO NOT add any information the user did not provide.
-- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
-- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
-- DO NOT invent hospital names, phone numbers, addresses, or medical information.
-- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
 - DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
 - DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
 - DO NOT invent hospital names, phone numbers, addresses, or medical information.
@@ -194,12 +174,7 @@ Structure: decorative header/frame (30-40%) + calendar grid (50-60%) + footer ON
 The poster must have visual identity: background texture, decorative elements, branded header.
 DO NOT make the calendar grid fill 100% of the image.
 ⛔ STRICT CONTENT RULES:
-- ⛔ STRICT CONTENT RULES:
 - DO NOT add any information the user did not provide.
-- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
-- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
-- DO NOT invent hospital names, phone numbers, addresses, or medical information.
-- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
 - DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
 - DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
 - DO NOT invent hospital names, phone numbers, addresses, or medical information.
@@ -225,12 +200,7 @@ Structure: decorative header/frame (30-40%) + calendar grid (50-60%) + footer ON
 The poster must have visual identity: background texture, decorative elements, branded header.
 DO NOT make the calendar grid fill 100% of the image.
 ⛔ STRICT CONTENT RULES:
-- ⛔ STRICT CONTENT RULES:
 - DO NOT add any information the user did not provide.
-- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
-- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
-- DO NOT invent hospital names, phone numbers, addresses, or medical information.
-- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
 - DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
 - DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
 - DO NOT invent hospital names, phone numbers, addresses, or medical information.
@@ -255,12 +225,7 @@ Structure: decorative header/frame (30-40%) + calendar grid (50-60%) + footer ON
 The poster must have visual identity: background texture, decorative elements, branded header.
 DO NOT make the calendar grid fill 100% of the image.
 ⛔ STRICT CONTENT RULES:
-- ⛔ STRICT CONTENT RULES:
 - DO NOT add any information the user did not provide.
-- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
-- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
-- DO NOT invent hospital names, phone numbers, addresses, or medical information.
-- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
 - DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
 - DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
 - DO NOT invent hospital names, phone numbers, addresses, or medical information.
@@ -297,12 +262,7 @@ Structure: decorative header/frame (30-40%) + calendar grid (50-60%) + footer ON
 The poster must have visual identity: background texture, decorative elements, branded header.
 DO NOT make the calendar grid fill 100% of the image.
 ⛔ STRICT CONTENT RULES:
-- ⛔ STRICT CONTENT RULES:
 - DO NOT add any information the user did not provide.
-- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
-- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
-- DO NOT invent hospital names, phone numbers, addresses, or medical information.
-- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
 - DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
 - DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
 - DO NOT invent hospital names, phone numbers, addresses, or medical information.
@@ -335,12 +295,7 @@ Structure: decorative header/frame (30-40%) + calendar grid (50-60%) + footer ON
 The poster must have visual identity: background texture, decorative elements, branded header.
 DO NOT make the calendar grid fill 100% of the image.
 ⛔ STRICT CONTENT RULES:
-- ⛔ STRICT CONTENT RULES:
 - DO NOT add any information the user did not provide.
-- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
-- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
-- DO NOT invent hospital names, phone numbers, addresses, or medical information.
-- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
 - DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
 - DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
 - DO NOT invent hospital names, phone numbers, addresses, or medical information.
@@ -373,12 +328,7 @@ Structure: decorative header/frame (30-40%) + calendar grid (50-60%) + footer ON
 The poster must have visual identity: background texture, decorative elements, branded header.
 DO NOT make the calendar grid fill 100% of the image.
 ⛔ STRICT CONTENT RULES:
-- ⛔ STRICT CONTENT RULES:
 - DO NOT add any information the user did not provide.
-- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
-- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
-- DO NOT invent hospital names, phone numbers, addresses, or medical information.
-- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
 - DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
 - DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
 - DO NOT invent hospital names, phone numbers, addresses, or medical information.
@@ -411,12 +361,7 @@ Structure: decorative header/frame (30-40%) + calendar grid (50-60%) + footer ON
 The poster must have visual identity: background texture, decorative elements, branded header.
 DO NOT make the calendar grid fill 100% of the image.
 ⛔ STRICT CONTENT RULES:
-- ⛔ STRICT CONTENT RULES:
 - DO NOT add any information the user did not provide.
-- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
-- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
-- DO NOT invent hospital names, phone numbers, addresses, or medical information.
-- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
 - DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
 - DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
 - DO NOT invent hospital names, phone numbers, addresses, or medical information.
