@@ -14,7 +14,7 @@ import type { PublicDiagnosticView } from '../../../lib/diagnostic/publicShare';
 export const revalidate = 300;
 
 interface Props {
-  params: { token: string };
+  params: Promise<{ token: string }>;
 }
 
 async function fetchShareSnapshot(token: string): Promise<PublicDiagnosticView | null> {
@@ -36,7 +36,8 @@ async function fetchShareSnapshot(token: string): Promise<PublicDiagnosticView |
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const view = await fetchShareSnapshot(params.token);
+  const { token } = await params;
+  const view = await fetchShareSnapshot(token);
   if (!view) {
     return { title: '진단 결과를 찾을 수 없습니다 | Winaid' };
   }
@@ -55,7 +56,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function CheckTokenPage({ params }: Props) {
-  const view = await fetchShareSnapshot(params.token);
+  const { token } = await params;
+  const view = await fetchShareSnapshot(token);
   if (!view) notFound();
   return <PublicDiagnosticResult view={view} />;
 }

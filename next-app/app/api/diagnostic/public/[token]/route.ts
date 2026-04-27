@@ -16,9 +16,9 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { token: string } },
+  { params }: { params: Promise<{ token: string }> },
 ) {
-  const { token } = params;
+  const { token } = await params;
   if (!token || !/^[A-Za-z0-9_-]{1,32}$/.test(token)) {
     return NextResponse.json({ error: '유효하지 않은 토큰입니다.' }, { status: 404 });
   }
