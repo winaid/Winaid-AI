@@ -279,7 +279,7 @@ ${escapeXml(safeOpeningStyle)}
 
   const tocBlock = as_.tableOfContents?.trim()
     ? `<table_of_contents priority="highest">
-${as_.tableOfContents}
+${escapeXml(as_.tableOfContents)}
 
 **반드시 위 목차 블록을 인사/훅 직후, 첫 소제목(h3) 직전에 원문 그대로 재현하세요.**
 번호 리스트 형식·빈 줄 간격 보존. 생략 절대 금지.
@@ -344,8 +344,8 @@ ${uniqueSentences.map(s => `<sentence>${escapeXml(s)}</sentence>`).join('\n')}
 3. 원문 단락 샘플과 단락 길이·빈 줄 위치가 비슷한가?
 </style_self_check>`;
 
-  return `<hospital_writing_style name="${name}">
-<one_line_summary>${as_.oneLineSummary || description}</one_line_summary>
+  return `<hospital_writing_style name="${escapeXml(name)}">
+<one_line_summary>${escapeXml(as_.oneLineSummary || description)}</one_line_summary>
 
 <instruction priority="highest">
 어미 몇 개를 흉내 내는 것이 아니라, 화자의 태도·상담 방식·설명 습관·설득 구조·단락 리듬을 전부 재현하세요.

@@ -1702,8 +1702,9 @@ export function buildSectionFromOutlinePrompt(
   if (journeyGuide) {
     systemBlocks.push({ type: 'text', text: journeyGuide, cacheable: true, cacheTtl: '1h' });
   }
-  // FAQ 섹션에만 FAQ_SECTION_GUIDE 주입
-  if (section.heading?.includes('자주 묻는 질문')) {
+  // FAQ 섹션 감지 — outline LLM 이 "FAQ" / "Q&A" / "궁금" 등으로 다양하게 생성하므로 정규식 매칭
+  const _faqHeading = section.heading || '';
+  if (/자주\s*묻는|자주\s*하는|FAQ|Q\s*&\s*A|궁금한\s*점|질문/i.test(_faqHeading)) {
     systemBlocks.push({ type: 'text', text: FAQ_SECTION_GUIDE, cacheable: true, cacheTtl: '1h' });
   }
   systemBlocks.push({ type: 'text', text: E_E_A_T_GUIDE, cacheable: true, cacheTtl: '1h' });
@@ -1769,7 +1770,7 @@ ${nextHeading ? `  <next_heading>${sanitizePromptInput(nextHeading, 100)}</next_
 </target_section>`,
   );
 
-  const typeLabel = section.type === 'intro' ? '도입부' : section.type === 'outro' ? '마무리' : `"${section.heading || ''}"`;
+  const typeLabel = section.type === 'intro' ? '도입부' : section.type === 'outro' ? '마무리' : `"${sanitizePromptInput(section.heading || '', 100)}"`;
   const charLimit = section.charTarget ?? 300;
   systemBlocks.push({
     type: 'text',
