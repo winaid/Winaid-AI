@@ -209,8 +209,10 @@ export function buildStylePrompt(
   const safeGoodExamples = filterTextArray(as_.goodExamples);
   const safeRepresentativeParagraphs = filterTextArray(as_.representativeParagraphs);
   const safeOpeningStyle = filterText(as_.openingStyle);
-  if (medLawFilteredCount > 0) {
-    console.warn(`[style] medical law words filtered: ${medLawFilteredCount}건 from "${name}"`);
+  if (medLawFilteredCount >= 10) {
+    console.warn(`[style-learn] WARNING: ${medLawFilteredCount}건 의료법 위반어 필터링 from "${name}". 크롤 소스가 비준수 콘텐츠일 수 있음 — 출처 확인 권장.`);
+  } else if (medLawFilteredCount >= 3) {
+    console.info(`[style-learn] ${medLawFilteredCount}건 의료법 위반어 필터링 from "${name}".`);
   }
 
   const toneBlock = `<tone>
