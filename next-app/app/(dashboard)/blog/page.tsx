@@ -113,7 +113,7 @@ function BlogForm() {
     if (!hospitalName?.trim()) return;
     const checkDbStyle = async () => {
       try {
-        const res = await fetch(`/api/style-check?hospitalName=${encodeURIComponent(hospitalName.trim())}`);
+        const res = await authFetch(`/api/style-check?hospitalName=${encodeURIComponent(hospitalName.trim())}`);
         if (res.ok) {
           const data = await res.json() as { hasProfile?: boolean; hospitalName?: string };
           if (data.hasProfile) {
@@ -975,7 +975,7 @@ JSON 형식으로 응답해주세요.`;
     try {
       // ═══ v4: Sonnet 4.6 통합 초안 (SSE stream) ═══
       console.info(`[BLOG] [V4] Sonnet 4.6 통합 초안 요청 (stream)`);
-      const draftRes = await fetch('/api/generate/blog?stream=1', {
+      const draftRes = await authFetch('/api/generate/blog?stream=1', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1097,7 +1097,7 @@ JSON 형식으로 응답해주세요.`;
       setPipelineStep('reviewing_and_images');
       setDisplayStage(2);
 
-      const reviewPromise = fetch('/api/generate/blog/review', {
+      const reviewPromise = authFetch('/api/generate/blog/review', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -2154,7 +2154,7 @@ Output ONLY the prompt. No explanation.`;
       const sectionTitle = section.type === 'intro' ? '도입부' : section.title;
 
       // v4: /api/generate/blog/section (Sonnet + server-side regex 필터) 로 교체
-      const res = await fetch('/api/generate/blog/section', {
+      const res = await authFetch('/api/generate/blog/section', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

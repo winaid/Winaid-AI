@@ -7,6 +7,7 @@
  */
 
 import type { ClinicContext } from './clinicContextService';
+import { authFetch } from './authFetch';
 
 export type SaturationLevel = 'blue' | 'normal' | 'red';
 
@@ -134,7 +135,7 @@ export async function checkKeywordRankings(
     const batchResults = await Promise.all(
       batch.map(async (keyword): Promise<KeywordRankResult> => {
         try {
-          const res = await fetch('/api/naver/search', {
+          const res = await authFetch('/api/naver/search', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ query: keyword, display: 30, type: 'blog' }),
@@ -426,7 +427,7 @@ function fallbackKeywordGeneration(address: string, category?: string): string[]
 // ── 검색량 + 발행량 조회 ──
 
 async function fetchKeywordStats(keywords: string[]): Promise<{ stats: KeywordStat[]; apiErrors?: string[] }> {
-  const res = await fetch('/api/naver/keyword-stats', {
+  const res = await authFetch('/api/naver/keyword-stats', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ keywords }),
@@ -541,7 +542,7 @@ export async function analyzeHospitalKeywords(
   // Step 0.5: 네이버 검색광고 API로 시드 검색량 사전 검증 (환각 시드 조기 제거)
   onProgress?.('시드 키워드 검색량 사전 검증 중...');
   try {
-    const seedVerifyRes = await fetch('/api/naver/keyword-stats', {
+    const seedVerifyRes = await authFetch('/api/naver/keyword-stats', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ keywords: seedKeywords.slice(0, 20) }),
@@ -572,7 +573,7 @@ export async function analyzeHospitalKeywords(
   let suggestCount = 0;
   for (let si = 0; si < seedKeywords.length; si++) {
     try {
-      const suggestRes = await fetch('/api/naver/suggest', {
+      const suggestRes = await authFetch('/api/naver/suggest', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: seedKeywords[si] }),
