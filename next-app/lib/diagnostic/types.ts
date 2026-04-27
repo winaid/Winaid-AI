@@ -260,6 +260,8 @@ export interface MeasurementData {
   answerText: string;
   /** Tier 3-B: 실측 답변에서 추출된 경쟁사 URL 목록 (GAP 분석 자동 채움용, 최대 5) */
   topResultUrls?: string[];
+  /** Phase 3: 자동 경쟁사 추천 카드용 — title/domain/rank 포함 풀 정보 */
+  topResults?: { url: string; title: string; domain: string; rank: number }[];
 }
 
 /** POST /api/diagnostic/refresh-narrative 응답 — 갱신된 필드만. */

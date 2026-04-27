@@ -553,16 +553,27 @@ export default function AIVisibilityCard({ visibility, siteName, selfUrl, onMeas
             }));
             // C+B 강화안: 부모에게 실측 결과 전달 (해설 갱신 버튼 활성화용)
             // Tier 3-B: topResultUrls 추출 (경쟁사 GAP 자동 채움용)
-            const topUrls = (Array.isArray(payload.topResults) ? payload.topResults : [])
-              .filter((r: { url?: string }) => typeof r?.url === 'string')
-              .map((r: { url: string }) => r.url)
+            // Phase 3: title/domain/rank 포함 full topResults 도 함께 전달 (자동 경쟁사 카드용)
+            const rawResults = Array.isArray(payload.topResults) ? payload.topResults : [];
+            const fullResults = rawResults
+              .filter((r: { url?: string; title?: string; domain?: string; rank?: number }) =>
+                typeof r?.url === 'string' && typeof r?.domain === 'string',
+              )
+              .map((r: { url: string; title?: string; domain: string; rank?: number }, i: number) => ({
+                url: r.url,
+                title: typeof r.title === 'string' ? r.title : r.domain,
+                domain: r.domain,
+                rank: typeof r.rank === 'number' ? r.rank : i + 1,
+              }))
               .slice(0, 5);
+            const topUrls = fullResults.map((r: { url: string }) => r.url);
             onMeasurementDone?.(visibility.platform as AIPlatform, {
               selfIncluded: !!payload.selfIncluded,
               selfRank: typeof payload.selfRank === 'number' ? payload.selfRank : null,
               queryUsed: trimmed || '(자동)',
               answerText: typeof payload.answerText === 'string' ? payload.answerText : '',
               topResultUrls: topUrls.length > 0 ? topUrls : undefined,
+              topResults: fullResults.length > 0 ? fullResults : undefined,
             });
           } else if (payload.type === 'error') {
             setState({
