@@ -138,7 +138,8 @@ export async function POST(request: NextRequest) {
 
     // 검색량 조회 (5개씩 배치)
     if (!hasSearchAdKeys) {
-      errors.push('SearchAd API 키가 설정되지 않았습니다. NAVER_SEARCHAD_CUSTOMER_ID, NAVER_SEARCHAD_API_KEY, NAVER_SEARCHAD_SECRET 환경변수를 확인하세요.');
+      console.error('[keyword-stats] SearchAd keys missing', { hasCustomerId: !!process.env.NAVER_SEARCHAD_CUSTOMER_ID, hasApiKey: !!process.env.NAVER_SEARCHAD_API_KEY, hasSecret: !!process.env.NAVER_SEARCHAD_SECRET });
+      errors.push('검색광고 API 키가 설정되지 않았습니다. 관리자에게 문의하세요.');
     } else {
       const chunks: string[][] = [];
       for (let i = 0; i < keywords.length; i += 5) chunks.push(keywords.slice(i, i + 5));
@@ -166,7 +167,8 @@ export async function POST(request: NextRequest) {
         for (const { keyword, blogCount } of results) blogCountMap[keyword] = blogCount;
       }
     } else {
-      errors.push('블로그 API 키 미설정 (NAVER_CLIENT_ID, NAVER_CLIENT_SECRET)');
+      console.error('[keyword-stats] Blog API keys missing', { hasClientId: !!process.env.NAVER_CLIENT_ID, hasClientSecret: !!process.env.NAVER_CLIENT_SECRET });
+      errors.push('블로그 검색 API 키가 설정되지 않았습니다. 관리자에게 문의하세요.');
     }
 
     // 결과 조합
@@ -189,6 +191,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(responseBody);
   } catch (error) {
     console.error('[keyword-stats] Error:', (error as Error).message);
-    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
+    return NextResponse.json({ error: '키워드 통계 조회 중 오류가 발생했습니다.' }, { status: 500 });
   }
 }
