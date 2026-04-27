@@ -14,6 +14,7 @@ import CategoryCard from './CategoryCard';
 import AIVisibilityCard from './AIVisibilityCard';
 import ActionPlan from './ActionPlan';
 import CompetitorAutoSuggestions from './CompetitorAutoSuggestions';
+import SnippetsPanel from './SnippetsPanel';
 
 interface DiagnosticResultProps {
   result: DiagnosticResponse;
@@ -21,13 +22,14 @@ interface DiagnosticResultProps {
   onResultUpdate?: (updated: DiagnosticResponse) => void;
 }
 
-type Tab = 'summary' | 'details' | 'ai' | 'actions';
+type Tab = 'summary' | 'details' | 'ai' | 'actions' | 'snippets';
 
 const TABS: { id: Tab; label: string; emoji: string }[] = [
   { id: 'summary', label: '종합 진단', emoji: '📊' },
   { id: 'details', label: '항목별 상세', emoji: '🧾' },
   { id: 'ai', label: 'AI 플랫폼별 노출', emoji: '🤖' },
   { id: 'actions', label: '우선 조치', emoji: '🎯' },
+  { id: 'snippets', label: '코드 스니펫', emoji: '🛠' },
 ];
 
 function scoreHeadline(score: number): string {
@@ -552,6 +554,9 @@ export default function DiagnosticResult({ result, onResultUpdate }: DiagnosticR
 
       {/* 탭 4: 우선 조치 */}
       {tab === 'actions' && <ActionPlan actions={result.priorityActions} />}
+
+      {/* 탭 5: 코드 스니펫 — fail/warning 항목 중 코드로 고칠 수 있는 것 자동 생성 */}
+      {tab === 'snippets' && <SnippetsPanel result={result} />}
     </div>
   );
 }
