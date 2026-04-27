@@ -3,7 +3,7 @@
 import { CATEGORIES, PERSONAS, TONES } from '../../../lib/constants';
 import { TEAM_DATA } from '../../../lib/teamData';
 import type { ContentCategory, AudienceMode, ImageStyle, ImageSourceMode, CssTheme } from '../../../lib/types';
-import type { KeywordStat, KeywordRankResult } from '../../../lib/keywordAnalysisService';
+import type { KeywordStat, KeywordRankResult, SaturationLevel } from '../../../lib/keywordAnalysisService';
 import type { HospitalImage } from '../../../lib/hospitalImageService';
 import ImageLibrary from '../../../components/blog/ImageLibrary';
 import type { ClinicContext } from '../../../lib/clinicContextService';
@@ -120,6 +120,22 @@ export interface BlogFormPanelProps {
   onSaveSettings?: () => void;
   onLoadSettings?: () => void;
   settingsToast?: string;
+}
+
+const SATURATION_BADGE_CONFIG: Record<SaturationLevel, { emoji: string; label: string; cls: string }> = {
+  blue:   { emoji: '🟦', label: '블루오션', cls: 'bg-blue-50 text-blue-700 border-blue-200' },
+  normal: { emoji: '🟨', label: '보통',     cls: 'bg-amber-50 text-amber-700 border-amber-200' },
+  red:    { emoji: '🟥', label: '레드오션', cls: 'bg-red-50 text-red-700 border-red-200' },
+};
+
+function SaturationBadge({ level }: { level?: SaturationLevel }) {
+  if (!level) return null;
+  const c = SATURATION_BADGE_CONFIG[level];
+  return (
+    <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold border ${c.cls}`}>
+      {c.emoji} {c.label}
+    </span>
+  );
 }
 
 export default function BlogFormPanel(props: BlogFormPanelProps) {
@@ -397,9 +413,12 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
                   </div>
                   {keywordStats.slice(0, 10).map(s => (
                     <button key={s.keyword} type="button" onClick={() => setKeywords(k => k ? `${k}, ${s.keyword}` : s.keyword)}
-                      className="w-full px-3 py-1.5 text-left text-xs hover:bg-blue-50 flex justify-between border-b border-slate-50">
-                      <span className="text-slate-700">{s.keyword}</span>
-                      <span className="text-slate-400">{s.monthlySearchVolume.toLocaleString()}</span>
+                      className="w-full px-3 py-1.5 text-left text-xs hover:bg-blue-50 flex items-center justify-between gap-2 border-b border-slate-50">
+                      <span className="text-slate-700 flex-1 min-w-0 truncate">{s.keyword}</span>
+                      <span className="flex items-center gap-1.5 shrink-0">
+                        <SaturationBadge level={s.saturationLevel} />
+                        <span className="text-slate-400">{s.monthlySearchVolume.toLocaleString()}</span>
+                      </span>
                     </button>
                   ))}
                 </div>

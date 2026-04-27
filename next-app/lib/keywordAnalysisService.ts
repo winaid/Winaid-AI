@@ -8,6 +8,8 @@
 
 import type { ClinicContext } from './clinicContextService';
 
+export type SaturationLevel = 'blue' | 'normal' | 'red';
+
 export interface KeywordStat {
   keyword: string;
   monthlySearchVolume: number;
@@ -15,6 +17,7 @@ export interface KeywordStat {
   monthlyMobileVolume: number;
   blogPostCount: number;
   saturation?: number;
+  saturationLevel?: SaturationLevel;
 }
 
 export interface KeywordAnalysisResult {
@@ -341,6 +344,23 @@ JSON 배열로만 응답하세요:
   }
 }
 
+// ── 포화도 라벨링 — 업종별 임계값 (추정치, 실사용 후 조정 가능) ──
+
+const SATURATION_THRESHOLDS: Record<string, { low: number; high: number }> = {
+  '치과':   { low: 0.10, high: 0.60 },   // 대중적, 광고 많음
+  '피부과': { low: 0.05, high: 0.40 },   // 시술 다양, 격전
+  '정형외과': { low: 0.08, high: 0.50 }, // 지역 기반
+};
+
+const DEFAULT_SATURATION_THRESHOLD = { low: 0.05, high: 0.40 };
+
+function assessSaturationLevel(category: string | undefined, saturation: number): SaturationLevel {
+  const t = SATURATION_THRESHOLDS[category ?? ''] ?? DEFAULT_SATURATION_THRESHOLD;
+  if (saturation < t.low) return 'blue';
+  if (saturation > t.high) return 'red';
+  return 'normal';
+}
+
 // ── 폴백: 정적 파싱으로 키워드 생성 ──
 
 const MEGA_CITY_PROVINCE = /특별시|광역시|특별자치시/;
@@ -433,7 +453,7 @@ async function fetchKeywordStats(keywords: string[]): Promise<{ stats: KeywordSt
 
 async function analyzeBlueOceanWithAI(hospitalName: string, stats: KeywordStat[]): Promise<string> {
   const dataRows = stats
-    .map(s => `${s.keyword} | 검색량: ${s.monthlySearchVolume.toLocaleString()} | 발행량: ${s.blogPostCount.toLocaleString()} | 포화도: ${s.saturation?.toFixed(1)}`)
+    .map(s => `${s.keyword} | 검색량: ${s.monthlySearchVolume.toLocaleString()} | 발행량: ${s.blogPostCount.toLocaleString()} | 포화도: ${s.saturation?.toFixed(2)} (${s.saturationLevel ?? 'normal'})`)
     .join('\n');
 
   const prompt = `아래 지역 키워드 데이터를 분석하세요.
@@ -595,7 +615,8 @@ export async function analyzeHospitalKeywords(
   const filteredStats = stats
     .filter(s => s.monthlySearchVolume >= 10) // 검색량 10 미만 제거
     .filter(s => s.keyword.split(/\s+/).length <= 4) // 5단어 이상 롱테일 제거
-    .sort((a, b) => b.monthlySearchVolume - a.monthlySearchVolume);
+    .sort((a, b) => b.monthlySearchVolume - a.monthlySearchVolume)
+    .map(s => ({ ...s, saturationLevel: assessSaturationLevel(category, s.saturation ?? 0) }));
 
   // Step 3: 블루오션 분석
   const hasData = filteredStats.filter(s => s.monthlySearchVolume > 0);
@@ -652,7 +673,8 @@ export async function loadMoreKeywords(
     const roundStats = stats
       .filter(s => s.monthlySearchVolume >= 10)
       .filter(s => s.keyword.split(/\s+/).length <= 4)
-      .filter(s => !allUsedKeywords.has(s.keyword.toLowerCase()));
+      .filter(s => !allUsedKeywords.has(s.keyword.toLowerCase()))
+      .map(s => ({ ...s, saturationLevel: assessSaturationLevel(category, s.saturation ?? 0) }));
 
     for (const s of roundStats) {
       allUsedKeywords.add(s.keyword.toLowerCase());
