@@ -2097,7 +2097,8 @@ Output ONLY the prompt. No explanation.`;
       const imgData = await imgRes.json() as { imageDataUrl?: string };
       if (!imgData.imageDataUrl) throw new Error('이미지 데이터 없음');
       if (imgData.imageDataUrl.length > 700 * 1024) {
-        console.warn(`[image] base64 too large: ${Math.round(imgData.imageDataUrl.length / 1024)}KB — Storage 업로드 필수`);
+        console.warn(`[image] base64 too large (${Math.round(imgData.imageDataUrl.length / 1024)}KB > 700KB) — embed 차단`);
+        throw new Error('이미지가 너무 큽니다. 다시 생성해 주세요.');
       }
 
       // Supabase Storage 업로드
