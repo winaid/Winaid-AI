@@ -31,7 +31,6 @@ function getClaudeKeys(): string[] {
   return keys;
 }
 
-let keyIndex = 0;
 
 /**
  * CacheableBlock[] → Anthropic TextBlockParam[].
@@ -120,9 +119,11 @@ export async function callClaude(req: LLMRequest): Promise<LLMResponse> {
 
   let lastErr: unknown = null;
   const started = Date.now();
+  // per-request 랜덤 시작점 — 전역 keyIndex race condition 제거
+  const startIdx = Math.floor(Math.random() * keys.length);
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    const ki = (keyIndex + attempt) % keys.length;
+    const ki = (startIdx + attempt) % keys.length;
     const client = new Anthropic({ apiKey: keys[ki] });
 
     try {
@@ -133,8 +134,6 @@ export async function callClaude(req: LLMRequest): Promise<LLMResponse> {
         system,
         messages: [{ role: 'user', content: req.userPrompt }],
       });
-
-      keyIndex = (ki + 1) % keys.length;
 
       const text = resp.content
         .map(block => (block.type === 'text' ? block.text : ''))

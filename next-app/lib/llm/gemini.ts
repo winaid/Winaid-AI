@@ -41,15 +41,13 @@ function getGeminiKeys(): string[] {
   return keys;
 }
 
-// 모듈 레벨 라운드로빈 인덱스 (기존 route.ts 와 동일 패턴)
-let keyIndex = 0;
-
 function redactKey(text: string): string {
   return text.replace(/key=[A-Za-z0-9_-]+/g, 'key=***');
 }
 
 async function fetchGemini(
   keys: string[],
+  startIdx: number,
   model: string,
   apiBody: Record<string, unknown>,
   timeoutMs: number,
@@ -58,7 +56,7 @@ async function fetchGemini(
   const perAttemptTimeout = Math.min(Math.floor(timeoutMs * 0.85), 150_000);
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    const ki = (keyIndex + attempt) % keys.length;
+    const ki = (startIdx + attempt) % keys.length;
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), perAttemptTimeout);
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
@@ -76,7 +74,6 @@ async function fetchGemini(
       clearTimeout(timeoutId);
 
       if (response.ok) {
-        keyIndex = (ki + 1) % keys.length;
         try {
           const data = (await response.json()) as GeminiSuccessData;
           return { ok: true, data };
@@ -165,8 +162,11 @@ export async function callGemini(req: LLMRequest): Promise<LLMResponse> {
     apiBody.tools = [{ googleSearch: {} }];
   }
 
+  // per-request 랜덤 시작점 — 전역 keyIndex race condition 제거
+  const startIdx = Math.floor(Math.random() * keys.length);
+
   const started = Date.now();
-  let result = await fetchGemini(keys, model, apiBody, 60_000);
+  let result = await fetchGemini(keys, startIdx, model, apiBody, 60_000);
 
   // PRO → FLASH 폴백 (googleSearch 포함 — 응답 불가보다 FLASH가 나음)
   if (
@@ -175,7 +175,7 @@ export async function callGemini(req: LLMRequest): Promise<LLMResponse> {
     (result.status === 500 || result.status === 503 || result.status === 429 || result.status === 504)
   ) {
     console.warn(`[llm/gemini] FALLBACK ${model} ${result.status} → ${FLASH}`);
-    result = await fetchGemini(keys, FLASH, apiBody, 25_000);
+    result = await fetchGemini(keys, startIdx, FLASH, apiBody, 25_000);
   }
 
   const latencyMs = Date.now() - started;
