@@ -14,17 +14,48 @@ import { NextRequest, NextResponse } from 'next/server';
 import { generateShareToken, buildPublicView } from '../../../../lib/diagnostic/publicShare';
 import { getSessionSafe } from '../../../../lib/supabase';
 import { getSupabaseClient } from '../../../../lib/supabase';
+import { checkRateLimit, getClientIp } from '../../../../lib/rateLimit';
 import type { DiagnosticResponse } from '../../../../lib/diagnostic/types';
 
 export const dynamic = 'force-dynamic';
 
 const EXPIRES_DAYS = 90;
+const MINUTE_LIMIT = 5;
+const HOUR_LIMIT = 20;
 
-function err(message: string, status: number) {
-  return NextResponse.json({ success: false, error: message }, { status });
+function err(message: string, status: number, headers?: Record<string, string>) {
+  return NextResponse.json(
+    { success: false, error: message },
+    { status, ...(headers ? { headers } : {}) },
+  );
 }
 
 export async function POST(request: NextRequest) {
+  // Rate limit — IP 기반 분당 5건 + 시간당 20건. DB 장애 시 fail-open (요청 통과).
+  const ip = getClientIp(request);
+  try {
+    const minute = await checkRateLimit(`share:m:${ip}`, MINUTE_LIMIT, 60);
+    if (!minute.allowed) {
+      return err(
+        `요청이 너무 많습니다. ${minute.retryAfterSec}초 후 다시 시도해 주세요.`,
+        429,
+        { 'Retry-After': String(minute.retryAfterSec) },
+      );
+    }
+    const hour = await checkRateLimit(`share:h:${ip}`, HOUR_LIMIT, 3600);
+    if (!hour.allowed) {
+      const mins = Math.ceil(hour.retryAfterSec / 60);
+      return err(
+        `시간당 발급 한도(${HOUR_LIMIT}건)를 초과했습니다. ${mins}분 후 다시 시도해 주세요.`,
+        429,
+        { 'Retry-After': String(hour.retryAfterSec) },
+      );
+    }
+  } catch (e) {
+    // DB 장애 — fail-open. 정상 사용자 차단보다 spam 일부 허용이 안전.
+    console.warn('[share] rate limit check 실패 (fail-open):', (e as Error).message?.slice(0, 100));
+  }
+
   let body: { result?: DiagnosticResponse };
   try {
     body = (await request.json()) as { result?: DiagnosticResponse };
