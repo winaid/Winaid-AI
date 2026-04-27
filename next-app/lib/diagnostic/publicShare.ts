@@ -70,6 +70,13 @@ export function buildPublicView(
     .filter((c) => c.score >= 70)
     .map((c) => ({ label: c.name, categoryId: c.id }));
 
+  // Phase 3 — 의료광고법 준수 통과 시 별도 배지 추가
+  const contentCat = result.categories.find((c) => c.id === 'content_quality');
+  const medicalLawItem = contentCat?.items.find((i) => i.label === '의료광고법 준수');
+  if (medicalLawItem?.status === 'pass') {
+    trustBadges.push({ label: '의료광고법 준수', categoryId: 'content_quality' });
+  }
+
   const aiVisibility: PublicAIVisibility[] = result.aiVisibility.map((v) => ({
     platform: v.platform,
     likelihood: v.likelihood,

@@ -8,6 +8,7 @@
  */
 
 import type { CrawlResult, PsiResult, CategoryScore, CategoryItem, CategoryItemStatus } from './types';
+import { filterMedicalLawViolations } from '../medicalLawFilter';
 
 // ── 라벨 상수 (actionPlan.ts 와 공유) ──────────────────────────
 
@@ -68,6 +69,8 @@ export const LABELS = {
   canonical: 'Canonical URL 선언',
   // Phase 1 — content_quality 추가 항목
   favicon: '파비콘(사이트 아이콘)',
+  // Phase 3 — content_quality 의료광고법
+  medical_law_compliance: '의료광고법 준수',
   // Phase 1 — external_channels 추가 항목
   og_bundle: 'OG 소셜 미리보기 (og:title·description·image)',
   twitter_card: 'Twitter Card 메타태그',
@@ -148,6 +151,7 @@ const RECOMMENDATIONS: Record<string, string> = {
   [LABELS.x_frame_header]: 'X-Frame-Options 헤더가 없어 클릭재킹(Clickjacking) 공격에 취약할 수 있습니다. 제작사에 "X-Frame-Options: DENY 또는 SAMEORIGIN 헤더 추가" 요청하세요.',
   [LABELS.x_content_type_header]: 'X-Content-Type-Options 헤더가 없습니다. 브라우저의 MIME 스니핑이 활성화되어 취약점이 생길 수 있습니다. 제작사에 "X-Content-Type-Options: nosniff 헤더 추가" 요청하세요.',
   [LABELS.referrer_policy_header]: 'Referrer-Policy 헤더가 없습니다. 외부 링크 클릭 시 불필요한 정보가 전달될 수 있습니다. 제작사에 "Referrer-Policy: no-referrer-when-downgrade 헤더 추가" 요청하세요.',
+  [LABELS.medical_law_compliance]: '"100%", "최고", "유일한", "완치", "부작용 없는" 같은 절대·단정 표현은 의료법 제56조(의료광고 금지) 위반 가능성이 있습니다. "대부분의 경우", "주력 시술", "환자 만족도 높은" 같은 일반화 표현으로 교체하세요.',
 };
 
 // ── 헬퍼 ───────────────────────────────────────────────────
@@ -523,6 +527,25 @@ function scoreContentQuality(crawl: CrawlResult): CategoryScore {
   items.push(crawl.favicon
     ? makeItem(LABELS.favicon, 8, 8, 'pass', `파비콘 감지: ${crawl.favicon}`, crawl.favicon)
     : makeItem(LABELS.favicon, 8, 0, 'warning', '파비콘 없음 — 브라우저 탭·북마크에 아이콘이 없어 신뢰도가 낮아 보임.'));
+
+  // Phase 3 — 의료광고법 위반 검출 (filterMedicalLawViolations 재활용)
+  const violations = filterMedicalLawViolations(crawl.textContent || '');
+  const violationCount = violations.replacedCount;
+  if (violationCount === 0) {
+    items.push(makeItem(LABELS.medical_law_compliance, 12, 12, 'pass', '의료광고법 위반 가능 표현이 발견되지 않음.', '0건'));
+  } else if (violationCount <= 3) {
+    items.push(makeItem(
+      LABELS.medical_law_compliance, 12, 8, 'warning',
+      `의료광고법 위반 가능 표현 ${violationCount}건 검출 (예: ${violations.foundTerms.slice(0, 3).join(', ')}).`,
+      `${violationCount}건`,
+    ));
+  } else {
+    items.push(makeItem(
+      LABELS.medical_law_compliance, 12, 3, 'fail',
+      `의료광고법 위반 가능 표현 ${violationCount}건 검출 (예: ${violations.foundTerms.slice(0, 3).join(', ')}). 환자 민원·처분 위험.`,
+      `${violationCount}건`,
+    ));
+  }
 
   return toCategoryScore('content_quality', '콘텐츠 품질', items);
 }
