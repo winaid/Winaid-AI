@@ -467,10 +467,8 @@ export async function POST(request: NextRequest) {
 
   const keys = getKeys();
   if (keys.length === 0) {
-    return NextResponse.json(
-      { error: '[env] GEMINI_API_KEY 누락' },
-      { status: 500 },
-    );
+    console.error('[api/image] GEMINI_API_KEY not configured');
+    return NextResponse.json({ error: 'configuration_error' }, { status: 500 });
   }
 
   let body: ImageRequestBody;
@@ -796,8 +794,6 @@ ABSOLUTE PROHIBITIONS:
     }
   }
 
-  return NextResponse.json(
-    { error: `이미지 생성 실패 (${MODELS.length}개 모델 모두 실패)`, details: lastError },
-    { status: 502 },
-  );
+  console.error(`[api/image] all models failed: ${lastError}`);
+  return NextResponse.json({ error: 'image_generation_failed' }, { status: 502 });
 }
