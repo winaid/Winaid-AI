@@ -102,6 +102,31 @@ export default function DiagnosticResult({ result, onResultUpdate }: DiagnosticR
   const [refreshing, setRefreshing] = useState(false);
   const [refreshDone, setRefreshDone] = useState(false);
 
+  // 공유 링크
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [generating, setGenerating] = useState(false);
+
+  const handleShare = useCallback(async () => {
+    if (generating) return;
+    if (shareUrl) { await navigator.clipboard.writeText(shareUrl).catch(() => {}); return; }
+    setGenerating(true);
+    try {
+      const res = await fetch('/api/diagnostic/share', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ result }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = (await res.json()) as { publicUrl: string };
+      setShareUrl(data.publicUrl);
+      await navigator.clipboard.writeText(data.publicUrl).catch(() => {});
+    } catch (e) {
+      console.warn('[share]', e);
+    } finally {
+      setGenerating(false);
+    }
+  }, [generating, shareUrl, result]);
+
   // Tier 3-B: 경쟁사 GAP 분석
   const [gapResult, setGapResult] = useState<GapAnalysis | null>(null);
   const [gapLoading, setGapLoading] = useState(false);
@@ -205,6 +230,24 @@ export default function DiagnosticResult({ result, onResultUpdate }: DiagnosticR
                 <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-violet-50 text-violet-700">
                   시술 {result.crawlMeta.detectedServices.length}개 감지
                 </span>
+              )}
+            </div>
+            {/* 공유 버튼 */}
+            <div className="mt-4">
+              <button
+                type="button"
+                onClick={handleShare}
+                disabled={generating}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-[12px] font-semibold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+              >
+                {generating
+                  ? '링크 생성 중...'
+                  : shareUrl
+                  ? '🔗 링크 복사됨!'
+                  : '🔗 공유 링크 생성'}
+              </button>
+              {shareUrl && (
+                <p className="mt-1.5 text-[11px] text-slate-400 break-all">{shareUrl}</p>
               )}
             </div>
           </div>
