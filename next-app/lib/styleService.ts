@@ -154,6 +154,33 @@ function filterProhibited(words: string[]): string[] {
   return words.filter(w => !STYLE_PROHIBITED.some(p => w.toLowerCase().includes(p.toLowerCase())));
 }
 
+// ── PII 마스킹 (raw_sample_text / representativeParagraphs 저장 전 적용) ──
+
+function stripPii(text: string): { text: string; removedCount: number } {
+  let count = 0;
+  let out = text;
+  // 한국 휴대폰: 010-1234-5678 / 01012345678 / +82 10 1234 5678
+  out = out.replace(/(?:\+?82[\s-]?)?0?1[016789][\s-]?\d{3,4}[\s-]?\d{4}/g, () => { count++; return '[전화번호]'; });
+  // 일반 전화: 02-123-4567 등
+  out = out.replace(/0\d{1,2}[\s-]\d{3,4}[\s-]\d{4}/g, () => { count++; return '[전화번호]'; });
+  // 이메일
+  out = out.replace(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, () => { count++; return '[이메일]'; });
+  // 주민등록번호 패턴
+  out = out.replace(/\d{6}[\s-]?\d{7}/g, () => { count++; return '[주민번호]'; });
+  return { text: out, removedCount: count };
+}
+
+function sanitizeAnalyzedStylePii(as_: AnalyzedStyle): AnalyzedStyle {
+  const strip = (s: string) => stripPii(s).text;
+  const stripArr = (arr?: string[]) => arr?.map(strip);
+  return {
+    ...as_,
+    representativeParagraphs: stripArr(as_.representativeParagraphs),
+    goodExamples: stripArr(as_.goodExamples),
+    openingStyle: as_.openingStyle ? strip(as_.openingStyle) : as_.openingStyle,
+  };
+}
+
 // ── 공통 말투 프롬프트 빌더 (DB 프로파일 + localStorage 스타일 양쪽에서 사용) ──
 
 export function buildStylePrompt(
@@ -571,8 +598,12 @@ export async function crawlAndLearnHospitalStyle(
         hospital_name: hospitalName,
         naver_blog_url: blogUrls.join(','),
         crawled_posts_count: dbPostCount,
-        style_profile: analyzedStyle,
-        raw_sample_text: combinedText.slice(0, 25000),
+        style_profile: sanitizeAnalyzedStylePii(analyzedStyle),
+        raw_sample_text: (() => {
+          const pii = stripPii(combinedText);
+          if (pii.removedCount > 0) console.warn(`[style-learn] PII ${pii.removedCount}건 마스킹 from "${hospitalName}"`);
+          return pii.text.slice(0, 25000);
+        })(),
         last_crawled_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       },
@@ -1439,12 +1470,12 @@ export async function crawlAndScoreAllHospitals(
         updated_at: new Date().toISOString(),
       };
       if (analyzedStyle) {
-        profileData.style_profile = analyzedStyle;
+        profileData.style_profile = sanitizeAnalyzedStylePii(analyzedStyle);
         // Phase 2D Tier 2-A: 단락 경계 보존 (DB 저장용 raw sample)
-        profileData.raw_sample_text = allContents
-          .map((c, idx) => `[글 #${idx + 1}]\n${c}`)
-          .join('\n\n')
-          .slice(0, 25000);
+        const rawJoined = allContents.map((c, idx) => `[글 #${idx + 1}]\n${c}`).join('\n\n');
+        const pii = stripPii(rawJoined);
+        if (pii.removedCount > 0) console.warn(`[style-learn] PII ${pii.removedCount}건 마스킹 from "${name}"`);
+        profileData.raw_sample_text = pii.text.slice(0, 25000);
       }
       await (supabase.from('hospital_style_profiles') as any).upsert(
         profileData,
