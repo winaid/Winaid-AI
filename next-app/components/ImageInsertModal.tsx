@@ -5,6 +5,7 @@ import { authFetch } from '../lib/authFetch';
 import { getSessionSafe } from '../lib/supabase';
 import { IMAGE_TAG_PRESETS, type HospitalImage } from '../lib/hospitalImageService';
 import { buildImagePrompt } from '../lib/blogPrompt';
+import { sanitizePromptInput } from '../lib/promptSanitize';
 
 /**
  * 이미지 삽입 모달 — 2개 탭 (라이브러리 / AI 생성).
@@ -88,14 +89,18 @@ export default function ImageInsertModal({
     setGenerating(true);
     setAiError(null);
     try {
+      const safeAlt = sanitizePromptInput(trimmed, 200);
+      const safeTopic = sanitizePromptInput(topic || trimmed, 100);
+      const safeHospital = hospitalName ? sanitizePromptInput(hospitalName, 100) : undefined;
+
       // buildImagePrompt 재활용 — 카테고리별 subject hint 자동 적용 (2-C 와 일관성)
       const body = {
         prompt: buildImagePrompt({
-          altText: trimmed,
+          altText: safeAlt,
           imageStyle: style,
           category: category || '치과',
-          topic: topic || trimmed,
-          hospitalName,
+          topic: safeTopic,
+          hospitalName: safeHospital,
           customImagePrompt: undefined,
         }),
         aspectRatio: '4:3' as const,
