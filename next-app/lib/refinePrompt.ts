@@ -6,6 +6,7 @@
  */
 
 import { getMedicalLawPromptBlock } from './medicalLawRules';
+import { sanitizePromptInput, sanitizeSourceContent } from './promptSanitize';
 
 export type RefineMode = 'natural' | 'professional' | 'shorter' | 'longer' | 'medical_law' | 'seo';
 
@@ -276,8 +277,11 @@ export function buildRefinePrompt(req: RefineRequest): {
 
 [출력] 순수 HTML(<p>, <h3>, <strong>, <em>)만. 마크다운/코드블록 금지.`;
 
-  const keywordBlock = req.mode === 'seo' && req.keywords
-    ? `\n[핵심 키워드] "${req.keywords}" — 이 키워드를 소제목과 본문에 5~8회 자연스럽게 분산 배치하세요.\n`
+  const safeKeywords = sanitizePromptInput(req.keywords, 200);
+  const safeOriginalText = sanitizeSourceContent(req.originalText, 15000);
+
+  const keywordBlock = req.mode === 'seo' && safeKeywords
+    ? `\n[핵심 키워드] "${safeKeywords}" — 이 키워드를 소제목과 본문에 5~8회 자연스럽게 분산 배치하세요.\n`
     : '';
 
   const prompt = `${MODE_INSTRUCTIONS[req.mode]}
@@ -286,7 +290,7 @@ ${keywordBlock}${MARK_CHANGES}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📄 원문
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-${req.originalText}
+${safeOriginalText}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 위 원문을 위 지침에 따라 수정한 결과를 HTML로만 출력해주세요.`;
@@ -301,40 +305,43 @@ export function buildChatRefinePrompt(req: ChatRefineRequest): {
   prompt: string;
 } {
   const { workingContent, userMessage, crawledContent } = req;
+  const safeWorkingContent = sanitizeSourceContent(workingContent, 15000);
+  const safeCrawledContent = crawledContent ? sanitizeSourceContent(crawledContent, 5000) : undefined;
+  const safeUserMessage = sanitizePromptInput(userMessage, 500);
 
   // ── 의도 분석 (대폭 확장) ──
 
   // 기본 동작
-  const wantsExpand = /자세히|자세하게|더 쓰|길게|확장|더 설명|상세|구체적|늘려|보강/.test(userMessage);
-  const wantsShorter = /짧게|줄여|간결|요약|압축/.test(userMessage);
-  const wantsRephrase = /다시|다르게|바꿔|고쳐|수정/.test(userMessage);
-  const wantsHumanize = /사람|자연|AI|인공|딱딱|부드럽/.test(userMessage);
+  const wantsExpand = /자세히|자세하게|더 쓰|길게|확장|더 설명|상세|구체적|늘려|보강/.test(safeUserMessage);
+  const wantsShorter = /짧게|줄여|간결|요약|압축/.test(safeUserMessage);
+  const wantsRephrase = /다시|다르게|바꿔|고쳐|수정/.test(safeUserMessage);
+  const wantsHumanize = /사람|자연|AI|인공|딱딱|부드럽/.test(safeUserMessage);
 
   // 위치/범위 특정
-  const targetSection = userMessage.match(/(\d+)\s*번째?\s*(소제목|문단|섹션)/);
-  const targetIntro = /도입|서론|첫\s*문단|시작\s*부분/.test(userMessage);
-  const targetConclusion = /결론|마무리|마지막|끝\s*부분/.test(userMessage);
-  const targetSpecificText = userMessage.match(/["""](.+?)["""]/);
+  const targetSection = safeUserMessage.match(/(\d+)\s*번째?\s*(소제목|문단|섹션)/);
+  const targetIntro = /도입|서론|첫\s*문단|시작\s*부분/.test(safeUserMessage);
+  const targetConclusion = /결론|마무리|마지막|끝\s*부분/.test(safeUserMessage);
+  const targetSpecificText = safeUserMessage.match(/["""](.+?)["""]/);
 
   // 동작 유형
-  const wantsDelete = /삭제|지워|빼|제거/.test(userMessage);
-  const wantsReplace = /바꿔|교체|대신|으로\s*변경/.test(userMessage);
-  const wantsAdd = /추가|넣어|더해|삽입|CTA|콜투액션/.test(userMessage);
-  const wantsTone = /톤|분위기|느낌|어투|말투/.test(userMessage);
-  const wantsFact = /수치|데이터|통계|근거|출처|팩트/.test(userMessage);
-  const wantsSEO = /SEO|키워드|검색|네이버|상위노출/.test(userMessage);
-  const wantsMedLaw = /의료법|의료광고|금지|위반|법적/.test(userMessage);
-  const wantsDentalLab = /기공소|보철|기공사|지르코니아|CAD|밀링/.test(userMessage);
+  const wantsDelete = /삭제|지워|빼|제거/.test(safeUserMessage);
+  const wantsReplace = /바꿔|교체|대신|으로\s*변경/.test(safeUserMessage);
+  const wantsAdd = /추가|넣어|더해|삽입|CTA|콜투액션/.test(safeUserMessage);
+  const wantsTone = /톤|분위기|느낌|어투|말투/.test(safeUserMessage);
+  const wantsFact = /수치|데이터|통계|근거|출처|팩트/.test(safeUserMessage);
+  const wantsSEO = /SEO|키워드|검색|네이버|상위노출/.test(safeUserMessage);
+  const wantsMedLaw = /의료법|의료광고|금지|위반|법적/.test(safeUserMessage);
+  const wantsDentalLab = /기공소|보철|기공사|지르코니아|CAD|밀링/.test(safeUserMessage);
 
   // 구조 변경
-  const wantsReorder = /순서|위치.*바꿔|앞으로|뒤로|올려|내려/.test(userMessage);
-  const wantsSubheading = /소제목.*바꿔|소제목.*수정|제목.*변경/.test(userMessage);
-  const wantsEmphasis = /강조|볼드|굵게|하이라이트|중요/.test(userMessage);
+  const wantsReorder = /순서|위치.*바꿔|앞으로|뒤로|올려|내려/.test(safeUserMessage);
+  const wantsSubheading = /소제목.*바꿔|소제목.*수정|제목.*변경/.test(safeUserMessage);
+  const wantsEmphasis = /강조|볼드|굵게|하이라이트|중요/.test(safeUserMessage);
 
   // 콘텐츠 특화
-  const wantsExample = /예시|사례|예를.*들|경우/.test(userMessage);
-  const wantsFAQ = /FAQ|자주.*묻|질문|Q&A/.test(userMessage);
-  const wantsSimplify = /쉽게|간단히|이해.*쉽|풀어/.test(userMessage);
+  const wantsExample = /예시|사례|예를.*들|경우/.test(safeUserMessage);
+  const wantsFAQ = /FAQ|자주.*묻|질문|Q&A/.test(safeUserMessage);
+  const wantsSimplify = /쉽게|간단히|이해.*쉽|풀어/.test(safeUserMessage);
 
   // 구체성 판단
   const isSpecific = !!(targetSection || targetIntro || targetConclusion || targetSpecificText);
@@ -375,7 +382,7 @@ export function buildChatRefinePrompt(req: ChatRefineRequest): {
     ? actions.join('\n')
     : '사용자의 요청이 구체적이지 않습니다. 수정 범위를 최소화하세요. 확실한 부분만 수정하고, 불확실하면 원본을 유지하세요.';
 
-  const textOnly = workingContent.replace(/<[^>]+>/g, '').trim();
+  const textOnly = safeWorkingContent.replace(/<[^>]+>/g, '').trim();
   const currentLength = textOnly.length;
 
   const systemInstruction = `당신은 병원 블로그 콘텐츠 보정 전문 에디터입니다.
@@ -404,7 +411,7 @@ ${toneRule}
 ${MEDICAL_LAW_COMMON}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🎯 사용자 요청: ${userMessage}
+🎯 사용자 요청: ${safeUserMessage}
 ${scopeInstruction}
 ${actionInstruction ? `\n[동작 지침] ${actionInstruction}` : ''}
 
@@ -432,12 +439,12 @@ ${[
   ].filter(Boolean).join(', ') || '일반 수정'}
 
 현재 글자 수: ${currentLength}자
-${crawledContent ? `\n[참고 자료 — 출처 표시 없이 내용만 참고]\n${crawledContent}` : ''}
+${safeCrawledContent ? `\n[참고 자료 — 출처 표시 없이 내용만 참고]\n${safeCrawledContent}` : ''}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📄 현재 콘텐츠
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-${workingContent}
+${safeWorkingContent}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ${MARK_CHANGES}

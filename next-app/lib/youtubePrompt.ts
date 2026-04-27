@@ -8,6 +8,7 @@
  */
 
 import { getMedicalLawPromptBlock } from './medicalLawRules';
+import { sanitizePromptInput, sanitizeSourceContent } from './promptSanitize';
 
 export type YoutubeWritingStyle = 'blog' | 'clinical' | 'summary';
 
@@ -93,6 +94,13 @@ export function buildYoutubePrompt(req: YoutubeArticleRequest): {
   systemInstruction: string;
   prompt: string;
 } {
+  const safeTopic = sanitizePromptInput(req.topic, 200);
+  const safeCategory = sanitizePromptInput(req.category, 50);
+  const safeHospitalName = sanitizePromptInput(req.hospitalName, 100);
+  const safeDoctorName = sanitizePromptInput(req.doctorName, 50);
+  const safeKeywords = sanitizePromptInput(req.keywords, 200);
+  const safeTranscript = sanitizeSourceContent(req.transcript, 10000);
+
   const targetLength = req.textLength || 2500;
   const styleInstruction = STYLE_SYSTEM_INSTRUCTIONS[req.writingStyle];
 
@@ -108,16 +116,15 @@ ${getMedicalLawPromptBlock(true)}
 
   promptParts.push(
     '[글 작성 요청]',
-    `- 진료과: ${req.category}`,
-    `- 주제: ${req.topic}`,
+    `- 진료과: ${safeCategory}`,
+    `- 주제: ${safeTopic}`,
     `- 문체: ${req.writingStyle}`,
     `- 목표 글자수: 공백 포함 ${Math.round(targetLength * 0.85)}~${Math.round(targetLength * 1.15)}자`,
-    ...(req.hospitalName ? [`- 병원명: ${req.hospitalName}`] : []),
-    ...(req.doctorName && req.writingStyle === 'clinical' ? [`- 원장명: ${req.doctorName}`] : []),
-    ...(req.keywords ? [`- SEO 키워드: ${req.keywords}`] : []),
+    ...(safeHospitalName ? [`- 병원명: ${safeHospitalName}`] : []),
+    ...(safeDoctorName && req.writingStyle === 'clinical' ? [`- 원장명: ${safeDoctorName}`] : []),
+    ...(safeKeywords ? [`- SEO 키워드: ${safeKeywords}`] : []),
   );
 
-  const trimmedTranscript = req.transcript.trim().slice(0, 10000);
   promptParts.push(
     '',
     '[유튜브 영상 분석 결과 — 원본 자료]',
@@ -126,7 +133,7 @@ ${getMedicalLawPromptBlock(true)}
     '⚠️ 요약 내용을 그대로 복사하지 마세요. 위 문체에 맞게 완전히 재구성하세요.',
     '⚠️ 영상의 핵심 정보(수치, 과정, 사례)는 적극 활용하세요.',
     '',
-    trimmedTranscript,
+    safeTranscript,
   );
 
   promptParts.push(

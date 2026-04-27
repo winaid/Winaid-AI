@@ -11,6 +11,7 @@
  */
 
 import { getMedicalLawPromptBlock } from './medicalLawRules';
+import { sanitizePromptInput, sanitizeSourceContent } from './promptSanitize';
 
 export interface ClinicalArticleRequest {
   topic: string;
@@ -109,9 +110,16 @@ export function buildClinicalPrompt(req: ClinicalArticleRequest): {
   systemInstruction: string;
   prompt: string;
 } {
+  const safeTopic = sanitizePromptInput(req.topic, 200);
+  const safeCategory = sanitizePromptInput(req.category, 50);
+  const safeHospitalName = sanitizePromptInput(req.hospitalName, 100);
+  const safeDoctorName = sanitizePromptInput(req.doctorName, 50);
+  const safeKeywords = sanitizePromptInput(req.keywords, 200);
+  const safeImageAnalysis = sanitizeSourceContent(req.imageAnalysis, 5000);
+
   const targetLength = req.textLength || 3000;
   const structure = ARTICLE_TYPE_STRUCTURES[req.articleType] || ARTICLE_TYPE_STRUCTURES.general;
-  const doctorRef = req.doctorName ? `${req.doctorName} 원장` : '원장';
+  const doctorRef = safeDoctorName ? `${safeDoctorName} 원장` : '원장';
 
   const systemInstruction = `당신은 한국 치과/병원 원장이 직접 쓰는 임상 블로그 글을 대필하는 전문 작성자입니다.
 실제 의사가 쓴 것처럼 자연스럽고, 환자가 읽기 쉬우면서도 전문적인 글을 씁니다.
@@ -182,20 +190,20 @@ ${getMedicalLawPromptBlock(true)}
 
   promptParts.push(
     '[임상글 작성 요청]',
-    `- 진료과: ${req.category}`,
-    `- 주제: ${req.topic}`,
+    `- 진료과: ${safeCategory}`,
+    `- 주제: ${safeTopic}`,
     `- 글 유형: ${req.articleType}`,
     `- 목표 글자수: 공백 포함 ${Math.round(targetLength * 0.85)}~${Math.round(targetLength * 1.15)}자`,
-    ...(req.hospitalName ? [`- 병원명: ${req.hospitalName}`] : []),
-    ...(req.doctorName ? [`- 원장명: ${req.doctorName}`] : []),
-    ...(req.keywords ? [`- SEO 키워드: ${req.keywords} (자연스럽게 포함)`] : []),
+    ...(safeHospitalName ? [`- 병원명: ${safeHospitalName}`] : []),
+    ...(safeDoctorName ? [`- 원장명: ${safeDoctorName}`] : []),
+    ...(safeKeywords ? [`- SEO 키워드: ${safeKeywords} (자연스럽게 포함)`] : []),
   );
 
   // 이미지 분석 결과 + 환각 방지
   promptParts.push(
     '',
     '[업로드된 임상 이미지 분석 결과]',
-    req.imageAnalysis,
+    safeImageAnalysis,
     '',
     '[장비/시술 정확성 — 환각 방지]',
     '- 위 이미지 분석에서 언급된 장비/시술/재료만 글에 포함하세요.',

@@ -47,6 +47,7 @@ export const CATEGORIES = [
 
 import { getMedicalLawPromptBlock } from './medicalLawRules';
 import { getTrustedSourcesPromptBlock } from './trustedMedicalSources';
+import { sanitizePromptInput } from './promptSanitize';
 
 const PRESS_TYPE_STRUCTURES: Record<PressType, string> = {
   achievement: `[실적 달성 기사 구조]
@@ -104,7 +105,12 @@ export function buildPressPrompt(req: PressReleaseRequest): {
   prompt: string;
 } {
   const pressTypeLabel = PRESS_TYPE_LABELS[req.pressType] || '실적 달성';
-  const hospitalName = req.hospitalName || 'OO병원';
+  const hospitalName = sanitizePromptInput(req.hospitalName, 100) || 'OO병원';
+  const safeDoctorName = sanitizePromptInput(req.doctorName, 50);
+  const safeDoctorTitle = sanitizePromptInput(req.doctorTitle, 30);
+  const safeCategory = sanitizePromptInput(req.category, 50);
+  const safeTopic = sanitizePromptInput(req.topic, 200);
+  const safeKeywords = sanitizePromptInput(req.keywords, 200);
   const maxLength = req.textLength || 1200;
 
   const now = new Date();
@@ -186,24 +192,24 @@ ${getMedicalLawPromptBlock(true)}
 </div>
 
 전문의 인용 형식:
-<p>${hospitalName} ${req.category || ''} ${req.doctorName} ${req.doctorTitle}은 "인용문"이라고 설명했다.</p>
+<p>${hospitalName} ${safeCategory || ''} ${safeDoctorName} ${safeDoctorTitle}은 "인용문"이라고 설명했다.</p>
 ⛔ blockquote 태그 사용 금지! <p> 태그 안에서 기사체로 인용!
 ⛔ h2 부제 태그 출력 금지!
 
-${getTrustedSourcesPromptBlock(req.category)}
-${PRESS_CATEGORY_GUIDES[req.category || ''] ? `\n[${req.category} 전문 용어 — 기사에 정확한 명칭 사용]\n${PRESS_CATEGORY_GUIDES[req.category || '']}` : ''}`;
+${getTrustedSourcesPromptBlock(safeCategory)}
+${PRESS_CATEGORY_GUIDES[safeCategory || ''] ? `\n[${safeCategory} 전문 용어 — 기사에 정확한 명칭 사용]\n${PRESS_CATEGORY_GUIDES[safeCategory || '']}` : ''}`;
 
   const promptParts = [
     `[기본 정보]`,
     `- 작성일: ${formattedDate}`,
     `- 병원명: ${hospitalName}`,
-    `- 의료진: ${req.doctorName} ${req.doctorTitle}`,
+    `- 의료진: ${safeDoctorName} ${safeDoctorTitle}`,
     `- 보도 유형: ${pressTypeLabel}`,
-    `- 주제: ${req.topic}`,
+    `- 주제: ${safeTopic}`,
   ];
 
-  if (req.category) promptParts.push(`- 진료과: ${req.category}`);
-  if (req.keywords) promptParts.push(`- SEO 키워드: ${req.keywords} (본문에 자연스럽게 포함)`);
+  if (safeCategory) promptParts.push(`- 진료과: ${safeCategory}`);
+  if (safeKeywords) promptParts.push(`- SEO 키워드: ${safeKeywords} (본문에 자연스럽게 포함)`);
 
   // 기사 길이별 구체적 가이드라인 (LLM이 실제로 차이를 두도록)
   if (maxLength <= 800) {
@@ -264,7 +270,7 @@ ${PRESS_CATEGORY_GUIDES[req.category || ''] ? `\n[${req.category} 전문 용어 
     `[핵심 규칙]`,
     `- 언론 기사체로 작성 (블로그체 아님)`,
     `- 공포 은유 금지 ("침묵의 살인자", "시한폭탄" 등)`,
-    `- h1 제목: "${req.topic}"을 기반으로 기사 제목답게 다듬으세요.`,
+    `- h1 제목: "${safeTopic}"을 기반으로 기사 제목답게 다듬으세요.`,
     `  · 핵심 정보가 앞에 (두괄식)`,
     `  · 전문의 인용 포함 가능: "○○○ 원장 '~가 중요'"`,
     `  · 30~50자 내외. 과장/낚시 금지. 사실 기반.`,
