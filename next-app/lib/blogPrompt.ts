@@ -1309,7 +1309,7 @@ function buildCharBudgetBlock(opts: {
   if (mode === 'outline') {
     const lo = Math.floor(totalTarget * 0.9);
     const hi = Math.ceil(totalTarget * 1.1);
-    return `<char_budget priority="highest">
+    return `<char_budget priority="char_budget">
   <total_target>${totalTarget}자</total_target>
   <tolerance>±10% (${lo}~${hi}자)</tolerance>
   <counting_rules>
@@ -1339,7 +1339,7 @@ ${countingRules}
     const lo = Math.floor(sectionCharTarget * 0.85);
     const hi = Math.ceil(sectionCharTarget * 1.15);
     const typeLabel = sectionType === 'intro' ? '도입부' : sectionType === 'outro' ? '마무리' : '본문';
-    return `<char_budget priority="highest">
+    return `<char_budget priority="char_budget">
   <this_section_target>${sectionCharTarget}자</this_section_target>
   <tolerance>±15% (${lo}~${hi}자)</tolerance>
   <counting_rules>
@@ -1362,7 +1362,7 @@ ${countingRules}
   // one-pass
   const lo = Math.floor(totalTarget * 0.9);
   const hi = Math.ceil(totalTarget * 1.1);
-  return `<char_budget priority="highest">
+  return `<char_budget priority="char_budget">
   <total_target>${totalTarget}자</total_target>
   <tolerance>±10% (${lo}~${hi}자)</tolerance>
   <structure_budget>
@@ -1469,13 +1469,13 @@ function buildGreetingRuleBlock(req: GenerationRequest): string {
   const includeIntro = req.includeHospitalIntro !== false;
 
   if (!hospitalName || !includeIntro) {
-    return `<greeting_rule priority="highest">
+    return `<greeting_rule>
 <mode>no_hospital</mode>
 <instruction>병원명 언급 없이 공감 훅 또는 질문형으로 시작하세요.</instruction>
 </greeting_rule>`;
   }
   if (req.persona === 'director_1st') {
-    return `<greeting_rule priority="highest">
+    return `<greeting_rule>
 <mode>first_person_allowed</mode>
 <hospital_name>${hospitalName}</hospital_name>
 <role>대표 원장</role>
@@ -1484,14 +1484,14 @@ function buildGreetingRuleBlock(req: GenerationRequest): string {
 </greeting_rule>`;
   }
   if (req.persona === 'coordinator') {
-    return `<greeting_rule priority="highest">
+    return `<greeting_rule>
 <mode>first_person_allowed</mode>
 <hospital_name>${hospitalName}</hospital_name>
 <role>상담실장</role>
 <required_format><p>안녕하세요. {수식구 15~35자} ${hospitalName} 상담실장입니다.</p></required_format>
 </greeting_rule>`;
   }
-  return `<greeting_rule priority="highest">
+  return `<greeting_rule>
 <mode>hospital_info</mode>
 <hospital_name>${hospitalName}</hospital_name>
 <instruction>1인칭 인사 금지. 본문 중 "${hospitalName}은(는)..." 형태로 3인칭 서술.</instruction>
@@ -1504,7 +1504,7 @@ function buildReferenceBlock(req: GenerationRequest): string {
   const safeFacts = sanitizeSourceContent(req.referenceFacts, 3000);
   const sources = req.referenceSources?.length
     ? `\n<source>${req.referenceSources.join(', ')}</source>` : '';
-  return `<reference_material priority="highest">
+  return `<reference_material>
 <facts>
 ${safeFacts}
 </facts>${sources}
@@ -1521,7 +1521,7 @@ ${safeFacts}
 /** <no_reference_warning> 블록 — referenceFacts 없을 때만. 환각 위험 경감 지시. */
 function buildNoReferenceWarningBlock(req: GenerationRequest): string {
   if (req.referenceFacts) return '';
-  return `<no_reference_warning priority="highest">
+  return `<no_reference_warning>
 현재 화이트리스트 의료 기관(대한치과의사협회·국가건강정보포털·서울대병원 등)에서
 이 주제의 참고 자료를 수집하지 못했습니다. 자료 없이 작성할 때 지켜야 할 규칙:
 
