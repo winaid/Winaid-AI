@@ -1807,12 +1807,28 @@ JSON 형식으로 응답해주세요.`;
     }
   };
 
+  function isSafeImageUrl(url: string): boolean {
+    try {
+      const parsed = new URL(url, window.location.href);
+      if (!['http:', 'https:', 'data:'].includes(parsed.protocol)) return false;
+      if (parsed.protocol === 'data:' && !parsed.pathname.startsWith('image/')) return false;
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   const handleImageReplace = (selected: HospitalImage) => {
     if (replaceSlotIndex === null) return;
+    if (!isSafeImageUrl(selected.publicUrl)) {
+      console.warn('[image] unsafe publicUrl rejected:', selected.publicUrl.slice(0, 80));
+      return;
+    }
     const idx = replaceSlotIndex;
     setGeneratedContent((prev) => {
       if (!prev) return prev;
-      const newImg = `<img src="${selected.publicUrl}" alt="${selected.altText || ''}" data-image-index="${idx}" style="max-width:100%;height:auto;border-radius:12px;" />`;
+      const safeAlt = (selected.altText || '').replace(/"/g, '&quot;');
+      const newImg = `<img src="${selected.publicUrl}" alt="${safeAlt}" data-image-index="${idx}" style="max-width:100%;height:auto;border-radius:12px;" />`;
 
       const imgRegex = new RegExp(`<img[^>]*data-image-index="${idx}"[^>]*\\/?>`, 'i');
       if (imgRegex.test(prev)) {
@@ -1941,6 +1957,10 @@ Output ONLY the prompt. No explanation.`;
 
   // 이미지 삽입 실행 — after: 단락 뒤에 추가, replace: placeholder wrapper 교체
   const handleInsertImage = useCallback((imageUrl: string, alt: string, prompt?: string) => {
+    if (!isSafeImageUrl(imageUrl)) {
+      console.warn('[insert] unsafe imageUrl rejected:', imageUrl.slice(0, 80));
+      return;
+    }
     if (!insertTargetElement) return;
     const editor = insertTargetElement.closest('article[contenteditable]') as HTMLElement | null;
     if (!editor) return;
@@ -2022,6 +2042,10 @@ Output ONLY the prompt. No explanation.`;
   }, [insertTargetElement, generatedContent]);
 
   const handleSelectHistoryImage = useCallback((imageIndex: number, url: string) => {
+    if (!isSafeImageUrl(url)) {
+      console.warn('[history] unsafe image url rejected:', url.slice(0, 80));
+      return;
+    }
     setGeneratedContent(prev => {
       if (!prev) return prev;
       const div = document.createElement('div');
