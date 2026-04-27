@@ -109,6 +109,19 @@ export interface CrawlResult {
   favicon?: string;
   /** Twitter Card 메타 태그 (meta name="twitter:*") */
   twitterTags?: Record<string, string>;
+
+  // ── Phase 4 확장 필드 ────────────────────────────────────
+  /** 원본 HTML byte 길이 (string.length 기준) */
+  htmlSize?: number;
+  /** <!DOCTYPE html> 시작 여부 */
+  hasDoctype?: boolean;
+  /** P 태그별 텍스트 길이 (글자 수). 빈 P 제외. */
+  paragraphLengths?: number[];
+  /** H3~H6 태그 개수 (h1/h2 는 기존 h1/h2 배열 길이로 카운트) */
+  h3Count?: number;
+  h4Count?: number;
+  h5Count?: number;
+  h6Count?: number;
 }
 
 // ── PSI 결과 ────────────────────────────────────────────────

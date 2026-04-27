@@ -233,6 +233,10 @@ export async function crawlSite(targetUrl: string, options: CrawlOptions = {}): 
 function parseHtml(html: string, origin: string, finalUrl: string): CrawlResult {
   const $ = cheerio.load(html);
 
+  // Phase 4: HTML 사이즈 + Doctype (cheerio load 전 raw HTML 으로 측정)
+  const htmlSize = html.length;
+  const hasDoctype = /^\s*<!DOCTYPE\s+html\s*>/i.test(html);
+
   // 기본 메타
   const title = $('title').first().text().trim();
   const metaDescription = $('meta[name="description"]').attr('content')?.trim() ?? '';
@@ -282,6 +286,11 @@ function parseHtml(html: string, origin: string, finalUrl: string): CrawlResult 
   const h1: string[] = [];
   const h2: string[] = [];
   const headingStructure: CrawlHeading[] = [];
+  // Phase 4: H3~H6 카운트
+  let h3Count = 0;
+  let h4Count = 0;
+  let h5Count = 0;
+  let h6Count = 0;
   $('h1, h2, h3, h4, h5, h6').each((_, el) => {
     const tag = (el as { tagName?: string; name?: string }).tagName ?? (el as { name?: string }).name ?? '';
     const level = Number.parseInt(tag.replace('h', ''), 10);
@@ -289,7 +298,18 @@ function parseHtml(html: string, origin: string, finalUrl: string): CrawlResult 
     if (!text) return;
     headingStructure.push({ level, text });
     if (level === 1) h1.push(text);
-    if (level === 2) h2.push(text);
+    else if (level === 2) h2.push(text);
+    else if (level === 3) h3Count++;
+    else if (level === 4) h4Count++;
+    else if (level === 5) h5Count++;
+    else if (level === 6) h6Count++;
+  });
+
+  // Phase 4: P 태그 단락 길이 분포
+  const paragraphLengths: number[] = [];
+  $('p').each((_, el) => {
+    const len = $(el).text().trim().length;
+    if (len > 0) paragraphLengths.push(len);
   });
 
   // 구조화 데이터 (JSON-LD)
@@ -454,6 +474,15 @@ function parseHtml(html: string, origin: string, finalUrl: string): CrawlResult 
     twitterTags: Object.keys(twitterTags).length > 0 ? twitterTags : undefined,
     favicon,
     // httpStatus / securityHeaders 는 crawlSite() 에서 응답 헤더로 주입
+
+    // Phase 4 확장 필드
+    htmlSize,
+    hasDoctype,
+    paragraphLengths: paragraphLengths.length > 0 ? paragraphLengths : undefined,
+    h3Count,
+    h4Count,
+    h5Count,
+    h6Count,
   };
 }
 

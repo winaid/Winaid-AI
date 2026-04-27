@@ -71,6 +71,14 @@ export const LABELS = {
   favicon: '파비콘(사이트 아이콘)',
   // Phase 3 — content_quality 의료광고법
   medical_law_compliance: '의료광고법 준수',
+  // Phase 4 — content_quality 추가 (NXT 동등 수준)
+  title_length: '제목(Title) 길이',
+  keyword_density: '본문 키워드 밀도',
+  heading_hierarchy: '헤딩 계층 구조 (H1~H6)',
+  paragraph_structure: '단락 구조 (P 태그 길이)',
+  // Phase 4 — security_tech 추가
+  html_size: 'HTML 페이지 사이즈',
+  doctype: 'HTML5 Doctype 선언',
   // Phase 1 — external_channels 추가 항목
   og_bundle: 'OG 소셜 미리보기 (og:title·description·image)',
   twitter_card: 'Twitter Card 메타태그',
@@ -152,6 +160,12 @@ const RECOMMENDATIONS: Record<string, string> = {
   [LABELS.x_content_type_header]: 'X-Content-Type-Options 헤더가 없습니다. 브라우저의 MIME 스니핑이 활성화되어 취약점이 생길 수 있습니다. 제작사에 "X-Content-Type-Options: nosniff 헤더 추가" 요청하세요.',
   [LABELS.referrer_policy_header]: 'Referrer-Policy 헤더가 없습니다. 외부 링크 클릭 시 불필요한 정보가 전달될 수 있습니다. 제작사에 "Referrer-Policy: no-referrer-when-downgrade 헤더 추가" 요청하세요.',
   [LABELS.medical_law_compliance]: '"100%", "최고", "유일한", "완치", "부작용 없는" 같은 절대·단정 표현은 의료법 제56조(의료광고 금지) 위반 가능성이 있습니다. "대부분의 경우", "주력 시술", "환자 만족도 높은" 같은 일반화 표현으로 교체하세요.',
+  [LABELS.title_length]: '제목은 30~60자 권장. 너무 짧으면 정보 부족, 너무 길면 검색 결과에서 잘립니다. 제작사에 "title 태그를 30~60자 범위로 조정 (지역+업종+특화 키워드)" 요청하세요.',
+  [LABELS.keyword_density]: '주요 키워드는 본문의 0.5~3% 정도가 자연스럽습니다. 5% 초과하면 SEO 키워드 스터핑으로 페널티 가능. 자연스러운 문장 안에 분산 배치하세요.',
+  [LABELS.heading_hierarchy]: 'H1 → H2 → H3 순서로 계층을 지키세요. H2 없이 H3 직접 사용은 SEO·접근성 저하. 제작사에 "헤딩 계층(H1 1개, H2 다음 H3) 정리" 요청하세요.',
+  [LABELS.paragraph_structure]: '단락 평균 50~200자가 모바일 가독성 양호. 너무 긴 단락(400자+)은 모바일에서 읽기 부담. 관리자 모드에서 긴 단락을 의미 단위로 끊어 짧게 재구성하세요.',
+  [LABELS.html_size]: '페이지 사이즈 200KB 이내 권장. 큰 사이트는 모바일 로딩이 느려 환자 이탈 위험. 제작사에 "이미지 압축(WebP) + 사용 안 하는 CSS/JS 제거" 요청하세요.',
+  [LABELS.doctype]: 'HTML 첫 줄에 <!DOCTYPE html> 선언 필수. 없으면 브라우저 호환 모드(quirks mode) 로 동작해 레이아웃이 깨질 수 있습니다. 제작사에 "HTML5 Doctype 선언 추가" 요청하세요.',
 };
 
 // ── 헬퍼 ───────────────────────────────────────────────────
@@ -266,6 +280,23 @@ function scoreSecurityTech(crawl: CrawlResult, psi: PsiResult | null, hasRobotsT
   items.push(crawl.canonical
     ? makeItem(LABELS.canonical, 10, 10, 'pass', `canonical: ${crawl.canonical}`, crawl.canonical)
     : makeItem(LABELS.canonical, 10, 0, 'fail', 'canonical link 없음 — 중복 URL 발생 시 SEO 불이익.'));
+
+  // Phase 4: HTML 사이즈
+  const sizeKb = (crawl.htmlSize ?? 0) / 1024;
+  if (crawl.htmlSize === undefined || crawl.htmlSize === 0) {
+    items.push(makeItem(LABELS.html_size, 6, 0, 'unknown', 'HTML 사이즈 측정 불가.'));
+  } else if (sizeKb < 200) {
+    items.push(makeItem(LABELS.html_size, 6, 6, 'pass', `${sizeKb.toFixed(0)}KB (가벼움)`, `${sizeKb.toFixed(0)}KB`));
+  } else if (sizeKb < 500) {
+    items.push(makeItem(LABELS.html_size, 6, 4, 'warning', `${sizeKb.toFixed(0)}KB — 200KB 이내 권장`, `${sizeKb.toFixed(0)}KB`));
+  } else {
+    items.push(makeItem(LABELS.html_size, 6, 1, 'fail', `${sizeKb.toFixed(0)}KB — 너무 큼, 모바일 로딩 느림`, `${sizeKb.toFixed(0)}KB`));
+  }
+
+  // Phase 4: HTML5 Doctype
+  items.push(crawl.hasDoctype
+    ? makeItem(LABELS.doctype, 4, 4, 'pass', '<!DOCTYPE html> 선언 OK')
+    : makeItem(LABELS.doctype, 4, 0, 'fail', 'Doctype 선언 없음 — 브라우저 호환 모드(quirks mode) 위험.'));
 
   return toCategoryScore('security_tech', '보안 및 기술 기반', items);
 }
@@ -527,6 +558,76 @@ function scoreContentQuality(crawl: CrawlResult): CategoryScore {
   items.push(crawl.favicon
     ? makeItem(LABELS.favicon, 8, 8, 'pass', `파비콘 감지: ${crawl.favicon}`, crawl.favicon)
     : makeItem(LABELS.favicon, 8, 0, 'warning', '파비콘 없음 — 브라우저 탭·북마크에 아이콘이 없어 신뢰도가 낮아 보임.'));
+
+  // ── Phase 4 — Title 길이 (6점) ──
+  const titleLen = (crawl.title || '').length;
+  if (titleLen === 0) {
+    items.push(makeItem(LABELS.title_length, 6, 0, 'fail', '<title> 태그 없음', '0자'));
+  } else if (titleLen >= 30 && titleLen <= 60) {
+    items.push(makeItem(LABELS.title_length, 6, 6, 'pass', `제목 ${titleLen}자 (적정)`, `${titleLen}자`));
+  } else if ((titleLen >= 20 && titleLen < 30) || (titleLen > 60 && titleLen <= 80)) {
+    items.push(makeItem(LABELS.title_length, 6, 4, 'warning', `제목 ${titleLen}자 — 30~60자 권장`, `${titleLen}자`));
+  } else {
+    items.push(makeItem(LABELS.title_length, 6, 1, 'fail', `제목 ${titleLen}자 — 검색 결과 노출에 부적합`, `${titleLen}자`));
+  }
+
+  // ── Phase 4 — 키워드 밀도 (6점) ──
+  // title 첫 단어(파이프/콜론/하이픈 이전 부분)를 핵심 키워드로 간주.
+  const titleFirst = (crawl.title || '').replace(/[|\-:].*$/, '').trim().split(/\s+/)[0] ?? '';
+  if (!titleFirst || titleFirst.length < 2) {
+    items.push(makeItem(LABELS.keyword_density, 6, 3, 'warning', '제목에서 키워드 추출 불가.', ''));
+  } else {
+    const text = crawl.textContent || '';
+    const safePat = titleFirst.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const matches = text.match(new RegExp(safePat, 'gi')) ?? [];
+    const totalWords = text.split(/\s+/).filter(Boolean).length || 1;
+    const density = (matches.length / totalWords) * 100;
+    const dPct = density.toFixed(1);
+    if (density >= 0.5 && density <= 3) {
+      items.push(makeItem(LABELS.keyword_density, 6, 6, 'pass', `"${titleFirst}" 키워드 밀도 ${dPct}%`, `${dPct}%`));
+    } else if (density > 3 && density <= 5) {
+      items.push(makeItem(LABELS.keyword_density, 6, 3, 'warning', `"${titleFirst}" 밀도 ${dPct}% — 살짝 높음`, `${dPct}%`));
+    } else if (density > 5) {
+      items.push(makeItem(LABELS.keyword_density, 6, 1, 'fail', `"${titleFirst}" 밀도 ${dPct}% — 키워드 스터핑 의심`, `${dPct}%`));
+    } else {
+      items.push(makeItem(LABELS.keyword_density, 6, 2, 'warning', `"${titleFirst}" 밀도 ${dPct}% — 부족 (0.5~3% 권장)`, `${dPct}%`));
+    }
+  }
+
+  // ── Phase 4 — 헤딩 계층 (6점) ──
+  const h1n = crawl.h1.length;
+  const h2n = crawl.h2.length;
+  const h3n = crawl.h3Count ?? 0;
+  const h4n = crawl.h4Count ?? 0;
+  const skipsH2 = h3n > 0 && h2n === 0;
+  const skipsH1 = h2n > 0 && h1n === 0;
+  if (h1n === 1 && !skipsH2 && !skipsH1) {
+    items.push(makeItem(LABELS.heading_hierarchy, 6, 6, 'pass', `계층 정상 (H1×${h1n}, H2×${h2n}, H3×${h3n}${h4n ? `, H4×${h4n}` : ''}).`));
+  } else if (skipsH2 || skipsH1) {
+    items.push(makeItem(LABELS.heading_hierarchy, 6, 2, 'warning', `계층 건너뜀 (H1×${h1n}, H2×${h2n}, H3×${h3n}) — 순서 어긋남.`));
+  } else if (h1n !== 1) {
+    items.push(makeItem(LABELS.heading_hierarchy, 6, 3, 'warning', `H1 ${h1n}개 — 페이지당 1개 권장.`, `H1×${h1n}`));
+  } else {
+    items.push(makeItem(LABELS.heading_hierarchy, 6, 4, 'pass', `H1×${h1n}, H2×${h2n}, H3×${h3n}.`));
+  }
+
+  // ── Phase 4 — 단락 구조 (6점) ──
+  const pLengths = crawl.paragraphLengths ?? [];
+  if (pLengths.length === 0) {
+    items.push(makeItem(LABELS.paragraph_structure, 6, 1, 'fail', 'P 태그 단락 없음 — 본문이 평탄하거나 div/span 으로만 구성됨.'));
+  } else {
+    const avgP = pLengths.reduce((a, b) => a + b, 0) / pLengths.length;
+    const avgRound = Math.round(avgP);
+    if (avgP >= 50 && avgP <= 200) {
+      items.push(makeItem(LABELS.paragraph_structure, 6, 6, 'pass', `단락 ${pLengths.length}개, 평균 ${avgRound}자.`, `평균 ${avgRound}자`));
+    } else if (avgP > 200 && avgP <= 400) {
+      items.push(makeItem(LABELS.paragraph_structure, 6, 3, 'warning', `단락 평균 ${avgRound}자 — 모바일에서 읽기 부담.`, `평균 ${avgRound}자`));
+    } else if (avgP > 400) {
+      items.push(makeItem(LABELS.paragraph_structure, 6, 1, 'fail', `단락 평균 ${avgRound}자 — 매우 김.`, `평균 ${avgRound}자`));
+    } else {
+      items.push(makeItem(LABELS.paragraph_structure, 6, 2, 'warning', `단락 평균 ${avgRound}자 — 너무 짧음.`, `평균 ${avgRound}자`));
+    }
+  }
 
   // Phase 3 — 의료광고법 위반 검출 (filterMedicalLawViolations 재활용)
   const violations = filterMedicalLawViolations(crawl.textContent || '');
