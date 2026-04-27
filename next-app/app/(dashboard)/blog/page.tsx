@@ -1827,8 +1827,8 @@ JSON 형식으로 응답해주세요.`;
 
   const handleImageReplace = (selected: HospitalImage) => {
     if (replaceSlotIndex === null) return;
-    if (!isSafeImageUrl(selected.publicUrl)) {
-      console.warn('[image] unsafe publicUrl rejected:', selected.publicUrl.slice(0, 80));
+    if (!selected.publicUrl || !isSafeImageUrl(selected.publicUrl)) {
+      console.warn('[image] unsafe publicUrl rejected:', selected.publicUrl?.slice(0, 80));
       return;
     }
     const idx = replaceSlotIndex;
