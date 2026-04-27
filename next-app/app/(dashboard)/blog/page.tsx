@@ -972,6 +972,17 @@ JSON 형식으로 응답해주세요.`;
     // ── Phase 2A v4: pipeline state 초기화 ──
     setPipelineStep('drafting');
 
+    // 크레딧 낙관적 차감 — 실패 시 catch 에서 롤백
+    const prevCredits = (creditCtx.userId && creditCtx.creditInfo)
+      ? { credits: creditCtx.creditInfo.credits, totalUsed: creditCtx.creditInfo.totalUsed || 0 }
+      : null;
+    if (prevCredits) {
+      creditCtx.setCreditInfo({
+        credits: Math.max(0, prevCredits.credits - 2),
+        totalUsed: prevCredits.totalUsed + 2,
+      });
+    }
+
     try {
       // ═══ v4: Sonnet 4.6 통합 초안 (SSE stream) ═══
       console.info(`[BLOG] [V4] Sonnet 4.6 통합 초안 요청 (stream)`);
@@ -1753,14 +1764,6 @@ JSON 형식으로 응답해주세요.`;
         console.warn(`[BLOG] 저장 실패: Supabase 연결 불가`, saveErr);
         setSaveStatus('저장 실패: Supabase 연결 불가');
       }
-      // ── v4: 로그인 사용자 크레딧은 서버(/blog + /review = 2크레딧) 가 차감. UI 는 즉시 로컬 감산. ──
-      if (creditCtx.userId && creditCtx.creditInfo) {
-        creditCtx.setCreditInfo({
-          credits: Math.max(0, creditCtx.creditInfo.credits - 2),
-          totalUsed: (creditCtx.creditInfo.totalUsed || 0) + 2,
-        });
-      }
-
       console.info(`[BLOG] ========== 블로그 생성 완료 (v4) ==========`);
 
       // 생성 완료 시 결과 영역으로 스크롤 이동
@@ -1773,6 +1776,10 @@ JSON 형식으로 응답해주세요.`;
         }
       }, 100);
     } catch (err: unknown) {
+      if (prevCredits) {
+        creditCtx.setCreditInfo(prevCredits);
+        console.warn('[BLOG] generation failed — credits rolled back');
+      }
       const { message, retryable } = classifyError(err);
       console.error(`[BLOG] ❌ 생성 실패: ${message}`, err);
       setError(message);
