@@ -27,6 +27,7 @@ import {
   streamChatGPT,
   streamGemini,
   buildDiscoveryQuery,
+  buildDiscoveryQueries,
   hostOf,
   domainMatches,
   extractUrlsFromText,
@@ -107,6 +108,8 @@ interface Body {
   url?: string;
   customQuery?: string;
   platform?: string;
+  /** Phase 3: 다중 쿼리 패턴 ID (recommend/service/price/urgent). 없으면 customQuery 또는 기본값. */
+  queryId?: string;
 }
 
 function sanitizeCustomQuery(raw: unknown): string | undefined {
@@ -174,7 +177,16 @@ export async function POST(request: NextRequest) {
     return jsonError(502, '사이트 크롤에 실패했습니다.', { detail: msg });
   }
 
-  const query = buildDiscoveryQuery(crawl, '치과', customQuery);
+  // Phase 3: queryId 가 있으면 다중 쿼리에서 매칭, 없으면 단일 쿼리(customQuery 또는 자동).
+  const queryId = typeof body.queryId === 'string' ? body.queryId.trim() : '';
+  let query: string;
+  if (queryId && !customQuery) {
+    const queries = buildDiscoveryQueries(crawl, '치과');
+    const matched = queries.find((q) => q.id === queryId);
+    query = matched?.query ?? buildDiscoveryQuery(crawl, '치과');
+  } else {
+    query = buildDiscoveryQuery(crawl, '치과', customQuery);
+  }
   const selfHost = hostOf(crawl.finalUrl);
 
   // 3.5) 캐시 조회 — 30일 이내 동일 platform+query 결과가 있으면 fake-stream 으로 즉시 반환.

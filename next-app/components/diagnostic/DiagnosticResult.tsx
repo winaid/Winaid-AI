@@ -363,6 +363,7 @@ export default function DiagnosticResult({ result, onResultUpdate }: DiagnosticR
                 siteName={result.siteName}
                 selfUrl={result.url}
                 onMeasurementDone={handleMeasurementDone}
+                availableQueries={result.availableQueries}
               />
             ))}
           </div>

@@ -206,6 +206,10 @@ export interface DiagnosticResponse {
   detectedRegion?: string;
   /** 업종 (기본: "치과", 향후 확장 여지) */
   detectedCategory?: string;
+
+  // ── Phase 3: AEO 다중 쿼리 (UI 드롭다운에서 선택) ──
+  /** 추천형/시술별/가격/야간진료 등 4가지 패턴 (지역 없으면 3개) */
+  availableQueries?: { id: string; label: string; query: string }[];
 }
 
 // ── 단계 5-A: LLM 추출·생성 중간 타입 ───────────────────────────

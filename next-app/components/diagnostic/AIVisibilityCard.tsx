@@ -354,6 +354,8 @@ interface AIVisibilityCardProps {
   selfUrl: string;
   /** C+B 강화안: 실측 완료 시 부모에게 결과 전달 (해설 갱신 버튼 활성화용) */
   onMeasurementDone?: (platform: AIPlatform, data: MeasurementData) => void;
+  /** Phase 3: 4가지 패턴 쿼리 — 진단 응답의 availableQueries. 없으면 단일 입력 모드 */
+  availableQueries?: { id: string; label: string; query: string }[];
 }
 
 type StreamState =
@@ -401,12 +403,16 @@ function formatTimestamp(iso: string): string {
   }
 }
 
-export default function AIVisibilityCard({ visibility, siteName, selfUrl, onMeasurementDone }: AIVisibilityCardProps) {
+export default function AIVisibilityCard({ visibility, siteName, selfUrl, onMeasurementDone, availableQueries }: AIVisibilityCardProps) {
   const meta = LIKELIHOOD_META[visibility.likelihood];
   const pm = PLATFORM_META[visibility.platform];
 
   const [state, setState] = useState<StreamState>({ phase: 'idle' });
   const [customQueryInput, setCustomQueryInput] = useState('');
+  // Phase 3: 다중 쿼리 선택 (드롭다운). 기본값 'recommend'. customQuery 입력하면 무시.
+  const [selectedQueryId, setSelectedQueryId] = useState<string>(
+    availableQueries?.[0]?.id ?? 'recommend',
+  );
   const [sourcesExpanded, setSourcesExpanded] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   /** 네트워크 drop 자동 재시도 횟수 — 1회만 허용. reset 시 0 으로 초기화. */
@@ -438,7 +444,10 @@ export default function AIVisibilityCard({ visibility, siteName, selfUrl, onMeas
     const controller = new AbortController();
     abortRef.current = controller;
 
-    setState({ phase: 'streaming', query: trimmed || '…', answerText: '' });
+    // Phase 3: customQuery 가 있으면 그것 사용, 없으면 selectedQueryId 의 쿼리 텍스트 표시
+    const selectedQuery = availableQueries?.find((q) => q.id === selectedQueryId)?.query;
+    const displayQuery = trimmed || selectedQuery || '…';
+    setState({ phase: 'streaming', query: displayQuery, answerText: '' });
 
     try {
       const res = await fetch('/api/diagnostic/stream', {
@@ -448,6 +457,7 @@ export default function AIVisibilityCard({ visibility, siteName, selfUrl, onMeas
           url: selfUrl,
           customQuery: trimmed || undefined,
           platform: visibility.platform,
+          ...(trimmed ? {} : { queryId: selectedQueryId }),
         }),
         signal: controller.signal,
       });
@@ -681,18 +691,40 @@ export default function AIVisibilityCard({ visibility, siteName, selfUrl, onMeas
       <div className="border-t border-slate-100 bg-slate-50/50 px-5 py-4 flex flex-col">
         {state.phase === 'idle' && (
           <div>
+            {availableQueries && availableQueries.length > 1 && !customQueryInput.trim() && (
+              <div className="mb-2">
+                <label
+                  htmlFor={`diag-query-pattern-${visibility.platform}`}
+                  className="block text-[11px] font-bold text-slate-600 mb-1"
+                >
+                  📋 쿼리 패턴 <span className="font-normal text-slate-400">(자동 추천)</span>
+                </label>
+                <select
+                  id={`diag-query-pattern-${visibility.platform}`}
+                  value={selectedQueryId}
+                  onChange={(e) => setSelectedQueryId(e.target.value)}
+                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
+                >
+                  {availableQueries.map((q) => (
+                    <option key={q.id} value={q.id}>
+                      {q.label} — {q.query}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             <label
               htmlFor={`diag-stream-query-${visibility.platform}`}
               className="block text-[11px] font-bold text-slate-600 mb-1"
             >
-              🔍 실측 검색어 <span className="font-normal text-slate-400">(선택)</span>
+              🔍 직접 입력 <span className="font-normal text-slate-400">(선택, 입력 시 위 패턴 무시)</span>
             </label>
             <input
               id={`diag-stream-query-${visibility.platform}`}
               type="text"
               value={customQueryInput}
               onChange={(e) => setCustomQueryInput(e.target.value)}
-              placeholder="예: 안산 치과 추천 (비우면 자동 추출)"
+              placeholder="예: 안산 치과 추천 (비우면 위 패턴 사용)"
               maxLength={MAX_QUERY_LEN}
               className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 mb-2"
             />

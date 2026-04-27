@@ -386,6 +386,69 @@ export function buildDiscoveryQuery(
   return buildQuery(region, category);
 }
 
+// ── Phase 3: AEO 다중 쿼리 ──────────────────────────────────
+
+export interface DiscoveryQuery {
+  id: string;
+  label: string;
+  query: string;
+}
+
+/**
+ * AEO 다중 쿼리 빌더 — 4가지 패턴으로 AI 검색 노출 측정.
+ * customQuery 있으면 그것만 반환. 없으면 자동 4개 (지역 없으면 3개) 생성.
+ *
+ * 패턴: recommend(추천형) · service(시술별) · price(가격) · urgent(야간진료)
+ */
+export function buildDiscoveryQueries(
+  crawl: CrawlResult,
+  category: string,
+  customQuery?: string,
+): DiscoveryQuery[] {
+  const trimmed = customQuery?.trim();
+  if (trimmed) {
+    return [{ id: 'custom', label: '커스텀', query: trimmed }];
+  }
+
+  const region = extractRegion(crawl);
+  const services = (crawl.detectedServices || []).slice(0, 1);
+  const queries: DiscoveryQuery[] = [];
+
+  // 1. 추천형 (기본)
+  queries.push({
+    id: 'recommend',
+    label: '추천형',
+    query: region ? `${region} ${category} 추천` : `${category} 추천`,
+  });
+
+  // 2. 시술형 (서비스 1개 이상 검출 시)
+  if (services[0]) {
+    queries.push({
+      id: 'service',
+      label: '시술별',
+      query: region ? `${region} ${services[0]}` : `${category} ${services[0]}`,
+    });
+  }
+
+  // 3. 가격형
+  queries.push({
+    id: 'price',
+    label: '가격',
+    query: region ? `${region} ${category} 가격` : `${category} 비용`,
+  });
+
+  // 4. 야간/응급 (지역 있을 때만 의미 있음)
+  if (region) {
+    queries.push({
+      id: 'urgent',
+      label: '야간진료',
+      query: `야간 진료 ${category} ${region}`,
+    });
+  }
+
+  return queries;
+}
+
 // ── Streaming 버전 (단계 S-A + Gemini 진짜 streaming 핫픽스) ──
 // 기본 /api/diagnostic 에서 실측을 분리하고, 사용자가 "실측하기" 를 누를 때
 // /api/diagnostic/stream 에서 플랫폼별로 하나씩 호출. SSE 로 chunk 단위 전달.

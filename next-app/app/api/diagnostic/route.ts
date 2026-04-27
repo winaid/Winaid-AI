@@ -21,7 +21,7 @@ import { scoreCategories, computeOverallScore } from '../../../lib/diagnostic/sc
 import { predictAIVisibility } from '../../../lib/diagnostic/aiVisibility';
 import { buildActionPlan } from '../../../lib/diagnostic/actionPlan';
 import { enrichDiagnostic } from '../../../lib/diagnostic/enrich';
-import { extractRegion } from '../../../lib/diagnostic/discovery';
+import { extractRegion, buildDiscoveryQueries } from '../../../lib/diagnostic/discovery';
 import { logDiagnostic, generateTraceId } from '../../../lib/diagnostic/logger';
 import { supabase } from '../../../lib/supabase';
 import type { DiagnosticResponse, DiagnosticErrorResponse } from '../../../lib/diagnostic/types';
@@ -198,11 +198,13 @@ export async function POST(request: NextRequest) {
   logDiagnostic({ traceId, step: 'enrich', duration: Date.now() - tEnrich });
 
   const detectedRegion = customQuery ? undefined : (extractRegion(crawl) ?? undefined);
+  const availableQueries = buildDiscoveryQueries(crawl, '치과', customQuery);
 
   const final: DiagnosticResponse = {
     ...enriched,
     detectedCategory: '치과',
     ...(detectedRegion ? { detectedRegion } : {}),
+    availableQueries,
   };
   logDiagnostic({ traceId, step: 'done', duration: Date.now() - t0, url: normalizedUrl, detail: `score=${final.overallScore}` });
 
