@@ -30,7 +30,9 @@ export async function POST(request: NextRequest) {
   const ids = (body.imageIds || []).filter(x => typeof x === 'string' && x.length > 0);
   if (ids.length === 0) return NextResponse.json({ ok: true, incremented: 0 });
 
-  const { error } = await supabase.rpc('increment_image_usage', { image_ids: ids, owner_id: owner });
+  // owner_id 제거 — RPC 내부에서 auth.uid() 로 소유자 검증 (마이그레이션 2026-04-27_usage_rpc_auth_uid.sql 필요)
+  void owner; // 로깅/감사용으로 resolveImageOwner 유지, RPC 에는 미전달
+  const { error } = await supabase.rpc('increment_image_usage', { image_ids: ids });
   if (error) {
     console.warn(`[hospital-images/usage] rpc error: ${error.message}`);
     return NextResponse.json({ error: 'rpc_failed' }, { status: 500 });
