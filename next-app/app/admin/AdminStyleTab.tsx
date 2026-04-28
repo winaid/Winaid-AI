@@ -1,7 +1,7 @@
 'use client';
 
 import type { TeamData } from '../../lib/teamData';
-import type { HospitalStyleProfile, LearnedWritingStyle } from '../../lib/styleService';
+import type { HospitalStyleProfile, LearnedWritingStyle } from '@winaid/blog-core';
 import type { CrawledPostScore, DBCrawledPost } from '@winaid/blog-core';
 import { formatDate } from './adminTypes';
 

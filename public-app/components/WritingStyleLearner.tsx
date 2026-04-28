@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { buildStylePrompt, createLearnedWritingStyle } from '../lib/styleService';
+import { buildStylePrompt, createLearnedWritingStyle } from '@winaid/blog-core';
 import { authFetch } from '../lib/authFetch';
-import type { LearnedWritingStyle } from '../lib/styleService';
+import type { LearnedWritingStyle } from '@winaid/blog-core';
 
 export type { LearnedWritingStyle };
 

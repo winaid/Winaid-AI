@@ -8,7 +8,7 @@
  * 쿼리 파라미터 ?includeStyle=true 로 말투 분석까지 실행 가능.
  */
 import { NextRequest, NextResponse } from 'next/server';
-import { crawlAndScoreAllHospitals } from '../../../../lib/styleService';
+import { crawlAndScoreAllHospitals } from '@winaid/blog-core';
 
 export const maxDuration = 300; // 5분 (Vercel Pro/Enterprise)
 export const dynamic = 'force-dynamic';

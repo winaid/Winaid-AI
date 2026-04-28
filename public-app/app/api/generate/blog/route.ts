@@ -9,7 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { gateGuestRequest } from '../../../../lib/guestRateLimit';
 import { useCredit } from '../../../../lib/creditService';
-import { getHospitalStylePrompt } from '../../../../lib/styleService';
+import { getHospitalStylePrompt } from '@winaid/blog-core';
 import { buildBlogPromptV3, buildOutlinePrompt, buildSectionFromOutlinePrompt } from '../../../../lib/blogPrompt';
 import { filterMedicalLawViolations } from '@winaid/blog-core';
 import { callLLM } from '@winaid/blog-core';

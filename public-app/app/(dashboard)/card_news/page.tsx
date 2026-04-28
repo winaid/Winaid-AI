@@ -11,7 +11,7 @@ import { CardRegenModal, type CardPromptHistoryItem, CARD_PROMPT_HISTORY_KEY, CA
 import CardTemplateManager from '../../../components/CardTemplateManager';
 import BrandPresetEditor from '../../../components/card-news/BrandPresetEditor';
 import { brandPresetToTheme } from '@winaid/blog-core';
-import { getBrandPreset } from '../../../lib/styleService';
+import { getBrandPreset } from '@winaid/blog-core';
 import CardNewsProRenderer from '../../../components/CardNewsProRenderer';
 import { DEFAULT_THEME, COVER_TEMPLATES, CARD_FONTS, FONT_CATEGORIES, type DesignPresetStyle, parseProSlidesJson, ensureSlideIds, generateSlideId, type SlideData as ProSlideData, type CardNewsTheme, type SlideLayoutType, type CoverTemplate } from '@winaid/blog-core';
 import { buildLayoutDefaults, analyzeInspirationImage, type InspirationAnalysis } from '../../../lib/cardAiActions';

@@ -16,7 +16,7 @@ import { useCredit } from '../../../../../lib/creditService';
 import { buildBlogReviewPrompt } from '../../../../../lib/blogPrompt';
 import { applyContentFilters } from '@winaid/blog-core';
 import { callLLM } from '@winaid/blog-core';
-import { getHospitalStylePrompt } from '../../../../../lib/styleService';
+import { getHospitalStylePrompt } from '@winaid/blog-core';
 
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';

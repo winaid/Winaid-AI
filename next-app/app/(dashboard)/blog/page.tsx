@@ -9,7 +9,7 @@ import { ContentCategory, type GenerationRequest, type AudienceMode, type ImageS
 import { applyContentFilters } from '@winaid/blog-core';
 import { savePost } from '../../../lib/postStorage';
 import { getSessionSafe, supabase } from '@winaid/blog-core';
-import { getHospitalStylePrompt } from '../../../lib/styleService';
+import { getHospitalStylePrompt } from '@winaid/blog-core';
 import { buildImagePrompt } from '../../../lib/blogPrompt';
 import { type ScoreBarData } from '../../../components/GenerationResult';
 import { getStyleById, getStylePromptForGeneration } from '../../../components/WritingStyleLearner';

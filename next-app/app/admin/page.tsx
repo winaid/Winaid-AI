@@ -24,7 +24,7 @@ import {
   crawlAndScoreAllHospitals,
   HospitalStyleProfile,
   LearnedWritingStyle,
-} from '../../lib/styleService';
+} from '@winaid/blog-core';
 import { deleteAllGeneratedPosts, updateUserTeam, deleteUserProfile } from '../../lib/adminService';
 import { ToastContainer, toast } from '../../components/Toast';
 import type { CrawledPostScore, DBCrawledPost } from '@winaid/blog-core';

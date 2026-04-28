@@ -6,3 +6,4 @@ export * from './supabase';
 export * from './llm';
 export * from './cardNewsLayouts';
 export * from './brandPreset';
+export * from './styleService';

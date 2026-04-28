@@ -31,7 +31,7 @@ import {
   type BrandColors,
   type BrandTone,
 } from '@winaid/blog-core';
-import { getBrandPreset, saveBrandPreset } from '../../lib/styleService';
+import { getBrandPreset, saveBrandPreset } from '@winaid/blog-core';
 
 interface BrandPresetEditorProps {
   hospitalName: string;
