@@ -9,7 +9,7 @@
  */
 
 import type { GenerationRequest, BlogOutline, BlogOutlineSection } from './types';
-import { sanitizePromptInput, sanitizeSourceContent } from './promptSanitize';
+import { sanitizePromptInput, sanitizeSourceContent } from '@winaid/blog-core';
 import type { CacheableBlock } from './llm';
 
 // ═══════════════════════════════════════════════════════════════════

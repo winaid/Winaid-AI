@@ -10,8 +10,7 @@
  * - 담백하면서 친근한 톤
  */
 
-import { getMedicalLawPromptBlock } from './medicalLawRules';
-import { sanitizePromptInput, sanitizeSourceContent } from './promptSanitize';
+import { getMedicalLawPromptBlock, sanitizePromptInput, sanitizeSourceContent } from '@winaid/blog-core';
 
 export interface ClinicalArticleRequest {
   topic: string;

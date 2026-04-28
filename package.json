@@ -1,0 +1,10 @@
+{
+  "name": "winaid-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "next-app",
+    "public-app",
+    "packages/*"
+  ]
+}

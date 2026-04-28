@@ -5,8 +5,7 @@
  * HTML 출력, 의료광고법 준수, AI 느낌 제거, Google Search 연동
  */
 
-import { getMedicalLawPromptBlock } from './medicalLawRules';
-import { sanitizePromptInput, sanitizeSourceContent } from './promptSanitize';
+import { getMedicalLawPromptBlock, sanitizePromptInput, sanitizeSourceContent } from '@winaid/blog-core';
 
 export type RefineMode = 'natural' | 'professional' | 'shorter' | 'longer' | 'medical_law' | 'seo';
 

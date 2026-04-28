@@ -45,9 +45,8 @@ export const CATEGORIES = [
   '정신건강의학과', '재활의학과', '영상의학과', '마취통증의학과', '기타',
 ];
 
-import { getMedicalLawPromptBlock } from './medicalLawRules';
+import { getMedicalLawPromptBlock, sanitizePromptInput } from '@winaid/blog-core';
 import { getTrustedSourcesPromptBlock } from './trustedMedicalSources';
-import { sanitizePromptInput } from './promptSanitize';
 
 const PRESS_TYPE_STRUCTURES: Record<PressType, string> = {
   achievement: `[실적 달성 기사 구조]

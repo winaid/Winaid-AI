@@ -4,7 +4,7 @@
  */
 import type { SlideData, SlideLayoutType, SlideComparisonColumn } from './cardNewsLayouts';
 import { SLIDE_IMAGE_STYLES } from './cardNewsLayouts';
-import { getMedicalLawPromptBlock, detectForbiddenWords } from './medicalLawRules';
+import { getMedicalLawPromptBlock, detectForbiddenWords } from '@winaid/blog-core';
 import { applyContentFilters } from './medicalLawFilter';
 
 /**

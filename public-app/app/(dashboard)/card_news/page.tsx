@@ -15,7 +15,7 @@ import { getBrandPreset } from '../../../lib/styleService';
 import CardNewsProRenderer from '../../../components/CardNewsProRenderer';
 import { DEFAULT_THEME, COVER_TEMPLATES, CARD_FONTS, FONT_CATEGORIES, type DesignPresetStyle, parseProSlidesJson, ensureSlideIds, generateSlideId, type SlideData as ProSlideData, type CardNewsTheme, type SlideLayoutType, type CoverTemplate } from '../../../lib/cardNewsLayouts';
 import { buildLayoutDefaults, analyzeInspirationImage, type InspirationAnalysis } from '../../../lib/cardAiActions';
-import { sanitizePromptInput } from '../../../lib/promptSanitize';
+import { sanitizePromptInput } from '@winaid/blog-core';
 import { getSavedTemplates, deleteTemplate, imageToEditableTemplate, type CardTemplate } from '../../../lib/cardTemplateService';
 import { saveDraft, loadDraft, clearDraft, type CardNewsDraft, type CardRatio, type LoadDraftResult } from '../../../lib/cardNewsDraft';
 import { ContentCategory } from '../../../lib/types';

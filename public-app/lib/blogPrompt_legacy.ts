@@ -6,7 +6,7 @@
  * 원래 설명: 블로그 생성 프롬프트 조립 — GenerationRequest → { systemInstruction, prompt }
  */
 import type { GenerationRequest } from './types';
-import { sanitizePromptInput, sanitizeSourceContent } from './promptSanitize';
+import { sanitizePromptInput, sanitizeSourceContent } from '@winaid/blog-core';
 
 const AUDIENCE_GUIDES: Record<string, string> = {
   '환자용(친절/공감)': '환자가 치료를 두려워하지 않도록 따뜻하고 공감하는 어조로 작성하세요. 전문 용어는 쉬운 말로 바꿔 설명합니다.',
@@ -182,7 +182,7 @@ const CATEGORY_IMAGE_GUIDES: Record<string, string> = {
 - 피할 것: 고통스러운 표정, 심한 부상, 수술실 내부`,
 };
 
-import { getMedicalLawPromptBlock } from './medicalLawRules';
+import { getMedicalLawPromptBlock } from '@winaid/blog-core';
 import { getTrustedSourcesPromptBlock } from './trustedMedicalSources';
 
 type TopicType = 'info' | 'compare' | 'aftercare' | 'symptom' | 'qna' | 'general';

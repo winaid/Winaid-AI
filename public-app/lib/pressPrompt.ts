@@ -5,7 +5,7 @@
  * 3인칭 기자 문체, 의료광고법 준수, 전문의 인용, HTML 출력.
  */
 
-import { sanitizePromptInput, sanitizeSourceContent } from './promptSanitize';
+import { sanitizePromptInput, sanitizeSourceContent } from '@winaid/blog-core';
 
 export type PressType = 'achievement' | 'new_service' | 'research' | 'event' | 'award' | 'health_tips';
 
@@ -47,7 +47,7 @@ export const CATEGORIES = [
   '정신건강의학과', '재활의학과', '영상의학과', '마취통증의학과', '기타',
 ];
 
-import { getMedicalLawPromptBlock } from './medicalLawRules';
+import { getMedicalLawPromptBlock } from '@winaid/blog-core';
 import { getTrustedSourcesPromptBlock } from './trustedMedicalSources';
 
 const PRESS_TYPE_STRUCTURES: Record<PressType, string> = {

@@ -5,7 +5,7 @@ import { authFetch } from '../lib/authFetch';
 import { getSessionSafe } from '../lib/supabase';
 import { IMAGE_TAG_PRESETS, type HospitalImage } from '../lib/hospitalImageService';
 import { buildImagePrompt } from '../lib/blogPrompt';
-import { sanitizePromptInput } from '../lib/promptSanitize';
+import { sanitizePromptInput } from '@winaid/blog-core';
 
 /**
  * 이미지 삽입 모달 — 2개 탭 (라이브러리 / AI 생성).

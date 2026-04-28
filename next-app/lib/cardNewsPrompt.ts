@@ -7,8 +7,7 @@
 
 import type { CardNewsDesignTemplateId } from './types';
 import { CARD_NEWS_DESIGN_TEMPLATES } from './cardNewsDesignTemplates';
-import { getMedicalLawPromptBlock } from './medicalLawRules';
-import { sanitizePromptInput } from './promptSanitize';
+import { getMedicalLawPromptBlock, sanitizePromptInput } from '@winaid/blog-core';
 
 export interface CardNewsRequest {
   topic: string;

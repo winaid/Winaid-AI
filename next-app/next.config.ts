@@ -4,6 +4,7 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: __dirname + '/..',
   },
+  transpilePackages: ['@winaid/blog-core'],
   async headers() {
     return [
       {

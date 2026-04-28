@@ -7,8 +7,7 @@
  * - summary: 영상 요약 문체 (핵심 내용 구조적 정리)
  */
 
-import { getMedicalLawPromptBlock } from './medicalLawRules';
-import { sanitizePromptInput, sanitizeSourceContent } from './promptSanitize';
+import { getMedicalLawPromptBlock, sanitizePromptInput, sanitizeSourceContent } from '@winaid/blog-core';
 
 export type YoutubeWritingStyle = 'blog' | 'clinical' | 'summary';
 

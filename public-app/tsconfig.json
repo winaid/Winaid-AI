@@ -25,6 +25,9 @@
     "paths": {
       "@/*": [
         "./*"
+      ],
+      "@winaid/blog-core": [
+        "../packages/blog-core/src/index.ts"
       ]
     }
   },
