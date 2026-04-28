@@ -724,7 +724,9 @@ export default function AIVisibilityCard({ visibility, siteName, selfUrl, onMeas
               </button>
             </div>
             <div className="text-[14px] leading-[1.8] text-slate-700 whitespace-pre-line bg-white rounded-lg p-4 border border-slate-200 min-h-[100px]">
-              {state.answerText}
+              {state.answerText.split('\n').map((ln, i) => (
+                <div key={`stream-${i}`}>{renderInline(ln, `stream-${i}`)}</div>
+              ))}
               <span
                 className="inline-block ml-0.5 animate-pulse text-slate-400"
                 aria-hidden="true"

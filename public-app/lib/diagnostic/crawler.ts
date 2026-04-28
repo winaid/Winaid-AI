@@ -13,7 +13,7 @@ import { checkRobotsTxt, checkSitemap, parseAiCrawlerPolicy, checkLlmsTxt } from
 const USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 
-const DEFAULT_TIMEOUT_MS = 10_000;
+const DEFAULT_TIMEOUT_MS = 6_000;
 
 // ── 의료/치과 특화 키워드 ──────────────────────────────────
 
@@ -71,7 +71,7 @@ interface CrawlOptions {
 
 export async function crawlSite(targetUrl: string, options: CrawlOptions = {}): Promise<CrawlResult> {
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-  const subpageLimit = options.subpageLimit ?? 3;
+  const subpageLimit = options.subpageLimit ?? 1;
 
   const parsedUrl = new URL(targetUrl);
   const origin = parsedUrl.origin;

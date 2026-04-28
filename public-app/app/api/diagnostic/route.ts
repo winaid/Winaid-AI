@@ -129,11 +129,16 @@ export async function POST(request: NextRequest) {
   }
   const customQuery = sanitizeCustomQuery(body.customQuery);
 
-  // 3) 크롤링
+  // 3) 크롤링 — 외곽 타임아웃 가드 (느린 사이트가 누적해 함수 한도 120s 를 깎아먹지 않도록).
+  //    classifyCrawlError 가 'timeout' 패턴을 TIMEOUT 코드로 분기하므로 catch 통과시 자동 504.
   let crawl;
   const tCrawl = Date.now();
   try {
-    crawl = await crawlSite(normalizedUrl);
+    crawl = await withTimeout(
+      crawlSite(normalizedUrl, { subpageLimit: 1 }),
+      40_000,
+      'crawl',
+    );
     logDiagnostic({ traceId, step: 'crawl', duration: Date.now() - tCrawl, url: normalizedUrl });
   } catch (e) {
     logDiagnostic({ traceId, step: 'crawl_error', duration: Date.now() - tCrawl, url: normalizedUrl, error: (e as Error).message.slice(0, 200) });
@@ -143,7 +148,7 @@ export async function POST(request: NextRequest) {
 
   // 4) PSI
   const tPsi = Date.now();
-  const psi = await withTimeout(fetchPsi(crawl.finalUrl), 70_000, 'psi').catch(() => null);
+  const psi = await withTimeout(fetchPsi(crawl.finalUrl), 25_000, 'psi').catch(() => null);
   logDiagnostic({ traceId, step: 'psi', duration: Date.now() - tPsi, detail: psi ? `score=${psi.score}` : 'null' });
 
   // 5~7) 채점 + 종합
@@ -181,7 +186,7 @@ export async function POST(request: NextRequest) {
 
   // 11) enrich
   const tEnrich = Date.now();
-  const enriched = await withTimeout(enrichDiagnostic(base, crawl), 75_000, 'enrich').catch((e) => {
+  const enriched = await withTimeout(enrichDiagnostic(base, crawl), 40_000, 'enrich').catch((e) => {
     logDiagnostic({ traceId, step: 'enrich_error', duration: Date.now() - tEnrich, error: (e as Error)?.message?.slice(0, 200) });
     return base;
   });
