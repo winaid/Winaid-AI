@@ -6,7 +6,7 @@
 import { supabase } from './supabase';
 import type { CrawledPostScore, DBCrawledPost } from './types';
 import type { BrandPreset } from './brandPreset';
-import { filterMedicalLawViolations } from './medicalLawFilter';
+import { filterMedicalLawViolations, FORBIDDEN_EXPRESSIONS } from '@winaid/blog-core';
 
 // ── 타입 ──
 
@@ -141,8 +141,6 @@ export async function saveBrandPreset(hospitalName: string, preset: BrandPreset)
 }
 
 // ── 의료광고법 금지 표현 필터 (말투 분석 결과에서 위험 표현 제거) ──
-
-import { FORBIDDEN_EXPRESSIONS } from '@winaid/blog-core';
 
 const STYLE_PROHIBITED = [
   ...FORBIDDEN_EXPRESSIONS.inducement.map(w => w.replace(/^~/, '')),

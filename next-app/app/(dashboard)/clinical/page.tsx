@@ -6,7 +6,7 @@ import { getSessionSafe, supabase } from '../../../lib/supabase';
 import { CATEGORIES } from '../../../lib/constants';
 import { sanitizeHtml } from '../../../lib/sanitize';
 import { stripDoctype } from '../../../lib/htmlUtils';
-import { applyContentFilters } from '../../../lib/medicalLawFilter';
+import { applyContentFilters } from '@winaid/blog-core';
 import { useCreditContext } from '../layout';
 import { useCredit } from '../../../lib/creditService';
 

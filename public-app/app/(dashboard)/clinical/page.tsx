@@ -9,7 +9,7 @@ import { consumeGuestCredit } from '../../../lib/guestCredits';
 import { CATEGORIES } from '../../../lib/constants';
 import { sanitizeHtml } from '../../../lib/sanitize';
 import { stripDoctype } from '../../../lib/htmlUtils';
-import { applyContentFilters } from '../../../lib/medicalLawFilter';
+import { applyContentFilters } from '@winaid/blog-core';
 
 const inputCls = 'w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm outline-none focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-500/10 transition-all placeholder:text-slate-300';
 

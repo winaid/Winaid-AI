@@ -8,7 +8,7 @@ import { getHospitalStylePrompt } from '../../../lib/styleService';
 import { ErrorPanel } from '../../../components/GenerationResult';
 import { sanitizeHtml } from '../../../lib/sanitize';
 import { stripDoctype } from '../../../lib/htmlUtils';
-import { applyContentFilters } from '../../../lib/medicalLawFilter';
+import { applyContentFilters } from '@winaid/blog-core';
 import { useCreditContext } from '../layout';
 import { useCredit } from '../../../lib/creditService';
 import { consumeGuestCredit } from '../../../lib/guestCredits';

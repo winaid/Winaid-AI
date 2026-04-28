@@ -7,7 +7,7 @@ import { getSessionSafe } from '../../../lib/supabase';
 import { ErrorPanel } from '../../../components/GenerationResult';
 import { sanitizeHtml } from '../../../lib/sanitize';
 import { stripDoctype } from '../../../lib/htmlUtils';
-import { applyContentFilters } from '../../../lib/medicalLawFilter';
+import { applyContentFilters } from '@winaid/blog-core';
 
 interface ChatMsg { role: 'user' | 'assistant'; content: string; ts: Date; }
 

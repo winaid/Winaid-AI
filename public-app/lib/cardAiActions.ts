@@ -4,8 +4,7 @@
  */
 import type { SlideData, SlideLayoutType, SlideComparisonColumn } from './cardNewsLayouts';
 import { SLIDE_IMAGE_STYLES } from './cardNewsLayouts';
-import { getMedicalLawPromptBlock, detectForbiddenWords } from '@winaid/blog-core';
-import { applyContentFilters } from './medicalLawFilter';
+import { getMedicalLawPromptBlock, detectForbiddenWords, applyContentFilters } from '@winaid/blog-core';
 
 /**
  * Gemini 응답을 "출력 가능한 순수 한 줄 텍스트"로 정리.

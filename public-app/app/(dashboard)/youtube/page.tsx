@@ -5,7 +5,7 @@ import { buildYoutubePrompt, YOUTUBE_WRITING_STYLES } from '../../../lib/youtube
 import { supabase } from '../../../lib/supabase';
 import { CATEGORIES } from '../../../lib/constants';
 import { sanitizeHtml } from '../../../lib/sanitize';
-import { applyContentFilters } from '../../../lib/medicalLawFilter';
+import { applyContentFilters } from '@winaid/blog-core';
 import { useCreditContext } from '../layout';
 import { useCredit } from '../../../lib/creditService';
 import { consumeGuestCredit } from '../../../lib/guestCredits';

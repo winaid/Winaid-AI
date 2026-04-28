@@ -169,9 +169,9 @@ export function filterOutputArtifacts(text: string): string {
   // 3) 같은 어미 3회 연속 감지 + 3번째를 교체
   const endingPatterns: Array<[RegExp, string[]]> = [
     [/좋습니다/g, ['바람직합니다', '낫습니다', '권장됩니다']],
-    [/있습니다/g, ['있어요', '있는 편입니다']],
-    [/됩니다/g, ['돼요', '되는 편입니다']],
-    [/합니다/g, ['해요']],
+    [/있습니다/g, ['있어요', '있거든요', '있는 편입니다']],
+    [/됩니다/g, ['돼요', '되거든요', '되는 편입니다']],
+    [/합니다/g, ['해요', '하거든요']],
   ];
 
   for (const [pattern, alts] of endingPatterns) {

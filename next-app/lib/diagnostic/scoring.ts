@@ -8,7 +8,7 @@
  */
 
 import type { CrawlResult, PsiResult, CategoryScore, CategoryItem, CategoryItemStatus } from './types';
-import { filterMedicalLawViolations } from '../medicalLawFilter';
+import { filterMedicalLawViolations } from '@winaid/blog-core';
 
 // ── 라벨 상수 (actionPlan.ts 와 공유) ──────────────────────────
 

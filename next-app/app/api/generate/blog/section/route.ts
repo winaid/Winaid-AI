@@ -9,7 +9,7 @@ import {
   buildBlogSectionPromptV3,
   type SectionRegenerateInputV3,
 } from '../../../../../lib/blogPrompt';
-import { applyContentFilters } from '../../../../../lib/medicalLawFilter';
+import { applyContentFilters } from '@winaid/blog-core';
 import { callLLM } from '../../../../../lib/llm';
 
 export const maxDuration = 45;

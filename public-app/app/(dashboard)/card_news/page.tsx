@@ -24,7 +24,7 @@ import { useCreditContext } from '../layout';
 import { useCredit as cardNewsUseCredit } from '../../../lib/creditService';
 import { consumeGuestCredit } from '../../../lib/guestCredits';
 import { overlayLogo } from '../../../lib/cardDownloadUtils';
-import { applyContentFilters } from '../../../lib/medicalLawFilter';
+import { applyContentFilters } from '@winaid/blog-core';
 
 function GeneratingTimer({ progress, slideCount = 6 }: { progress: string; slideCount?: number }) {
   // 장수 기반 동적 추정치 — 4장≈50초, 6장≈70초, 8장≈90초, 10장≈110초 (30~120초 클램프)

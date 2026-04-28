@@ -6,7 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { CATEGORIES, PERSONAS, TONES } from '../../../lib/constants';
 import { TEAM_DATA } from '../../../lib/teamData';
 import { ContentCategory, type GenerationRequest, type AudienceMode, type ImageStyle, type ImageSourceMode, type WritingStyle, type CssTheme, type TrendingItem, type SeoTitleItem, type SeoReport } from '../../../lib/types';
-import { applyContentFilters } from '../../../lib/medicalLawFilter';
+import { applyContentFilters } from '@winaid/blog-core';
 import { savePost } from '../../../lib/postStorage';
 import { getSessionSafe, supabase } from '../../../lib/supabase';
 import { getHospitalStylePrompt } from '../../../lib/styleService';
@@ -1924,7 +1924,7 @@ JSON 형식으로 응답해주세요.`;
         let refined = data.text.trim();
         refined = refined.replace(/^```html?\s*\n?/i, '').replace(/\n?```\s*$/, '');
         if (refined.includes('<')) {
-          const { applyContentFilters: filterContent } = await import('../../../lib/medicalLawFilter');
+          const { applyContentFilters: filterContent } = await import('@winaid/blog-core');
           const { filtered, replacedCount, foundTerms } = filterContent(refined);
           refined = filtered;
           if (replacedCount > 0) console.info(`[BLOG_CHAT] 의료법 자동 대체: ${replacedCount}건 — ${foundTerms.join(', ')}`);

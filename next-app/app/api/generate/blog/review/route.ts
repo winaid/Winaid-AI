@@ -8,7 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { checkAuth } from '../../../../../lib/apiAuth';
 import { useCredit } from '../../../../../lib/creditService';
 import { buildBlogReviewPrompt } from '../../../../../lib/blogPrompt';
-import { applyContentFilters } from '../../../../../lib/medicalLawFilter';
+import { applyContentFilters } from '@winaid/blog-core';
 import { callLLM } from '../../../../../lib/llm';
 import { getHospitalStylePrompt } from '../../../../../lib/styleService';
 

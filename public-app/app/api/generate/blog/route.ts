@@ -11,7 +11,7 @@ import { gateGuestRequest } from '../../../../lib/guestRateLimit';
 import { useCredit } from '../../../../lib/creditService';
 import { getHospitalStylePrompt } from '../../../../lib/styleService';
 import { buildBlogPromptV3, buildOutlinePrompt, buildSectionFromOutlinePrompt } from '../../../../lib/blogPrompt';
-import { filterMedicalLawViolations } from '../../../../lib/medicalLawFilter';
+import { filterMedicalLawViolations } from '@winaid/blog-core';
 import { callLLM } from '../../../../lib/llm';
 import type { GenerationRequest, BlogOutline } from '../../../../lib/types';
 
