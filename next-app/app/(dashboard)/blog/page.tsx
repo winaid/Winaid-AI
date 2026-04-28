@@ -10,7 +10,7 @@ import { applyContentFilters } from '@winaid/blog-core';
 import { savePost } from '../../../lib/postStorage';
 import { getSessionSafe, supabase } from '@winaid/blog-core';
 import { getHospitalStylePrompt } from '@winaid/blog-core';
-import { buildImagePrompt } from '../../../lib/blogPrompt';
+import { buildImagePrompt } from '@winaid/blog-core';
 import { type ScoreBarData } from '../../../components/GenerationResult';
 import { getStyleById, getStylePromptForGeneration } from '../../../components/WritingStyleLearner';
 import type { BlogSection } from '@winaid/blog-core';

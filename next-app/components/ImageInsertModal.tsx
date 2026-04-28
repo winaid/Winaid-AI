@@ -4,7 +4,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { authFetch } from '../lib/authFetch';
 import { getSessionSafe } from '@winaid/blog-core';
 import { IMAGE_TAG_PRESETS, type HospitalImage } from '../lib/hospitalImageService';
-import { buildImagePrompt } from '../lib/blogPrompt';
+import { buildImagePrompt } from '@winaid/blog-core';
 import { sanitizePromptInput } from '@winaid/blog-core';
 
 /**

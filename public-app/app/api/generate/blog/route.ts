@@ -10,7 +10,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { gateGuestRequest } from '../../../../lib/guestRateLimit';
 import { useCredit } from '../../../../lib/creditService';
 import { getHospitalStylePrompt } from '@winaid/blog-core';
-import { buildBlogPromptV3, buildOutlinePrompt, buildSectionFromOutlinePrompt } from '../../../../lib/blogPrompt';
+import { buildBlogPromptV3, buildOutlinePrompt, buildSectionFromOutlinePrompt } from '@winaid/blog-core';
 import { filterMedicalLawViolations } from '@winaid/blog-core';
 import { callLLM } from '@winaid/blog-core';
 import type { GenerationRequest, BlogOutline } from '@winaid/blog-core';

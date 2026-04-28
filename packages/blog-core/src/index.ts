@@ -7,3 +7,4 @@ export * from './llm';
 export * from './cardNewsLayouts';
 export * from './brandPreset';
 export * from './styleService';
+export * from './blogPrompt';

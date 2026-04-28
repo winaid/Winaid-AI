@@ -13,7 +13,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { gateGuestRequest } from '../../../../../lib/guestRateLimit';
 import { useCredit } from '../../../../../lib/creditService';
-import { buildBlogReviewPrompt } from '../../../../../lib/blogPrompt';
+import { buildBlogReviewPrompt } from '@winaid/blog-core';
 import { applyContentFilters } from '@winaid/blog-core';
 import { callLLM } from '@winaid/blog-core';
 import { getHospitalStylePrompt } from '@winaid/blog-core';

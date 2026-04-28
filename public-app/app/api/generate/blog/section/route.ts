@@ -10,7 +10,7 @@ import { useCredit } from '../../../../../lib/creditService';
 import {
   buildBlogSectionPromptV3,
   type SectionRegenerateInputV3,
-} from '../../../../../lib/blogPrompt';
+} from '@winaid/blog-core';
 import { applyContentFilters } from '@winaid/blog-core';
 import { callLLM } from '@winaid/blog-core';
 

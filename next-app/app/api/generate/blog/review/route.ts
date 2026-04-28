@@ -7,7 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { checkAuth } from '../../../../../lib/apiAuth';
 import { useCredit } from '../../../../../lib/creditService';
-import { buildBlogReviewPrompt } from '../../../../../lib/blogPrompt';
+import { buildBlogReviewPrompt } from '@winaid/blog-core';
 import { applyContentFilters } from '@winaid/blog-core';
 import { callLLM } from '@winaid/blog-core';
 import { getHospitalStylePrompt } from '@winaid/blog-core';
