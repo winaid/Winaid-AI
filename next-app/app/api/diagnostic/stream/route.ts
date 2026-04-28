@@ -36,7 +36,9 @@ import {
 import { logDiagnostic, generateTraceId } from '../../../../lib/diagnostic/logger';
 import type { AIPlatform } from '../../../../lib/diagnostic/types';
 
-export const maxDuration = 600; // 10분 — 실측은 긴 스트림 허용
+// Vercel Pro plan max = 300s. 600 은 fallback(60s default)으로 떨어져 504 발생.
+// Gemini 3.1 Pro Preview 실측 평균 30~60s, worst ~120s 라 300 이면 충분.
+export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
 
 // ── 캐시 헬퍼 ──────────────────────────────────────────────
