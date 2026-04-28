@@ -26,7 +26,7 @@ const USER_AGENT =
 // 만료·자체 서명 SSL 인증서 허용 Agent (의료 도메인에 흔히 발생)
 const insecureHttpsAgent = new nodeHttps.Agent({ rejectUnauthorized: false });
 
-const DEFAULT_TIMEOUT_MS = 30_000;
+const DEFAULT_TIMEOUT_MS = 6_000;
 
 const BASE_HEADERS = {
   'User-Agent': USER_AGENT,
@@ -172,7 +172,7 @@ interface CrawlOptions {
 
 export async function crawlSite(targetUrl: string, options: CrawlOptions = {}): Promise<CrawlResult> {
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-  const subpageLimit = options.subpageLimit ?? 3;
+  const subpageLimit = options.subpageLimit ?? 1;
 
   const parsedUrl = new URL(targetUrl);
   const origin = parsedUrl.origin;
