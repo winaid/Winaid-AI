@@ -4,7 +4,7 @@
  * DB: teams + hospitals 테이블
  * Fallback: lib/teamData.ts (DB 미설정 또는 빈 테이블일 때)
  */
-import { supabase } from './supabase';
+import { supabase } from '@winaid/blog-core';
 import { TEAM_DATA, type TeamData, type HospitalEntry } from './teamData';
 
 // ── 조회 ──

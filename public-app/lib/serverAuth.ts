@@ -1,5 +1,5 @@
 import type { NextRequest } from 'next/server';
-import { supabase } from './supabase';
+import { supabase } from '@winaid/blog-core';
 
 /**
  * Bearer 토큰으로 이미지 리소스 소유자 판정.

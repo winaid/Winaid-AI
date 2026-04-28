@@ -5,9 +5,9 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { gateGuestRequest } from '../../../lib/guestRateLimit';
-import { callLLM } from '../../../lib/llm';
-import { resolveRoute } from '../../../lib/llm/router';
-import type { LLMTaskKind } from '../../../lib/llm/types';
+import { callLLM } from '@winaid/blog-core';
+import { resolveRoute } from '@winaid/blog-core';
+import type { LLMTaskKind } from '@winaid/blog-core';
 
 export const maxDuration = 120;
 export const dynamic = 'force-dynamic';

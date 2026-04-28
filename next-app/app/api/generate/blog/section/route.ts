@@ -10,7 +10,7 @@ import {
   type SectionRegenerateInputV3,
 } from '../../../../../lib/blogPrompt';
 import { applyContentFilters } from '@winaid/blog-core';
-import { callLLM } from '../../../../../lib/llm';
+import { callLLM } from '@winaid/blog-core';
 
 export const maxDuration = 45;
 export const dynamic = 'force-dynamic';

@@ -7,7 +7,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { savePost } from '../../../lib/postStorage';
-import { supabase } from '../../../lib/supabase';
+import { supabase } from '@winaid/blog-core';
 import { PromptChat } from '../../../components/PromptChat';
 import type { CategoryTemplate } from '../../../lib/categoryTemplateTypes';
 import { TemplateSVGPreview } from '../../../components/TemplatePreviews';

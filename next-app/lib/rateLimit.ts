@@ -10,7 +10,7 @@
  *  - DB 왕복 2회 이상 (조회 + upsert/update). 절대 처리량 보다 spam 방지가 목적.
  */
 
-import { getSupabaseClient } from './supabase';
+import { getSupabaseClient } from '@winaid/blog-core';
 
 export interface RateLimitResult {
   allowed: boolean;

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { TEAM_DATA } from '../../../lib/teamData';
 import { buildPressPrompt, PRESS_TYPES, DOCTOR_TITLES, CATEGORIES, PRESS_CSS, type PressType } from '../../../lib/pressPrompt';
 import { savePost } from '../../../lib/postStorage';
-import { getSessionSafe } from '../../../lib/supabase';
+import { getSessionSafe } from '@winaid/blog-core';
 import { getHospitalStylePrompt } from '../../../lib/styleService';
 import { ErrorPanel } from '../../../components/GenerationResult';
 import { sanitizeHtml } from '../../../lib/sanitize';

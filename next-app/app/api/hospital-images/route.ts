@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '../../../lib/supabase';
+import { supabase } from '@winaid/blog-core';
 import { checkAuth } from '../../../lib/apiAuth';
 import { STORAGE_BUCKET } from '../../../lib/hospitalImageService';
 import type { HospitalImage } from '../../../lib/hospitalImageService';

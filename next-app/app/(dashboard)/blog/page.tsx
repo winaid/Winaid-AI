@@ -8,7 +8,7 @@ import { TEAM_DATA } from '../../../lib/teamData';
 import { ContentCategory, type GenerationRequest, type AudienceMode, type ImageStyle, type ImageSourceMode, type WritingStyle, type CssTheme, type TrendingItem, type SeoTitleItem, type SeoReport } from '@winaid/blog-core';
 import { applyContentFilters } from '@winaid/blog-core';
 import { savePost } from '../../../lib/postStorage';
-import { getSessionSafe, supabase } from '../../../lib/supabase';
+import { getSessionSafe, supabase } from '@winaid/blog-core';
 import { getHospitalStylePrompt } from '../../../lib/styleService';
 import { buildImagePrompt } from '../../../lib/blogPrompt';
 import { type ScoreBarData } from '../../../components/GenerationResult';

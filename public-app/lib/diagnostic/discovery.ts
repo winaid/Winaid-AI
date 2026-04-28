@@ -14,7 +14,7 @@ import type {
   AIPlatform,
   CompetitorResult,
 } from './types';
-import { callLLM } from '../llm';
+import { callLLM } from '@winaid/blog-core';
 
 const CHATGPT_TIMEOUT_MS = 90_000;
 const OPENAI_CHAT_COMPLETIONS_URL = 'https://api.openai.com/v1/chat/completions';

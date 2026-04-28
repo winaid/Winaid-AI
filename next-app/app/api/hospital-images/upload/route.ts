@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { devLog } from '../../../../lib/devLog';
-import { supabase } from '../../../../lib/supabase';
+import { supabase } from '@winaid/blog-core';
 import { checkAuth } from '../../../../lib/apiAuth';
 import { ALLOWED_MIME_TYPES, MAX_FILE_SIZE, STORAGE_BUCKET, mimeToExt } from '../../../../lib/hospitalImageService';
 

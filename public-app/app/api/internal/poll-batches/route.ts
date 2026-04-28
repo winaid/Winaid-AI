@@ -14,7 +14,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { listInFlightBatches, pollLLMBatch } from '../../../../lib/llm';
+import { listInFlightBatches, pollLLMBatch } from '@winaid/blog-core';
 
 export const maxDuration = 300;
 export const dynamic = 'force-dynamic';

@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { CATEGORIES } from '../../../lib/constants';
 import { buildCardNewsProPrompt, type CardNewsRequest } from '../../../lib/cardNewsPrompt';
 import { savePost, listPosts, deletePost, type SavedPost } from '../../../lib/postStorage';
-import { getSessionSafe, supabase, getSupabaseClient, isSupabaseConfigured } from '../../../lib/supabase';
+import { getSessionSafe, supabase, getSupabaseClient, isSupabaseConfigured } from '@winaid/blog-core';
 import { CARD_NEWS_DESIGN_TEMPLATES } from '../../../lib/cardNewsDesignTemplates';
 import { ErrorPanel } from '../../../components/GenerationResult';
 import { CardRegenModal, type CardPromptHistoryItem, CARD_PROMPT_HISTORY_KEY, CARD_REF_IMAGE_KEY } from '../../../components/CardRegenModal';

@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase } from '@winaid/blog-core';
 
 /**
  * Supabase 세션 있으면 Authorization: Bearer <access_token> 자동 첨부.

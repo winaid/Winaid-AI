@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { isSupabaseConfigured, getSupabaseClient } from '../lib/supabase';
+import { isSupabaseConfigured, getSupabaseClient } from '@winaid/blog-core';
 import type { User } from '@supabase/supabase-js';
 
 interface AuthGuardResult {

@@ -3,7 +3,7 @@
  *
  * old app writingStyleService.ts에서 이식.
  */
-import { supabase } from './supabase';
+import { supabase } from '@winaid/blog-core';
 import type { CrawledPostScore, DBCrawledPost } from '@winaid/blog-core';
 import type { BrandPreset } from './brandPreset';
 import { filterMedicalLawViolations, FORBIDDEN_EXPRESSIONS } from '@winaid/blog-core';

@@ -11,8 +11,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { callLLM } from '../../../lib/llm';
-import type { CacheableBlock, LLMTaskKind } from '../../../lib/llm';
+import { callLLM } from '@winaid/blog-core';
+import type { CacheableBlock, LLMTaskKind } from '@winaid/blog-core';
 
 export const maxDuration = 120;
 export const dynamic = 'force-dynamic';

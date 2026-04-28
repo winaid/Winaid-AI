@@ -978,7 +978,7 @@ export function buildSectionRegeneratePrompt(input: SectionRegenerateInput): {
 // Sonnet 4.6 (section) : 섹션만 재작성
 // ═══════════════════════════════════════════════════════════════════
 
-import type { CacheableBlock } from './llm';
+import type { CacheableBlock } from '@winaid/blog-core';
 
 export interface BlogPromptV3 {
   systemBlocks: CacheableBlock[];

@@ -12,8 +12,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { generateShareToken, buildPublicView } from '../../../../lib/diagnostic/publicShare';
-import { getSessionSafe } from '../../../../lib/supabase';
-import { getSupabaseClient } from '../../../../lib/supabase';
+import { getSessionSafe } from '@winaid/blog-core';
+import { getSupabaseClient } from '@winaid/blog-core';
 import { checkRateLimit, getClientIp } from '../../../../lib/rateLimit';
 import type { DiagnosticResponse } from '../../../../lib/diagnostic/types';
 

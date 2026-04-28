@@ -10,7 +10,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseClient } from '../../../../../lib/supabase';
+import { getSupabaseClient } from '@winaid/blog-core';
 
 export const dynamic = 'force-dynamic';
 

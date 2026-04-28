@@ -490,7 +490,7 @@ ${dataRows}
 /** 크롤링된 블로그 글 제목 가져오기 (Supabase) */
 async function fetchExistingBlogTitles(hospitalName: string): Promise<string[]> {
   try {
-    const { supabase } = await import('./supabase');
+    const { supabase } = await import('@winaid/blog-core');
     if (!supabase) return [];
     const { data } = await supabase
       .from('hospital_crawled_posts')

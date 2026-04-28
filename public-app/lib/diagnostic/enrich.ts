@@ -21,7 +21,7 @@ import type {
   AIPlatform,
   MeasurementData,
 } from './types';
-import { callLLM } from '../llm';
+import { callLLM } from '@winaid/blog-core';
 
 const AI_PLATFORMS: AIPlatform[] = ['ChatGPT', 'Gemini'];
 

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { buildClinicalPrompt, ARTICLE_TYPES } from '../../../lib/clinicalPrompt';
-import { getSessionSafe, supabase } from '../../../lib/supabase';
+import { getSessionSafe, supabase } from '@winaid/blog-core';
 import { CATEGORIES } from '../../../lib/constants';
 import { sanitizeHtml } from '../../../lib/sanitize';
 import { stripDoctype } from '../../../lib/htmlUtils';

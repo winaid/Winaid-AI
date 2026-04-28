@@ -10,7 +10,7 @@
  * 응답 객체는 snake_case (postStorage / generated_posts와 동일 컨벤션)
  */
 
-import { supabase, isSupabaseConfigured, getSessionSafe } from './supabase';
+import { supabase, isSupabaseConfigured, getSessionSafe } from '@winaid/blog-core';
 
 const BUCKET = 'video-outputs';
 const RETENTION_DAYS = 7;

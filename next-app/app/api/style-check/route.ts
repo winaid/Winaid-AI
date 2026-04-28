@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { checkAuth } from '../../../lib/apiAuth';
-import { supabase } from '../../../lib/supabase';
+import { supabase } from '@winaid/blog-core';
 
 export const dynamic = 'force-dynamic';
 

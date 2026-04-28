@@ -5,9 +5,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '../../../../lib/supabase';
+import { supabase } from '@winaid/blog-core';
 import { gateGuestRequest } from '../../../../lib/guestRateLimit';
-import { callLLM } from '../../../../lib/llm';
+import { callLLM } from '@winaid/blog-core';
 import { resolveImageOwner } from '../../../../lib/serverAuth';
 
 export const maxDuration = 30;

@@ -4,7 +4,7 @@
  * Supabase RPC: get_credits, use_credit
  * Supabase 미설정 시 크레딧 무제한 (개발 환경)
  */
-import { isSupabaseConfigured, getSupabaseClient } from './supabase';
+import { isSupabaseConfigured, getSupabaseClient } from '@winaid/blog-core';
 
 export interface CreditInfo {
   credits: number;

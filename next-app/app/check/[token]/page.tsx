@@ -7,7 +7,7 @@
 
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import { getSupabaseClient } from '../../../lib/supabase';
+import { getSupabaseClient } from '@winaid/blog-core';
 import PublicDiagnosticResult from '../../../components/diagnostic/PublicDiagnosticResult';
 import type { PublicDiagnosticView } from '../../../lib/diagnostic/publicShare';
 

@@ -7,7 +7,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { supabase, isSupabaseConfigured } from '../../lib/supabase';
+import { supabase, isSupabaseConfigured } from '@winaid/blog-core';
 import { TEAM_DATA as TEAM_DATA_FALLBACK } from '../../lib/teamData';
 import type { TeamData } from '../../lib/teamData';
 import { getTeamDataFromDB, addHospital, deactivateHospital } from '../../lib/hospitalService';

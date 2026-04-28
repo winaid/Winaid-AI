@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { getSupabaseClient, isSupabaseConfigured } from '../../../lib/supabase';
+import { getSupabaseClient, isSupabaseConfigured } from '@winaid/blog-core';
 import { getCredits, type CreditInfo } from '../../../lib/creditService';
 import { listPosts, deletePost, type SavedPost } from '../../../lib/postStorage';
-import { getSessionSafe } from '../../../lib/supabase';
+import { getSessionSafe } from '@winaid/blog-core';
 import { sanitizeHtml } from '../../../lib/sanitize';
 
 // ── 상대 시간 ──

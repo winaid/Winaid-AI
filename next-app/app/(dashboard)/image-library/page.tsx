@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { isSupabaseConfigured } from '../../../lib/supabase';
+import { isSupabaseConfigured } from '@winaid/blog-core';
 import { useAuthGuard } from '../../../hooks/useAuthGuard';
 import { authFetch } from '../../../lib/authFetch';
 import { IMAGE_TAG_PRESETS, type HospitalImage } from '../../../lib/hospitalImageService';

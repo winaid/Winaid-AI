@@ -5,8 +5,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { checkAuth } from '../../../lib/apiAuth';
-import { callLLM } from '../../../lib/llm';
-import type { LLMTaskKind } from '../../../lib/llm/types';
+import { callLLM } from '@winaid/blog-core';
+import type { LLMTaskKind } from '@winaid/blog-core';
 
 export const maxDuration = 120;
 export const dynamic = 'force-dynamic';

@@ -13,7 +13,7 @@ import { crawlSite } from '../../../../lib/diagnostic/crawler';
 import { scoreCategories, computeOverallScore } from '../../../../lib/diagnostic/scoring';
 import { calculateGap } from '../../../../lib/diagnostic/gapAnalysis';
 import { logDiagnostic, generateTraceId } from '../../../../lib/diagnostic/logger';
-import { callLLM } from '../../../../lib/llm';
+import { callLLM } from '@winaid/blog-core';
 import type { DiagnosticResponse, GapAnalysis } from '../../../../lib/diagnostic/types';
 
 export const maxDuration = 120;

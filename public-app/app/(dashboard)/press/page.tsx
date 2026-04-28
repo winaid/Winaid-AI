@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { buildPressPrompt, PRESS_TYPES, DOCTOR_TITLES, CATEGORIES, PRESS_CSS, type PressType } from '../../../lib/pressPrompt';
 import { savePost } from '../../../lib/postStorage';
-import { getSessionSafe, getSupabaseClient, isSupabaseConfigured } from '../../../lib/supabase';
+import { getSessionSafe, getSupabaseClient, isSupabaseConfigured } from '@winaid/blog-core';
 import { getHospitalStylePrompt } from '../../../lib/styleService';
 import { ErrorPanel } from '../../../components/GenerationResult';
 import { sanitizeHtml } from '../../../lib/sanitize';

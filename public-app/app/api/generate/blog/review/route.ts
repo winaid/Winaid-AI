@@ -15,7 +15,7 @@ import { gateGuestRequest } from '../../../../../lib/guestRateLimit';
 import { useCredit } from '../../../../../lib/creditService';
 import { buildBlogReviewPrompt } from '../../../../../lib/blogPrompt';
 import { applyContentFilters } from '@winaid/blog-core';
-import { callLLM } from '../../../../../lib/llm';
+import { callLLM } from '@winaid/blog-core';
 import { getHospitalStylePrompt } from '../../../../../lib/styleService';
 
 export const maxDuration = 60;

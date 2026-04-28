@@ -2,7 +2,7 @@
  * 관리자 페이지 타입/상수/RPC 헬퍼
  * page.tsx에서 분리
  */
-import { supabase } from '../../lib/supabase';
+import { supabase } from '@winaid/blog-core';
 
 // ── 타입 ──
 

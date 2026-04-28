@@ -4,7 +4,7 @@
  * 로그인 사용자: Supabase에 저장/조회 (기존 동작 유지)
  * Guest 사용자: localStorage에 저장/조회
  */
-import { isSupabaseConfigured, supabase } from './supabase';
+import { isSupabaseConfigured, supabase } from '@winaid/blog-core';
 
 export interface SavePostInput {
   userId?: string | null;

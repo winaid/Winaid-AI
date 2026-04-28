@@ -1,4 +1,4 @@
-import { getSupabaseClient } from './supabase';
+import { getSupabaseClient } from '@winaid/blog-core';
 
 /**
  * 관리자 이메일 화이트리스트.

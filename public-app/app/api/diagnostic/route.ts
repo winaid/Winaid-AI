@@ -23,7 +23,7 @@ import { buildActionPlan } from '../../../lib/diagnostic/actionPlan';
 import { enrichDiagnostic } from '../../../lib/diagnostic/enrich';
 import { extractRegion } from '../../../lib/diagnostic/discovery';
 import { logDiagnostic, generateTraceId } from '../../../lib/diagnostic/logger';
-import { supabase } from '../../../lib/supabase';
+import { supabase } from '@winaid/blog-core';
 import type { DiagnosticResponse, DiagnosticErrorResponse } from '../../../lib/diagnostic/types';
 
 // 실측(discovery) 은 /api/diagnostic/stream 별도 엔드포인트로 분리 (단계 S-A, 플랫폼별 SSE).

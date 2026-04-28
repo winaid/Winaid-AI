@@ -14,8 +14,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { queueLLMBatch, pollLLMBatch, isBatchable } from '../../../lib/llm';
-import type { BatchItem, LLMTaskKind, CacheableBlock } from '../../../lib/llm';
+import { queueLLMBatch, pollLLMBatch, isBatchable } from '@winaid/blog-core';
+import type { BatchItem, LLMTaskKind, CacheableBlock } from '@winaid/blog-core';
 
 export const maxDuration = 120;
 export const dynamic = 'force-dynamic';

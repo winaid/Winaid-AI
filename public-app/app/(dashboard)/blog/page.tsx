@@ -8,7 +8,7 @@ import { CATEGORIES, PERSONAS, TONES } from '../../../lib/constants';
 import { ContentCategory, type GenerationRequest, type AudienceMode, type ImageStyle, type WritingStyle, type CssTheme, type TrendingItem, type SeoTitleItem, type SeoReport } from '@winaid/blog-core';
 import { applyContentFilters } from '@winaid/blog-core';
 import { savePost } from '../../../lib/postStorage';
-import { getSessionSafe, supabase, getSupabaseClient, isSupabaseConfigured } from '../../../lib/supabase';
+import { getSessionSafe, supabase, getSupabaseClient, isSupabaseConfigured } from '@winaid/blog-core';
 import { getHospitalStylePrompt } from '../../../lib/styleService';
 import { type ScoreBarData } from '../../../components/GenerationResult';
 import { getStyleById, getStylePromptForGeneration } from '../../../components/WritingStyleLearner';

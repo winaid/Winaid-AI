@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { listPosts, type SavedPost } from '../../../lib/postStorage';
-import { getSessionSafe } from '../../../lib/supabase';
+import { getSessionSafe } from '@winaid/blog-core';
 import { sanitizeHtml } from '../../../lib/sanitize';
 
 // ── 상대 시간 ──

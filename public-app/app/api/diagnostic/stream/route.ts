@@ -21,7 +21,7 @@
 
 import { NextRequest } from 'next/server';
 import { gateDiagnosticRequest } from '../../../../lib/guestRateLimit';
-import { supabase } from '../../../../lib/supabase';
+import { supabase } from '@winaid/blog-core';
 import { crawlSite } from '../../../../lib/diagnostic/crawler';
 import {
   streamChatGPT,

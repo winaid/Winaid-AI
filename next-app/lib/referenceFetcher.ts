@@ -4,7 +4,7 @@
  * 블로그 프롬프트에 <reference_material> 블록으로 주입.
  */
 
-import { callLLM } from './llm';
+import { callLLM } from '@winaid/blog-core';
 
 export interface ReferenceResult {
   facts: string;

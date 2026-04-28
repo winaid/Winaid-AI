@@ -5,7 +5,7 @@
  * 로그인/비로그인 모두 작성 가능 (비로그인 시 user_id='anonymous').
  * 3/31 이후 로그인 연동 시 작성자 식별 강화 예정.
  */
-import { supabase } from './supabase';
+import { supabase } from '@winaid/blog-core';
 
 export interface InternalFeedback {
   id: string;

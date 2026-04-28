@@ -1,7 +1,7 @@
 /**
  * Admin 전용 서비스 — RPC 헬퍼 + 사용자 관리
  */
-import { supabase } from './supabase';
+import { supabase } from '@winaid/blog-core';
 
 /** 전체 콘텐츠 삭제 — root deleteAllGeneratedPosts 동일 */
 export async function deleteAllGeneratedPosts(

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { isSupabaseConfigured, supabase } from '../../lib/supabase';
+import { isSupabaseConfigured, supabase } from '@winaid/blog-core';
 import { signInWithEmail, signUpWithEmail } from '../../lib/auth';
 
 type AuthMode = 'login' | 'register';

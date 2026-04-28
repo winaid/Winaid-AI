@@ -1,4 +1,4 @@
-import { getSupabaseClient } from './supabase';
+import { getSupabaseClient } from '@winaid/blog-core';
 
 /** 이름 + 팀ID → 내부용 이메일 생성 (기존 호환 + 신규 방식) */
 const nameToOldHex = (name: string): string =>

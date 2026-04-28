@@ -10,7 +10,7 @@
 
 import type { GenerationRequest, BlogOutline, BlogOutlineSection } from '@winaid/blog-core';
 import { sanitizePromptInput, sanitizeSourceContent } from '@winaid/blog-core';
-import type { CacheableBlock } from './llm';
+import type { CacheableBlock } from '@winaid/blog-core';
 
 // ═══════════════════════════════════════════════════════════════════
 // Part A — 타입 · 유틸 · 조회 테이블

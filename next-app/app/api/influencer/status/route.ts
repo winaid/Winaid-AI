@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
 
   // Supabase 동적 import (설정 안 되어 있으면 로컬 스토리지 fallback)
   try {
-    const { supabase } = await import('../../../../lib/supabase');
+    const { supabase } = await import('@winaid/blog-core');
     if (!supabase) {
       // Supabase 미설정 → 성공으로 응답 (프론트에서 로컬 상태만 관리)
       return NextResponse.json({ success: true, storage: 'local' });

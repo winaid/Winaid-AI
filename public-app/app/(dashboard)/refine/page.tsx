@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { buildRefinePrompt, buildChatRefinePrompt, REFINE_OPTIONS, type RefineMode } from '../../../lib/refinePrompt';
 import { savePost } from '../../../lib/postStorage';
-import { getSessionSafe } from '../../../lib/supabase';
+import { getSessionSafe } from '@winaid/blog-core';
 import { ErrorPanel } from '../../../components/GenerationResult';
 import { sanitizeHtml } from '../../../lib/sanitize';
 import { stripDoctype } from '../../../lib/htmlUtils';

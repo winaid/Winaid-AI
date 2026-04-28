@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '../../../../lib/supabase';
+import { supabase } from '@winaid/blog-core';
 import { checkAuth } from '../../../../lib/apiAuth';
 import { resolveImageOwner } from '../../../../lib/serverAuth';
 

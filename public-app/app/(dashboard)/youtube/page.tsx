@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { buildYoutubePrompt, YOUTUBE_WRITING_STYLES } from '../../../lib/youtubePrompt';
-import { supabase } from '../../../lib/supabase';
+import { supabase } from '@winaid/blog-core';
 import { CATEGORIES } from '../../../lib/constants';
 import { sanitizeHtml } from '../../../lib/sanitize';
 import { applyContentFilters } from '@winaid/blog-core';
