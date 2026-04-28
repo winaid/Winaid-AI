@@ -556,7 +556,8 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
                 />
               )}
 
-              {/* FAQ 토글 */}
+              {/* FAQ 토글 — UI 임시 숨김 (당분간). 복원 시 `{false && (` 와 `)}` 만 제거. */}
+              {false && (
               <div className="flex items-center justify-between p-3 bg-white rounded-xl border border-slate-200">
                 <div className="flex items-center gap-2">
                   <span className="text-sm">❓</span>
@@ -583,6 +584,7 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
                   </button>
                 </div>
               </div>
+              )}
 
               {/* 이미지 수 슬라이더 */}
               {useImageLibrary ? (
