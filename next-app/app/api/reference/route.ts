@@ -8,7 +8,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { checkAuth } from '../../../lib/apiAuth';
 import { fetchMedicalReference } from '../../../lib/referenceFetcher';
 
-export const maxDuration = 60;
+// Gemini search-grounded LLM 호출이 30~80s 걸려 60s default 로는 504 발생.
+// Vercel plan max(Pro=300) 안에서 안전하게 90s 확보.
+export const maxDuration = 90;
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
