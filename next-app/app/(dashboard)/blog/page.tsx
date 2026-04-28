@@ -35,18 +35,18 @@ import { authFetch } from '../../../lib/authFetch';
 // dataURL → Blob URL 변환. Chrome 의 매우 긴 data URL invalid 처리(특히 5~6 장
 // 병렬 첫 생성 시 일부 큰 base64) 회피용. Storage 업로드를 안 거치는 조기 경로
 // 에서만 사용 — 정식 generateAndUpload 는 Supabase Storage URL 사용하므로 무관.
-// 메모리 누수는 페이지 reload 시 자동 정리 (블로그는 보통 한 번 보면 떠남).
-function dataUrlToBlobUrl(dataUrl: string): string {
+//
+// 구현: fetch(dataUrl) → blob() 으로 브라우저 native 디코더 사용 (atob 직접 호출
+// 회피 — 800KB+ × 5~6 장 동시 디코드 시 atob 메모리 압박으로 일부 fail 했던 케이스
+// 해결). 메모리 누수는 페이지 reload 시 자동 정리.
+async function dataUrlToBlobUrl(dataUrl: string): Promise<string> {
   try {
-    const commaIdx = dataUrl.indexOf(',');
-    if (commaIdx < 0) return dataUrl;
-    const header = dataUrl.substring(0, commaIdx);
-    const b64 = dataUrl.substring(commaIdx + 1);
-    const mime = header.match(/data:(.*?);base64/)?.[1] || 'image/jpeg';
-    const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
-    return URL.createObjectURL(new Blob([bytes], { type: mime }));
-  } catch {
-    return dataUrl; // 변환 실패 시 원본 dataURL fallback
+    const res = await fetch(dataUrl);
+    const blob = await res.blob();
+    return URL.createObjectURL(blob);
+  } catch (e) {
+    console.warn('[image] Blob URL 변환 실패, dataURL fallback:', (e as Error).message?.slice(0, 100));
+    return dataUrl;
   }
 }
 
@@ -1195,16 +1195,16 @@ JSON 형식으로 응답해주세요.`;
                 customImagePrompt: imageStyle === 'custom' ? (customPrompt?.trim() || undefined) : undefined,
               }),
             }).then(r => r.ok ? r.json() : null)
-              .then(d => {
+              .then(async d => {
                 const dataUrl = d?.imageDataUrl as string | undefined;
                 // 조기 경로: Storage 업로드 없이 즉시 src 박음. Chrome data URL
-                // 한도(~2MB) + 본문 HTML 비대화 회피 위해 Blob URL 로 변환.
+                // 한도(~2MB) + 본문 HTML 비대화 회피 위해 Blob URL 로 변환 (async).
                 // 매우 큰 (5MB+) 경우만 skip → generateAndUpload 정식 경로로 재생성.
                 if (dataUrl && dataUrl.length > 5000 * 1024) {
                   console.warn(`[image] base64 too large, skip embed: ${Math.round(dataUrl.length / 1024)}KB`);
                   return { index, url: null as string | null };
                 }
-                return { index, url: dataUrl ? dataUrlToBlobUrl(dataUrl) : null };
+                return { index, url: dataUrl ? await dataUrlToBlobUrl(dataUrl) : null };
               })
               .catch(() => ({ index, url: null as string | null }));
           })
