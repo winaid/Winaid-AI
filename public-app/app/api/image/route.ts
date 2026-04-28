@@ -518,26 +518,22 @@ export async function POST(request: NextRequest) {
   const isBlogMode = body.mode === 'blog';
   const isCardNewsMode = body.mode === 'card_news';
 
-  const BLOG_IMAGE_RULE = `[BLOG ILLUSTRATION — STRICT RULES]
-You are generating a blog body illustration. NOT a poster, flyer, ad, or infographic.
+  const BLOG_IMAGE_RULE = `[BLOG ILLUSTRATION]
+Pure visual illustration for a blog body image — never a poster, flyer, infographic, or card news layout.
 
-ABSOLUTE PROHIBITIONS:
-- NO text, letters, words, labels, logos, watermarks, signage, phone numbers, URLs
-- NO poster/infographic/card news layout — pure visual illustration only
+[FORBIDDEN]
+- Any text, letters, words, labels, logos, watermarks, phone numbers, URLs in the image
+- Poster / infographic / card-news layout
 
-[AI ARTIFACT PREVENTION]
-- NO symmetrical faces/poses, unnaturally smooth skin, unrealistic perfect teeth
-- NO studio-perfect lighting without shadows, empty backgrounds, stock photo poses
-- ADD natural imperfections: skin texture, slight asymmetry, environmental details
-- ADD realistic lighting: directional source, natural shadows, ambient occlusion
-
-[KOREAN MEDICAL CLINIC SETTING]
-- Real Korean hospital/clinic interior: clean white walls, wood accents, modern minimalist
+[KOREAN MEDICAL CONTEXT]
+- Real Korean hospital or clinic interior: clean white walls, wood accents, modern minimalist
 - Korean-style white coats (not American scrubs), modern equipment, warm accent lighting
+- Korean patients and staff, warm approachable atmosphere
 
 [COMPOSITION]
 - Rule of thirds, breathing room around subjects, foreground/midground/background depth
-- Natural eye-level or slightly elevated angle, no dead center placement`;
+- Natural eye-level or slightly elevated angle, no dead-center placement
+- Directional natural lighting with soft shadows`;
 
   const fullPrompt = isCardNewsMode
     ? buildCardNewsPromptFull(body)
