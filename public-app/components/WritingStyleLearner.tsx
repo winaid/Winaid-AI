@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { buildStylePrompt, createLearnedWritingStyle } from '../lib/styleService';
+import { authFetch } from '../lib/authFetch';
 import type { LearnedWritingStyle } from '../lib/styleService';
 
 export type { LearnedWritingStyle };
@@ -330,7 +331,7 @@ JSON 객체 하나만 출력하세요. JSON 밖의 텍스트는 포함하지 마
 5. representativeParagraphs는 5개. 다양한 위치에서 선택.
 </critical_rules>`;
 
-      const res = await fetch('/api/llm', {
+      const res = await authFetch('/api/llm', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

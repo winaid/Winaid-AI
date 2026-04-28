@@ -598,7 +598,7 @@ SEO 점수 기준:
 - 블로그 적합도 (10점): 클릭하고 싶은 제목인가`;
 
       const schemaHint = 'JSON 배열만 출력. [{title:string, score:number, type:"증상질환형"|"변화원인형"|"확인형"|"정상범위형"}]';
-      const res = await fetch('/api/llm', {
+      const res = await authFetch('/api/llm', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -838,7 +838,7 @@ JSON 형식으로 응답해주세요.`;
       };
 
       const schemaText = JSON.stringify(seoSchema, null, 2);
-      const seoRes = await fetch('/api/llm', {
+      const seoRes = await authFetch('/api/llm', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ task: 'blog_seo_eval', prompt: seoPrompt + `\n\nJSON 스키마:\n${schemaText}\n\n위 스키마에 정확히 맞는 JSON만 출력하세요.`, systemInstruction: '네이버 블로그 SEO 전문가. JSON만 출력.', responseType: 'json', temperature: 0.3, maxOutputTokens: 4096 }),
@@ -1869,7 +1869,7 @@ JSON 형식으로 응답해주세요.`;
         workingContent: generatedContent,
         userMessage: chatInput.trim(),
       });
-      const res = await fetch('/api/llm', {
+      const res = await authFetch('/api/llm', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1948,7 +1948,7 @@ Write ONE English image prompt for the ${selectedImgIndex}th image in the Korean
 ${textOnly}
 
 Output ONLY the prompt. No explanation.`;
-      const res = await fetch('/api/llm', {
+      const res = await authFetch('/api/llm', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ task: 'blog_image_prompt', prompt: imgPromptText, systemInstruction: 'Medical blog image prompt specialist. Output only the prompt.', temperature: 0.7, maxOutputTokens: 500 }),
       });
@@ -2039,7 +2039,7 @@ ${bodyText}
 
 Output ONLY the prompt. No explanation.`;
 
-    const res = await fetch('/api/llm', {
+    const res = await authFetch('/api/llm', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
