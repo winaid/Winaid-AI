@@ -119,6 +119,66 @@ export default function PublicDiagnosticResult({ view }: Props) {
           </div>
         )}
 
+        {/* 섹션 4.5: 우선 조치 잠금 카드 */}
+        {view.priorityActionsTeaser.total > 0 && (
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm relative overflow-hidden">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-base">🔒</span>
+              <h2 className="text-sm font-bold text-slate-700">우선 조치 가이드</h2>
+            </div>
+            <p className="text-sm text-slate-600 leading-relaxed mb-4">
+              이 사이트는 <strong className="text-slate-900">{view.priorityActionsTeaser.total}개</strong>의 개선 항목이 발견됐어요.
+            </p>
+            <div className="flex flex-wrap gap-2 mb-5">
+              {view.priorityActionsTeaser.highImpact > 0 && (
+                <span className="px-3 py-1.5 rounded-full text-[11px] font-bold bg-red-50 text-red-700 border border-red-200">
+                  영향 큼 {view.priorityActionsTeaser.highImpact}개
+                </span>
+              )}
+              {view.priorityActionsTeaser.mediumImpact > 0 && (
+                <span className="px-3 py-1.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                  영향 중 {view.priorityActionsTeaser.mediumImpact}개
+                </span>
+              )}
+              {view.priorityActionsTeaser.lowImpact > 0 && (
+                <span className="px-3 py-1.5 rounded-full text-[11px] font-bold bg-slate-50 text-slate-600 border border-slate-200">
+                  영향 낮음 {view.priorityActionsTeaser.lowImpact}개
+                </span>
+              )}
+            </div>
+            {/* 블러된 잠금 미리보기 */}
+            <div className="relative">
+              <div className="space-y-2 blur-sm select-none pointer-events-none" aria-hidden="true">
+                <div className="h-12 rounded-lg bg-slate-100" />
+                <div className="h-12 rounded-lg bg-slate-100" />
+                <div className="h-12 rounded-lg bg-slate-100" />
+              </div>
+              <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-b from-white/40 to-white/90">
+                <div className="text-center px-4">
+                  <p className="text-[12px] text-slate-500 mb-3 leading-relaxed">
+                    각 항목별 상세 가이드 (이게 뭐예요? · 어떻게 하나요? · 팁) 는<br />
+                    <strong className="text-slate-700">Winaid 전문 컨설팅</strong>에서 확인하실 수 있어요.
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                    <a
+                      href="tel:025849400"
+                      className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-full bg-indigo-600 text-white text-[12px] font-bold hover:bg-indigo-700 transition-colors"
+                    >
+                      📞 02-584-9400
+                    </a>
+                    <a
+                      href="mailto:winaid@daum.net"
+                      className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-full bg-white text-indigo-600 text-[12px] font-bold border border-indigo-200 hover:bg-indigo-50 transition-colors"
+                    >
+                      ✉️ winaid@daum.net
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* 섹션 5: CTA */}
         <div className="rounded-2xl border border-indigo-200 bg-indigo-50 p-6 text-center shadow-sm">
           <p className="text-sm font-bold text-indigo-800 mb-1">내 병원 AI 검색 노출 진단받기</p>

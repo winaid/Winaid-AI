@@ -43,6 +43,12 @@ export interface PublicDiagnosticView {
   };
   detectedCategory?: string;
   detectedRegion?: string;
+  priorityActionsTeaser: {
+    total: number;
+    highImpact: number;
+    mediumImpact: number;
+    lowImpact: number;
+  };
 }
 
 /** 12자 URL-safe base64 토큰 (randomBytes(9) → 72bit) */
@@ -82,6 +88,15 @@ export function buildPublicView(
     likelihood: v.likelihood,
   }));
 
+  // 우선 조치 — 텍스트 노출하지 않고 개수 + 영향도 분포만
+  const actions = result.priorityActions || [];
+  const priorityActionsTeaser = {
+    total: actions.length,
+    highImpact: actions.filter((a) => a.impact === 'high').length,
+    mediumImpact: actions.filter((a) => a.impact === 'medium').length,
+    lowImpact: actions.filter((a) => a.impact === 'low').length,
+  };
+
   return {
     token,
     url: result.url,
@@ -98,5 +113,6 @@ export function buildPublicView(
     },
     detectedCategory: result.detectedCategory,
     detectedRegion: result.detectedRegion,
+    priorityActionsTeaser,
   };
 }
