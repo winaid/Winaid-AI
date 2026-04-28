@@ -2,7 +2,7 @@
 
 import type { TeamData } from '../../lib/teamData';
 import type { HospitalStyleProfile, LearnedWritingStyle } from '../../lib/styleService';
-import type { CrawledPostScore, DBCrawledPost } from '../../lib/types';
+import type { CrawledPostScore, DBCrawledPost } from '@winaid/blog-core';
 import { formatDate } from './adminTypes';
 
 interface NewHospitalForm {

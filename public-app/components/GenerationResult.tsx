@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
-import type { BlogSection } from '../lib/types';
+import type { BlogSection } from '@winaid/blog-core';
 import { sanitizeHtml } from '../lib/sanitize';
 
 // ── 간이 Markdown → HTML 변환 ──

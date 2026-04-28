@@ -8,7 +8,7 @@
  * Part E — 빌더 함수 (임시 legacy re-export → 2/3에서 직접 구현)
  */
 
-import type { GenerationRequest, BlogOutline, BlogOutlineSection } from './types';
+import type { GenerationRequest, BlogOutline, BlogOutlineSection } from '@winaid/blog-core';
 import { sanitizePromptInput, sanitizeSourceContent } from '@winaid/blog-core';
 import type { CacheableBlock } from './llm';
 

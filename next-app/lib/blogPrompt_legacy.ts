@@ -5,7 +5,7 @@
  *
  * 원래 설명: 블로그 생성 프롬프트 조립 — GenerationRequest → { systemInstruction, prompt }
  */
-import type { GenerationRequest } from './types';
+import type { GenerationRequest } from '@winaid/blog-core';
 import { sanitizePromptInput, sanitizeSourceContent } from '@winaid/blog-core';
 
 const AUDIENCE_GUIDES: Record<string, string> = {
@@ -1531,7 +1531,7 @@ export function buildBlogSectionPromptV3(
 // 2-Pass 병렬 생성 — Pass 1: 아웃라인 / Pass 2: 섹션별 병렬 작성
 // ═══════════════════════════════════════════════════════════════════
 
-import type { BlogOutline } from './types';
+import type { BlogOutline } from '@winaid/blog-core';
 
 const OUTLINE_PERSONA = `[역할]
 너는 한국 병·의원 네이버 블로그 콘텐츠의 구조를 설계하는 수석 에디터다.
@@ -1630,7 +1630,7 @@ export function buildOutlinePrompt(
 
 // ── buildSectionFromOutlinePrompt — Pass 2: 개별 섹션 작성 ──
 
-import type { BlogOutlineSection } from './types';
+import type { BlogOutlineSection } from '@winaid/blog-core';
 
 interface SectionFromOutlineInput {
   section: BlogOutlineSection;

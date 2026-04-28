@@ -5,7 +5,7 @@ import { useState, useEffect, useMemo, useRef, useCallback, Suspense } from 'rea
 import { useSearchParams } from 'next/navigation';
 import { CATEGORIES, PERSONAS, TONES } from '../../../lib/constants';
 import { TEAM_DATA } from '../../../lib/teamData';
-import { ContentCategory, type GenerationRequest, type AudienceMode, type ImageStyle, type ImageSourceMode, type WritingStyle, type CssTheme, type TrendingItem, type SeoTitleItem, type SeoReport } from '../../../lib/types';
+import { ContentCategory, type GenerationRequest, type AudienceMode, type ImageStyle, type ImageSourceMode, type WritingStyle, type CssTheme, type TrendingItem, type SeoTitleItem, type SeoReport } from '@winaid/blog-core';
 import { applyContentFilters } from '@winaid/blog-core';
 import { savePost } from '../../../lib/postStorage';
 import { getSessionSafe, supabase } from '../../../lib/supabase';
@@ -13,7 +13,7 @@ import { getHospitalStylePrompt } from '../../../lib/styleService';
 import { buildImagePrompt } from '../../../lib/blogPrompt';
 import { type ScoreBarData } from '../../../components/GenerationResult';
 import { getStyleById, getStylePromptForGeneration } from '../../../components/WritingStyleLearner';
-import type { BlogSection } from '../../../lib/types';
+import type { BlogSection } from '@winaid/blog-core';
 import type { HospitalImage } from '../../../lib/hospitalImageService';
 import { parseBlogSections, replaceSectionHtml } from '../../../lib/blogSectionParser';
 import { stripDoctype } from '../../../lib/htmlUtils';

@@ -7,7 +7,7 @@
  * - SVG 미리보기 썸네일
  * - assembleCardNewsHtml용 스타일 설정
  */
-import type { CardNewsDesignTemplateId } from './types';
+import type { CardNewsDesignTemplateId } from '@winaid/blog-core';
 
 export interface CardNewsDesignTemplate {
   id: CardNewsDesignTemplateId;

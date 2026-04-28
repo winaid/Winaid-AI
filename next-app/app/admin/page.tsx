@@ -27,7 +27,7 @@ import {
 } from '../../lib/styleService';
 import { deleteAllGeneratedPosts, updateUserTeam, deleteUserProfile } from '../../lib/adminService';
 import { ToastContainer, toast } from '../../components/Toast';
-import type { CrawledPostScore, DBCrawledPost } from '../../lib/types';
+import type { CrawledPostScore, DBCrawledPost } from '@winaid/blog-core';
 import {
   type AdminStats, type GeneratedPost, type UserProfile,
   type Tab, type PostTypeFilter,

@@ -5,7 +5,7 @@
  * 슬라이드별 제목 + 설명 구조로 출력.
  */
 
-import type { CardNewsDesignTemplateId } from './types';
+import type { CardNewsDesignTemplateId } from '@winaid/blog-core';
 import { CARD_NEWS_DESIGN_TEMPLATES } from './cardNewsDesignTemplates';
 import { getMedicalLawPromptBlock, sanitizePromptInput } from '@winaid/blog-core';
 

@@ -1,7 +1,7 @@
 /**
  * 블로그 생성 폼 상수 — 기존 src/constants.ts에서 추출
  */
-import { ContentCategory } from './types';
+import { ContentCategory } from '@winaid/blog-core';
 
 export const CATEGORIES = [
   { value: ContentCategory.DENTAL, label: '🦷 치과' },

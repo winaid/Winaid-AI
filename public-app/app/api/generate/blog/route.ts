@@ -13,7 +13,7 @@ import { getHospitalStylePrompt } from '../../../../lib/styleService';
 import { buildBlogPromptV3, buildOutlinePrompt, buildSectionFromOutlinePrompt } from '../../../../lib/blogPrompt';
 import { filterMedicalLawViolations } from '@winaid/blog-core';
 import { callLLM } from '../../../../lib/llm';
-import type { GenerationRequest, BlogOutline } from '../../../../lib/types';
+import type { GenerationRequest, BlogOutline } from '@winaid/blog-core';
 
 export const maxDuration = 300;
 export const dynamic = 'force-dynamic';

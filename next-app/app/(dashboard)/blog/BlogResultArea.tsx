@@ -5,7 +5,7 @@ import { BLOG_STAGES, BLOG_MESSAGE_POOL } from './blogConstants';
 import { ErrorPanel, ResultPanel, type ScoreBarData } from '../../../components/GenerationResult';
 import ContentAnalysisPanel from '../../../components/ContentAnalysisPanel';
 import SeoDetailPanel from '../../../components/SeoDetailPanel';
-import type { BlogSection, CssTheme, SeoReport } from '../../../lib/types';
+import type { BlogSection, CssTheme, SeoReport } from '@winaid/blog-core';
 
 export interface BlogResultAreaProps {
   // 진행 상태

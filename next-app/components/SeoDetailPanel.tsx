@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { SeoReport } from '../lib/types';
+import type { SeoReport } from '@winaid/blog-core';
 
 interface SeoDetailPanelProps {
   report: SeoReport;

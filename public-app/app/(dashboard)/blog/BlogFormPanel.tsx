@@ -1,12 +1,12 @@
 'use client';
 
 import { CATEGORIES, PERSONAS, TONES } from '../../../lib/constants';
-import type { ContentCategory, AudienceMode, ImageStyle, CssTheme } from '../../../lib/types';
+import type { ContentCategory, AudienceMode, ImageStyle, CssTheme } from '@winaid/blog-core';
 import type { KeywordStat, KeywordRankResult } from '../../../lib/keywordAnalysisService';
 import type { HospitalImage } from '../../../lib/hospitalImageService';
 import ImageLibrary from '../../../components/blog/ImageLibrary';
 import type { ClinicContext } from '../../../lib/clinicContextService';
-import type { TrendingItem, SeoTitleItem } from '../../../lib/types';
+import type { TrendingItem, SeoTitleItem } from '@winaid/blog-core';
 import WritingStyleLearner from '../../../components/WritingStyleLearner';
 import { MAX_KEYWORDS } from '../../../lib/keywordAnalysisService';
 

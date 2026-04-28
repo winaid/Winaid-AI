@@ -4,7 +4,7 @@
  * old app writingStyleService.ts에서 이식.
  */
 import { supabase } from './supabase';
-import type { CrawledPostScore, DBCrawledPost } from './types';
+import type { CrawledPostScore, DBCrawledPost } from '@winaid/blog-core';
 import type { BrandPreset } from './brandPreset';
 
 // ── 타입 ──

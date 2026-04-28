@@ -2,7 +2,7 @@
  * 블로그 HTML → 섹션 파싱
  * root app src/core/generation/generateContentJob.ts parseBlogSections 기준 이식
  */
-import type { BlogSection } from './types';
+import type { BlogSection } from '@winaid/blog-core';
 
 export function parseBlogSections(html: string): BlogSection[] {
   const sections: BlogSection[] = [];
