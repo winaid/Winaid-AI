@@ -30,7 +30,7 @@ import {
   type BrandPreset,
   type BrandColors,
   type BrandTone,
-} from '../../lib/brandPreset';
+} from '@winaid/blog-core';
 import { getBrandPreset, saveBrandPreset } from '../../lib/styleService';
 
 interface BrandPresetEditorProps {

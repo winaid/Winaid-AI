@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
-import type { SlideData, CardNewsTheme, SlideLayoutType, DesignPresetStyle, SlideCustomElement } from '../lib/cardNewsLayouts';
-import { LAYOUT_LABELS, CARD_FONTS, FONT_CATEGORIES, generateSlideId } from '../lib/cardNewsLayouts';
+import type { SlideData, CardNewsTheme, SlideLayoutType, DesignPresetStyle, SlideCustomElement } from '@winaid/blog-core';
+import { LAYOUT_LABELS, CARD_FONTS, FONT_CATEGORIES, generateSlideId } from '@winaid/blog-core';
 import { buildLayoutDefaults, fillLayoutContent, generateSlideImage, suggestSlideText, suggestImagePrompt, enrichSlide, suggestComparison } from '../lib/cardAiActions';
 import type { CardTemplate } from '../lib/cardTemplateService';
 import { ensureGoogleFontLoaded, resolveSlideFontFamily } from '../lib/cardStyleUtils';

@@ -3,8 +3,8 @@
  * CardNewsProRenderer.tsx에서 추출 — HTML 렌더링 전용 값.
  */
 import type { CSSProperties } from 'react';
-import type { SlideData, CardNewsTheme } from './cardNewsLayouts';
-import { CARD_FONTS, getCardFont } from './cardNewsLayouts';
+import type { SlideData, CardNewsTheme } from '@winaid/blog-core';
+import { CARD_FONTS, getCardFont } from '@winaid/blog-core';
 
 // ── CSS 파싱 ──
 

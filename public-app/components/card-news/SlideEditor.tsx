@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useMemo, useRef } from 'react';
-import type { SlideData, SlideDecoration, SlideImagePosition, SlideImageStyle } from '../../lib/cardNewsLayouts';
-import { CARD_FONTS, FONT_CATEGORIES, SLIDE_IMAGE_STYLES, COVER_TEMPLATES } from '../../lib/cardNewsLayouts';
+import type { SlideData, SlideDecoration, SlideImagePosition, SlideImageStyle } from '@winaid/blog-core';
+import { CARD_FONTS, FONT_CATEGORIES, SLIDE_IMAGE_STYLES, COVER_TEMPLATES } from '@winaid/blog-core';
 import { IconChangerPopover, ElementAccordion, TextElementEditor, ArrayItemEditor } from './EditorWidgets';
 import { validateSlideMedicalAd, type ViolationResult, type SlideFieldViolation } from '../../lib/medicalAdValidation';
 

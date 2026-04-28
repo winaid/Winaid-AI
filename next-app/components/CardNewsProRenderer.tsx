@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import type { SlideData, SlideDecoration, CardNewsTheme, SlideLayoutType, SlideImagePosition, SlideImageStyle, SlideComparisonColumn, DesignPresetStyle } from '../lib/cardNewsLayouts';
-import { LAYOUT_LABELS, CARD_FONTS, FONT_CATEGORIES, getCardFont, SLIDE_IMAGE_STYLES } from '../lib/cardNewsLayouts';
+import type { SlideData, SlideDecoration, CardNewsTheme, SlideLayoutType, SlideImagePosition, SlideImageStyle, SlideComparisonColumn, DesignPresetStyle } from '@winaid/blog-core';
+import { LAYOUT_LABELS, CARD_FONTS, FONT_CATEGORIES, getCardFont, SLIDE_IMAGE_STYLES } from '@winaid/blog-core';
 import type { CardTemplate } from '../lib/cardTemplateService';
 
 /**

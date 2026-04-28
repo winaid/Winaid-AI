@@ -6,7 +6,7 @@
  * "위반 감지 + 대체 표현 제안"에 초점을 맞춘 모듈.
  */
 
-import type { SlideData } from './cardNewsLayouts';
+import type { SlideData } from '@winaid/blog-core';
 
 // ── 타입 ──
 

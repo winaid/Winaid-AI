@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { CARD_FONTS, FONT_CATEGORIES, getCardFont } from '../../lib/cardNewsLayouts';
+import { CARD_FONTS, FONT_CATEGORIES, getCardFont } from '@winaid/blog-core';
 import { FONT_LIST, getFontById, loadGoogleFont } from '../../lib/cardFonts';
 
 // ═══════════════════════════════════════════════════════════════

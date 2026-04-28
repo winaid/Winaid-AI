@@ -9,7 +9,7 @@
  *  - 저장 결과 반환: QuotaExceededError 등 실패를 호출자가 인지 가능
  *  - idle timeout: "마지막 접근 기준 48시간"으로 변경, 편집 중 재접근하면 수명 연장
  */
-import type { SlideData, CardNewsTheme } from './cardNewsLayouts';
+import type { SlideData, CardNewsTheme } from '@winaid/blog-core';
 
 const DRAFT_KEY = 'winai-cardnews-draft';
 const DRAFT_IDLE_MS = 48 * 60 * 60 * 1000; // 마지막 접근 후 48시간

@@ -2,8 +2,8 @@
  * 카드뉴스 AI 액션 — ProRenderer에서 추출된 순수 async 함수.
  * state setter 없이 결과만 반환. 호출부에서 state 관리.
  */
-import type { SlideData, SlideLayoutType, SlideComparisonColumn } from './cardNewsLayouts';
-import { SLIDE_IMAGE_STYLES } from './cardNewsLayouts';
+import type { SlideData, SlideLayoutType, SlideComparisonColumn } from '@winaid/blog-core';
+import { SLIDE_IMAGE_STYLES } from '@winaid/blog-core';
 
 /**
  * 레이아웃 변경 시 새 레이아웃에 맞는 기본값을 채운 SlideData 반환.

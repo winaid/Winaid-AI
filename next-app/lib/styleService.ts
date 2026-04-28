@@ -5,7 +5,7 @@
  */
 import { supabase } from '@winaid/blog-core';
 import type { CrawledPostScore, DBCrawledPost } from '@winaid/blog-core';
-import type { BrandPreset } from './brandPreset';
+import type { BrandPreset } from '@winaid/blog-core';
 import { filterMedicalLawViolations, FORBIDDEN_EXPRESSIONS } from '@winaid/blog-core';
 
 // ── 타입 ──

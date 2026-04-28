@@ -3,7 +3,7 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { Stage, Layer, Rect, Transformer, Line } from 'react-konva';
 import type Konva from 'konva';
-import type { SlideData, CardNewsTheme } from '../../lib/cardNewsLayouts';
+import type { SlideData, CardNewsTheme } from '@winaid/blog-core';
 import { BackgroundImage, renderCustomElements, setKonvaFontFamily, type LayoutRenderArgs } from './konva/KonvaHelpers';
 import { resolveEffectiveFontFamily, resolveSlideFontFamily } from '../../lib/cardStyleUtils';
 import { renderCover, renderInfo, renderQuote } from './konva/KonvaLayoutBasic';

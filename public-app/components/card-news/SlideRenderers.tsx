@@ -6,9 +6,9 @@
  * 다음 단계에서 렌더 함수를 이쪽으로 이동 예정.
  */
 import type { CSSProperties } from 'react';
-import type { CardNewsTheme, SlideData, CoverTemplate, DesignPresetStyle } from '../../lib/cardNewsLayouts';
+import type { CardNewsTheme, SlideData, CoverTemplate, DesignPresetStyle } from '@winaid/blog-core';
 import type { CardTemplate } from '../../lib/cardTemplateService';
-import { COVER_TEMPLATES } from '../../lib/cardNewsLayouts';
+import { COVER_TEMPLATES } from '@winaid/blog-core';
 import {
   parseCSSString, resolveEffectiveFontFamily, resolveSlideFontFamily,
   calcTitleSize, calcValueSize, calcItemLayout, calcGridCols, calcBodySize, calcCardPadding, getContentAlignV,

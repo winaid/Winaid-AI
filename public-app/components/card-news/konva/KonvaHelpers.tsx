@@ -272,13 +272,13 @@ export interface EditableTextProps {
 }
 
 export type LayoutRenderArgs = [
-  slide: import('../../../lib/cardNewsLayouts').SlideData,
-  theme: import('../../../lib/cardNewsLayouts').CardNewsTheme,
+  slide: import('@winaid/blog-core').SlideData,
+  theme: import('@winaid/blog-core').CardNewsTheme,
   w: number,
   h: number,
   selectedId: string | null,
   setSelectedId: (id: string | null) => void,
-  onChange: (patch: Partial<import('../../../lib/cardNewsLayouts').SlideData>) => void,
+  onChange: (patch: Partial<import('@winaid/blog-core').SlideData>) => void,
   readOnly?: boolean,
   onSnapGuides?: (guides: { vertical?: number; horizontal?: number }) => void,
   fontFamily?: string,
@@ -653,12 +653,12 @@ function CustomImageElement({
 
 /** 커스텀 요소(사용자 추가 텍스트/이미지) 전체 렌더 */
 export function renderCustomElements(
-  slide: import('../../../lib/cardNewsLayouts').SlideData,
+  slide: import('@winaid/blog-core').SlideData,
   w: number,
   h: number,
   selectedId: string | null,
   setSelectedId: (id: string | null) => void,
-  onSlideChange: (patch: Partial<import('../../../lib/cardNewsLayouts').SlideData>) => void,
+  onSlideChange: (patch: Partial<import('@winaid/blog-core').SlideData>) => void,
   readOnly: boolean,
   fontFamily?: string,
 ): React.ReactNode {
