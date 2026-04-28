@@ -12,7 +12,7 @@ import { applyContentFilters } from '@winaid/blog-core';
 import { callLLM } from '@winaid/blog-core';
 import { getHospitalStylePrompt } from '@winaid/blog-core';
 
-export const maxDuration = 60;
+export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
 
 interface ReviewIssue {

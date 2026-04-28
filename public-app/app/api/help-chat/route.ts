@@ -21,7 +21,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { HELP_FAQS, formatFaqKnowledge, type HelpDomain } from '../../../lib/helpFaq';
 
-export const maxDuration = 30;
+export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
 
 const MODEL = 'gemini-3.1-flash-lite-preview';

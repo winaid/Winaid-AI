@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { callGeminiDirect } from '../../../../lib/geminiDirect';
 
-export const maxDuration = 60;
+export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
 
 interface GenerateDmRequest {

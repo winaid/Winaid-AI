@@ -9,7 +9,7 @@ import { supabase } from '@winaid/blog-core';
 import { checkAuth } from '../../../../lib/apiAuth';
 import { resolveImageOwner } from '../../../../lib/serverAuth';
 
-export const maxDuration = 30;
+export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
 
 const ALLOWED_IMAGE_HOSTS = [

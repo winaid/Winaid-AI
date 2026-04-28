@@ -10,7 +10,7 @@ import { gateGuestRequest } from '../../../../lib/guestRateLimit';
 import { callLLM } from '@winaid/blog-core';
 import { resolveImageOwner } from '../../../../lib/serverAuth';
 
-export const maxDuration = 30;
+export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
 
 const TAG_LIST = [
