@@ -274,10 +274,10 @@ export default function DiagnosticResult({ result, onResultUpdate }: DiagnosticR
               <div className="text-sm text-slate-600 bg-slate-50 rounded-xl px-4 py-5 space-y-1.5">
                 <p className="font-semibold">PageSpeed Insights 측정 결과를 받지 못했습니다.</p>
                 <p className="text-[12px] text-slate-500 leading-relaxed">
-                  · 서버 환경변수 <code className="px-1 py-0.5 rounded bg-white text-slate-700 text-[11px]">PAGESPEED_API_KEY</code> 가 설정되어 있는지 확인해주세요
-                  (Google 정책상 무키 호출은 일일 쿼터가 0입니다).<br />
-                  · 키가 있는데도 실패하면 Google Cloud Console 에서 <em>PageSpeed Insights API</em> 가
-                  활성화되어 있는지 확인하세요.<br />
+                  · 다른 사이트가 정상 측정된다면 <strong>이 사이트가 PSI 측정 불가 상태</strong>일 수 있습니다
+                  (HTTP 비암호화 사이트, 응답이 너무 느림, robots.txt 차단, 실시간 응답 불가 등 Google 정책 사유).<br />
+                  · 모든 사이트가 안 되면 서버 환경변수 <code className="px-1 py-0.5 rounded bg-white text-slate-700 text-[11px]">PAGESPEED_API_KEY</code> 또는
+                  Google Cloud Console 의 <em>PageSpeed Insights API</em> 활성 여부 확인.<br />
                   · 측정 시간이 40초를 넘어가면 서버 로그(<code className="px-1 py-0.5 rounded bg-white text-slate-700 text-[11px]">[psi]</code>)에 사유가 기록됩니다.
                 </p>
               </div>

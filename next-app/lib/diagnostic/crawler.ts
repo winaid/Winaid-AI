@@ -120,6 +120,23 @@ const PHONE_PATTERN = /(?:\+?82-?)?(?:0\d{1,2}|1\d{3})[-.\s]?\d{3,4}[-.\s]?\d{4}
 
 // ── fetch 헬퍼 (3단계 fallback) ───────────────────────────
 
+/** Response → charset 자동 감지하여 디코드된 HTML 문자열로 변환.
+ *  Content-Type 헤더 → <meta charset> → utf-8 순서로 fallback. EUC-KR / CP949 등 지원. */
+export async function decodeWithCharset(res: Response): Promise<string> {
+  const buf = await res.arrayBuffer();
+  const ct = res.headers.get('content-type') || '';
+  let charset = ct.match(/charset=([^;]+)/i)?.[1]?.trim().toLowerCase();
+  if (!charset) {
+    const head = new TextDecoder('latin1').decode(buf.slice(0, 2048));
+    charset = head.match(/<meta[^>]+charset=["']?([^"'>\s/]+)/i)?.[1]?.toLowerCase()
+      ?? head.match(/<meta[^>]+content=["'][^"']*charset=([^"';\s]+)/i)?.[1]?.toLowerCase();
+  }
+  if (charset && charset !== 'utf-8' && charset !== 'utf8') {
+    try { return new TextDecoder(charset).decode(buf); } catch { /* fallback to utf-8 */ }
+  }
+  return new TextDecoder('utf-8').decode(buf);
+}
+
 export async function fetchWithTimeout(
   url: string,
   timeoutMs: number = DEFAULT_TIMEOUT_MS,
@@ -192,7 +209,9 @@ export async function crawlSite(targetUrl: string, options: CrawlOptions = {}): 
     if (res.status === 403 || res.status === 429) throw new Error(`BOT_BLOCKED:${res.status}`);
     throw new Error(`UNREACHABLE:${res.status}`);
   }
-  const html = await res.text();
+  // charset 자동 감지 — 한국 사이트 (egowoon 등) 가 EUC-KR / CP949 인 경우
+  // res.text() 의 UTF-8 강제 디코딩으로 한글이 깨져 title 이 깨진 채 표시됨.
+  const html = await decodeWithCharset(res);
   const finalUrl = res.url || targetUrl;
 
   const result = parseHtml(html, origin, finalUrl);

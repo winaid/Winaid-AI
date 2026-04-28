@@ -7,7 +7,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { devLog } from '../../../lib/devLog';
 
-export const maxDuration = 300;
+// Vercel function timeout — 60s 한도(plan 기본값)에 안전하게 들어가도록 명시.
+// Pro plan 이라도 60s default 가 적용되는 경우 504 발생하던 문제 회피.
+export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
 
 // ── 멀티키 로테이션 (gemini route와 동일) ──
@@ -717,7 +719,9 @@ ABSOLUTE PROHIBITIONS:
     },
   };
 
-  const perAttemptTimeout = 120000;
+  // 한 번 시도 25s — 60s 함수 한도 안에서 모델 2회 fallback + 안전여유.
+  // 첫 모델(Flash) 5~15s 가 일반적이라 대부분 첫 시도에서 성공.
+  const perAttemptTimeout = 25000;
   let lastError = '';
 
   // 각 모델 × 각 키 조합으로 시도

@@ -333,7 +333,7 @@ export default function DiagnosticResult({ result, onResultUpdate }: DiagnosticR
             <h3 className="text-sm font-bold text-slate-700 mb-3">로딩 성능 (Core Web Vitals)</h3>
             {result.performance === null ? (
               <div className="text-sm text-slate-600 bg-slate-50 rounded-xl px-4 py-5 space-y-1.5">
-                <p className="font-semibold">PageSpeed Insights 측정 결과를 받지 못했습니다.</p>
+                <p className="font-semibold">PageSpeed Insights 측정 결과를 받지 못했습니다 (이 사이트만)</p>
                 <p className="text-[12px] text-slate-500 leading-relaxed">
                   · 서버 환경변수 <code className="px-1 py-0.5 rounded bg-white text-slate-700 text-[11px]">PAGESPEED_API_KEY</code> 가 설정되어 있는지 확인해주세요
                   (Google 정책상 무키 호출은 일일 쿼터가 0입니다).<br />
