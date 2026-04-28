@@ -1,23 +1,16 @@
 /**
- * /api/image — OpenAI gpt-image-2 이미지 생성 프록시
+ * /api/image — Gemini 이미지 생성 프록시
  *
- * 모델: process.env.OPENAI_IMAGE_MODEL || 'gpt-image-2' (스냅샷 핀 가능: 'gpt-image-2-2026-04-21')
- * 응답: { imageDataUrl: data URL, mimeType: 'image/png', model } — 호출부 호환 위해 shape 고정.
- *
- * Gemini 구현은 ./route.gemini.ts.bak 으로 보존 (5분 롤백 컷).
- * referenceImage / logoBase64 / calendarImage 첨부는 현재 generate 텍스트 힌트로 변환 —
- * openai-node 이슈 #1844 로 images.edit 가 gpt-image-2 거부 중. 픽스되면
- * OPENAI_IMAGE_EDIT_ENABLED=1 로 활성화 가능 (TODO 분기 마련됨).
+ * 모델 우선순위: gemini-3-pro > gemini-3.1-flash > gemini-2.5-flash.
+ * responseModalities: ["IMAGE", "TEXT"] 사용.
  */
 import { NextRequest, NextResponse } from 'next/server';
-import OpenAI from 'openai';
 import { gateGuestRequest } from '../../../lib/guestRateLimit';
 
 export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
 
-// ── 멀티키 로테이션 ──
-// Gemini 키는 보존 (route.gemini.ts.bak 에서 사용. 활성 경로는 OpenAI).
+// ── 멀티키 로테이션 (gemini route와 동일) ──
 
 function getKeys(): string[] {
   const keys: string[] = [];
@@ -29,34 +22,7 @@ function getKeys(): string[] {
   return keys;
 }
 
-function getOpenAIKeys(): string[] {
-  const keys: string[] = [];
-  for (let i = 0; i <= 10; i++) {
-    const envName = i === 0 ? 'OPENAI_API_KEY' : `OPENAI_API_KEY_${i}`;
-    const val = process.env[envName];
-    if (val) keys.push(val);
-  }
-  return keys;
-}
-
 let keyIndex = 0;
-
-// ── aspect ratio → gpt-image-2 size 문자열 ──
-// gpt-image-2 는 size 변이 16 의 배수, 최대 변 3840px, 2K(2560x1440) 이내 안정 권장.
-// 사용자 매핑 + 16 배수 보정 ('3:4' / '4:3' 의 1366 → 1376).
-function aspectRatioToSize(ratio: AspectRatio): string {
-  switch (ratio) {
-    case '1:1': return '1024x1024';
-    case '16:9': return '1536x1024';
-    case '9:16': return '1024x1536';
-    case '4:5': return '1024x1280';
-    case '3:4': return '1024x1376';
-    case '4:3': return '1376x1024';
-    case 'A4': return '1024x1456';
-    case 'auto': return 'auto';
-    default: return '1024x1024';
-  }
-}
 
 type AspectRatio = '1:1' | '4:5' | 'A4' | '16:9' | '3:4' | '9:16' | '4:3' | 'auto';
 
@@ -503,10 +469,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: gate.error }, { status: gate.status });
   }
 
-  const keys = getOpenAIKeys();
+  const keys = getKeys();
   if (keys.length === 0) {
     return NextResponse.json(
-      { error: '[env] OPENAI_API_KEY 누락' },
+      { error: '[env] GEMINI_API_KEY 누락' },
       { status: 500 },
     );
   }
@@ -606,75 +572,221 @@ ABSOLUTE PROHIBITIONS:
       ].filter(Boolean).join('\n\n');
     })()
 
-  // ── 모델 / 사이즈 / 품질 매핑 ──
-  const MODEL = process.env.OPENAI_IMAGE_MODEL || 'gpt-image-2';
-  const sizeStr = aspectRatioToSize(aspectRatio);
-  const qualityStr: 'low' | 'medium' | 'high' | 'auto' =
-    body.quality === 'premium' ? 'high' : 'auto';
+  // 멀티모달 parts 구성: 텍스트 + 참조 이미지들
+  const parts: Array<Record<string, unknown>> = [{ text: fullPrompt }];
 
-  // ── 첨부 이미지 (referenceImage / logoBase64 / calendarImage) → prompt 텍스트 힌트로 변환 ──
-  // gpt-image-2 의 images.edit 는 2026-04-27 부터 SDK v6.34 에서 model validation 으로 거부됨
-  // (openai-node 이슈 #1844). 현재는 generate 단일 호출 + 텍스트 힌트로 우회.
-  // OpenAI 가 픽스하면 OPENAI_IMAGE_EDIT_ENABLED=1 환경변수 + edit 분기 활성화 가능 (TODO).
-  // (참고: isCardNewsMode/buildCardNewsIllustrationPrompt/buildCardNewsTextOverlayPrompt 함수는
-  //  edit 활성화 시 2-Stage 복원용으로 보존.)
-  const editEnabled = process.env.OPENAI_IMAGE_EDIT_ENABLED === '1';
-  const hasAttachment = !!body.referenceImage || !!body.logoBase64 || !!body.calendarImage;
-  let promptForGenerate = fullPrompt;
-  if (hasAttachment && !editEnabled) {
-    const hints: string[] = [];
-    if (body.referenceImage) hints.push('Reference image attached — clone its background, layout zones, font style, and decorative elements per the [STYLE LOCK] / [STYLE CLONE] block above.');
-    if (body.logoBase64) hints.push('Hospital logo attached — render the logo subtly in a corner, small and tasteful (do not invent a different logo).');
-    if (body.calendarImage) hints.push('Calendar reference image attached — follow the date-weekday placement strictly per the [정확한 달력 데이터] block above.');
-    promptForGenerate = `${fullPrompt}\n\n[ATTACHED IMAGE CONTEXT]\n${hints.join('\n')}`;
-  }
-  // (isCardNewsMode + premium quality 는 quality='high' 로 자동 매핑 — 기존 2-Stage 우회.)
-
-  // ── OpenAI 호출 + 멀티키 로테이션 ──
-  let lastError = '';
-  for (let ki = 0; ki < keys.length; ki++) {
-    const keyIdx = (keyIndex + ki) % keys.length;
-    const openai = new OpenAI({ apiKey: keys[keyIdx], timeout: 120_000 });
-
-    try {
-      const result = await openai.images.generate({
-        model: MODEL,
-        prompt: promptForGenerate,
-        size: sizeStr as 'auto',
-        quality: qualityStr,
-        n: 1,
+  // 달력 참조 이미지를 inlineData로 추가
+  if (body.calendarImage) {
+    const calMatch = body.calendarImage.match(/^data:(image\/\w+);base64,(.+)$/);
+    if (calMatch) {
+      parts.push({
+        inlineData: { mimeType: calMatch[1], data: calMatch[2] },
       });
+    }
+  }
 
-      keyIndex = (keyIdx + 1) % keys.length;
-      const b64 = result.data?.[0]?.b64_json;
-      if (!b64) {
-        lastError = `${MODEL} key${ki}: 응답에 이미지 데이터 없음`;
-        continue;
+  // 카드뉴스 참고 이미지를 inlineData로 추가
+  if (body.referenceImage) {
+    const refMatch = body.referenceImage.match(/^data:(image\/\w+);base64,(.+)$/);
+    if (refMatch) {
+      parts.push({
+        inlineData: { mimeType: refMatch[1], data: refMatch[2] },
+      });
+    }
+  }
+
+  // 로고 이미지를 inlineData로 추가
+  if (body.logoBase64) {
+    const match = body.logoBase64.match(/^data:(image\/\w+);base64,(.+)$/);
+    if (match) {
+      parts.push({
+        inlineData: { mimeType: match[1], data: match[2] },
+      });
+    }
+  }
+
+  // ═══ 카드뉴스 2단계 생성: Flash(밑그림) → Pro(글씨) — quality='premium'일 때만 ═══
+  if (isCardNewsMode && body.quality === 'premium') {
+    const illustrationPrompt = buildCardNewsIllustrationPrompt(body);
+    const textOverlayPrompt = buildCardNewsTextOverlayPrompt(body);
+    const hasTextToRender = !!textOverlayPrompt;
+
+    // ── Stage 1: Flash로 일러스트 생성 ──
+    const stage1Parts: Array<Record<string, unknown>> = [{ text: illustrationPrompt }];
+    if (body.referenceImage) {
+      const refMatch = body.referenceImage.match(/^data:(image\/\w+);base64,(.+)$/);
+      if (refMatch) stage1Parts.push({ inlineData: { mimeType: refMatch[1], data: refMatch[2] } });
+    }
+
+    const FLASH_MODELS = ['gemini-3.1-flash-image-preview', 'gemini-2.5-flash-image'];
+    let stage1Image: { mimeType: string; data: string } | null = null;
+
+    for (const model of FLASH_MODELS) {
+      for (let ki = 0; ki < keys.length; ki++) {
+        const keyIdx = (keyIndex + ki) % keys.length;
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 60000);
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+        try {
+          const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-goog-api-key': keys[keyIdx],
+            },
+            body: JSON.stringify({ contents: [{ role: 'user', parts: stage1Parts }], generationConfig: { responseModalities: ['IMAGE', 'TEXT'], temperature: 0.6 } }),
+            signal: controller.signal,
+          });
+          clearTimeout(timeoutId);
+          if (!response.ok) { const s = response.status; if (s === 429 || s === 503) { await new Promise(r => setTimeout(r, 1500)); continue; } if (s === 400 || s === 404) break; continue; }
+          keyIndex = (keyIdx + 1) % keys.length;
+          const data = await response.json();
+          const imgPart = (data?.candidates?.[0]?.content?.parts || []).find((p: { inlineData?: { data?: string } }) => p.inlineData?.data);
+          if (imgPart?.inlineData) { stage1Image = { mimeType: imgPart.inlineData.mimeType || 'image/png', data: imgPart.inlineData.data }; break; }
+        } catch (err: unknown) { clearTimeout(timeoutId); if ((err as Error).name === 'AbortError') break; await new Promise(r => setTimeout(r, 1500)); continue; }
+      }
+      if (stage1Image) break;
+    }
+
+    if (!stage1Image) {
+      // Stage 1 (Flash) failed, falling back to single-stage Pro
+    } else if (!hasTextToRender) {
+      return NextResponse.json({ imageDataUrl: `data:${stage1Image.mimeType};base64,${stage1Image.data}`, mimeType: stage1Image.mimeType, model: 'flash(illustration)' });
+    } else {
+      // ── Stage 2: Pro로 텍스트 오버레이 ──
+      const stage2Parts: Array<Record<string, unknown>> = [
+        { text: textOverlayPrompt },
+        { inlineData: { mimeType: stage1Image.mimeType, data: stage1Image.data } },
+      ];
+      const PRO_MODELS = ['gemini-3-pro-image-preview', 'gemini-3.1-flash-image-preview'];
+
+      for (const model of PRO_MODELS) {
+        for (let ki = 0; ki < keys.length; ki++) {
+          const keyIdx = (keyIndex + ki) % keys.length;
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 120000);
+          const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+          try {
+            const response = await fetch(apiUrl, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-goog-api-key': keys[keyIdx],
+              },
+              body: JSON.stringify({ contents: [{ role: 'user', parts: stage2Parts }], generationConfig: { responseModalities: ['IMAGE', 'TEXT'], temperature: 0.4 } }),
+              signal: controller.signal,
+            });
+            clearTimeout(timeoutId);
+            if (!response.ok) { const s = response.status; if (s === 429 || s === 503) { await new Promise(r => setTimeout(r, 1500)); continue; } if (s === 400 || s === 404) break; continue; }
+            keyIndex = (keyIdx + 1) % keys.length;
+            const data = await response.json();
+            const imgPart = (data?.candidates?.[0]?.content?.parts || []).find((p: { inlineData?: { data?: string } }) => p.inlineData?.data);
+            if (imgPart?.inlineData) {
+              return NextResponse.json({ imageDataUrl: `data:${imgPart.inlineData.mimeType || 'image/png'};base64,${imgPart.inlineData.data}`, mimeType: imgPart.inlineData.mimeType || 'image/png', model: `flash(illustration)+${model}(text)` });
+            }
+          } catch (err: unknown) { clearTimeout(timeoutId); if ((err as Error).name === 'AbortError') break; await new Promise(r => setTimeout(r, 1500)); continue; }
+        }
       }
 
-      return NextResponse.json({
-        imageDataUrl: `data:image/png;base64,${b64}`,
-        mimeType: 'image/png',
-        model: MODEL,
-      });
-    } catch (err: unknown) {
-      const e = err as { status?: number; message?: string; name?: string };
-      const status = e.status ?? 0;
-      lastError = `${MODEL} key${ki}: ${status} ${(e.message || '').slice(0, 200)}`;
-      // 429 / 503 → 다음 키 (rate limit / 서비스 일시 불가)
-      if (status === 429 || status === 503) {
+      // Stage 2 (Pro text) failed, returning Stage 1 image without text
+      return NextResponse.json({ imageDataUrl: `data:${stage1Image.mimeType};base64,${stage1Image.data}`, mimeType: stage1Image.mimeType, model: 'flash(illustration-only)' });
+    }
+  }
+
+  // 모델 우선순위: Flash(Nano Banana 2) 먼저 → Pro fallback (속도 우선)
+  const MODELS = [
+    'gemini-3.1-flash-image-preview',   // Nano Banana 2: 기본 (빠름, 안정)
+    'gemini-2.5-flash-image',           // Nano Banana: fallback
+    'gemini-3-pro-image-preview',       // Pro: 최후 fallback (느리지만 고품질)
+  ];
+
+  const apiBody = {
+    contents: [{ role: 'user', parts }],
+    generationConfig: {
+      responseModalities: ['IMAGE', 'TEXT'],
+      temperature: 0.6,
+    },
+  };
+
+  const perAttemptTimeout = 120000;
+  let lastError = '';
+
+  // 각 모델 × 각 키 조합으로 시도
+  for (const model of MODELS) {
+    for (let ki = 0; ki < keys.length; ki++) {
+      const keyIdx = (keyIndex + ki) % keys.length;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), perAttemptTimeout);
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+
+      try {
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-goog-api-key': keys[keyIdx],
+          },
+          body: JSON.stringify(apiBody),
+          signal: controller.signal,
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          const status = response.status;
+          lastError = `${model} key${ki}: ${status} ${errorText.substring(0, 200)}`;
+
+          // 429/503 → 다음 키 또는 다음 모델로
+          if (status === 429 || status === 503) {
+            await new Promise(r => setTimeout(r, 1500));
+            continue;
+          }
+
+          // 400 (모델 미존재 등) → 다음 모델로
+          if (status === 400 || status === 404) break;
+
+          // 기타 에러 → 다음 시도
+          continue;
+        }
+
+        keyIndex = (keyIdx + 1) % keys.length;
+        const data = await response.json();
+
+        const resParts = data?.candidates?.[0]?.content?.parts || [];
+        const imagePart = resParts.find((p: { inlineData?: { data?: string } }) => p.inlineData?.data);
+
+        if (imagePart?.inlineData) {
+          const mimeType = imagePart.inlineData.mimeType || 'image/png';
+          const base64 = imagePart.inlineData.data;
+
+          return NextResponse.json({
+            imageDataUrl: `data:${mimeType};base64,${base64}`,
+            mimeType,
+            model,
+          });
+        }
+
+        // 이미지 없는 응답 → 다음 시도
+        lastError = `${model}: 응답에 이미지 데이터 없음`;
+        continue;
+      } catch (err: unknown) {
+        clearTimeout(timeoutId);
+        const error = err as Error;
+        lastError = `${model} key${ki}: ${error.name === 'AbortError' ? 'timeout' : error.message}`;
+
+        if (error.name === 'AbortError') {
+          // 타임아웃 → 다음 모델로 (같은 모델 재시도 무의미)
+          break;
+        }
         await new Promise(r => setTimeout(r, 1500));
         continue;
       }
-      // 400 / 401 / 404 → 모든 키 동일 결과 (요청/모델/인증 오류) → 즉시 종료
-      if (status === 400 || status === 401 || status === 404) break;
-      // 기타 (5xx, 네트워크) → 다음 키
-      continue;
     }
   }
 
   return NextResponse.json(
-    { error: `이미지 생성 실패 (모든 OpenAI 키 시도 실패)`, details: lastError },
+    { error: `이미지 생성 실패 (${MODELS.length}개 모델 모두 실패)`, details: lastError },
     { status: 502 },
   );
 }
