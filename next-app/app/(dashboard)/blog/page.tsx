@@ -1181,7 +1181,7 @@ JSON 형식으로 응답해주세요.`;
                 const dataUrl = d?.imageDataUrl as string | undefined;
                 // base64 HTML embed 한도 — 이 조기 경로는 Storage 업로드 없이 직접 embed
                 // 너무 큰 경우 null 반환 → generateAndUpload 가 정식 Storage 경로로 재생성
-                if (dataUrl && dataUrl.length > 1500 * 1024) {
+                if (dataUrl && dataUrl.length > 600 * 1024) {
                   console.warn(`[image] base64 too large, skip embed: ${Math.round(dataUrl.length / 1024)}KB`);
                   return { index, url: null as string | null };
                 }
@@ -1627,7 +1627,7 @@ JSON 형식으로 응답해주세요.`;
             }
 
             // 6c) Storage 실패 시 base64 fallback — 단 700KB 초과는 HTML 비대화 방지로 차단
-            if (dataUrl.length > 1500 * 1024) {
+            if (dataUrl.length > 600 * 1024) {
               console.warn(`[image] Storage 실패 + base64 ${Math.round(dataUrl.length / 1024)}KB 초과 — embed skip`);
               return { index, url: null };
             }
@@ -2186,7 +2186,7 @@ Output ONLY the prompt. No explanation.`;
       }
 
       // Storage 실패 → base64 fallback. 단 700KB 초과는 HTML 비대화 방지
-      if (imgData.imageDataUrl.length > 1500 * 1024) {
+      if (imgData.imageDataUrl.length > 600 * 1024) {
         console.warn(`[image] Storage 실패 + base64 ${Math.round(imgData.imageDataUrl.length / 1024)}KB 초과 — 차단`);
         throw new Error('이미지가 너무 큽니다. 다시 생성해 주세요.');
       }

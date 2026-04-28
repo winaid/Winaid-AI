@@ -130,7 +130,9 @@ export async function callClaude(req: LLMRequest): Promise<LLMResponse> {
       const resp = await client.messages.create({
         model: route.model,
         max_tokens: req.maxOutputTokens ?? 8192,
-        temperature: req.temperature ?? 0.7,
+        // temperature: 신 reasoning 모델 (claude-opus-4-7, claude-sonnet-4-6 등) 에서
+        // "deprecated for this model" 400 응답. SDK 가 받지 않게 아예 omit.
+        // 구 모델은 default temperature 사용 (Anthropic 기본값).
         system,
         messages: [{ role: 'user', content: req.userPrompt }],
       });

@@ -126,7 +126,7 @@ export async function queueLLMBatch(
     params: {
       model: route.model,
       max_tokens: it.request.maxOutputTokens ?? 8192,
-      temperature: it.request.temperature ?? 0.7,
+      // temperature 신 모델에서 deprecated — claude.ts 와 동일 정책으로 omit.
       system: buildClaudeSystemParam(it.request.systemBlocks, cacheTtl),
       messages: [{ role: 'user', content: it.request.userPrompt }],
     },
