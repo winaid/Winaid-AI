@@ -591,7 +591,10 @@ export async function* streamGemini(
   const keys = getGeminiKeys();
   if (keys.length === 0) throw new Error('GEMINI_API_KEY 미설정');
 
-  const model = 'gemini-3.1-pro-preview'; // resolveRoute 가 googleSearch=true 에 강제하는 모델과 일치
+  // Flash Lite Preview — Pro Preview 가 reasoning thinking phase 로 첫 byte 30~90s 걸려
+  // Vercel maxDuration 안에서 504. Flash Lite 는 즉시 응답 + search grounding 동일 지원.
+  // 일반 사용자가 실제 Gemini 에서 보게 되는 답변과 더 가까움 (free tier 모델).
+  const model = 'gemini-3.1-flash-lite-preview';
   // 실측 철학: systemInstruction / temperature 모두 제거. 사용자가 Gemini 웹에 직접 물었을 때와 동등.
   // tools.googleSearch 는 사용자가 웹 UI 에서 검색을 켠 것과 동치라 유지.
   const apiBody = {
