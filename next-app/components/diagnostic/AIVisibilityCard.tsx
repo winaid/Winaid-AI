@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { AIVisibility, AIPlatform, MeasurementData } from '../../lib/diagnostic/types';
+import { authFetch } from '../../lib/authFetch';
 
 // ── 출처·본문 파싱 유틸 ────────────────────────────────────
 // 서버는 프롬프트 최소화로 원본 그대로를 돌려주니 클라이언트에서 마크다운을 정리한다.
@@ -450,7 +451,7 @@ export default function AIVisibilityCard({ visibility, siteName, selfUrl, onMeas
     setState({ phase: 'streaming', query: displayQuery, answerText: '' });
 
     try {
-      const res = await fetch('/api/diagnostic/stream', {
+      const res = await authFetch('/api/diagnostic/stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

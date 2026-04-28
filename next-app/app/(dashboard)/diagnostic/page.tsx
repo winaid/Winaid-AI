@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import type { DiagnosticResponse, DiagnosticErrorResponse } from '../../../lib/diagnostic/types';
 import DiagnosticForm from '../../../components/diagnostic/DiagnosticForm';
 import DiagnosticResult from '../../../components/diagnostic/DiagnosticResult';
+import { authFetch } from '../../../lib/authFetch';
 
 type Status = 'idle' | 'loading' | 'success' | 'error';
 
@@ -132,7 +133,7 @@ export default function DiagnosticPage() {
     setError(null);
 
     try {
-      const res = await fetch('/api/diagnostic', {
+      const res = await authFetch('/api/diagnostic', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url }),
