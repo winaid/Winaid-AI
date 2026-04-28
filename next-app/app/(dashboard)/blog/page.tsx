@@ -905,9 +905,8 @@ JSON 형식으로 응답해주세요.`;
     generateAbortRef.current = new AbortController();
     const abortSignal = generateAbortRef.current.signal;
 
-    // 학습된 말투 → 프롬프트 텍스트로 직렬화 (LLM 시스템 프롬프트의 정체성 자리에 바로 투입)
-    const learned = learnedStyleId ? getStyleById(learnedStyleId) : null;
-    const stylePromptText = learned ? getStylePromptForGeneration(learned) : undefined;
+    // 학습된 말투 → sectionLearnedStylePrompt useMemo 재사용 (sectionRegen 과 단일 진실원)
+    const stylePromptText = sectionLearnedStylePrompt;
 
     const request: GenerationRequest = {
       category,
@@ -1735,6 +1734,7 @@ JSON 형식으로 응답해주세요.`;
         console.warn('[BLOG] [V4] review 처리 실패 — 원본 유지:', revErr);
       }
       setPipelineStep('done');
+      setDisplayStage(4); // 마무리 — SEO eval / 저장 백그라운드 진행 중
 
       // ── fact_check 기본값 설정 ──
       {
@@ -2286,7 +2286,7 @@ Output ONLY the prompt. No explanation.`;
     } finally {
       setRegeneratingSection(null);
     }
-  }, [blogSections, generatedContent, regeneratingSection, category, persona, tone, audienceMode, writingStyle, keywords, disease, medicalLawMode, sectionLearnedStylePrompt]);
+  }, [blogSections, generatedContent, regeneratingSection, category, keywords, medicalLawMode, sectionLearnedStylePrompt]);
 
   // ── Word / PDF 다운로드 ──
   const handleDownloadWord = useCallback(async () => {
