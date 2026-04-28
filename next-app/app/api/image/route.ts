@@ -8,8 +8,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { devLog } from '../../../lib/devLog';
 
 // Vercel function timeout — 60s 한도(plan 기본값)에 안전하게 들어가도록 명시.
-// Pro plan 이라도 60s default 가 적용되는 경우 504 발생하던 문제 회피.
-export const maxDuration = 60;
+// Pro Image 모델 응답이 단일 호출 ~19s. 5~6 장 병렬 첫 생성 + Vercel cold start +
+// concurrency throttle 누적 시 60s 한도 빠듯 → 504. 90s 로 안전여유 확보.
+export const maxDuration = 90;
 export const dynamic = 'force-dynamic';
 
 // ── 멀티키 로테이션 (gemini route와 동일) ──
