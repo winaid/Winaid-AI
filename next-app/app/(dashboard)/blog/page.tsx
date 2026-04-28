@@ -79,10 +79,6 @@ function BlogForm() {
     if (!imageCountManualRef.current) setImageCount(recommendedImageCount);
   }, [recommendedImageCount]);
 
-  useEffect(() => {
-    if (!isRestoringSettingsRef.current) imageCountManualRef.current = false;
-  }, [textLength]);
-
   const handleImageCountChange = useCallback((count: number) => {
     imageCountManualRef.current = true;
     setImageCount(count);
@@ -1091,8 +1087,17 @@ JSON 형식으로 응답해주세요.`;
 
       const imagePrompts: string[] = [];
       for (let i = 1; i <= imageCount; i++) {
-        const m = fullText.match(new RegExp(`\\[IMG_${i}(?:\\s+alt="([^"]*)")?[^\\]]*\\]`));
+        const markerRx = new RegExp(`\\[IMG_${i}(?:\\s+alt="([^"]*)")?[^\\]]*\\]`);
+        const m = fullText.match(markerRx);
         const alt = m?.[1]?.trim() || '';
+        // alt 부족 시 마커 직전 <h3> 헤딩 추출 (슬롯별 차별화)
+        let sectionHint = '';
+        if (m && m.index !== undefined && alt.length < 5) {
+          const before = fullText.slice(0, m.index);
+          const h3All = [...before.matchAll(/<h3[^>]*>([\s\S]*?)<\/h3>/gi)];
+          const lastH3 = h3All[h3All.length - 1]?.[1]?.replace(/<[^>]+>/g, '').trim() || '';
+          if (lastH3.length >= 3) sectionHint = lastH3;
+        }
         imagePrompts.push(buildImagePrompt({
           altText: alt,
           imageStyle,
@@ -1101,6 +1106,8 @@ JSON 형식으로 응답해주세요.`;
           hospitalName,
           disease,
           customImagePrompt: imageStyle === 'custom' ? (customPrompt?.trim() || undefined) : undefined,
+          sectionIndex: i,
+          sectionHint,
         }));
       }
       console.info(`[BLOG] [V4] 이미지 프롬프트 추출: ${imagePrompts.length}개 (buildImagePrompt 적용)`);

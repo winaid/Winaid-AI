@@ -75,8 +75,6 @@ function BlogForm() {
     if (!imageCountManualRef.current) setImageCount(recommendedImageCount);
   }, [recommendedImageCount]);
 
-  useEffect(() => { imageCountManualRef.current = false; }, [textLength]);
-
   const handleImageCountChange = useCallback((count: number) => {
     imageCountManualRef.current = true;
     setImageCount(count);
@@ -977,12 +975,30 @@ JSON 형식으로 응답해주세요.`;
       const draftViolations = draftJson.violations || [];
       console.info(`[BLOG] [V4] Sonnet 초안 완료 — ${fullText.length}자, 감지 violations ${draftViolations.length}개 (model=${draftJson.model || '?'})`);
 
-      // [IMG_N alt="..."] 마커에서 이미지 프롬프트 추출 (V3 는 ---IMAGE_PROMPTS--- 블록 사용 안 함)
+      // [IMG_N alt="..."] 마커에서 이미지 프롬프트 추출.
+      // alt 부족 시 직전 <h3> 헤딩 + 섹션 인덱스로 차별화 (재사용 방지).
       const imagePrompts: string[] = [];
       for (let i = 1; i <= imageCount; i++) {
-        const m = fullText.match(new RegExp(`\\[IMG_${i}(?:\\s+alt="([^"]*)")?[^\\]]*\\]`));
+        const markerRx = new RegExp(`\\[IMG_${i}(?:\\s+alt="([^"]*)")?[^\\]]*\\]`);
+        const m = fullText.match(markerRx);
         const alt = m?.[1]?.trim() || '';
-        imagePrompts.push(alt || `${topic.trim()} ${request.category}`);
+        if (alt.length >= 5) {
+          imagePrompts.push(alt);
+          continue;
+        }
+        // alt 부족 → 마커 직전 <h3> 헤딩 추출
+        let sectionHint = '';
+        if (m && m.index !== undefined) {
+          const before = fullText.slice(0, m.index);
+          const h3All = [...before.matchAll(/<h3[^>]*>([\s\S]*?)<\/h3>/gi)];
+          const lastH3 = h3All[h3All.length - 1]?.[1]?.replace(/<[^>]+>/g, '').trim() || '';
+          if (lastH3.length >= 3) sectionHint = lastH3;
+        }
+        imagePrompts.push(
+          sectionHint
+            ? `${sectionHint}, ${request.category}`
+            : `${topic.trim()} ${request.category} 섹션 ${i}`
+        );
       }
       console.info(`[BLOG] [V4] 이미지 프롬프트 추출: ${imagePrompts.length}개`);
 

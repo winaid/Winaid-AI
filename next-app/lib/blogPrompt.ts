@@ -90,6 +90,8 @@ export function buildImagePrompt(args: {
   hospitalName?: string;
   disease?: string;
   customImagePrompt?: string;
+  sectionIndex?: number;
+  sectionHint?: string;
 }): string {
   const { altText, imageStyle, category, topic, disease, customImagePrompt } = args;
 
@@ -109,11 +111,17 @@ export function buildImagePrompt(args: {
   };
   const subjectHint = categoryHints[category] || 'Korean medical clinic interior';
 
-  // alt 가 너무 짧으면 topic + disease fallback
+  // alt 부족 시 섹션 헤딩 또는 인덱스 suffix 로 슬롯별 차별화
   const trimmedAlt = altText.trim();
-  const subject = trimmedAlt.length >= 5
-    ? trimmedAlt
-    : `${topic}${disease ? ` (${disease})` : ''}`;
+  let subject: string;
+  if (trimmedAlt.length >= 5) {
+    subject = trimmedAlt;
+  } else if (args.sectionHint && args.sectionHint.length >= 3) {
+    subject = `${args.sectionHint}, ${topic}${disease ? ` (${disease})` : ''}`;
+  } else {
+    const idxSuffix = args.sectionIndex ? ` 섹션 ${args.sectionIndex}` : '';
+    subject = `${topic}${disease ? ` (${disease})` : ''}${idxSuffix}`;
+  }
 
   // custom 스타일일 때 customImagePrompt 는 alt 를 보강 (스타일은 route 에서 처리)
   const customBoost = imageStyle === 'custom' && customImagePrompt?.trim()
