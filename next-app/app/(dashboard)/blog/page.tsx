@@ -67,6 +67,7 @@ function BlogForm() {
   // 이미지 수량 자동 추천
   const imageCountManualRef = useRef(false);
   const isRestoringSettingsRef = useRef(false);
+  const generateAbortRef = useRef<AbortController | null>(null);
   const recommendedImageCount = useMemo(() => {
     if (textLength <= 1000) return 4;
     if (textLength <= 1500) return 6;
@@ -212,8 +213,12 @@ function BlogForm() {
   // Phase 2D Tier 2-A+: verdict/diff UI 제거. review 호출 결과는 내부 본문 교체에만 사용 (로컬 변수).
   const [pipelineStep, setPipelineStep] = useState<'idle' | 'drafting' | 'reviewing_and_images' | 'done' | 'error'>('idle');
 
-  // 설정 저장/불러오기
-  const getSettingsKey = () => selectedTeam ? `winaid_blog_settings_team_${selectedTeam}` : 'winaid_blog_settings';
+  // 설정 저장/불러오기 — team + hospital scope (multi-hospital 충돌 방지)
+  const getSettingsKey = () => {
+    const team = selectedTeam || 'noteam';
+    const hosp = hospitalName ? hospitalName.replace(/[^\w가-힣]/g, '_').slice(0, 32) : 'nohospital';
+    return `winaid_blog_settings_${team}_${hosp}`;
+  };
 
   const handleSaveSettings = useCallback(() => {
     const s = { category, hospitalName, selectedHospitalAddress, homepageUrl, textLength, imageCount, imageAspectRatio, imageStyle, imageSourceMode, audienceMode, persona, tone, writingStyle, medicalLawMode, includeFaq, faqCount, includeHospitalIntro, learnedStyleId };
@@ -264,21 +269,37 @@ function BlogForm() {
   }, []);
 
   const handleLoadSettings = useCallback(() => {
-    const raw = localStorage.getItem(getSettingsKey());
+    // backward-compat: 새 키 → team 키 → 전역 키 순으로 fallback
+    const teamKey = selectedTeam ? `winaid_blog_settings_team_${selectedTeam}` : null;
+    const raw = localStorage.getItem(getSettingsKey())
+      || (teamKey ? localStorage.getItem(teamKey) : null)
+      || localStorage.getItem('winaid_blog_settings');
     if (!raw) { setSettingsToast('저장된 설정 없음'); setTimeout(() => setSettingsToast(''), 1500); return; }
     if (applySettings(raw)) { setSettingsToast('📂 설정 불러옴'); setTimeout(() => setSettingsToast(''), 1500); }
-  }, [applySettings, selectedTeam]);
+  }, [applySettings, selectedTeam, hospitalName]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // 페이지 진입 시 자동 불러오기 — 팀별 키 없으면 기본 키로 폴백
+  // 페이지 진입 시 자동 불러오기 — 새 키 → team 키 → 전역 키 순 fallback
   useEffect(() => {
     const teamKey = selectedTeam ? `winaid_blog_settings_team_${selectedTeam}` : null;
-    const raw = (teamKey && localStorage.getItem(teamKey)) || localStorage.getItem('winaid_blog_settings');
+    const raw = localStorage.getItem(getSettingsKey())
+      || (teamKey ? localStorage.getItem(teamKey) : null)
+      || localStorage.getItem('winaid_blog_settings');
     if (raw) applySettings(raw);
   }, [selectedTeam]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── 편집 손실 방지: beforeunload 경고 + 드래프트 자동 저장 + 복구 ──
   const DRAFT_KEY = 'winaid_blog_draft_v1';
   const DRAFT_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7일
+
+  // 언마운트 시 진행 중 SSE abort
+  useEffect(() => {
+    return () => {
+      if (generateAbortRef.current) {
+        generateAbortRef.current.abort();
+        generateAbortRef.current = null;
+      }
+    };
+  }, []);
 
   // 1) beforeunload — 생성 중이거나 작성된 글이 있을 때
   useEffect(() => {
@@ -879,6 +900,11 @@ JSON 형식으로 응답해주세요.`;
       return;
     }
 
+    // 진행 중인 이전 생성 abort + 새 controller 발급
+    if (generateAbortRef.current) generateAbortRef.current.abort();
+    generateAbortRef.current = new AbortController();
+    const abortSignal = generateAbortRef.current.signal;
+
     // 학습된 말투 → 프롬프트 텍스트로 직렬화 (LLM 시스템 프롬프트의 정체성 자리에 바로 투입)
     const learned = learnedStyleId ? getStyleById(learnedStyleId) : null;
     const stylePromptText = learned ? getStylePromptForGeneration(learned) : undefined;
@@ -990,6 +1016,7 @@ JSON 형식으로 응답해주세요.`;
           hospitalName: hospitalName || undefined,
           userId: creditCtx.userId || null,
         }),
+        signal: abortSignal,
       });
 
       if (!draftRes.ok) {
@@ -1794,6 +1821,7 @@ JSON 형식으로 응답해주세요.`;
       setIsGenerating(false);
       setDisplayStage(0);
       setStageInfo(null);
+      generateAbortRef.current = null;
     }
   };
 

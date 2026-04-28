@@ -64,6 +64,7 @@ function BlogForm() {
 
   // 이미지 수량 자동 추천
   const imageCountManualRef = useRef(false);
+  const generateAbortRef = useRef<AbortController | null>(null);
   const recommendedImageCount = useMemo(() => {
     if (textLength <= 1000) return 4;
     if (textLength <= 1500) return 6;
@@ -209,12 +210,18 @@ function BlogForm() {
   // Phase 2D Tier 2-A+: verdict/diff UI 제거. review 호출 결과는 내부 본문 교체에만 사용 (로컬 변수).
   const [pipelineStep, setPipelineStep] = useState<'idle' | 'drafting' | 'reviewing_and_images' | 'done' | 'error'>('idle');
 
+  // 설정 키 — hospitalName scope (병원별 분리, multi-hospital 충돌 방지)
+  const getSettingsKey = useCallback(
+    () => `winaid_blog_settings_${(hospitalName || 'nohospital').replace(/[^\w가-힣]/g, '_').slice(0, 32)}`,
+    [hospitalName],
+  );
+
   const handleSaveSettings = useCallback(() => {
     const s = { category, hospitalName, selectedHospitalAddress, homepageUrl, textLength, imageCount, imageAspectRatio, imageStyle, audienceMode, persona, tone, writingStyle, medicalLawMode, includeFaq, faqCount, includeHospitalIntro, customSubheadings };
-    localStorage.setItem('winaid_blog_settings', JSON.stringify(s));
+    localStorage.setItem(getSettingsKey(), JSON.stringify(s));
     setSettingsToast('💾 설정 저장됨');
     setTimeout(() => setSettingsToast(''), 1500);
-  }, [category, hospitalName, selectedHospitalAddress, homepageUrl, textLength, imageCount, imageAspectRatio, imageStyle, audienceMode, persona, tone, writingStyle, medicalLawMode, includeFaq, faqCount, includeHospitalIntro, customSubheadings]);
+  }, [category, hospitalName, selectedHospitalAddress, homepageUrl, textLength, imageCount, imageAspectRatio, imageStyle, audienceMode, persona, tone, writingStyle, medicalLawMode, includeFaq, faqCount, includeHospitalIntro, customSubheadings, getSettingsKey]);
 
   const applySettings = useCallback((raw: string) => {
     try {
@@ -241,16 +248,27 @@ function BlogForm() {
   }, []);
 
   const handleLoadSettings = useCallback(() => {
-    const raw = localStorage.getItem('winaid_blog_settings');
+    // backward-compat: 새 키 → 전역 키 fallback
+    const raw = localStorage.getItem(getSettingsKey()) || localStorage.getItem('winaid_blog_settings');
     if (!raw) { setSettingsToast('저장된 설정 없음'); setTimeout(() => setSettingsToast(''), 1500); return; }
     if (applySettings(raw)) { setSettingsToast('📂 설정 불러옴'); setTimeout(() => setSettingsToast(''), 1500); }
-  }, [applySettings]);
+  }, [applySettings, getSettingsKey]);
 
-  // 페이지 진입 시 자동 불러오기
+  // 페이지 진입 시 자동 불러오기 — 새 키 → 전역 키 fallback
   useEffect(() => {
-    const raw = localStorage.getItem('winaid_blog_settings');
+    const raw = localStorage.getItem(getSettingsKey()) || localStorage.getItem('winaid_blog_settings');
     if (raw) applySettings(raw);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 언마운트 시 진행 중 SSE abort
+  useEffect(() => {
+    return () => {
+      if (generateAbortRef.current) {
+        generateAbortRef.current.abort();
+        generateAbortRef.current = null;
+      }
+    };
+  }, []);
   const [isChatRefining, setIsChatRefining] = useState(false);
   // 생성 시간 추정
   const [generationStartTime, setGenerationStartTime] = useState<number>(0);
@@ -858,6 +876,11 @@ JSON 형식으로 응답해주세요.`;
     if (!topic.trim() || isGenerating) return;
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
+    // 진행 중인 이전 생성 abort + 새 controller 발급
+    if (generateAbortRef.current) generateAbortRef.current.abort();
+    generateAbortRef.current = new AbortController();
+    const abortSignal = generateAbortRef.current.signal;
+
     // 크레딧 체크 (차감은 생성 성공 후에)
     if (creditCtx.creditInfo) {
       if (creditCtx.creditInfo.credits <= 0) {
@@ -953,6 +976,7 @@ JSON 형식으로 응답해주세요.`;
           hospitalName: hospitalName || undefined,
           userId: creditCtx.userId || null,
         }),
+        signal: abortSignal,
       });
 
       if (!draftRes.ok) {
@@ -1495,6 +1519,7 @@ JSON 형식으로 응답해주세요.`;
     } finally {
       setIsGenerating(false);
       setDisplayStage(0);
+      generateAbortRef.current = null;
     }
   };
 
