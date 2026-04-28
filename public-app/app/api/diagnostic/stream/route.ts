@@ -233,7 +233,8 @@ export async function POST(request: NextRequest) {
           send({ type: 'chunk', text: result.value });
         }
 
-        // 완료 — 누적된 답변에서 URL 추출 후 selfIncluded 판정 (기존 로직 유지)
+        // 완료 — URL 매칭 OR 사이트 이름 언급 으로 selfIncluded 판정.
+        // (사용자 요청: "URL 이 아니라 치과 이름만 들어가있어도 언급으로 인정")
         const topResults = extractUrlsFromText(fullText);
         let selfRank: number | null = null;
         for (const r of topResults) {
@@ -242,6 +243,12 @@ export async function POST(request: NextRequest) {
             break;
           }
         }
+        // 사이트 이름이 답변 텍스트에 직접 노출됐는지 검사. 공백 normalize 후 includes().
+        // siteName 2 자 미만이면 false positive 방지로 skip.
+        const siteNameRaw = (crawl.title || '').trim().slice(0, 60);
+        const siteNameMentioned = siteNameRaw.length >= 2
+          ? fullText.replace(/\s/g, '').includes(siteNameRaw.replace(/\s/g, ''))
+          : false;
 
         // 캐시 저장 (비동기, 실패해도 done 이벤트에 영향 없음)
         if (supabase && fullText.length > 30) {
@@ -255,7 +262,7 @@ export async function POST(request: NextRequest) {
                   query_text: query,
                   answer_text: fullText,
                   sources: JSON.stringify(meta.sources),
-                  self_included: selfRank !== null,
+                  self_included: (selfRank !== null || siteNameMentioned),
                   self_rank: selfRank,
                   truncated: meta.truncated,
                 },
@@ -271,7 +278,7 @@ export async function POST(request: NextRequest) {
           type: 'done',
           answerText: fullText,
           topResults,
-          selfIncluded: selfRank !== null,
+          selfIncluded: (selfRank !== null || siteNameMentioned),
           selfRank,
           truncated: meta.truncated,
           ...(meta.reason ? { reason: meta.reason } : {}),

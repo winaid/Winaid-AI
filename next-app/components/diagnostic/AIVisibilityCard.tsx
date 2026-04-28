@@ -901,12 +901,12 @@ export default function AIVisibilityCard({ visibility, siteName, selfUrl, onMeas
               <div className="mt-3">
                 {state.selfIncluded ? (
                   <div className="rounded-lg px-3 py-2 text-sm font-medium bg-green-50 text-green-800 border border-green-200">
-                    ✅ {siteName || '본인 사이트'} URL 이 답변에 포함되어 있습니다
-                    {state.selfRank ? ` (${state.selfRank}번째 언급)` : ''}
+                    ✅ {siteName || '본인 사이트'} 이(가) 답변에 언급되었어요
+                    {state.selfRank ? ` (${state.selfRank}번째 URL)` : ''}
                   </div>
                 ) : (
                   <div className="rounded-lg px-3 py-2 text-sm font-medium bg-amber-50 text-amber-800 border border-amber-200">
-                    ⚠️ {siteName || '본인 사이트'} URL 이 답변에 포함되어 있지 않습니다
+                    ⚠️ {siteName || '본인 사이트'} 이(가) 답변에 언급되지 않았어요
                   </div>
                 )}
               </div>
