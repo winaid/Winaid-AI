@@ -1334,6 +1334,14 @@ JSON 형식으로 응답해주세요.`;
         });
         const imageResults = await Promise.all(imagePromises);
 
+        // 이미지 부분 실패 사용자 안내
+        {
+          const failedCount = imageResults.filter((r) => !r.url).length;
+          if (failedCount > 0) {
+            setError(`이미지 ${failedCount}장 생성에 실패했습니다. 글 내 이미지 재생성 버튼으로 다시 시도해 주세요.`);
+          }
+        }
+
         // 7) [IMG_N alt="..."] 마커를 실제 이미지로 교체 — alt 텍스트 추출
         let finalHtml = blogText;
         for (const img of imageResults) {
@@ -1353,31 +1361,8 @@ JSON 형식으로 응답해주세요.`;
         finalHtml = finalHtml.replace(/<img\s+([^>]*?)src="(?!data:|https?:\/\/|\/)[^"]*"([^>]*?)>/gi, '');
         // 빈 content-image-wrapper 정리
         finalHtml = finalHtml.replace(/<div class="content-image-wrapper"[^>]*>\s*<\/div>/g, '');
-        // 의료광고법 최종 대체 (이미지 삽입 후)
-        {
-          const lawReplacements: [RegExp, string][] = [
-            [/극대화/g, '향상'],
-            [/최첨단/g, '최신'],
-            [/완벽(한|하게|히)?/g, '꼼꼼$1'],
-            [/확실한/g, '체계적인'],
-            [/확실하게/g, '체계적으로'],
-            [/확실히/g, '체계적으로'],
-            [/혁신적인/g, '새로운'],
-            [/혁신적으로/g, '새롭게'],
-            [/획기적(인|으로)?/g, '효과적$1'],
-            [/독보적(인|으로)?/g, '전문적$1'],
-            [/완치/g, '호전'],
-            [/100%/g, '높은 비율로'],
-            [/영구적(인|으로)?/g, '장기적$1'],
-            [/유일한/g, '대표적인'],
-            [/유일하게/g, '차별화되게'],
-            [/세계\s?최초/g, '새로운 방식의'],
-            [/국내\s?유일/g, '선도적인'],
-            [/부작용\s?없/g, '부작용 위험을 줄인'],
-            [/통증\s?없는/g, '불편감을 줄인'],
-          ];
-          for (const [p, r] of lawReplacements) finalHtml = finalHtml.replace(p, r);
-        }
+        // 의료광고법 최종 대체 (이미지 삽입 후) — 전체 패턴 적용
+        finalHtml = applyContentFilters(finalHtml).filtered;
         // 잘못된/빈 이미지 태그 최종 정리
         finalHtml = finalHtml.replace(/<img\s+[^>]*src="(?!data:|https?:\/\/)[^"]*"[^>]*\/?>/gi, '');
         finalHtml = finalHtml.replace(/<div[^>]*class="content-image-wrapper"[^>]*>\s*<\/div>/g, '');

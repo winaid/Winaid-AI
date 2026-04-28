@@ -127,6 +127,22 @@ function parseOutlineJson(raw: string, imageCount: number): BlogOutline | null {
     }
   }
 
+  // 5) charTarget 합 검증: totalCharTarget과 2배 이상 차이나면 비례 조정
+  {
+    const sumCharTargets = parsed.sections.reduce((s, sec) => s + (sec.charTarget ?? 0), 0);
+    if (sumCharTargets > 0) {
+      const ratio = parsed.totalCharTarget / sumCharTargets;
+      if (ratio < 0.5 || ratio > 2.0) {
+        console.warn(`[outline] charTarget sum=${sumCharTargets} vs totalCharTarget=${parsed.totalCharTarget} (ratio=${ratio.toFixed(2)}) — rescaling`);
+        for (const sec of parsed.sections) {
+          if (typeof sec.charTarget === 'number') {
+            sec.charTarget = Math.round(sec.charTarget * ratio);
+          }
+        }
+      }
+    }
+  }
+
   return parsed;
 }
 
