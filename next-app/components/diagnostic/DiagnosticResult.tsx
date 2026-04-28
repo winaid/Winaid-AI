@@ -13,6 +13,7 @@ import ScoreRing from './ScoreRing';
 import CategoryCard from './CategoryCard';
 import AIVisibilityCard from './AIVisibilityCard';
 import ActionPlan from './ActionPlan';
+import { authFetch } from '../../lib/authFetch';
 import CompetitorAutoSuggestions from './CompetitorAutoSuggestions';
 import SnippetsPanel from './SnippetsPanel';
 
@@ -114,7 +115,7 @@ export default function DiagnosticResult({ result, onResultUpdate }: DiagnosticR
     if (shareUrl) { await navigator.clipboard.writeText(shareUrl).catch(() => {}); return; }
     setGenerating(true);
     try {
-      const res = await fetch('/api/diagnostic/share', {
+      const res = await authFetch('/api/diagnostic/share', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ result }),
@@ -143,7 +144,7 @@ export default function DiagnosticResult({ result, onResultUpdate }: DiagnosticR
     if (refreshing || !onResultUpdate) return;
     setRefreshing(true);
     try {
-      const res = await fetch('/api/diagnostic/refresh-narrative', {
+      const res = await authFetch('/api/diagnostic/refresh-narrative', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ diagnosticResult: result, measurements: measurementResults }),
@@ -184,7 +185,7 @@ export default function DiagnosticResult({ result, onResultUpdate }: DiagnosticR
     setGapLoading(true);
     setGapResult(null);
     try {
-      const res = await fetch('/api/diagnostic/competitor-gap', {
+      const res = await authFetch('/api/diagnostic/competitor-gap', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ selfResult: result, competitorUrl: target }),
