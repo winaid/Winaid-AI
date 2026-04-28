@@ -1395,14 +1395,17 @@ JSON 형식으로 응답해주세요.`;
       }
 
       // ═══ Phase 2A v4: Opus 감수 결과 적용 ═══
+      let reviewQualityScores: { safety?: number; conversion?: number } | undefined;
       try {
         const review = await reviewPromise as {
           verdict: 'pass' | 'minor_fix' | 'major_fix';
           issues: Array<{ category: string; severity: string; originalQuote?: string; problem?: string; suggestion?: string }>;
           revisedHtml: string | null;
           summaryNote: string;
+          qualityScores?: { safety?: number; conversion?: number };
           warning?: string;
         };
+        reviewQualityScores = review.qualityScores;
         console.info(`[BLOG] [V4] Opus 검수 완료 — verdict=${review.verdict}, issues=${review.issues?.length || 0}, summary="${(review.summaryNote || '').slice(0, 80)}"`);
 
         if (review.revisedHtml && typeof review.revisedHtml === 'string' && review.revisedHtml.length > 100) {
@@ -1432,18 +1435,28 @@ JSON 형식으로 응답해주세요.`;
       }
       setPipelineStep('done');
 
-      // ── fact_check 기본값 설정 (old legacyBlogGeneration.ts:1713-1740 동일) ──
-      // Gemini가 ---SCORES--- 블록을 반환하지 않았거나 필드가 빠진 경우 기본값으로 보완
+      // ── fact_check 기본값 설정 ──
       {
         if (!parsed) parsed = {};
-        // conversion_score: 없거나 0이면 기본값 75
+
+        // 1순위: Opus 검수가 콘텐츠 분석 중 산정한 진짜 점수
+        if (reviewQualityScores) {
+          if (typeof reviewQualityScores.safety === 'number') {
+            parsed.safetyScore = reviewQualityScores.safety;
+          }
+          if (typeof reviewQualityScores.conversion === 'number') {
+            parsed.conversionScore = reviewQualityScores.conversion;
+          }
+        }
+
+        // 3순위: 둘 다 없으면 fallback
         if (!parsed.conversionScore || parsed.conversionScore === 0) {
           parsed.conversionScore = 75;
-          devLog('[BLOG] ⚠️ conversion_score 기본값 75점 설정 (AI 미반환)');
+          devLog('[BLOG] ⚠️ conversion_score fallback 75 (AI 미반환)');
         }
-        // safety_score: undefined/null이면 기본값 90
         if (parsed.safetyScore === undefined || parsed.safetyScore === null) {
           parsed.safetyScore = 90;
+          devLog('[BLOG] ⚠️ safety_score fallback 90 (AI 미반환)');
         }
         // fact_score, ai_smell_score, verified_facts_count는 ScoreBarData에 없으므로 로그만 기록
         const factScore = 85;

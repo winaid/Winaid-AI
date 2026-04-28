@@ -24,6 +24,7 @@ interface ReviewIssue {
 }
 
 interface ReviewJson {
+  qualityScores?: { safety?: number; conversion?: number };
   verdict: 'pass' | 'minor_fix' | 'major_fix';
   issues?: ReviewIssue[];
   revisedHtml?: string | null;
@@ -128,6 +129,7 @@ export async function POST(request: NextRequest) {
   let issues: ReviewIssue[];
   let revisedHtml: string | null;
   let summaryNote: string;
+  let qualityScores: { safety?: number; conversion?: number } | undefined;
 
   if (!parsed) {
     verdict = 'pass';
@@ -140,6 +142,17 @@ export async function POST(request: NextRequest) {
     revisedHtml = (verdict !== 'pass' && typeof parsed.revisedHtml === 'string') ? parsed.revisedHtml : null;
     summaryNote = typeof parsed.summaryNote === 'string' ? parsed.summaryNote.slice(0, 400) : '';
     if (verdict === 'pass') { issues = []; revisedHtml = null; }
+
+    // qualityScores: 0~100 범위만 허용
+    const qs = parsed.qualityScores;
+    if (qs && typeof qs === 'object') {
+      const clamp = (v: unknown) => typeof v === 'number' && v >= 0 && v <= 100 ? Math.round(v) : undefined;
+      const safety = clamp(qs.safety);
+      const conversion = clamp(qs.conversion);
+      if (safety !== undefined || conversion !== undefined) {
+        qualityScores = { ...(safety !== undefined ? { safety } : {}), ...(conversion !== undefined ? { conversion } : {}) };
+      }
+    }
   }
 
   if (revisedHtml) {
@@ -166,5 +179,5 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  return NextResponse.json({ verdict, issues, revisedHtml, summaryNote, usage, model });
+  return NextResponse.json({ verdict, issues, revisedHtml, summaryNote, qualityScores, usage, model });
 }

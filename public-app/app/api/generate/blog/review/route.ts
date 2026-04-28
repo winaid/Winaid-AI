@@ -30,6 +30,7 @@ interface ReviewIssue {
 }
 
 interface ReviewJson {
+  qualityScores?: { safety?: number; conversion?: number };
   verdict: 'pass' | 'minor_fix' | 'major_fix';
   issues?: ReviewIssue[];
   revisedHtml?: string | null;
@@ -155,6 +156,7 @@ export async function POST(request: NextRequest) {
   let issues: ReviewIssue[];
   let revisedHtml: string | null;
   let summaryNote: string;
+  let qualityScores: { safety?: number; conversion?: number } | undefined;
 
   if (!parsed) {
     verdict = 'pass';
@@ -170,6 +172,17 @@ export async function POST(request: NextRequest) {
     if (verdict === 'pass') {
       issues = [];
       revisedHtml = null;
+    }
+
+    // qualityScores: 0~100 범위만 허용
+    const qs = parsed.qualityScores;
+    if (qs && typeof qs === 'object') {
+      const clamp = (v: unknown) => typeof v === 'number' && v >= 0 && v <= 100 ? Math.round(v) : undefined;
+      const safety = clamp(qs.safety);
+      const conversion = clamp(qs.conversion);
+      if (safety !== undefined || conversion !== undefined) {
+        qualityScores = { ...(safety !== undefined ? { safety } : {}), ...(conversion !== undefined ? { conversion } : {}) };
+      }
     }
   }
 
@@ -204,6 +217,7 @@ export async function POST(request: NextRequest) {
     issues,
     revisedHtml,
     summaryNote,
+    qualityScores,
     usage,
     model,
   });

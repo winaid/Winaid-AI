@@ -2114,6 +2114,10 @@ ${hasLearnedStyle ? `6. 학습 말투 경로:
 draft_to_review를 review_criteria 5~6개 항목으로 전수 검토하고 JSON 객체 하나만 출력하세요.
 
 {
+  "qualityScores": {
+    "safety": 0~100,
+    "conversion": 0~100
+  },
   "verdict": "pass" | "minor_fix" | "major_fix",
   "issues": [{
     "category": "medical_law"|"factuality"|"tone"|"seo"|"structure"|"ai_artifact",
@@ -2125,6 +2129,12 @@ draft_to_review를 review_criteria 5~6개 항목으로 전수 검토하고 JSON 
   "revisedHtml": "수정 HTML" | null,
   "summaryNote": "종합 1~2줄"
 }
+
+qualityScores 산정 기준:
+- safety (의료법): 100 = 단정·과장·유도 표현 0건. 80~99 = 미세한 톤 이슈만. 50~79 = 1~2건 위반.
+  30~49 = 3건+ 위반. 0~29 = "완치/100%/최고" 같은 고위험 표현 다수. ruleFilterViolations 갯수 가중.
+- conversion (전환): 100 = 마무리에 자연스러운 행동 유도(상담/내원 권유) + 정보→감정→행동 구조.
+  70~89 = 행동 유도 있으나 약함. 50~69 = 행동 유도 부족. 30~49 = 갑작스러운 직접 명령형. 0~29 = 마무리 부재.
 
 verdict 규칙 (기계적 적용):
 - issues 0개 → "pass" (issues=[], revisedHtml=null)
