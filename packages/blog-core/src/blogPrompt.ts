@@ -796,9 +796,9 @@ blog_title이 없으면 topic을 기준으로 동일 원칙 적용.
 이 페르소나의 고유 규칙:
 
 1. 도입부 200자 안에 "독자/주제/얻을 가치" 3요소 전달 (모바일 첫 화면 대응).
-2. 도입부 첫 문장 = 5유형 훅 중 매번 다른 것 (질문/상황/통계/대비/스토리).
-3. 마무리 둘째 문단 = 5유형 중 매번 다른 것 (상담권유/예방/자기점검/가족안내/다음단계).
-4. 매 문단을 쓸 때 자신에게 물어보세요: "이 문장에 환자가 공감할 구체적 장면이 있는가?"
+2. 매 문단을 쓸 때 자신에게 물어보세요: "이 문장에 환자가 공감할 구체적 장면이 있는가?"
+   (도입부 hook 패턴·마무리 형식은 <structure> 블록 따름 — learned_style 또는
+   medical_blog_voice 의 opening_template/closing_template 위임)
 </writing_style>
 
 <e_e_a_t>
@@ -949,16 +949,24 @@ JSON 객체 하나만 출력하세요. JSON 밖의 텍스트는 포함하지 마
 5. imageIndex: **정확히 image_count 개 섹션에만** 1부터 순서대로 부여.
    - image_count=3 이면 imageIndex 1,2,3 만 3개 섹션에. 4번째 이상 절대 금지
    - image_count=0 이면 imageIndex 전부 생략
-   - intro/outro 포함 총 섹션 중 image_count 개만 골라서 배정
+   - **intro/outro 에는 imageIndex 부여 금지** (자연스러운 흐름 — intro 의 hook+공감
+     본문이 텍스트로 충분히 형성된 후 첫 body section 부터 이미지 등장).
+   - body section 수가 image_count 보다 적으면 outline 자체에서 body section 수를
+     image_count 이상으로 늘리도록 설계.
 6. summary: 구체적 내용 방향. 막연한 서술 피하세요
 7. intro → sections → outro 자연스러운 논리 순서
 8. variable 블록의 topic_type이 제공되면 해당 유형의 구조 가이드를 반영해 아웃라인 설계
-9. intro·첫 section = 경험/공감, 중간 section = 전문성/권위, outro = 신뢰/상담 유도 분포로 설계
+9. intro·첫 section = 경험/공감, 중간 section = 전문성/권위,
+   outro = 신뢰 + 신중한 결정 권유 분포로 설계 (영업 톤 금지 — fallback anti_marketing 정신 일관:
+   "꼭 저희를 찾아주시지 않으셔도 됩니다", "다른 곳에서도 의견 들어보세요" 등).
 10. 첫 section의 summary는 "질문+짧은 답+근거" 구조 (첫 100자에서 AI 요약 추출 가능)
 11. variable의 include_faq가 "true" 이거나 totalCharTarget >= 1500 이면 outro 앞에 type="section" heading="자주 묻는 질문" 항목 추가. summary에 "Q&A 3~5쌍" 명시.
 12. 첫 section은 topic_type에 맞는 스니펫 유형(정의/리스트/표)을 배치할 수 있게 설계. summary에 "정의형 스니펫: ~란 ~이다" 또는 "리스트 스니펫: 3가지 방법" 힌트 포함.
-13. intro의 summary에 훅 유형 힌트 포함: "통계형 훅: 국내 성인 7명 중 1명..." 또는 "상황형 훅: 아침 양치 피"
-14. outro의 summary에 마무리 유형 힌트 포함: "자기 점검형: 증상 체크 유도" 또는 "예방 강조형"
+13. intro의 summary에는 hook 의 구조만 기술 (예: "환자 시점 공감 hook + 본론 전환").
+    구체 hook 형식은 본문 작성 단계에서 learned_style 또는 medical_blog_voice 의
+    opening_template (4유형: 가상인용자답·반전선언·환자대변·환자사연) 따름.
+14. outro의 summary에는 마무리 구조만 기술 (예: "안티-마케팅 권유 + 감사 마무리").
+    구체 마무리 형식은 learned_style 또는 medical_blog_voice 의 closing_template 따름.
 15. 각 section의 charTarget 합계가 totalCharTarget의 90~110% 범위인지 검증.
     intro ≈ 15%, 본문 sections ≈ 70%, outro ≈ 15% 비율 권장.
     FAQ 포함 시 FAQ ≈ 10%, 나머지 재분배.
