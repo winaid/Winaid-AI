@@ -1,16 +1,23 @@
 /**
- * /api/image — Gemini 이미지 생성 프록시
+ * /api/image — OpenAI gpt-image-2 이미지 생성 프록시
  *
- * 모델 우선순위: gemini-3-pro > gemini-3.1-flash > gemini-2.5-flash.
- * responseModalities: ["IMAGE", "TEXT"] 사용.
+ * 모델: process.env.OPENAI_IMAGE_MODEL || 'gpt-image-2' (스냅샷 핀 가능: 'gpt-image-2-2026-04-21')
+ * 응답: { imageDataUrl: data URL, mimeType: 'image/png', model } — 호출부 호환 위해 shape 고정.
+ *
+ * Gemini 구현은 ./route.gemini.ts.bak 으로 보존 (5분 롤백 컷).
+ * referenceImage / logoBase64 / calendarImage 첨부는 현재 generate 텍스트 힌트로 변환 —
+ * openai-node 이슈 #1844 로 images.edit 가 gpt-image-2 거부 중. 픽스되면
+ * OPENAI_IMAGE_EDIT_ENABLED=1 로 활성화 가능 (TODO 분기 마련됨).
  */
 import { NextRequest, NextResponse } from 'next/server';
+import OpenAI from 'openai';
 import { gateGuestRequest } from '../../../lib/guestRateLimit';
 
 export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
 
-// ── 멀티키 로테이션 (gemini route와 동일) ──
+// ── 멀티키 로테이션 ──
+// Gemini 키는 보존 (route.gemini.ts.bak 에서 사용. 활성 경로는 OpenAI).
 
 function getKeys(): string[] {
   const keys: string[] = [];
@@ -22,7 +29,34 @@ function getKeys(): string[] {
   return keys;
 }
 
+function getOpenAIKeys(): string[] {
+  const keys: string[] = [];
+  for (let i = 0; i <= 10; i++) {
+    const envName = i === 0 ? 'OPENAI_API_KEY' : `OPENAI_API_KEY_${i}`;
+    const val = process.env[envName];
+    if (val) keys.push(val);
+  }
+  return keys;
+}
+
 let keyIndex = 0;
+
+// ── aspect ratio → gpt-image-2 size 문자열 ──
+// gpt-image-2 는 size 변이 16 의 배수, 최대 변 3840px, 2K(2560x1440) 이내 안정 권장.
+// 사용자 매핑 + 16 배수 보정 ('3:4' / '4:3' 의 1366 → 1376).
+function aspectRatioToSize(ratio: AspectRatio): string {
+  switch (ratio) {
+    case '1:1': return '1024x1024';
+    case '16:9': return '1536x1024';
+    case '9:16': return '1024x1536';
+    case '4:5': return '1024x1280';
+    case '3:4': return '1024x1376';
+    case '4:3': return '1376x1024';
+    case 'A4': return '1024x1456';
+    case 'auto': return 'auto';
+    default: return '1024x1024';
+  }
+}
 
 type AspectRatio = '1:1' | '4:5' | 'A4' | '16:9' | '3:4' | '9:16' | '4:3' | 'auto';
 
@@ -54,51 +88,27 @@ function getAspectInstructionEn(ratio: AspectRatio): string {
   }
 }
 
-const DESIGNER_PERSONA = `[DESIGNER IDENTITY]
-You are a premium Korean hospital marketing designer.
-Every image must look like a ₩500,000+ professional agency deliverable.
+const DESIGNER_PERSONA = `[ROLE] Premium Korean hospital marketing designer.
 
-[CORE PRINCIPLES]
-- Apple-level clean design meets Korean medical professionalism
-- Information hierarchy: title (biggest) > key data > supporting details > footer
-- Surfaces: subtle shadows, rounded corners, elegant gradients
-- Korean text: crystal clear rendering. If text might be garbled, use fewer/shorter words.
-- DO NOT render CSS specs, design tokens, or technical notes as visible text`;
+[CORE STYLE]
+- Apple-clean meets Korean medical professionalism. Editorial, aspirational, never generic.
+- Information hierarchy: title (largest) > key data > supporting > footer.
+- Subtle shadows, rounded corners, refined gradients.
+- Render Korean text crystal clear. Keep titles ≤10 chars, subtitles ≤20 chars.`;
 
-const DESIGN_RULE = `[디자인 규칙 — 프리미엄 품질 필수]
-1. 사용자가 지정한 색상, 레이아웃, 분위기를 정확히 따르되, 항상 고급스럽게 표현하세요.
-2. 한국어 텍스트를 크고 선명하게 렌더링하세요. 최소 14pt, 제목은 28pt 이상.
-3. 여백을 넉넉하게 쓰세요 — 빽빽한 디자인은 금지. 요소 간 충분한 간격을 두세요.
-4. 색상은 최대 3색. 세련되고 조화로운 팔레트. 원색 대신 톤 다운된 프리미엄 컬러.
-5. 그라데이션은 미묘하고 우아하게. 2-3 스톱, 부드러운 전환.
-6. 카드/박스는 둥근 모서리와 미세한 그림자로 고급스러운 입체감.
-7. 사용자가 제공하지 않은 텍스트(전화번호, URL, 주소, 병원명)를 절대 지어내지 마세요.
-8. 휴진/휴무 표시는 지정된 색상으로 모든 해당 날짜에 일관되게 적용.
-9. 결과물은 실제 프리미엄 병원 인스타그램에 바로 올릴 수 있는 수준이어야 합니다.
-10. 모바일에서 팔 길이 거리에서 모든 텍스트가 읽혀야 합니다.
+const DESIGN_RULE = `[DESIGN RULES]
+- Follow user-specified colors/layout/mood; always elevate to premium quality.
+- Generous whitespace. Never cramped.
+- Max 3 colors. Refined palette over primary colors. Subtle gradients (2-3 stops).
+- Cards/boxes: rounded corners + soft shadows for tasteful depth.
+- NEVER invent text the user did not provide (phone, URL, address, hospital name).
+- Holiday/closed days: apply specified color consistently across all matching dates.
+- Output should be ready to post on a premium hospital Instagram account.
 
-[금지 사항]
-- 싸구려 느낌의 starburst, 폭발 효과, 만화 스타일
-- 클립아트, 스톡 사진 느낌
-- 12pt 미만의 작은 텍스트
-- 여러 폰트 혼용
-- 원색 위주의 촌스러운 색 조합
-- 빽빽하고 답답한 레이아웃
-- 워터마크, 스티커 효과
-
-[FONT]
-콘텐츠의 목적과 분위기에 가장 어울리는 Google Fonts 한국어 폰트를 자동으로 선택하세요.
-제목과 본문에 서로 다른 폰트를 쓸 수 있습니다.
-단, 한국어 텍스트가 깨지거나 읽기 어려울 바에는 깔끔한 고딕체(sans-serif)를 기본으로 사용하세요.
-가독성 > 디자인. 예쁘지만 읽을 수 없는 폰트보다 평범하지만 또렷한 폰트가 낫습니다.
-
-[한국어 텍스트 렌더링 — CRITICAL]
-한국어 텍스트가 이미지에서 가장 중요한 요소입니다. 텍스트가 깨지면 이미지 전체가 쓸모없어집니다.
-- 모든 한국어 글자가 정확히 읽혀야 합니다. 한 글자라도 깨지면 실패.
-- 글자 간격(자간)이 균일해야 합니다. 글자가 겹치거나 너무 벌어지면 안 됩니다.
-- 받침이 있는 글자(강, 봄, 든)가 특히 깨지기 쉬우니 주의하세요.
-- 텍스트가 정확하지 않을 바에는 텍스트를 줄이세요. 긴 문장보다 짧은 키워드가 안전합니다.
-- 제목은 최대 10자, 부제는 최대 20자를 권장합니다. 길수록 깨질 확률이 높아집니다.`;
+[FORBIDDEN]
+- Cheap effects: starbursts, explosions, cartoon stickers, clipart, stock-photo feel
+- Text below 12pt, mixed fonts, garish primary color combos, cramped layouts
+- Watermarks, fake placeholders, instruction labels rendered as visible text`;
 
 // ── 달력 감지 ──
 
@@ -171,12 +181,7 @@ Text zones: Top 15% subtitle, Center 40% mainTitle (bold), Bottom 25% descriptio
 Every Korean character must be perfectly readable. If any character is garbled, the entire card fails.
 Keep titles under 10 characters, subtitles under 20. Shorter text = safer rendering.
 [CRITICAL — DESIGN SYSTEM LOCK]
-Before generating each card, mentally recall the reference image and answer:
-- What is the EXACT background color/gradient? → Use the same.
-- Where is the title text positioned? → Put it in the same spot.
-- What illustration style was used? → Use the same style.
-- What decorative elements exist? → Replicate them.
-If you cannot answer these questions, look at the reference image again.
+If style cues are described in this prompt (background color, gradient, text positions, illustration style, decorative elements), replicate them EXACTLY across all cards in the series.
 Consistency score: If a human cannot instantly tell these cards are from the same series, the generation has FAILED.`;
 
 const CARD_FRAME_RULE = `[LAYOUT RULES]
@@ -194,13 +199,13 @@ function buildCardStyleBlock(imageStyle: string): string {
 - realistic skin texture, real fabric texture, 4K ultra high resolution
 - 실제 한국인 인물, 실제 병원/의료 환경
 QUALITY REFERENCE: Think Apple product page or Samsung Health app photography — clean, editorial, aspirational. NOT stock photo website or generic hospital brochure.
-⛔ 금지: 3D render, illustration, cartoon, anime, vector, clay`;
+[FORBIDDEN] 3D render, illustration, cartoon, anime, vector, clay`;
 
   if (imageStyle === 'medical') return `[STYLE - 의학 3D (MEDICAL 3D RENDER)]
 - medical 3D illustration, anatomical render, scientific visualization
 - clinical lighting, x-ray style glow, translucent organs
 - 인체 해부학, 장기 단면도, 뼈/근육/혈관 구조
-⛔ 금지: cute cartoon, photorealistic human face`;
+[FORBIDDEN] cute cartoon, photorealistic human face`;
 
   if (imageStyle === 'infographic') return `[STYLE - 플랫 아이콘/벡터 (FLAT VECTOR)]
 - flat 2D vector icon style, solid fill colors, no gradients, no shadows
@@ -208,7 +213,7 @@ QUALITY REFERENCE: Think Apple product page or Samsung Health app photography �
 - simple and bold, like a mobile app icon or emoji
 - 밝고 깨끗한 단색 배경, 심플한 도형 기반 의료 아이콘
 QUALITY REFERENCE: Think Google Material Icons or Apple SF Symbols — minimal, clean, geometric.
-⛔ 금지: 3D render, realistic photo, illustration with shadows, gradients, complex textures`;
+[FORBIDDEN] 3D render, realistic photo, illustration with shadows, gradients, complex textures`;
 
   if (imageStyle === 'custom') return ''; // 사용자 지정 스타일 — 추가 규칙 없음
 
@@ -220,7 +225,7 @@ QUALITY REFERENCE: Think Google Material Icons or Apple SF Symbols — minimal, 
 - 밝은 파스텔 톤, 파란색/흰색/연한 색상 팔레트
 - cute stylized characters, friendly expressions
 QUALITY REFERENCE: Think 카카오프렌즈/LINE Friends level 3D quality — smooth, polished, professional. NOT cheap mobile game ad or low-poly 3D.
-⛔ 금지: photorealistic, real photo, DSLR, realistic texture`;
+[FORBIDDEN] photorealistic, real photo, DSLR, realistic texture`;
 }
 
 function buildCardNewsPromptFull(body: ImageRequestBody): string {
@@ -249,21 +254,14 @@ function buildCardNewsPromptFull(body: ImageRequestBody): string {
   const tmplMatch = body.prompt.match(/\[디자인 템플릿:[^\]]*\][\s\S]*$/m);
   const templateBlock = tmplMatch?.[0] || '';
 
-  // 참조 이미지 스타일 복제 지시
+  // 참조 이미지 스타일 복제 지시 (현재 generate 모드는 텍스트 힌트로 변환되므로
+  // "image attached" 가정을 빼고 prompt 내 style cues 기반으로 복제 지시).
   const refImageRule = hasRefImage ? `
 🔒 [STYLE LOCK — ZERO DEVIATION ALLOWED]
-A reference image is attached. You MUST clone its design system exactly:
-CLONE these from the reference:
-✅ Background: exact same color values, gradient angle, gradient stops
-✅ Text zones: exact same Y-position for subtitle, mainTitle, description
-✅ Font: exact same weight, exact same color, exact same relative size
-✅ Padding: exact same distance from edges
-✅ Decorative elements: exact same style, position, size, opacity
-✅ Card shape: exact same rounded corners, shadows, inner frame
-CHANGE only:
-✅ The actual text words (subtitle, mainTitle, description)
-✅ The illustration subject (keep same style, size, position)
-The viewer should tell these cards are from the SAME series at a glance.` : '';
+This card is part of a series. The reference style is described above.
+CLONE these from the reference style: same background color/gradient, same Y-position for subtitle/mainTitle/description, same font weight/color/size, same padding, same decorative elements.
+CHANGE only: the actual text words and the illustration subject.
+The viewer should instantly tell these cards are from the SAME series.` : '';
 
   const hasText = subtitle || mainTitle;
 
@@ -469,10 +467,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: gate.error }, { status: gate.status });
   }
 
-  const keys = getKeys();
+  const keys = getOpenAIKeys();
   if (keys.length === 0) {
     return NextResponse.json(
-      { error: '[env] GEMINI_API_KEY 누락' },
+      { error: '[env] OPENAI_API_KEY 누락' },
       { status: 500 },
     );
   }
@@ -489,7 +487,8 @@ export async function POST(request: NextRequest) {
   }
 
   const aspectRatio = body.aspectRatio || '1:1';
-  const aspectInstruction = getAspectInstruction(aspectRatio);
+  // size 파라미터로 처리되므로 prompt 자연어 비율 지시는 제거 (중복 방지).
+  // getAspectInstruction / getAspectInstructionEn 함수 정의는 롤백 대비 보존.
 
   // 언어 감지
   const hasEnglishRequest = /\b(english|영어로)\b/i.test(body.prompt);
@@ -519,26 +518,22 @@ export async function POST(request: NextRequest) {
   const isBlogMode = body.mode === 'blog';
   const isCardNewsMode = body.mode === 'card_news';
 
-  const BLOG_IMAGE_RULE = `[BLOG ILLUSTRATION — STRICT RULES]
-You are generating a blog body illustration. NOT a poster, flyer, ad, or infographic.
+  const BLOG_IMAGE_RULE = `[BLOG ILLUSTRATION]
+Pure visual illustration for a blog body image — never a poster, flyer, infographic, or card news layout.
 
-ABSOLUTE PROHIBITIONS:
-- NO text, letters, words, labels, logos, watermarks, signage, phone numbers, URLs
-- NO poster/infographic/card news layout — pure visual illustration only
+[FORBIDDEN]
+- Any text, letters, words, labels, logos, watermarks, phone numbers, URLs in the image
+- Poster / infographic / card-news layout
 
-[AI ARTIFACT PREVENTION]
-- NO symmetrical faces/poses, unnaturally smooth skin, unrealistic perfect teeth
-- NO studio-perfect lighting without shadows, empty backgrounds, stock photo poses
-- ADD natural imperfections: skin texture, slight asymmetry, environmental details
-- ADD realistic lighting: directional source, natural shadows, ambient occlusion
-
-[KOREAN MEDICAL CLINIC SETTING]
-- Real Korean hospital/clinic interior: clean white walls, wood accents, modern minimalist
+[KOREAN MEDICAL CONTEXT]
+- Real Korean hospital or clinic interior: clean white walls, wood accents, modern minimalist
 - Korean-style white coats (not American scrubs), modern equipment, warm accent lighting
+- Korean patients and staff, warm approachable atmosphere
 
 [COMPOSITION]
 - Rule of thirds, breathing room around subjects, foreground/midground/background depth
-- Natural eye-level or slightly elevated angle, no dead center placement`;
+- Natural eye-level or slightly elevated angle, no dead-center placement
+- Directional natural lighting with soft shadows`;
 
   const fullPrompt = isCardNewsMode
     ? buildCardNewsPromptFull(body)
@@ -546,7 +541,6 @@ ABSOLUTE PROHIBITIONS:
     ? [
         BLOG_IMAGE_RULE,
         body.prompt.trim(),
-        getAspectInstructionEn(aspectRatio),
         'Generate at high resolution. Sharp edges, no blur, no compression artifacts.',
       ].filter(Boolean).join('\n\n')
     : (() => {
@@ -563,7 +557,6 @@ ABSOLUTE PROHIBITIONS:
         body.logoInstruction || '',
         body.hospitalInfo || '',
         body.brandColors || '',
-        aspectInstruction,
         'Generate at high resolution. Sharp edges, crisp text, no blur, no compression artifacts.',
         `⛔ TEXT SAFETY:
 - ONLY render Korean text that appears in "quotes" in the prompt. Do NOT invent text.
@@ -572,221 +565,77 @@ ABSOLUTE PROHIBITIONS:
       ].filter(Boolean).join('\n\n');
     })()
 
-  // 멀티모달 parts 구성: 텍스트 + 참조 이미지들
-  const parts: Array<Record<string, unknown>> = [{ text: fullPrompt }];
+  // ── 모델 / 사이즈 / 품질 매핑 ──
+  // Default: gpt-image-2 (2026-04-21 출시, organization verification 완료).
+  // Snapshot pin 권장: OPENAI_IMAGE_MODEL=gpt-image-2-2026-04-21 (silent 업그레이드 차단).
+  const MODEL = process.env.OPENAI_IMAGE_MODEL || 'gpt-image-2';
+  const sizeStr = aspectRatioToSize(aspectRatio);
+  const qualityStr: 'low' | 'medium' | 'high' | 'auto' =
+    body.quality === 'premium' ? 'high' : 'auto';
 
-  // 달력 참조 이미지를 inlineData로 추가
-  if (body.calendarImage) {
-    const calMatch = body.calendarImage.match(/^data:(image\/\w+);base64,(.+)$/);
-    if (calMatch) {
-      parts.push({
-        inlineData: { mimeType: calMatch[1], data: calMatch[2] },
-      });
-    }
+  // ── 첨부 이미지 (referenceImage / logoBase64 / calendarImage) → prompt 텍스트 힌트로 변환 ──
+  // gpt-image-2 의 images.edit 는 2026-04-27 부터 SDK v6.34 에서 model validation 으로 거부됨
+  // (openai-node 이슈 #1844). 현재는 generate 단일 호출 + 텍스트 힌트로 우회.
+  // OpenAI 가 픽스하면 OPENAI_IMAGE_EDIT_ENABLED=1 환경변수 + edit 분기 활성화 가능 (TODO).
+  // (참고: isCardNewsMode/buildCardNewsIllustrationPrompt/buildCardNewsTextOverlayPrompt 함수는
+  //  edit 활성화 시 2-Stage 복원용으로 보존.)
+  const editEnabled = process.env.OPENAI_IMAGE_EDIT_ENABLED === '1';
+  const hasAttachment = !!body.referenceImage || !!body.logoBase64 || !!body.calendarImage;
+  let promptForGenerate = fullPrompt;
+  if (hasAttachment && !editEnabled) {
+    const hints: string[] = [];
+    if (body.referenceImage) hints.push('Reference image attached — clone its background, layout zones, font style, and decorative elements per the [STYLE LOCK] / [STYLE CLONE] block above.');
+    if (body.logoBase64) hints.push('Hospital logo attached — render the logo subtly in a corner, small and tasteful (do not invent a different logo).');
+    if (body.calendarImage) hints.push('Calendar reference image attached — follow the date-weekday placement strictly per the [정확한 달력 데이터] block above.');
+    promptForGenerate = `${fullPrompt}\n\n[ATTACHED IMAGE CONTEXT]\n${hints.join('\n')}`;
   }
+  // (isCardNewsMode + premium quality 는 quality='high' 로 자동 매핑 — 기존 2-Stage 우회.)
 
-  // 카드뉴스 참고 이미지를 inlineData로 추가
-  if (body.referenceImage) {
-    const refMatch = body.referenceImage.match(/^data:(image\/\w+);base64,(.+)$/);
-    if (refMatch) {
-      parts.push({
-        inlineData: { mimeType: refMatch[1], data: refMatch[2] },
-      });
-    }
-  }
-
-  // 로고 이미지를 inlineData로 추가
-  if (body.logoBase64) {
-    const match = body.logoBase64.match(/^data:(image\/\w+);base64,(.+)$/);
-    if (match) {
-      parts.push({
-        inlineData: { mimeType: match[1], data: match[2] },
-      });
-    }
-  }
-
-  // ═══ 카드뉴스 2단계 생성: Flash(밑그림) → Pro(글씨) — quality='premium'일 때만 ═══
-  if (isCardNewsMode && body.quality === 'premium') {
-    const illustrationPrompt = buildCardNewsIllustrationPrompt(body);
-    const textOverlayPrompt = buildCardNewsTextOverlayPrompt(body);
-    const hasTextToRender = !!textOverlayPrompt;
-
-    // ── Stage 1: Flash로 일러스트 생성 ──
-    const stage1Parts: Array<Record<string, unknown>> = [{ text: illustrationPrompt }];
-    if (body.referenceImage) {
-      const refMatch = body.referenceImage.match(/^data:(image\/\w+);base64,(.+)$/);
-      if (refMatch) stage1Parts.push({ inlineData: { mimeType: refMatch[1], data: refMatch[2] } });
-    }
-
-    const FLASH_MODELS = ['gemini-3.1-flash-image-preview', 'gemini-2.5-flash-image'];
-    let stage1Image: { mimeType: string; data: string } | null = null;
-
-    for (const model of FLASH_MODELS) {
-      for (let ki = 0; ki < keys.length; ki++) {
-        const keyIdx = (keyIndex + ki) % keys.length;
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 60000);
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
-        try {
-          const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-goog-api-key': keys[keyIdx],
-            },
-            body: JSON.stringify({ contents: [{ role: 'user', parts: stage1Parts }], generationConfig: { responseModalities: ['IMAGE', 'TEXT'], temperature: 0.6 } }),
-            signal: controller.signal,
-          });
-          clearTimeout(timeoutId);
-          if (!response.ok) { const s = response.status; if (s === 429 || s === 503) { await new Promise(r => setTimeout(r, 1500)); continue; } if (s === 400 || s === 404) break; continue; }
-          keyIndex = (keyIdx + 1) % keys.length;
-          const data = await response.json();
-          const imgPart = (data?.candidates?.[0]?.content?.parts || []).find((p: { inlineData?: { data?: string } }) => p.inlineData?.data);
-          if (imgPart?.inlineData) { stage1Image = { mimeType: imgPart.inlineData.mimeType || 'image/png', data: imgPart.inlineData.data }; break; }
-        } catch (err: unknown) { clearTimeout(timeoutId); if ((err as Error).name === 'AbortError') break; await new Promise(r => setTimeout(r, 1500)); continue; }
-      }
-      if (stage1Image) break;
-    }
-
-    if (!stage1Image) {
-      // Stage 1 (Flash) failed, falling back to single-stage Pro
-    } else if (!hasTextToRender) {
-      return NextResponse.json({ imageDataUrl: `data:${stage1Image.mimeType};base64,${stage1Image.data}`, mimeType: stage1Image.mimeType, model: 'flash(illustration)' });
-    } else {
-      // ── Stage 2: Pro로 텍스트 오버레이 ──
-      const stage2Parts: Array<Record<string, unknown>> = [
-        { text: textOverlayPrompt },
-        { inlineData: { mimeType: stage1Image.mimeType, data: stage1Image.data } },
-      ];
-      const PRO_MODELS = ['gemini-3-pro-image-preview', 'gemini-3.1-flash-image-preview'];
-
-      for (const model of PRO_MODELS) {
-        for (let ki = 0; ki < keys.length; ki++) {
-          const keyIdx = (keyIndex + ki) % keys.length;
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 120000);
-          const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
-          try {
-            const response = await fetch(apiUrl, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'x-goog-api-key': keys[keyIdx],
-              },
-              body: JSON.stringify({ contents: [{ role: 'user', parts: stage2Parts }], generationConfig: { responseModalities: ['IMAGE', 'TEXT'], temperature: 0.4 } }),
-              signal: controller.signal,
-            });
-            clearTimeout(timeoutId);
-            if (!response.ok) { const s = response.status; if (s === 429 || s === 503) { await new Promise(r => setTimeout(r, 1500)); continue; } if (s === 400 || s === 404) break; continue; }
-            keyIndex = (keyIdx + 1) % keys.length;
-            const data = await response.json();
-            const imgPart = (data?.candidates?.[0]?.content?.parts || []).find((p: { inlineData?: { data?: string } }) => p.inlineData?.data);
-            if (imgPart?.inlineData) {
-              return NextResponse.json({ imageDataUrl: `data:${imgPart.inlineData.mimeType || 'image/png'};base64,${imgPart.inlineData.data}`, mimeType: imgPart.inlineData.mimeType || 'image/png', model: `flash(illustration)+${model}(text)` });
-            }
-          } catch (err: unknown) { clearTimeout(timeoutId); if ((err as Error).name === 'AbortError') break; await new Promise(r => setTimeout(r, 1500)); continue; }
-        }
-      }
-
-      // Stage 2 (Pro text) failed, returning Stage 1 image without text
-      return NextResponse.json({ imageDataUrl: `data:${stage1Image.mimeType};base64,${stage1Image.data}`, mimeType: stage1Image.mimeType, model: 'flash(illustration-only)' });
-    }
-  }
-
-  // 모델 우선순위: Flash(Nano Banana 2) 먼저 → Pro fallback (속도 우선)
-  const MODELS = [
-    'gemini-3.1-flash-image-preview',   // Nano Banana 2: 기본 (빠름, 안정)
-    'gemini-2.5-flash-image',           // Nano Banana: fallback
-    'gemini-3-pro-image-preview',       // Pro: 최후 fallback (느리지만 고품질)
-  ];
-
-  const apiBody = {
-    contents: [{ role: 'user', parts }],
-    generationConfig: {
-      responseModalities: ['IMAGE', 'TEXT'],
-      temperature: 0.6,
-    },
-  };
-
-  const perAttemptTimeout = 120000;
+  // ── OpenAI 호출 + 멀티키 로테이션 ──
   let lastError = '';
+  for (let ki = 0; ki < keys.length; ki++) {
+    const keyIdx = (keyIndex + ki) % keys.length;
+    const openai = new OpenAI({ apiKey: keys[keyIdx], timeout: 120_000 });
 
-  // 각 모델 × 각 키 조합으로 시도
-  for (const model of MODELS) {
-    for (let ki = 0; ki < keys.length; ki++) {
-      const keyIdx = (keyIndex + ki) % keys.length;
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), perAttemptTimeout);
-      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+    try {
+      const result = await openai.images.generate({
+        model: MODEL,
+        prompt: promptForGenerate,
+        size: sizeStr as 'auto',
+        quality: qualityStr,
+        n: 1,
+      });
 
-      try {
-        const response = await fetch(apiUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-goog-api-key': keys[keyIdx],
-          },
-          body: JSON.stringify(apiBody),
-          signal: controller.signal,
-        });
-
-        clearTimeout(timeoutId);
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          const status = response.status;
-          lastError = `${model} key${ki}: ${status} ${errorText.substring(0, 200)}`;
-
-          // 429/503 → 다음 키 또는 다음 모델로
-          if (status === 429 || status === 503) {
-            await new Promise(r => setTimeout(r, 1500));
-            continue;
-          }
-
-          // 400 (모델 미존재 등) → 다음 모델로
-          if (status === 400 || status === 404) break;
-
-          // 기타 에러 → 다음 시도
-          continue;
-        }
-
-        keyIndex = (keyIdx + 1) % keys.length;
-        const data = await response.json();
-
-        const resParts = data?.candidates?.[0]?.content?.parts || [];
-        const imagePart = resParts.find((p: { inlineData?: { data?: string } }) => p.inlineData?.data);
-
-        if (imagePart?.inlineData) {
-          const mimeType = imagePart.inlineData.mimeType || 'image/png';
-          const base64 = imagePart.inlineData.data;
-
-          return NextResponse.json({
-            imageDataUrl: `data:${mimeType};base64,${base64}`,
-            mimeType,
-            model,
-          });
-        }
-
-        // 이미지 없는 응답 → 다음 시도
-        lastError = `${model}: 응답에 이미지 데이터 없음`;
+      keyIndex = (keyIdx + 1) % keys.length;
+      const b64 = result.data?.[0]?.b64_json;
+      if (!b64) {
+        lastError = `${MODEL} key${ki}: 응답에 이미지 데이터 없음`;
         continue;
-      } catch (err: unknown) {
-        clearTimeout(timeoutId);
-        const error = err as Error;
-        lastError = `${model} key${ki}: ${error.name === 'AbortError' ? 'timeout' : error.message}`;
+      }
 
-        if (error.name === 'AbortError') {
-          // 타임아웃 → 다음 모델로 (같은 모델 재시도 무의미)
-          break;
-        }
+      return NextResponse.json({
+        imageDataUrl: `data:image/png;base64,${b64}`,
+        mimeType: 'image/png',
+        model: MODEL,
+      });
+    } catch (err: unknown) {
+      const e = err as { status?: number; message?: string; name?: string };
+      const status = e.status ?? 0;
+      lastError = `${MODEL} key${ki}: ${status} ${(e.message || '').slice(0, 200)}`;
+      // 429 / 503 → 다음 키 (rate limit / 서비스 일시 불가)
+      if (status === 429 || status === 503) {
         await new Promise(r => setTimeout(r, 1500));
         continue;
       }
+      // 400 / 401 / 404 → 모든 키 동일 결과 (요청/모델/인증 오류) → 즉시 종료
+      if (status === 400 || status === 401 || status === 404) break;
+      // 기타 (5xx, 네트워크) → 다음 키
+      continue;
     }
   }
 
   return NextResponse.json(
-    { error: `이미지 생성 실패 (${MODELS.length}개 모델 모두 실패)`, details: lastError },
+    { error: `이미지 생성 실패 (모든 OpenAI 키 시도 실패)`, details: lastError },
     { status: 502 },
   );
 }
