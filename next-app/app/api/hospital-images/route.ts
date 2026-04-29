@@ -53,14 +53,27 @@ export async function GET(request: NextRequest) {
 
   // user-scope · primary gate. RLS 는 SELECT permissive 라 server-side filter 가
   // 격리 책임. team_id 비교는 정수 컬럼이라 SQL injection 위험 없음.
-  if (mineOnly || ownerTeamId === null) {
-    query = query.eq('user_id', owner);
-  } else {
-    query = query.or(`user_id.eq.${owner},team_id.eq.${ownerTeamId}`);
-  }
-
-  if (hospitalName) {
+  //
+  // 병원 단위 공유 (scope=hospital): hospitalName + scope=hospital 가 함께 명시되면
+  // user/team 필터를 우회하고 그 병원의 모든 이미지를 반환한다 (업로더·팀 무관).
+  // 사용자 정책: "이미지 있는 병원 선택해서 글 쓰면 무조건 매칭되어야 한다."
+  // 블로그 생성 (blog/page.tsx) 만 이 모드를 사용하고, 라이브러리 페이지는 사용 안 함
+  // → 라이브러리는 소유권·관리 UX 차원에서 팀 단위 격리 유지가 의도된 정책.
+  // 인증 가드는 위 checkAuth 가 담당하므로, scope=hospital 은 익명 노출이 아니라
+  // "인증된 사용자 간 병원 단위 공유" 다.
+  const hospitalScope = params.get('scope') === 'hospital';
+  if (hospitalName && hospitalScope) {
     query = query.eq('hospital_name', hospitalName);
+    // mineOnly 가 함께 오면 hospitalName 안에서도 본인 것만 (예외 케이스).
+    if (mineOnly) query = query.eq('user_id', owner);
+  } else {
+    if (mineOnly || ownerTeamId === null) {
+      query = query.eq('user_id', owner);
+    } else {
+      query = query.or(`user_id.eq.${owner},team_id.eq.${ownerTeamId}`);
+    }
+    // hospitalName 만 단독 전달 (라이브러리 hospital 필터) → 기존처럼 user/team 안에서 추가 필터.
+    if (hospitalName) query = query.eq('hospital_name', hospitalName);
   }
 
   if (tagsParam) {

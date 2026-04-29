@@ -1441,9 +1441,16 @@ JSON 형식으로 응답해주세요.`;
         const imgMarkers = [...blogText.matchAll(/\[IMG_(\d+)\s+alt="([^"]*)"\]/g)];
         if (imgMarkers.length > 0) {
           try {
-            // 팀 풀 fetch — Authorization 헤더로 owner·team_id 결정 (서버에서).
-            // mine 미지정 시 본인 + 같은 팀 이미지가 한 번에 옴.
+            // 병원 단위 풀 fetch — hospitalName + scope=hospital 을 보내면 서버가 user/team 필터를
+            // 우회하고 그 병원의 모든 이미지(업로더·팀 무관)를 돌려준다. 사용자 정책:
+            // "이미지 있는 병원 선택해서 글 쓰면 무조건 매칭" (업로더 무관).
+            // hospitalName 이 비어 있으면 scope 도 생략하여 기존 동작(본인+같은 팀 풀)으로 폴백.
+            // 라이브러리 페이지(image-library)는 scope 를 보내지 않아 팀 단위 격리 유지.
             const qs = new URLSearchParams({ limit: '200' });
+            if (hospitalName?.trim()) {
+              qs.set('hospitalName', hospitalName.trim());
+              qs.set('scope', 'hospital');
+            }
             const res = await authFetch(`/api/hospital-images?${qs.toString()}`);
             if (res.ok) {
               const data = await res.json();
