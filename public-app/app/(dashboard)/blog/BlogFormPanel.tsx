@@ -591,7 +591,7 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
                     <label className="text-xs font-semibold text-slate-500">이미지 수</label>
-                    <span className="text-[10px] text-blue-500">AI 자동 배치 + 부족분 생성</span>
+                    <span className="text-[10px] text-blue-500">AI 자동 배치 (매칭 안 되는 자리는 비워둠)</span>
                   </div>
                   <input type="range" min={0} max={15} step={1} value={imageCount} onChange={e => setImageCount(Number(e.target.value))} className="w-full accent-blue-500 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer" />
                   <div className="flex justify-between mt-1 text-[10px] text-slate-400"><span>0장</span><span className="text-blue-600 font-semibold">{imageCount}장</span><span>15장</span></div>

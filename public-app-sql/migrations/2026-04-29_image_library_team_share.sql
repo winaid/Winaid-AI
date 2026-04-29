@@ -32,10 +32,19 @@ ALTER TABLE public.hospital_images
 -- ── 2. 기존 row 백필 ───────────────────────────────────────────────
 -- profiles.team_id 가 NULL 이면 hospital_images.team_id 도 NULL 유지.
 -- 본 PR 의 SELECT 필터는 team_id NULL 을 "팀 공유 안 됨" 으로 해석함.
+--
+-- ⚠️ 타입 정합성 메모:
+--   2026-04-17_hospital_images.sql 의 schema 선언은 user_id uuid 였으나, 운영
+--   DB 는 게스트 사용자의 user_id='guest' (string literal) INSERT 를 허용하기
+--   위해 어느 시점에 TEXT 로 변경됨 (2026-04-24_hospital_images_rls.sql:3
+--   주석 참고: "user_id 컬럼은 text 타입 — auth.uid() 는 uuid 반환 → ::text 캐스팅 필수").
+--   profiles.id 는 여전히 uuid → 비교 시 type mismatch (operator does not exist:
+--   text = uuid). 따라서 p.id::text 로 명시 캐스트.
+--   schema 선언과 운영 컬럼 타입 정합성은 별도 PR 에서 정리 필요.
 UPDATE public.hospital_images h
    SET team_id = p.team_id
   FROM public.profiles p
- WHERE h.user_id = p.id
+ WHERE h.user_id = p.id::text
    AND h.team_id IS NULL;
 
 
@@ -51,10 +60,12 @@ CREATE INDEX IF NOT EXISTS idx_hospital_images_team_id
 CREATE OR REPLACE FUNCTION public.set_hospital_image_team_id()
 RETURNS TRIGGER AS $$
 BEGIN
+  -- hospital_images.user_id 는 운영 DB 에서 TEXT (위 "타입 정합성 메모" 참고).
+  -- profiles.id 는 uuid → 비교 시 ::text 캐스트 필수.
   IF NEW.team_id IS NULL AND NEW.user_id IS NOT NULL THEN
     SELECT team_id INTO NEW.team_id
       FROM public.profiles
-     WHERE id = NEW.user_id;
+     WHERE id::text = NEW.user_id;
   END IF;
   RETURN NEW;
 END;

@@ -1203,10 +1203,10 @@ JSON 형식으로 응답해주세요.`;
         const imgMarkers = [...blogText.matchAll(/\[IMG_(\d+)\s+alt="([^"]*)"\]/g)];
         if (imgMarkers.length > 0) {
           try {
-            const { userId: uid } = await getSessionSafe();
+            // authFetch 로 Bearer 토큰 자동 첨부. raw fetch 면 서버가 owner='guest' 로
+            // resolve 해 빈 결과 반환 (resolveImageOwner: Authorization 헤더만 신뢰).
             const qs = new URLSearchParams({ limit: '100' });
-            if (uid) qs.set('userId', uid);
-            const res = await fetch(`/api/hospital-images?${qs.toString()}`);
+            const res = await authFetch(`/api/hospital-images?${qs.toString()}`);
             if (res.ok) {
               const data = await res.json();
               const libraryImages: HospitalImage[] = Array.isArray(data) ? data : (data.images || []);
