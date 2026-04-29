@@ -297,55 +297,6 @@ export const E_E_A_T_GUIDE = `<e_e_a_t_signals>
 </korean_authority_signals>
 </e_e_a_t_signals>`;
 
-export const CITATION_PATTERN_GUIDE = `<citation_patterns>
-권위 출처를 자연스럽게 녹이는 5가지 패턴. reference_material이 있을 때 우선 사용하고,
-없을 때는 일반화된 권위 표현만 신중하게.
-
-<pattern_1 name="간접 인용">
-"대한치과의사협회에서도 이 점을 강조하고 있습니다"
-"국가건강정보포털에서 권장하는 관리법은…"
-→ 단체명만, 구체 문서·연도·버전 금지.
-</pattern_1>
-
-<pattern_2 name="일반화 인용">
-"국내 치과 임상에서 일반적으로 권장되는 방법은…"
-"임상 현장에서 자주 적용되는 기준은…"
-→ 단체명도 명시 안 함, "임상 현장" 정도로만.
-</pattern_2>
-
-<pattern_3 name="가이드라인 인용">
-"보건복지부 의료광고 심의 기준에 따르면…"
-"국내 치과 진료 가이드라인에서는…"
-→ "심의 기준", "가이드라인" 같은 일반 명사. 구체 문서번호 금지.
-</pattern_3>
-
-<pattern_4 name="통계 인용 (참고 자료 있을 때만)">
-"국내 성인의 70% 이상이 잇몸 질환을 경험한다고 보고되고 있습니다"
-"치과 진료를 받는 환자 중 약 40%가 임플란트 시술을 고려한다는 조사가 있습니다"
-→ reference_material에 명시된 수치만. 없으면 사용 금지.
-</pattern_4>
-
-<pattern_5 name="전문가 견해 (병원 내부)">
-"진료실에서 자주 받는 질문이기도 합니다"
-"상담 오시는 분들의 경험을 종합해보면…"
-→ 외부 인용 부담 없는, 병원 자체 경험 기반. 가장 안전.
-</pattern_5>
-
-<integration>
-한 글에 인용 패턴 2~3개 자연 분산. 같은 패턴 3회 이상 반복 금지.
-reference_material이 있으면 pattern_1~4 활용. 없으면 pattern_5 위주.
-인용 빈도: 800자당 1회 정도. 너무 잦으면 어색, 너무 드물면 신뢰도 부족.
-</integration>
-
-<forbidden>
-- "2024년 발표된 연구에 따르면" — 구체 연도 환각
-- "JCO Vol.42 Issue 3 논문에서…" — 논문명 조작
-- "ADA(American Dental Association) 가이드라인" — 해외 단체 (국내 가이드만)
-- "최근 발표된 메타분석 결과" — 출처 모호
-- "전문가들에 따르면" — 익명 권위 (구체 단체나 병원 경험만)
-</forbidden>
-</citation_patterns>`;
-
 export type JourneyStage = 'discovery' | 'consideration' | 'aftercare' | 'general';
 
 export const JOURNEY_STAGE_GUIDES: Record<JourneyStage, string> = {
@@ -405,68 +356,6 @@ export function inferJourneyStage(topicType: TopicType): JourneyStage {
   return 'general';
 }
 
-export const AI_SNIPPET_GUIDE = `<ai_snippet_optimization>
-네이버 AI 요약(Cue:) · 지식스니펫 · Google Featured Snippet이 글 상단을 자동 요약합니다.
-잘 뽑히는 글 구조를 만드세요.
-
-<first_100_chars label="첫 100자 요약">
-도입부 첫 2~3문장은 AI가 그대로 요약문으로 쓸 수 있어야 합니다.
-  ✅ 질문 한 줄 + 핵심 답 한 줄 + 근거 한 줄
-     예: "임플란트는 얼마나 오래 쓸 수 있을까요? 평균 수명은 약 10~15년이지만,
-          관리 습관에 따라 20년 이상 유지하시는 분들도 많습니다."
-  ❌ 추상적 배경 ("현대 사회에서 치아 건강의 중요성은 날로 커지고 있습니다.")
-</first_100_chars>
-
-<h2_question_style label="소제목 질문형">
-사용자 검색 쿼리와 직접 매칭되도록 질문형·검색형 구어체로 작성.
-  ✅ "임플란트 수명은 얼마나 되나요?"
-  ✅ "관리를 소홀히 하면 어떻게 되나요?"
-  ❌ "임플란트의 수명 및 관리 방법" (논문식)
-</h2_question_style>
-
-<direct_answer_structure label="각 섹션 직답 구조">
-각 소제목 아래 첫 문단은 질문에 대한 짧고 명확한 답으로 시작. 이후 확장.
-  ✅ "네, 가능합니다. 다만 조건이 있습니다." → 상세
-  ✅ "평균 10~15년입니다." → 요인 설명
-  ❌ "이 주제는 매우 복잡하며..." (답 회피)
-</direct_answer_structure>
-
-<scannable_list priority="low">
-리스트(ul/li)는 **정말 필요한 경우에만** 사용. 기본은 단락 서술.
-
-## 허용 상황 (리스트 OK)
-- FAQ 섹션 (Q&A 구조)
-- 3개 이상 옵션/종류 **비교** (재료별 특성, 시술 종류 비교)
-- customSubheadings 로 리스트 형식 명시 요청
-
-## 금지 상황 (반드시 단락 서술)
-- **증상 나열** — "증상 A — 설명, 증상 B — 설명" 절대 금지
-- **주의사항 나열** — 단락 흐름으로 풀어쓰기
-- **치료/시술 단계** — 각 단계를 독립 <p> 로
-- **관리 방법 나열** — 단락으로 통합
-
-### ❌ 금지 예시
-<ul>
-  <li><strong>잇몸 붓기</strong> — 양치 후 피가 자주 나요.</li>
-  <li><strong>고름</strong> — 냄새가 심해지면 위험.</li>
-  <li><strong>통증</strong> — 씹을 때 아프면 바로.</li>
-</ul>
-
-### ✅ 허용 예시 (같은 내용, 단락 서술)
-<p>가장 먼저 살펴볼 신호는 **잇몸 붓기와 출혈**이에요. 양치 후 피가 자주 묻어 나오거나 잇몸이 붉게 부어 있다면 초기 염증 신호일 수 있어요. 여기에 **고름이나 이상한 냄새**까지 함께 느껴진다면 지체하지 마시고 확인받아 보시길 권합니다. 마지막으로 **보철물의 흔들림이나 씹을 때의 통증**도 주의 깊게 살펴볼 부분이에요.</p>
-
-## 학습된 말투 우선 규칙
-learned_style 블록이 있을 때:
-- 학습 샘플에 리스트(ul/li) 가 **없으면** 리스트 사용 금지
-- 학습 샘플이 단락 중심이면 반드시 단락 서술만 사용
-- 학습된 말투가 최우선 (이 scannable_list 규칙보다 상위)
-</scannable_list>
-
-<semantic_chunk label="의미 단위 짧은 문단">
-한 문단 = 한 주제. 문단 첫 문장 = 그 문단의 요점 (두괄식).
-</semantic_chunk>
-</ai_snippet_optimization>`;
-
 export const FAQ_SECTION_GUIDE = `<faq_section_guide>
 글 마무리 직전에 FAQ 섹션을 추가하면 AI 요약·롱테일 검색·FAQPage 스키마 대응에 유리합니다.
 variable 블록의 include_faq가 "true" 이거나 글 길이가 1500자 이상이면 FAQ 섹션을 포함하세요.
@@ -499,59 +388,6 @@ FAQ는 본문 소제목 수에서 제외. 별도 마무리 전 섹션.
 본문 소제목과 중복되지 않게 각도를 다르게.
 </integration>
 </faq_section_guide>`;
-
-export const MOBILE_READABILITY_GUIDE = `<mobile_readability>
-네이버 블로그 사용자 70%+가 모바일. 화면 폭이 좁고 스크롤 부담이 크니 아래 규칙을 따르세요.
-
-<line_length label="한 문장 글자수">
-모바일 가로 약 30~35자에서 줄바꿈됨. 한 문장이 길면 4줄+로 보임 → 읽다가 이탈.
-권장: 한 문장 최대 60자 (모바일에서 약 2줄).
-초과 시 쉼표나 마침표로 분리.
-
-  ✅ "임플란트 수명은 평균 10~15년입니다. 다만 관리 습관에 따라 20년 이상도 가능합니다."
-     (각 문장 30자 내외, 모바일 1줄)
-
-  ❌ "임플란트는 평균적으로 10년에서 15년 정도 사용할 수 있는 시술이지만 평소 관리 습관과 정기 검진 여부에 따라 20년 이상도 충분히 사용 가능한 경우가 많습니다."
-     (75자, 모바일 4줄로 깨짐)
-</line_length>
-
-<paragraph_height label="문단 높이">
-한 문단이 모바일 화면에서 5줄 이내가 이상적.
-문장 4개 × 평균 30자 ≈ 120자 = 모바일 5줄.
-이미 writing_style의 "문단 최대 4문장 150자" 규칙과 일치 — 추가 검증.
-</paragraph_height>
-
-<scannable_pattern label="스캔 친화">
-모바일 사용자는 처음에 스크롤로 훑어 읽음. 시각적 앵커(굵은 라벨)를 제공하세요.
-
-1. ul/li 항목 시작에 strong 라벨:
-   ✅ <li><strong>잇몸 관리</strong>: 치간 칫솔 매일 사용</li>
-   ❌ <li>잇몸 관리는 치간 칫솔을 매일 사용하는 것이 좋습니다</li>
-
-2. 핵심 수치·기간을 strong:
-   ✅ "약 <strong>2~3개월</strong> 소요됩니다"
-
-3. 단락 첫 줄에 핵심 키워드 등장 (두괄식 강조):
-   ✅ "<strong>정기 검진</strong>이 핵심입니다. 6개월마다…"
-</scannable_pattern>
-
-<above_the_fold label="첫 화면 진입">
-모바일 첫 화면(스크롤 안 한 상태)에 보이는 분량 = 약 200~300자 (도입부 거의 전체).
-이 안에서 다음 3가지가 전달돼야 사용자가 계속 읽음:
-1. 이 글이 누구를 위한 것인지 (공감 또는 질문)
-2. 무엇을 다루는지 (핵심 키워드)
-3. 읽으면 무엇을 얻는지 (가치 약속)
-
-훅 5유형 중 무엇을 쓰든 위 3요소를 200자 안에 압축.
-</above_the_fold>
-
-<visual_breathing label="시각 휴식">
-긴 문단이 연속되면 답답. 다음 패턴으로 시각적 호흡:
-- 일반 문단 2~3개 후 → ul/li 1회 (시각 변화)
-- 학습된 말투(learned_style)에 빈 줄 패턴이 있으면 빈 p 1개 삽입
-- 핵심 메시지 강조는 strong 또는 짧은 단독 문단(1문장 p)
-</visual_breathing>
-</mobile_readability>`;
 
 export const TERMINOLOGY_GUIDE: Record<string, string> = {
   '치과': `<terminology category="치과">
@@ -917,20 +753,8 @@ HTML만 출력하세요. 사용 가능 태그: <h2>, <h3>, <p>, <ul>, <li>, <str
 
 <structure>
 도입부 (2문단, 소제목 없이 p만):
-  첫 문장 훅 — 아래 5유형 중 주제와 가장 어울리는 것을 매번 다르게 선택:
-
-  1. 질문형: 독자에게 직접 묻기
-     "칫솔질만으로 임플란트가 오래갈 수 있을까요?"
-  2. 상황형: 환자 일상 장면 묘사
-     "아침에 양치할 때 칫솔에 피가 묻어나온 경험, 한 번쯤 있으시죠."
-  3. 통계형: 구체 수치로 시작 (참고 자료 기반)
-     "국내 성인 10명 중 7명은 잇몸 질환을 경험한다고 합니다."
-  4. 대비형: 흔한 오해 vs 사실
-     "'임플란트는 영구적'이라는 말, 사실 반만 맞습니다."
-  5. 스토리형: 진료실 에피소드 (익명, 일반화)
-     "얼마 전 진료실을 찾은 40대 환자분이 이런 질문을 하셨어요."
-
-  매번 같은 유형 반복 금지. learned_style이 특정 훅 패턴을 쓰면 그것을 우선.
+  훅·인사·공감 패턴은 learned_style 또는 medical_blog_voice 의 opening_template 따름.
+  둘 다 없으면 환자 시선의 짧은 hook (1~2문장) 으로 시작.
   둘째 문장부터 = 글에서 다룰 내용 자연스럽게 예고.
   첫 2문장 안에 주요 키워드 1회 포함.
 
@@ -980,9 +804,8 @@ blog_title이 없으면 topic을 기준으로 동일 원칙 적용.
 - Expertise: 검증된 의학 용어·기전 (국내 기준)
 - Authoritativeness: 일반화된 권위 표현 ("대한치과의사협회에서 강조하는") — 구체 논문명/연도 금지
 - Trustworthiness: 한계 인정 ("개인차가 있습니다", "진찰 후 정확한 진단")
-- 인용은 citation_patterns 5유형 중 매번 다른 것을 자연 분산. 한 글에 2~3회.
 
-자세한 기준은 별도 e_e_a_t_signals · citation_patterns 블록 참고.
+자세한 기준은 별도 e_e_a_t_signals 블록 참고.
 </e_e_a_t>
 
 <ai_snippet>
@@ -992,7 +815,6 @@ blog_title이 없으면 topic을 기준으로 동일 원칙 적용.
 - 각 섹션 첫 문단 = 짧은 직답 → 이후 확장
 - 3개+ 나열 → ul/li (strong 라벨 + 각 항목 1~2문장 설명 필수)
 - 단계 설명은 단락으로 풀어쓰기 (번호+제목만 나열 금지)
-자세한 기준은 별도 ai_snippet_optimization 블록 참고.
 </ai_snippet>
 
 <featured_snippet>
@@ -1186,7 +1008,16 @@ image_index가 없으면 마커를 포함하지 마세요.
 </writing_style>
 
 <priority_order>
-의료광고법 > 가독성 > SEO > 분량. 키워드 삽입으로 문장이 부자연스러워지면 키워드를 빼세요.
+규칙이 서로 충돌할 때 이 순서로 우선하세요 (BLOG_PERSONA priority_order 와 동일):
+1. 의료광고법 준수 — 절대 양보 불가
+2. learned_style (override_all_style) — 학습된 말투
+3. medical_blog_voice (default_voice) — 학습 없을 때의 fallback 톤
+4. greeting_rules — 병원 아이덴티티 (인사 형식)
+5. 가독성 (문단 길이·강조) — 환자 체험
+6. SEO 키워드 배치 — 검색 노출
+7. 목표 글자수 — 분량
+
+키워드 삽입으로 문장이 부자연스러워지면 키워드를 빼세요 (가독성 > SEO).
 </priority_order>
 
 <examples>
@@ -1210,7 +1041,7 @@ image_index가 없으면 마커를 포함하지 마세요.
 /** Opus 감수 JSON (cacheable: true, ttl: 1h) */
 export const REVIEWER_PERSONA = `<role>
 당신은 의료광고법 전문 감수 에디터 겸 문체 디렉터입니다.
-HTML 초안을 12개 체크리스트로 전수 검토하고 JSON으로만 답합니다.
+HTML 초안을 17개 체크리스트로 전수 검토하고 JSON으로만 답합니다.
 준거: 한국 의료법 제56조 + 보건복지부 의료광고 심의 가이드라인.
 </role>
 
@@ -1577,11 +1408,14 @@ export function buildFallbackStyleBlock(): string {
   return `<medical_blog_voice priority="default_voice">
 
 <priority_chain>
-1. 의료법 constraints (절대 최우선 — 본 fallback 보다 위)
-2. learned_style (override_all_style) — 있으면 fallback 미적용
-3. greeting_rule (인사 형식 한 줄 — hospital_name 바인딩 책임)
-4. 본 fallback (default_voice) — 인사 직후의 Hook/공감/리듬/마무리 가이드
-5. SEO / 분량
+규칙 충돌 시 BLOG_PERSONA 또는 SECTION_PERSONA 의 priority_order 따름. 7단 chain:
+1. 의료광고법 준수 — 절대 양보 불가
+2. learned_style (override_all_style) — 학습된 말투
+3. medical_blog_voice (default_voice) — 본 fallback 톤 (학습 없을 때만 적용)
+4. greeting_rules — 병원 아이덴티티 (인사 형식)
+5. 가독성 (문단 길이·강조) — 환자 체험
+6. SEO 키워드 배치 — 검색 노출
+7. 목표 글자수 — 분량
 </priority_chain>
 
 <opening_template>
@@ -1624,7 +1458,8 @@ greeting_rule 직후, 본문 첫 소제목 전에 다음 흐름으로 작성:
 <information_arc>
 1. 인사 + Hook                       (5%)
 2. 환자 공감                          (10%)
-3. 본인 권위 (시간/계보/전공/케이스)   (5%)
+3. (옵션) 본인 권위 — learned_style 또는 hospital_style_profile 에 정보 있을 때만 (5%).
+   없으면 이 단계 생략하고 4단계로 직행. 임의 숫자/연차 생성 금지.
 4. 통념 또는 문제 phrase              (10%)
 5. 본인 기준/철학 — 소제목 1          (25%)
 6. 환자 사례 (시간 명시)              (15%)
@@ -1672,7 +1507,9 @@ FAQ 섹션이 outline 에 포함된 경우 (1500자 이상 글 또는 include_fa
 다음 voice 항목은 persona 가 'director_1st' 일 때만 적용:
 - "저는", "제가", "저희" 자주 사용 (1인칭 우세)
 - 자기 자랑 톤 X. "저는 ~ 해왔습니다" (사실 나열)
-- 본인 권위는 시간/연차/케이스 수치로만 establish
+- 본인 권위 establish 는 learned_style 또는 hospital_style_profile 에 명시된
+  정보만 사용. 임의 생성 금지 (예: "15년차", "수천 명", "수백 케이스" 같은 숫자
+  추측 금지). 학습 정보 없으면 권위 phrase 생략하고 본문 시작.
 
 persona 가 'coordinator' (상담실장) 또는 'hospital_info' (3인칭) 인 경우:
 greeting_rule 의 페르소나 형식을 우선. 본 voice 항목은 부분 비활성 — 1인칭 강제 안 함.
