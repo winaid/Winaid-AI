@@ -6,6 +6,7 @@
 export interface HospitalImage {
   id: string;
   userId: string;
+  teamId?: number | null;
   hospitalName?: string;
   storagePath: string;
   originalFilename?: string;

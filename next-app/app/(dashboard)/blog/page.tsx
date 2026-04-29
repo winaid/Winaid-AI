@@ -1430,9 +1430,9 @@ JSON 형식으로 응답해주세요.`;
         const imgMarkers = [...blogText.matchAll(/\[IMG_(\d+)\s+alt="([^"]*)"\]/g)];
         if (imgMarkers.length > 0) {
           try {
-            const { userId: uid } = await getSessionSafe();
+            // 팀 풀 fetch — Authorization 헤더로 owner·team_id 결정 (서버에서).
+            // mine 미지정 시 본인 + 같은 팀 이미지가 한 번에 옴.
             const qs = new URLSearchParams({ limit: '200' });
-            if (uid) qs.set('userId', uid);
             const res = await authFetch(`/api/hospital-images?${qs.toString()}`);
             if (res.ok) {
               const data = await res.json();

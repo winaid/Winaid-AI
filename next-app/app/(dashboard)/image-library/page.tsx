@@ -8,6 +8,7 @@ import { IMAGE_TAG_PRESETS, type HospitalImage } from '../../../lib/hospitalImag
 import { TEAM_DATA } from '../../../lib/teamData';
 
 type SortBy = 'newest' | 'most_used' | 'name';
+type ViewMode = 'mine' | 'all';
 
 export default function ImageLibraryPage() {
   const { user } = useAuthGuard();
@@ -19,6 +20,8 @@ export default function ImageLibraryPage() {
   const [filterTag, setFilterTag] = useState<string>('');
   const [selectedHospital, setSelectedHospital] = useState('');
   const [sortBy, setSortBy] = useState<SortBy>('newest');
+  // 디폴트 'mine' — 옵트인 출시. 사용자가 직접 "팀 전체" 로 전환.
+  const [viewMode, setViewMode] = useState<ViewMode>('mine');
   const [editImage, setEditImage] = useState<HospitalImage | null>(null);
   const [editTags, setEditTags] = useState<string[]>([]);
   const [editAlt, setEditAlt] = useState('');
@@ -32,10 +35,12 @@ export default function ImageLibraryPage() {
   []);
 
   const loadImages = useCallback(async () => {
+    setLoading(true);
     try {
       const params = new URLSearchParams();
       if (filterTag) params.set('tags', filterTag);
       if (selectedHospital) params.set('hospitalName', selectedHospital);
+      if (viewMode === 'mine') params.set('mine', '1');
       params.set('limit', '100');
       const res = await authFetch(`/api/hospital-images?${params.toString()}`);
       if (!res.ok) return;
@@ -43,7 +48,7 @@ export default function ImageLibraryPage() {
       setImages(Array.isArray(data) ? data : (data.images || []));
     } catch { /* ignore */ }
     finally { setLoading(false); }
-  }, [filterTag, selectedHospital]);
+  }, [filterTag, selectedHospital, viewMode]);
 
   useEffect(() => { loadImages(); }, [loadImages]);
 
@@ -261,8 +266,29 @@ export default function ImageLibraryPage() {
         </div>
       </div>
 
-      {/* 병원 필터 */}
-      <div className="flex items-center gap-2">
+      {/* 보기 범위 토글 + 병원 필터 */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="inline-flex rounded-lg border border-slate-200 bg-white p-0.5" role="tablist" aria-label="이미지 보기 범위">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={viewMode === 'mine'}
+            onClick={() => setViewMode('mine')}
+            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${viewMode === 'mine' ? 'bg-blue-600 text-white' : 'text-slate-500 hover:text-slate-700'}`}
+          >
+            내 이미지
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={viewMode === 'all'}
+            onClick={() => setViewMode('all')}
+            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${viewMode === 'all' ? 'bg-blue-600 text-white' : 'text-slate-500 hover:text-slate-700'}`}
+          >
+            팀 전체
+          </button>
+        </div>
+
         <label className="text-xs font-bold text-slate-600">병원</label>
         <select value={selectedHospital} onChange={e => setSelectedHospital(e.target.value)}
           className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs bg-white text-slate-700">
@@ -312,7 +338,9 @@ export default function ImageLibraryPage() {
           onDragOver={e => e.preventDefault()}
           onDrop={e => { e.preventDefault(); handleUpload(e.dataTransfer.files); }}
         >
-          {sorted.map(img => (
+          {sorted.map(img => {
+            const isOwner = img.userId === userId;
+            return (
             <div key={img.id} className="group relative rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm hover:shadow-md transition-all">
               <div className="aspect-square relative">
                 {img.publicUrl ? (
@@ -320,11 +348,19 @@ export default function ImageLibraryPage() {
                 ) : (
                   <div className="w-full h-full bg-slate-100 flex items-center justify-center text-slate-400 text-2xl">📷</div>
                 )}
-                {/* hover 오버레이 */}
-                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
-                  <button onClick={() => openEdit(img)} className="w-9 h-9 bg-white rounded-full flex items-center justify-center text-sm hover:bg-blue-50 transition-colors" title="편집">✏️</button>
-                  <button onClick={() => handleDelete(img.id)} className="w-9 h-9 bg-white rounded-full flex items-center justify-center text-sm hover:bg-red-50 transition-colors" title="삭제">🗑</button>
-                </div>
+                {/* 소유자 뱃지 — 좌상단. 본인 이미지는 표시 안 함(노이즈 줄이기). */}
+                {!isOwner && (
+                  <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 bg-slate-800/80 text-white rounded text-[9px] font-semibold">
+                    팀원
+                  </span>
+                )}
+                {/* hover 오버레이 — 본인 이미지에만 편집/삭제 노출. 타인 것은 hover 영역 자체 숨김. */}
+                {isOwner && (
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                    <button onClick={() => openEdit(img)} className="w-9 h-9 bg-white rounded-full flex items-center justify-center text-sm hover:bg-blue-50 transition-colors" title="편집">✏️</button>
+                    <button onClick={() => handleDelete(img.id)} className="w-9 h-9 bg-white rounded-full flex items-center justify-center text-sm hover:bg-red-50 transition-colors" title="삭제">🗑</button>
+                  </div>
+                )}
               </div>
               <div className="p-2">
                 <div className="flex flex-wrap gap-1 mb-1">
@@ -338,7 +374,8 @@ export default function ImageLibraryPage() {
                 <p className="text-[10px] text-slate-400">{img.usageCount || 0}회 사용</p>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
