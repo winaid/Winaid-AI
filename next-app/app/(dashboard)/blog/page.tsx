@@ -1284,8 +1284,16 @@ JSON 형식으로 응답해주세요.`;
       blogText = stripDoctype(blogText);
 
       // 3.5) 구조 보정 (old legacyBlogGeneration.ts 동일: h1/h2→h3, markdown→h3, 이모지/해시태그 제거)
+      // 학습 스타일이 dense/긴 단락 패턴이면 긴 문단 자동 분리 임계값 완화
+      // → 학습본의 긴 단락 리듬을 깎지 않도록 (사용자 보고: "줄간격이 똑같이 따라가지 못한다")
+      const learnedHints = learnedStyleId
+        ? (() => {
+            const ps = getStyleById(learnedStyleId)?.analyzedStyle?.paragraphStats;
+            return ps ? { lineBreakStyle: ps.lineBreakStyle, paragraphLengthPattern: ps.paragraphLengthPattern } : undefined;
+          })()
+        : undefined;
       const beforeLen = blogText.length;
-      const { html: normalizedHtml, log: structureLogs } = normalizeBlogStructure(blogText, topic.trim());
+      const { html: normalizedHtml, log: structureLogs } = normalizeBlogStructure(blogText, topic.trim(), learnedHints);
       blogText = normalizedHtml;
       structureLogs.forEach(l => console.info(`[BLOG] ${l}`));
       console.info(`[BLOG] 구조 보정 완료 — ${beforeLen}자 → ${blogText.length}자`);
@@ -1392,8 +1400,9 @@ JSON 형식으로 응답해주세요.`;
         }
       }
 
-      // 3.11) 마무리 인사 삽입 (없으면 기본 문구)
-      if (!/감사합니다|감사드립니다|감사해요|감사하거든요/.test(blogText)) {
+      // 3.11) 마무리 인사 삽입 (학습 스타일 없을 때만 — 사용자 보고: 학습된 마무리 인사가 깎임)
+      // learnedStyleId 가 있으면 학습본의 마무리 패턴(다른 인사·인사 없음 등)을 그대로 보존.
+      if (!learnedStyleId && !/감사합니다|감사드립니다|감사해요|감사하거든요/.test(blogText)) {
         const lastPIdx = blogText.lastIndexOf('</p>');
         if (lastPIdx > 0) {
           blogText = blogText.substring(0, lastPIdx + 4)
@@ -1401,6 +1410,8 @@ JSON 형식으로 응답해주세요.`;
             + blogText.substring(lastPIdx + 4);
           console.info('[BLOG] 마무리 인사 자동 삽입');
         }
+      } else if (learnedStyleId) {
+        console.info('[BLOG] 마무리 인사 자동 삽입 스킵 — 학습 스타일 우선');
       }
 
       // 3.12) 줄 간격 후처리: doubleBreakFrequency=high → 전체, airy → 2번째, mixed → 3번째
@@ -1421,7 +1432,11 @@ JSON 형식으로 응답해주세요.`;
         }
       }
       // 빈 p 2개 이상 연속 → 1개로 축약
-      blogText = blogText.replace(/(<p>&nbsp;<\/p>\s*){2,}/g, '<p>&nbsp;</p>\n');
+      // 학습 스타일이 있을 때는 직전 줄 간격 후처리(:1407-1422)가 paragraphStats 기준으로
+      // 의도적으로 빈 p 를 삽입했을 수 있으므로 축약 스킵 — 학습 빈줄 패턴 보존.
+      if (!learnedStyleId) {
+        blogText = blogText.replace(/(<p>&nbsp;<\/p>\s*){2,}/g, '<p>&nbsp;</p>\n');
+      }
 
       // 4) imageCount 초과 마커 제거 — 모든 모드 공통 (Claude 가 초과 부여한 경우)
       const targetImageCount = request.imageCount ?? imageCount;
