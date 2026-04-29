@@ -53,10 +53,22 @@ export async function POST(request: NextRequest) {
     const altText = (formData.get('altText') as string || '').trim();
     const hospitalName = (formData.get('hospitalName') as string || '').trim() || null;
 
+    // owner 의 team_id 를 INSERT 에 명시 첨부. DB 트리거가 backup 으로도 채움.
+    let ownerTeamId: number | null = null;
+    if (owner !== 'guest') {
+      const { data: prof } = await supabase
+        .from('profiles')
+        .select('team_id')
+        .eq('id', owner)
+        .maybeSingle();
+      ownerTeamId = (prof?.team_id ?? null) as number | null;
+    }
+
     const { data: row, error: dbErr } = await supabase
       .from('hospital_images')
       .insert({
         user_id: owner,
+        team_id: ownerTeamId,
         hospital_name: hospitalName,
         storage_path: storagePath,
         original_filename: file.name,
