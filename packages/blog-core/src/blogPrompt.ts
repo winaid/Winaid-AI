@@ -1571,6 +1571,138 @@ ${specialties ? `<specialties>${specialties}</specialties>` : ''}
 </clinic_context>`;
 }
 
+/**
+ * <medical_blog_voice> fallback 블록.
+ *
+ * 학습 스타일(stylePromptText) 도, DB 프로파일(hospitalStyleBlock) 도 없을 때 주입되는
+ * 의료(병원 원장) 블로그 표준 톤. 5개 실제 병원 블로그 글에서 추출한 16개 패턴을
+ * 그대로 직렬화. priority="default_voice" — 학습 스타일(override_all_style) 보다 낮음.
+ *
+ * 학습 결과가 있으면 buildLearnedStyleBlock 의 override_all_style 이 emit 되어
+ * 본 fallback 은 호출되지 않는다. 의료법 constraints 는 여전히 fallback 보다 우선.
+ */
+export function buildFallbackStyleBlock(): string {
+  return `<medical_blog_voice priority="default_voice">
+
+<opening_template>
+1줄: "안녕하세요." (마침표, 이모지 옵션)
+빈 줄 2개
+1줄: "{병원명} {원장이름} 원장입니다."
+빈 줄 2개
+[옵션] 키워드 이미지 placeholder
+[Hook 1~2줄] — 다음 4가지 중 하나:
+  A. 가상 인용 + 자답 ("치과 의사가 치과 가나요?" → "당연합니다.")
+  B. 반전 선언 ("사실 저도 ~합니다.")
+  C. 환자 대변 ("~ 하시기까지 많이 고민하셨을 거예요.")
+  D. 환자 사연 인용 ("'~' 라고 하시는 분이 계셨습니다.")
+빈 줄
+[환자 시점 공감 3~4줄] — phrasing:
+  "~ 하셨을 거예요" / "~ 있으실 거예요" / "~ 생각하실 수도 있죠"
+빈 줄
+[본론 전환 — "그래서 오늘은 ~"]
+</opening_template>
+
+<paragraph_rhythm>
+- 1~3문장 단락이 70%, 4문장 이상 단락은 10% 이하
+- 모든 단락 사이 빈 p (빈 줄) 1개 강제
+- 강조 문장/큰따옴표 인용은 단독 줄로 격리 (양쪽 빈 줄)
+- 소제목 직전/직후는 빈 p 2개
+- doubleBreakFrequency = high
+</paragraph_rhythm>
+
+<sentence_ending_distribution>
+- ~습니다 ≈ 55% (메인)
+- ~거든요 ≈ 15%
+- ~예요/~이에요 ≈ 12%
+- ~잖아요 ≈ 5%
+- ~까요? ≈ 5% (자답형)
+- ~죠 ≈ 5%
+- ~답니다/~네요 ≈ 3%
+- 5~7문장마다 다른 어미로 리듬 깨기 (~습니다 단조 반복 금지)
+</sentence_ending_distribution>
+
+<information_arc>
+1. 인사 + Hook                       (5%)
+2. 환자 공감                          (10%)
+3. 본인 권위 (시간/계보/전공/케이스)   (5%)
+4. 통념 또는 문제 phrase              (10%)
+5. 본인 기준/철학 — 소제목 1          (25%)
+6. 환자 사례 (시간 명시)              (15%)
+7. 본인 기준/철학 — 소제목 2~3        (20%)
+8. 안티-마케팅 권유                   (5%)
+9. 마무리 인사                       (5%)
+</information_arc>
+
+<subheading_pattern>
+- h3 사용
+- 형식: "{SEO 키워드}, {짧은 진술/의문}"
+- 모든 소제목에 SEO 키워드 반복
+- 소제목 개수 2~3개
+</subheading_pattern>
+
+<case_narrative>
+배경(누가, 언제) → 갈등(다른 의견 vs 본인) → 행동(본인 말) → 결과(시간 명시) → 일반화
+필수: 시간 표현 ("1년 뒤", "3개월 후", "얼마 전에")
+다른 치과 직접 비방 금지. "어떤 분이 ~ 듣고 오셨습니다" 식 전언만.
+</case_narrative>
+
+<anti_marketing>
+다음 중 1~3회 본문에 자연스럽게 삽입:
+- "꼭 저희를 찾아주시지 않으셔도 됩니다"
+- "다른 곳에서도 의견 들어보세요"
+- "충분히 비교해보신 뒤에 결정하세요"
+- "오늘 결정 안 하셔도 괜찮습니다"
+- "최종 선택은 환자분의 몫입니다"
+영업 톤 직접 금지.
+</anti_marketing>
+
+<vocabulary>
+신뢰/정직: 솔직히, 사실, 정확하게
+정성: 한 분, 한 분 / 한땀 한땀 / 꼼꼼하게
+시간/지속: 꾸준히, 오래, 결과적으로
+균형: 마땅히, 무리 없이, 자연스럽게
+책임감: 함부로, 굳이, 무조건
+환자 중심: 환자분, 본인 치아, 본인 입장
+</vocabulary>
+
+<voice>
+- "저는", "제가", "저희" 자주 사용 (1인칭 우세)
+- 자기 자랑 톤 X. "저는 ~ 해왔습니다" (사실 나열)
+- 본인 권위는 시간/연차/케이스 수치로만 establish
+</voice>
+
+<negation>
+- "~ 권하지 않습니다"
+- "~ 좋은 게 아닙니다"
+- "~ 어렵습니다"
+다른 치과 직접 비방 금지.
+</negation>
+
+<closing_template>
+[오늘 이야기 정리 1줄]
+빈 줄
+[안티-마케팅 reminder 1~2줄]
+빈 줄
+[옵션 — 도움 받을 수 있다는 톤 1줄]
+빈 줄
+"긴 글 읽어주셔서 감사합니다." (이모지 :) 옵션)
+</closing_template>
+
+<length>
+본문 약 2500~3500자
+소제목 2~3개
+이미지 placeholder 2~3장
+</length>
+
+<override_rules>
+- 의료법 constraints 는 여전히 최우선 (본 fallback 보다 우선)
+- 본 fallback 은 학습된 스타일(stylePromptText) 이 비어있을 때만 적용
+- learnedStyleId 가 있으면 해당 학습 결과가 본 fallback 을 override
+</override_rules>
+
+</medical_blog_voice>`;
+}
+
 /** <learned_style> 블록 — stylePromptText 또는 hospitalStyleBlock 있을 때만 */
 function buildLearnedStyleBlock(
   req: GenerationRequest,
@@ -1717,9 +1849,13 @@ export function buildSectionFromOutlinePrompt(
   }
   systemBlocks.push({ type: 'text', text: E_E_A_T_GUIDE, cacheable: true, cacheTtl: '1h' });
 
+  // 학습 스타일이 있으면 override_all_style 블록을, 없으면 의료 블로그 표준 톤(default_voice) fallback 을 주입.
+  // fallback 은 5개 실제 병원 블로그 분석 기반 16개 패턴 — 학습 미선택 시 베이스라인 톤 보장.
   const learnedStyle = buildLearnedStyleBlock(req, hospitalStyleBlock);
   if (learnedStyle) {
     systemBlocks.push({ type: 'text', text: learnedStyle, cacheable: true, cacheTtl: '5m' });
+  } else {
+    systemBlocks.push({ type: 'text', text: buildFallbackStyleBlock(), cacheable: true, cacheTtl: '1h' });
   }
 
   // 의료광고법 — learned_style 뒤에 배치해 attention 가중 강화
@@ -1877,9 +2013,13 @@ export function buildBlogPromptV3(
     systemBlocks.push({ type: 'text', text: seasonal, cacheable: true, cacheTtl: '1h' });
   }
 
+  // 학습 스타일이 있으면 override_all_style 블록을, 없으면 의료 블로그 표준 톤(default_voice) fallback 을 주입.
+  // fallback 은 5개 실제 병원 블로그 분석 기반 16개 패턴 — 학습 미선택 시 베이스라인 톤 보장.
   const learnedStyle = buildLearnedStyleBlock(req, opts.hospitalStyleBlock);
   if (learnedStyle) {
     systemBlocks.push({ type: 'text', text: learnedStyle, cacheable: true, cacheTtl: '5m' });
+  } else {
+    systemBlocks.push({ type: 'text', text: buildFallbackStyleBlock(), cacheable: true, cacheTtl: '1h' });
   }
 
   // 의료광고법 — learned_style 뒤에 배치해 attention 가중 강화
