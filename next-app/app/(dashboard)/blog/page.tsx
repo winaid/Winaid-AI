@@ -926,6 +926,17 @@ JSON 형식으로 응답해주세요.`;
     // 학습된 말투 → sectionLearnedStylePrompt useMemo 재사용 (sectionRegen 과 단일 진실원)
     const stylePromptText = sectionLearnedStylePrompt;
 
+    // 가시성: 클라 학습 말투 적용 여부 (cache hit/miss/skip)
+    if (stylePromptText && stylePromptText.trim()) {
+      console.info(`[STYLE] hit — UI 학습 적용 (learnedStyleId="${learnedStyleId}", prompt_len=${stylePromptText.length})`);
+    } else if (learnedStyleId) {
+      console.info(`[STYLE] miss — learnedStyleId="${learnedStyleId}" 이지만 직렬화 결과 비어있음 (localStorage 정합성 확인 필요)`);
+    } else if (hospitalName) {
+      console.info(`[STYLE] skip — UI 학습 없음 → 서버가 hospitalName="${hospitalName}" 로 DB 프로파일 조회 시도`);
+    } else {
+      console.info(`[STYLE] skip — UI 학습/병원명 모두 없음 → generic 톤`);
+    }
+
     const request: GenerationRequest = {
       category,
       topic: topic.trim(),

@@ -12,6 +12,7 @@ import { stripDoctype } from '../../../lib/htmlUtils';
 import { applyContentFilters } from '@winaid/blog-core';
 import { useCreditContext } from '../layout';
 import { useCredit } from '../../../lib/creditService';
+import { authFetch } from '../../../lib/authFetch';
 
 export default function PressPage() {
   const creditCtx = useCreditContext();
@@ -63,7 +64,8 @@ export default function PressPage() {
       const crawlPromise = (async (): Promise<string> => {
         if (!hospitalWebsite.trim()) return '';
         try {
-          const crawlRes = await fetch('/api/naver/crawl-hospital-blog', {
+          // next-app 의 /api/naver/crawl-hospital-blog 는 checkAuth(Bearer) 필요. authFetch 로 토큰 자동 첨부.
+          const crawlRes = await authFetch('/api/naver/crawl-hospital-blog', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ blogUrl: hospitalWebsite.trim(), maxPosts: 1 }),

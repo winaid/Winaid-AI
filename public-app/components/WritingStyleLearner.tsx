@@ -186,22 +186,28 @@ export default function WritingStyleLearner({
     setPhase('extracting');
     setProgressStep(1);
     setAnalyzeProgress('블로그 글 수집 중...');
+    const isBlog = /blog\.naver\.com/i.test(urlInput);
+    console.info(`[STYLE] learner crawl 시작 — type=${isBlog ? 'naver-blog' : 'page'} url="${urlInput.trim().slice(0, 80)}"`);
     try {
-      const isBlog = /blog\.naver\.com/i.test(urlInput);
       let content = '';
       if (isBlog) {
+        // public-app 의 /api/naver/crawl-hospital-blog 는 게스트 허용 (gateGuestRequest 만). raw fetch 유지.
         const res = await fetch('/api/naver/crawl-hospital-blog', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ blogUrl: urlInput.trim(), maxPosts: 5 }),
         });
-        if (!res.ok) throw new Error('크롤링 실패');
+        if (!res.ok) {
+          console.warn(`[STYLE] learner crawl 실패 — status=${res.status}`);
+          throw new Error('크롤링 실패');
+        }
         const data = (await res.json()) as { posts?: { content?: string }[] };
         content = (data.posts || [])
           .map(p => (p.content || '').trim())
           .filter(t => t.length > 30)
           .join('\n\n---\n\n')
           .slice(0, 12000);
+        console.info(`[STYLE] learner crawl 완료 — posts=${data.posts?.length ?? 0}, chars=${content.length}`);
       } else {
         const res = await fetch('/api/crawler', {
           method: 'POST',
@@ -211,6 +217,7 @@ export default function WritingStyleLearner({
         if (!res.ok) throw new Error('크롤링 실패');
         const data = (await res.json()) as { content?: string };
         content = (data.content || '').trim().slice(0, 12000);
+        console.info(`[STYLE] learner crawl 완료 — page chars=${content.length}`);
       }
       if (content.length < 100) {
         setError('크롤링된 텍스트가 너무 짧습니다. 다른 URL을 시도해주세요.');
