@@ -1481,8 +1481,8 @@ JSON 형식으로 응답해주세요.`;
                 }
 
                 const bestCandidate = candidates[0];
-                // score >= 1: 라이브러리에 이미지가 있으면 최선의 매칭을 항상 삽입
-                if (bestCandidate && bestCandidate.score >= 1) {
+                // 라이브러리에 이미지가 있으면 best match 를 무조건 사용 (score 무관).
+                if (bestCandidate) {
                   const best = bestCandidate.img;
                   blogText = blogText.replace(
                     fullMatch,
