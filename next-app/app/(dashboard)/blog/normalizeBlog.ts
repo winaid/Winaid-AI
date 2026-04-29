@@ -1,8 +1,22 @@
 // ── 블로그 HTML 구조 보정 ──
 // page.tsx에서 분리한 normalizeBlogStructure 함수
 
+/**
+ * 학습된 단락 리듬 힌트.
+ * 학습 스타일이 dense 또는 "긴 단락" 패턴이면 긴 문단 자동 분리 임계값을 완화한다.
+ * (모바일 가독성 vs 학습본 충실도의 균형 — paragraphStats 가 명시적으로 dense/long 일 때만 완화)
+ */
+export interface LearnedParagraphHints {
+  lineBreakStyle?: 'dense' | 'airy' | 'mixed';
+  paragraphLengthPattern?: string;
+}
+
 /** AI 응답 HTML의 구조를 정규화: JSON escape 정리, 헤딩 통일, 이모지 제거 등 */
-export function normalizeBlogStructure(html: string, topicFallback: string): { html: string; log: string[] } {
+export function normalizeBlogStructure(
+  html: string,
+  topicFallback: string,
+  learnedHints?: LearnedParagraphHints,
+): { html: string; log: string[] } {
   const log: string[] = [];
   let out = html;
   const cleanedPatterns: string[] = [];
@@ -126,9 +140,16 @@ export function normalizeBlogStructure(html: string, topicFallback: string): { h
   }
   log.push(`[STRUCTURE] 섹션별 문단 수: [${sectionParagraphCounts.join(', ')}]`);
 
-  // 10) 긴 문단 자동 분리 — 180자 초과 <p> 를 한국어 마침 어미 기준으로 분할
-  // (모바일 친화 목표는 150자이지만 자동 분리는 보수적으로 180자 상한)
-  const PARA_MAX = 180;
+  // 10) 긴 문단 자동 분리 — 한국어 마침 어미 기준으로 분할
+  // 기본: 180자 상한 (모바일 친화 목표 150자 + 보수적 여유)
+  // 학습 스타일이 dense 또는 "긴 단락/긴 문단" 패턴이면 300자로 완화 — 학습본의 긴 단락 리듬 보존.
+  const learnedDense = learnedHints?.lineBreakStyle === 'dense';
+  const learnedLongParagraph = !!learnedHints?.paragraphLengthPattern
+    && /긴\s*단락|긴\s*문단|긴\s*p|long\s*paragraph/i.test(learnedHints.paragraphLengthPattern);
+  const PARA_MAX = (learnedDense || learnedLongParagraph) ? 300 : 180;
+  if (PARA_MAX !== 180) {
+    log.push(`[READABILITY] 학습 스타일(${learnedHints?.lineBreakStyle ?? 'unknown'} / "${learnedHints?.paragraphLengthPattern ?? ''}") → 분리 임계값 ${PARA_MAX}자로 완화`);
+  }
   let splitApplied = 0;
   out = out.replace(/<p>([^<]+)<\/p>/g, (full, text: string) => {
     if (text.length <= PARA_MAX) return full;
@@ -142,10 +163,11 @@ export function normalizeBlogStructure(html: string, topicFallback: string): { h
     splitApplied++;
     return `<p>${first}</p>\n<p>${second}</p>`;
   });
-  const stillLong = (out.match(/<p>[^<]{180,}<\/p>/g) || []).length;
+  const longRegex = new RegExp(`<p>[^<]{${PARA_MAX},}<\\/p>`, 'g');
+  const stillLong = (out.match(longRegex) || []).length;
   if (splitApplied > 0) log.push(`[READABILITY] ✅ 긴 문단 ${splitApplied}개 자동 분리됨`);
-  if (stillLong > 0) log.push(`[READABILITY] ⚠️ 여전히 180자 초과 문단 ${stillLong}개 (수동 확인 필요)`);
-  if (splitApplied === 0 && stillLong === 0) log.push('[READABILITY] ✅ 모든 문단 180자 이내');
+  if (stillLong > 0) log.push(`[READABILITY] ⚠️ 여전히 ${PARA_MAX}자 초과 문단 ${stillLong}개 (수동 확인 필요)`);
+  if (splitApplied === 0 && stillLong === 0) log.push(`[READABILITY] ✅ 모든 문단 ${PARA_MAX}자 이내`);
 
   out = out.trim();
   return { html: out, log };
