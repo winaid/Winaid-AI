@@ -219,6 +219,19 @@ export async function POST(request: NextRequest) {
         timestamp: new Date().toISOString(),
       });
 
+      // Keepalive — Gemini Pro Preview 는 reasoning phase 로 first-byte 30~90s 걸릴 수
+      // 있고, 그동안 Vercel/proxy 가 idle 로 판단해 504. SSE comment(`: ping\n\n`)는
+      // 이벤트 파서에서 무시되므로 클라이언트엔 영향 없음. 첫 chunk 도착 시 중단.
+      let firstChunkReceived = false;
+      const keepaliveInterval = setInterval(() => {
+        if (firstChunkReceived) return;
+        try {
+          controller.enqueue(encoder.encode(`: ping\n\n`));
+        } catch {
+          // controller 가 이미 닫힘 — finally 에서 clear 됨
+        }
+      }, 800);
+
       let fullText = '';
       try {
         // manual iteration 으로 generator return value(StreamMeta) 캡처
@@ -230,6 +243,10 @@ export async function POST(request: NextRequest) {
           if (result.done) {
             if (result.value) meta = result.value;
             break;
+          }
+          if (!firstChunkReceived) {
+            firstChunkReceived = true;
+            clearInterval(keepaliveInterval);
           }
           fullText += result.value;
           send({ type: 'chunk', text: result.value });
@@ -297,6 +314,7 @@ export async function POST(request: NextRequest) {
           timestamp: new Date().toISOString(),
         });
       } finally {
+        clearInterval(keepaliveInterval);
         controller.close();
       }
     },
