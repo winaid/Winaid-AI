@@ -8,6 +8,7 @@ import { ErrorPanel } from '../../../components/GenerationResult';
 import { sanitizeHtml } from '../../../lib/sanitize';
 import { stripDoctype } from '../../../lib/htmlUtils';
 import { applyContentFilters } from '@winaid/blog-core';
+import { authFetch } from '../../../lib/authFetch';
 
 interface ChatMsg { role: 'user' | 'assistant'; content: string; ts: Date; }
 
@@ -129,7 +130,8 @@ export default function RefinePage() {
         for (const url of urls) {
           const fullUrl = url.startsWith('www.') ? `https://${url}` : url;
           try {
-            const r = await fetch('/api/naver/crawl-hospital-blog', {
+            // next-app 의 /api/naver/crawl-hospital-blog 는 checkAuth(Bearer) 필요. authFetch 로 토큰 자동 첨부.
+            const r = await authFetch('/api/naver/crawl-hospital-blog', {
               method: 'POST', headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ blogUrl: fullUrl, maxPosts: 1 }),
             });

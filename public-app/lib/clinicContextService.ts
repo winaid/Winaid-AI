@@ -24,19 +24,26 @@ const MIN_CONTENT_LENGTH = 200;
 // ─── 크롤링 함수 ─────────────────────────────────────────
 
 async function crawlBlogPosts(blogUrl: string): Promise<string> {
+  console.info(`[STYLE] clinic-context crawl 시작 — url="${blogUrl.slice(0, 80)}"`);
+  // public-app 의 /api/naver/crawl-hospital-blog 는 게스트 허용 (gateGuestRequest 만). raw fetch 유지.
   const res = await fetch('/api/naver/crawl-hospital-blog', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ blogUrl, maxPosts: 5 }),
   });
-  if (!res.ok) return '';
+  if (!res.ok) {
+    console.warn(`[STYLE] clinic-context crawl 실패 — status=${res.status}`);
+    return '';
+  }
 
   const data = (await res.json()) as { posts?: { content?: string }[] };
-  return (data.posts || [])
+  const merged = (data.posts || [])
     .map(p => (p.content || '').trim())
     .filter(t => t.length > 30)
     .join('\n\n---\n\n')
     .slice(0, 12000);
+  console.info(`[STYLE] clinic-context crawl 완료 — posts=${data.posts?.length ?? 0}, chars=${merged.length}`);
+  return merged;
 }
 
 async function crawlSinglePage(url: string): Promise<string> {

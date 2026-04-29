@@ -4,6 +4,7 @@
  * 병원 홈페이지/블로그 URL에서 실제 콘텐츠를 분석하여
  * 서비스·지역·특화 시그널을 추출하는 독립 서비스.
  */
+import { authFetch } from './authFetch';
 
 export interface ClinicContext {
   actualServices: string[];
@@ -24,19 +25,26 @@ const MIN_CONTENT_LENGTH = 200;
 // ─── 크롤링 함수 ─────────────────────────────────────────
 
 async function crawlBlogPosts(blogUrl: string): Promise<string> {
-  const res = await fetch('/api/naver/crawl-hospital-blog', {
+  console.info(`[STYLE] clinic-context crawl 시작 — url="${blogUrl.slice(0, 80)}"`);
+  // next-app 의 /api/naver/crawl-hospital-blog 는 checkAuth(Bearer) 필요. authFetch 로 토큰 자동 첨부.
+  const res = await authFetch('/api/naver/crawl-hospital-blog', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ blogUrl, maxPosts: 5 }),
   });
-  if (!res.ok) return '';
+  if (!res.ok) {
+    console.warn(`[STYLE] clinic-context crawl 실패 — status=${res.status}`);
+    return '';
+  }
 
   const data = (await res.json()) as { posts?: { content?: string }[] };
-  return (data.posts || [])
+  const merged = (data.posts || [])
     .map(p => (p.content || '').trim())
     .filter(t => t.length > 30)
     .join('\n\n---\n\n')
     .slice(0, 12000);
+  console.info(`[STYLE] clinic-context crawl 완료 — posts=${data.posts?.length ?? 0}, chars=${merged.length}`);
+  return merged;
 }
 
 async function crawlSinglePage(url: string): Promise<string> {
