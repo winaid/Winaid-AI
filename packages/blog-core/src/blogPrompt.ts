@@ -1855,7 +1855,7 @@ ${nextHeading ? `  <next_heading>${sanitizePromptInput(nextHeading, 100)}</next_
   parts.push(
     '',
     `<task>
-target_section의 HTML만 출력하세요. 소제목 heading을 <h2>로 사용하고 아래 2~4개 <p> 문단.
+target_section의 HTML만 출력하세요. 소제목 heading을 <h3>로 사용하고 아래 2~4개 <p> 문단.
 글자수 목표: ${charLimit}자 (±15%, 상세 규칙은 char_budget 블록 참조).
 ${section.imageIndex ? `이미지 마커 [IMG_${section.imageIndex}]를 적절한 위치에 포함하세요.` : ''}
 prev_heading과 next_heading이 있으면 문맥이 자연스럽게 이어지도록.

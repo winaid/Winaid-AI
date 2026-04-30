@@ -1536,7 +1536,37 @@ JSON 형식으로 응답해주세요.`;
         console.info(`[BLOG] 하이브리드: 라이브러리 매칭 후 ${remainingMarkers.length}장 AI 생성 폴백`);
       }
 
-      // 5) 이미지 없으면 (library: 빈 자리 placeholder / ai+hybrid: 마커 strip)
+      // 5a) 목차 자동 생성 — 이미지 유무 무관하게 적용 (이전엔 aiImageCount === 0 분기 안에만 있어
+      // 이미지 ≥ 1 케이스에서 TOC 누락. PR #40 효과를 막던 직접 원인).
+      // 학습 원본에 tableOfContents 있으면 → 생성된 글의 h3 기반으로 구성.
+      // (원본 목차 복사 시 임플란트 목차가 턱관절 글에 나오는 치명적 버그 방지)
+      if (learnedStyleId) {
+        const learnedForToc = getStyleById(learnedStyleId);
+        const rawToc = learnedForToc?.analyzedStyle?.tableOfContents?.trim();
+        if (rawToc && rawToc.length > 10) {
+          const h3Matches = [...blogText.matchAll(/<h3[^>]*>([\s\S]*?)<\/h3>/gi)];
+          if (h3Matches.length >= 3) {
+            const firstH3Idx = blogText.indexOf('<h3');
+            if (firstH3Idx > 0) {
+              // 학습 데이터 첫 줄에서 헤더 라벨 추출 (없으면 <목차> fallback)
+              const firstLine = rawToc.split('\n')[0].trim();
+              const headerLabel = /목차|INDEX|차례|contents/i.test(firstLine) ? firstLine : '<목차>';
+              const tocItems = h3Matches.map((m, i) => {
+                const title = m[1].replace(/<[^>]+>/g, '').trim();
+                return `<p>${i + 1}) ${title}</p>`;
+              });
+              const tocHtml = '\n<p>&nbsp;</p>\n<p>' + headerLabel + '</p>\n'
+                + tocItems.join('\n') + '\n<p>&nbsp;</p>\n\n';
+              blogText = blogText.substring(0, firstH3Idx) + tocHtml + blogText.substring(firstH3Idx);
+              // 목차 삽입 후 빈 p 중복 재정리
+              blogText = blogText.replace(/(<p>&nbsp;<\/p>\s*){2,}/g, '<p>&nbsp;</p>\n');
+              console.info(`[BLOG] 목차 자동 생성: 헤더="${headerLabel}" ${h3Matches.length}개 소제목`);
+            }
+          }
+        }
+      }
+
+      // 5b) 이미지 없으면 (library: 빈 자리 placeholder / ai+hybrid: 마커 strip)
       if (aiImageCount === 0 || imagePrompts.length === 0) {
         if (imageSourceMode === 'library') {
           blogText = blogText.replace(/\[IMG_(\d+)[^\]]*\]/g, (_m, num) =>
@@ -1548,34 +1578,6 @@ JSON 형식으로 응답해주세요.`;
 
         // 인사: Claude의 opening_style/greeting_rules 프롬프트에 위임
         // (강제 삽입 시 원본 인사가 모든 주제 글에 복사되는 치명적 버그)
-
-        // 목차 자동 생성: 학습 원본에 tableOfContents 있으면 → 생성된 글의 h3 기반으로 구성
-        // (원본 목차 복사 시 임플란트 목차가 턱관절 글에 나오는 치명적 버그 방지)
-        if (learnedStyleId) {
-          const learnedForToc = getStyleById(learnedStyleId);
-          const rawToc = learnedForToc?.analyzedStyle?.tableOfContents?.trim();
-          if (rawToc && rawToc.length > 10) {
-            const h3Matches = [...blogText.matchAll(/<h3[^>]*>([\s\S]*?)<\/h3>/gi)];
-            if (h3Matches.length >= 3) {
-              const firstH3Idx = blogText.indexOf('<h3');
-              if (firstH3Idx > 0) {
-                // 학습 데이터 첫 줄에서 헤더 라벨 추출 (없으면 <목차> fallback)
-                const firstLine = rawToc.split('\n')[0].trim();
-                const headerLabel = /목차|INDEX|차례|contents/i.test(firstLine) ? firstLine : '<목차>';
-                const tocItems = h3Matches.map((m, i) => {
-                  const title = m[1].replace(/<[^>]+>/g, '').trim();
-                  return `<p>${i + 1}) ${title}</p>`;
-                });
-                const tocHtml = '\n<p>&nbsp;</p>\n<p>' + headerLabel + '</p>\n'
-                  + tocItems.join('\n') + '\n<p>&nbsp;</p>\n\n';
-                blogText = blogText.substring(0, firstH3Idx) + tocHtml + blogText.substring(firstH3Idx);
-                // 목차 삽입 후 빈 p 중복 재정리
-                blogText = blogText.replace(/(<p>&nbsp;<\/p>\s*){2,}/g, '<p>&nbsp;</p>\n');
-                console.info(`[BLOG] 목차 자동 생성: 헤더="${headerLabel}" ${h3Matches.length}개 소제목`);
-              }
-            }
-          }
-        }
 
         // 최종 hard cap: <img> + placeholder 총합 imageCount 초과분 제거
         let imgOrSlotCount = 0;
@@ -1677,33 +1679,44 @@ JSON 형식으로 응답해주세요.`;
         // 이미 스트리밍 중에 시작된 이미지가 있으면 그 결과 사용, 없으면 새로 생성
         const prompts = imagePrompts.slice(0, imageCount);
         const earlyResults = imageResultsPromise ? await imageResultsPromise : null;
-        const imagePromises = prompts.map((p, i) => {
+        // 동시성 캡 — gpt-image-2 가 2K PNG (5~10MB) 출력 + Vercel maxDuration / 메모리 peak
+        // 위험. N=6+ 동시 호출 시 504 위험 → 3개씩 청크로 sequential.
+        // 조기 결과(earlyResult.url) 가 있는 slot 은 즉시 resolve (네트워크 부하 0) 라
+        // 캡 대상에서 제외하고 lazy thunk 로 동일하게 처리.
+        const IMAGE_CONCURRENCY = 3;
+        const imageTasks = prompts.map((p, i) => {
           const index = i + 1;
-          // 조기 시작 결과가 있으면 Storage 업로드만 수행
           const earlyResult = earlyResults?.[i];
-          const uploadOrGenerate = earlyResult?.url
-            ? Promise.resolve(earlyResult)
-            : generateAndUpload(p, index);
-          return uploadOrGenerate.then(result => {
-            // 이미지 완성 즉시 해당 슬롯의 플레이스홀더를 실제 이미지로 교체
-            if (result.url) {
-              // 이미지 히스토리 초기화
-              setImageHistory(prev => ({ ...prev, [result.index]: [result.url!] }));
-              setGeneratedContent(prev => {
-                if (!prev) return prev;
-                const altMatch = prev.match(new RegExp('data-img-slot="' + result.index + '"[^>]*data-img-alt="([^"]*)"'));
-                const alt = altMatch?.[1] || 'blog image ' + result.index;
-                const imgTag = '<div class="content-image-wrapper"><img src="' + result.url + '" alt="' + alt + '" data-image-index="' + result.index + '" style="max-width:100%;height:auto;border-radius:12px;" /></div>';
-                return prev.replace(
-                  new RegExp('<div class="content-image-wrapper" data-img-slot="' + result.index + '"[^>]*>[\\s\\S]*?</div>\\s*</div>', ''),
-                  imgTag,
-                );
-              });
-            }
-            return result;
-          });
+          return () => {
+            const uploadOrGenerate = earlyResult?.url
+              ? Promise.resolve(earlyResult)
+              : generateAndUpload(p, index);
+            return uploadOrGenerate.then(result => {
+              // 이미지 완성 즉시 해당 슬롯의 플레이스홀더를 실제 이미지로 교체
+              if (result.url) {
+                // 이미지 히스토리 초기화
+                setImageHistory(prev => ({ ...prev, [result.index]: [result.url!] }));
+                setGeneratedContent(prev => {
+                  if (!prev) return prev;
+                  const altMatch = prev.match(new RegExp('data-img-slot="' + result.index + '"[^>]*data-img-alt="([^"]*)"'));
+                  const alt = altMatch?.[1] || 'blog image ' + result.index;
+                  const imgTag = '<div class="content-image-wrapper"><img src="' + result.url + '" alt="' + alt + '" data-image-index="' + result.index + '" style="max-width:100%;height:auto;border-radius:12px;" /></div>';
+                  return prev.replace(
+                    new RegExp('<div class="content-image-wrapper" data-img-slot="' + result.index + '"[^>]*>[\\s\\S]*?</div>\\s*</div>', ''),
+                    imgTag,
+                  );
+                });
+              }
+              return result;
+            });
+          };
         });
-        const imageResults = await Promise.all(imagePromises);
+        const imageResults: { index: number; url: string | null }[] = [];
+        for (let i = 0; i < imageTasks.length; i += IMAGE_CONCURRENCY) {
+          const chunk = imageTasks.slice(i, i + IMAGE_CONCURRENCY).map((fn) => fn());
+          const chunkResults = await Promise.all(chunk);
+          imageResults.push(...chunkResults);
+        }
 
         // 이미지 부분 실패 사용자 안내
         {
