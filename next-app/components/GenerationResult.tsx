@@ -663,6 +663,8 @@ export function ResultPanel({
                 const slot = target.closest('[data-img-slot]') as HTMLElement | null;
                 if (slot && onRequestImageInsert) {
                   e.preventDefault();
+                  // 부모 onClick(handleResultClick) 의 ImageReplaceModal 중복 오픈 차단
+                  e.stopPropagation();
                   const wrapper = slot.closest('.content-image-wrapper') as HTMLElement | null;
                   onRequestImageInsert(wrapper || slot, 'replace');
                   return;
@@ -673,6 +675,7 @@ export function ResultPanel({
                   const idx = target.getAttribute('data-image-index');
                   if (idx) {
                     e.preventDefault();
+                    e.stopPropagation();
                     onImageRegenerate(Number(idx));
                   }
                 }
