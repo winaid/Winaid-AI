@@ -558,7 +558,7 @@ export const COMMON_WRITING_STYLE = `<common_writing_style>
 
 1. 첫 문장은 두괄식 — 새로운 정보를 전달하세요.
 2. 한 문장 최대 60자 (모바일에서 약 2줄). 초과 시 분리.
-3. 매 문장 끝 어미를 다양하게 — 구체 분포는 learned_style 또는 medical_blog_voice 의 sentence_ending_distribution 따름. (둘 다 없으면 ~합니다·~이에요·~거든요·~인데요 균등 혼합)
+3. 매 문장 끝 어미를 다양하게 — 구체 분포는 learned_style 또는 medical_blog_voice 의 sentence_ending_distribution 따름. (둘 다 없으면 ~합니다·~이에요·~인데요 균등 혼합, ~거든요 는 단락당 최대 1회로 제한)
 4. 의미 중복 문장 금지 — 같은 뜻을 다른 표현으로 반복하지 않습니다.
    (예: "A 입니다. A 라고 할 수 있습니다.") 같은 의미는 한 번만 쓰고
    다음 문장으로 넘어가세요. 반복으로 분량 늘리는 것 금지.
@@ -1459,13 +1459,14 @@ greeting_rule 직후, 본문 첫 소제목 전에 다음 흐름으로 작성:
 
 <sentence_ending_distribution>
 - ~습니다 ≈ 55% (메인)
-- ~거든요 ≈ 15%
-- ~예요/~이에요 ≈ 12%
+- ~예요/~이에요 ≈ 17%
+- ~인데요 ≈ 8%
 - ~잖아요 ≈ 5%
 - ~까요? ≈ 5% (자답형)
-- ~죠 ≈ 5%
-- ~답니다/~네요 ≈ 3%
-- 5~7문장마다 다른 어미로 리듬 깨기 (~습니다 단조 반복 금지)
+- ~거든요 ≈ 5% (남용 금지 — 한 단락에 2회 이상 쓰지 마세요)
+- ~죠 ≈ 3%
+- ~답니다/~네요 ≈ 2%
+- 5~7문장마다 다른 어미로 리듬 깨기 (~습니다 단조 반복 + ~거든요 연속 사용 금지)
 </sentence_ending_distribution>
 
 <information_arc>
@@ -1543,8 +1544,14 @@ case_narrative 의 환자 사례 + anti_marketing 등 voice 외 항목은 person
 빈 줄
 [옵션 — 도움 받을 수 있다는 톤 1줄]
 빈 줄
-"긴 글 읽어주셔서 감사합니다." (이모지 :) 옵션)
+"긴 글 읽어주셔서 감사합니다."
 </closing_template>
+
+<emoji_policy>
+이모지·이모티콘(:), :(, ^^, ㅎㅎ, 😊 등) 본문·인사·마무리에 사용 금지.
+괄호 안 부연 (예: "(웃음)", "(미소)") 도 사용하지 마세요.
+의료 블로그 톤은 차분하고 신뢰감 있게 — 감정은 어휘로 표현.
+</emoji_policy>
 
 <length>
 본문 글자수는 char_budget / volume_rules 의 totalCharTarget 따름.
