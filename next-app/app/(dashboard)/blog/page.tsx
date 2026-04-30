@@ -2026,17 +2026,12 @@ JSON 형식으로 응답해주세요.`;
     setIsRecommendingPrompt(true);
     try {
       const textOnly = generatedContent.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 2000);
-      const imgPromptText = `You are a medical blog image prompt specialist.
-Write ONE English image prompt for the ${selectedImgIndex}th image in the Korean hospital blog below.
+      const imgPromptText = `Write ONE English image prompt (40-80 words) for the ${selectedImgIndex}th image in the Korean hospital blog below.
 
-[RULES]
-- Write in English. Minimum 40 words.
-- Include: location (where), people (who, Korean, expression), action (doing what), props (surrounding objects), atmosphere (lighting, color)
-- End with: "no text, no watermark, no logo"
-- Camera angle: specify eye-level, slightly elevated, or over-the-shoulder
-- No direct eye contact with camera
-- No text/labels/signage in the image
-- Korean medical clinic setting: clean white walls, modern minimalist, warm lighting
+Describe in this order: location (where in the clinic) → people (who, Korean, what expression) → action (what they're doing) → props (surrounding objects) → atmosphere (lighting, color tone).
+Camera angle: eye-level, slightly elevated, or over-the-shoulder. No direct eye contact with the camera.
+
+Do NOT include "no text" / "no watermark" rules — those are added by the server.
 
 [BLOG CONTENT]
 ${textOnly}
@@ -2113,20 +2108,15 @@ Output ONLY the prompt. No explanation.`;
       bodyText = generatedContent.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 2000);
     }
 
-    const imgPromptText = `You are a medical blog image prompt specialist.
-Write ONE English image prompt for an image to be inserted in the Korean hospital blog below.
+    const imgPromptText = `Write ONE English image prompt (40-80 words) for an image to be inserted in the Korean hospital blog below.
 
 [PARAGRAPH HINT - where the image will be placed]
 ${paragraphHint}
 
-[RULES]
-- Write in English. Minimum 40 words.
-- Include: location (where), people (who, Korean, expression), action (doing what), props (surrounding objects), atmosphere (lighting, color)
-- End with: "no text, no watermark, no logo"
-- Camera angle: specify eye-level, slightly elevated, or over-the-shoulder
-- No direct eye contact with camera
-- No text/labels/signage in the image
-- Korean medical clinic setting: clean white walls, modern minimalist, warm lighting
+Describe in this order: location (where in the clinic) → people (who, Korean, what expression) → action (what they're doing) → props (surrounding objects) → atmosphere (lighting, color tone).
+Camera angle: eye-level, slightly elevated, or over-the-shoulder. No direct eye contact with the camera.
+
+Do NOT include "no text" / "no watermark" rules — those are added by the server.
 
 [BLOG CONTENT]
 ${bodyText}
