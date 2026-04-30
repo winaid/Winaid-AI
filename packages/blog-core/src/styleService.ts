@@ -279,9 +279,6 @@ ${escapeXml(safeOpeningStyle)}
   const tocBlock = as_.tableOfContents?.trim()
     ? `<table_of_contents priority="highest">
 ${escapeXml(as_.tableOfContents)}
-
-**반드시 위 목차 블록을 인사/훅 직후, 첫 소제목(h3) 직전에 원문 그대로 재현하세요.**
-번호 리스트 형식·빈 줄 간격 보존. 생략 절대 금지.
 </table_of_contents>`
     : '';
 

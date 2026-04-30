@@ -1859,10 +1859,14 @@ ${keywordInstruction}${section.type === 'intro' ? `
 
 <intro_table_of_contents>
 learned_style 또는 medical_blog_voice 의 <table_of_contents> 블록이 비어있지 않으면,
-intro section 출력은 다음 순서로 구성하세요:
-1) 인사 1-2문장 (greeting_rule / opening_style 따름)
-2) <table_of_contents> 블록 안의 텍스트를 **원문 그대로** 출력 (요약·재구성·새로 작성 금지)
+intro section 출력은 **반드시 다음 순서를 그대로 따르세요**:
+1) 인사 1-2문장 (greeting_rule / opening_style 따름) — **절대 생략 금지**
+2) <table_of_contents> 블록 안의 텍스트를 **원문 그대로 1회만** 출력 (요약·재구성·새로 작성·반복 출력 금지)
 3) 본문 도입 훅 1-2문장
+
+⚠️ 같은 목차를 두 번 출력하지 마세요. <table_of_contents> 블록은 본 intro section 안에서 정확히 1회만 등장합니다.
+⚠️ 인사를 생략하고 목차로 시작하지 마세요 — 항상 인사가 첫 줄.
+
 <table_of_contents> 블록이 없거나 비어있으면 위 단계 생략하고 일반 도입부로 작성하세요.
 </intro_table_of_contents>` : ''}
 ${typeLabel} 섹션의 HTML만 출력. 설명/코드펜스/마크다운 금지.
