@@ -20,7 +20,12 @@ export function getSavedStyles(): LearnedWritingStyle[] {
 }
 
 export function getStyleById(id: string): LearnedWritingStyle | null {
-  return getSavedStyles().find(s => s.id === id) || null;
+  const style = getSavedStyles().find(s => s.id === id) || null;
+  // STYLE-DEBUG: 회귀 시 첫날 vs 다음날 콘솔 비교용 (length 만, raw 데이터 X)
+  if (style) {
+    console.info(`[STYLE-DEBUG] load id=${style.id} opening_len=${style.analyzedStyle?.openingStyle?.length ?? 0} toc_len=${style.analyzedStyle?.tableOfContents?.length ?? 0} sample_len=${style.sampleText?.length ?? 0}`);
+  }
+  return style;
 }
 
 // ── 생성 시 프롬프트 변환 — styleService.buildStylePrompt 사용 ──
@@ -80,6 +85,11 @@ export default function WritingStyleLearner({
   const saveStyles = (styles: LearnedWritingStyle[]) => {
     localStorage.setItem(LEARNED_STYLES_KEY, JSON.stringify(styles));
     setSavedStyles(styles);
+    // STYLE-DEBUG: 가장 최근 저장한 스타일의 length 기록 (회귀 시 라운드트립 비교용)
+    const latest = styles[styles.length - 1];
+    if (latest) {
+      console.info(`[STYLE-DEBUG] save id=${latest.id} opening_len=${latest.analyzedStyle?.openingStyle?.length ?? 0} toc_len=${latest.analyzedStyle?.tableOfContents?.length ?? 0} sample_len=${latest.sampleText?.length ?? 0}`);
+    }
   };
 
   // ── 이미지 OCR (old 동일: Gemini Vision 경유) ──
