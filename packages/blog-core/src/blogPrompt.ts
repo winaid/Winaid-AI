@@ -1330,7 +1330,29 @@ function buildGreetingRuleBlock(req: GenerationRequest): string {
 <hospital_name>${hospitalName}</hospital_name>
 <role>대표 원장</role>
 <required_format><p>안녕하세요. {수식구 15~35자} ${hospitalName} 대표 원장입니다.</p></required_format>
-<instruction>첫 p는 위 형식 한 문장. opening_style 블록이 있으면 수식구를 원문 그대로 복사 (주제 변형 금지). opening_style 없을 때만 주제 기반 수식구 생성. 두 번째 문장부터 공감 훅으로 전환.</instruction>
+<instruction>
+첫 p는 위 형식 한 문장. {수식구} 슬롯의 규칙:
+
+✅ 수식구는 "원장 / 병원" 의 정체성·철학·전문성을 묘사 (1인칭 자기소개의 일부).
+   예: "환자의 시간을 아끼는", "꼼꼼한 진단을 원칙으로 하는",
+       "한 분 한 분 정성껏 진료하는", "10년째 같은 자리를 지키는"
+
+❌ 환자의 상태·증상·고민·행동을 묘사하는 phrase 절대 금지.
+   수식구 안에 환자가 등장하면 안 됩니다.
+   ❌ 나쁜 예: "이가 빠진 자리, 오래 방치하고 계신" → "원장" 을 수식해서 비문
+   ❌ 나쁜 예: "치아가 시린 분들을 위한" → 어색
+   ❌ 나쁜 예: "임플란트 고민 중이신" → 원장이 임플란트 고민 중인 것처럼 읽힘
+
+❌ 의문문·청유문·환자 호명("~하시는 분", "~겪고 계신") 금지.
+
+opening_style 블록이 있으면: 수식구를 원문 그대로 복사 (주제 변형 금지).
+   단 opening_style 의 수식구도 위 ❌ 규칙에 어긋나면 (환자 상태 묘사면)
+   opening_style 의 톤·리듬만 참고하여 원장 정체성 phrase 로 자연스럽게 변주.
+
+opening_style 없을 때: 위 ✅ 패턴으로 원장/병원 정체성 phrase 생성.
+
+환자 공감·상태 묘사는 첫 p 다음 단락부터 작성하세요 (인사 단락에 넣지 마세요).
+</instruction>
 </greeting_rule>`;
   }
   if (req.persona === 'coordinator') {
@@ -1339,6 +1361,13 @@ function buildGreetingRuleBlock(req: GenerationRequest): string {
 <hospital_name>${hospitalName}</hospital_name>
 <role>상담실장</role>
 <required_format><p>안녕하세요. {수식구 15~35자} ${hospitalName} 상담실장입니다.</p></required_format>
+<instruction>
+첫 p는 위 형식 한 문장. {수식구} 는 "상담실장 / 병원" 의 정체성·역할 묘사.
+✅ 예: "환자의 첫 걸음을 안내하는", "상담을 돕는"
+❌ 환자 상태·증상·고민 phrase 금지 (관형절이 "상담실장" 을 수식해서 비문 됨).
+   예: "이가 아프신", "진료 고민 중이신" — 사용 금지.
+환자 공감은 첫 p 다음 단락에.
+</instruction>
 </greeting_rule>`;
   }
   return `<greeting_rule>
