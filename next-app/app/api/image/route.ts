@@ -537,7 +537,6 @@ Pure visual illustration for a blog body image — never a poster, flyer, infogr
     ? [
         BLOG_IMAGE_RULE,
         body.prompt.trim(),
-        'Generate at high resolution. Sharp edges, no blur, no compression artifacts.',
       ].filter(Boolean).join('\n\n')
     : (() => {
       const imageCategory = detectImageCategory(body.prompt);
