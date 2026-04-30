@@ -1944,11 +1944,19 @@ JSON 형식으로 응답해주세요.`;
         return prev.replace(imgRegex, newImg);
       }
 
-      const phRegex = new RegExp(
+      // case 1: 라이브러리 미매칭 placeholder — outer wrapper + inner div(data-img-slot)
+      const phRegex1 = new RegExp(
         `<div[^>]*class="content-image-wrapper"[^>]*>\\s*<div[^>]*data-img-slot="${idx}"[^>]*>[\\s\\S]*?<\\/div>\\s*<\\/div>`
       );
-      if (phRegex.test(prev)) {
-        return prev.replace(phRegex, `<div class="content-image-wrapper">${newImg}</div>`);
+      if (phRegex1.test(prev)) {
+        return prev.replace(phRegex1, `<div class="content-image-wrapper">${newImg}</div>`);
+      }
+      // case 2: hybrid AI 생성중 placeholder — outer div 가 class+data-img-slot 을 모두 가짐
+      const phRegex2 = new RegExp(
+        `<div[^>]*class="content-image-wrapper"[^>]*data-img-slot="${idx}"[^>]*>[\\s\\S]*?<\\/div>\\s*<\\/div>`
+      );
+      if (phRegex2.test(prev)) {
+        return prev.replace(phRegex2, `<div class="content-image-wrapper">${newImg}</div>`);
       }
 
       return prev;
@@ -2073,8 +2081,14 @@ Output ONLY the prompt. No explanation.`;
       .map(el => Number(el.getAttribute('data-image-index')))
       .filter(n => !Number.isNaN(n));
     const newIdx = existingIndices.length > 0 ? Math.max(...existingIndices) + 1 : 1;
+    // replace 시 placeholder 의 원래 slot 번호 보존 (못 찾으면 newIdx fallback) — 후속 매칭 실패 차단
+    const slotAttr = insertMode === 'replace'
+      ? (insertTargetElement.getAttribute('data-img-slot')
+        ?? insertTargetElement.querySelector('[data-img-slot]')?.getAttribute('data-img-slot'))
+      : null;
+    const slotIdx = slotAttr ? Number(slotAttr) : newIdx;
     const safeAlt = alt.replace(/"/g, '&quot;');
-    const html = `<div class="content-image-wrapper"><img src="${imageUrl}" alt="${safeAlt}" data-image-index="${newIdx}" style="max-width:100%;border-radius:12px;" /></div>`;
+    const html = `<div class="content-image-wrapper"><img src="${imageUrl}" alt="${safeAlt}" data-image-index="${slotIdx}" style="max-width:100%;border-radius:12px;" /></div>`;
 
     if (insertMode === 'replace') {
       // placeholder wrapper 자체를 <img> 로 교체 (outerHTML)
