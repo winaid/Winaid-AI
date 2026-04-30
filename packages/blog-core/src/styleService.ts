@@ -13,6 +13,13 @@ import { filterMedicalLawViolations, FORBIDDEN_EXPRESSIONS } from '@winaid/blog-
 export interface AnalyzedStyle {
   tone: string;
   sentenceEndings: string[];
+  /**
+   * 어미별 분포(%) — sentenceEndings 의 각 어미가 본문 100문장 기준 등장하는 추정 비율.
+   * learned_style 사용 시 medical_blog_voice fallback 의 sentence_ending_distribution 이
+   * skip 되므로, 학습본 자체의 분포를 prompt 에 박기 위해 도입.
+   * 기존 학습본 호환 위해 optional. 없으면 sentenceEndings 리스트만 약하게 가이드.
+   */
+  sentenceEndingDistribution?: Array<{ ending: string; ratio: number }>;
   vocabulary: string[];
   structure: string;
   emotionLevel: 'low' | 'medium' | 'high';
@@ -230,6 +237,22 @@ export function buildStylePrompt(
   <structure>${as_.structure}</structure>
 </tone>`;
 
+  // 어미 분포 블록 — learned_style 사용 시 medical_blog_voice fallback 의
+  // sentence_ending_distribution 이 skip 되므로, 학습본 자체 분포를 단일 진실원으로 박음.
+  // 기존 학습본은 sentenceEndingDistribution 미보유 → 블록 빈 문자열 (legacy 호환).
+  const distribution = as_.sentenceEndingDistribution || [];
+  const safeDistribution = distribution.filter(
+    (e) => filterProhibited([e.ending]).length > 0,
+  );
+  const distributionBlock = safeDistribution.length > 0
+    ? `<sentence_ending_distribution priority="high">
+${safeDistribution.map((e) => `- ${e.ending} ≈ ${e.ratio}%`).join('\n')}
+
+본문 어미는 위 분포를 ±5% 범위에서 따르세요. 단조 반복·연속 사용 금지 (같은 어미 3문장 연속 X).
+representative_paragraphs 의 어미 빈도가 위 분포와 다르면 **위 분포가 단일 진실원입니다**.
+</sentence_ending_distribution>`
+    : '';
+
   const characterBlock = as_.speakerIdentity ? `<speaker_character>
   <identity>${as_.speakerIdentity}</identity>
   <reader_distance>${as_.readerDistance || '미분석'}</reader_distance>
@@ -350,6 +373,7 @@ ${uniqueSentences.map(s => `<sentence>${escapeXml(s)}</sentence>`).join('\n')}
 ${openingBlock}
 ${tocBlock}
 ${toneBlock}
+${distributionBlock}
 ${characterBlock}
 ${dnaBlock}
 ${medicalBlock}
@@ -702,6 +726,19 @@ export function createLearnedWritingStyle(
     analyzedStyle: {
       tone: (result.tone as string) || '',
       sentenceEndings: (result.sentenceEndings as string[]) || [],
+      sentenceEndingDistribution: Array.isArray(result.sentenceEndingDistribution)
+        ? (result.sentenceEndingDistribution as unknown[])
+            .map((entry) => {
+              if (!entry || typeof entry !== 'object') return null;
+              const e = entry as { ending?: unknown; ratio?: unknown };
+              const ending = typeof e.ending === 'string' ? e.ending.trim() : '';
+              const ratio = typeof e.ratio === 'number' ? Math.round(e.ratio) : Number.NaN;
+              if (!ending || !Number.isFinite(ratio) || ratio < 0 || ratio > 100) return null;
+              return { ending, ratio };
+            })
+            .filter((x): x is { ending: string; ratio: number } => x !== null)
+            .slice(0, 12)
+        : undefined,
       vocabulary: (result.vocabulary as string[]) || [],
       structure: (result.structure as string) || '',
       emotionLevel: (result.emotionLevel as 'low' | 'medium' | 'high') || 'medium',
@@ -766,6 +803,10 @@ ${sampleText.substring(0, 20000)}
   · 올바른 추출: "찬 것에 시린 증상이 2주 이상 지속되면 신경 치료가 필요할 수 있습니다" (동일)
   · 잘못된 추출: "시린 증상이 오래되면 신경 치료를 고려해야 합니다" (요약/재작성 — 금지!)
 - sentenceEndings는 원문에서 실제로 반복 등장하는 패턴만 추출해라
+- sentenceEndingDistribution 은 sentenceEndings 의 각 어미가 본문 100문장 기준 등장하는 비율(%)을 정수로 추정해라.
+  · 합계는 100% 근처 (정확하지 않아도 OK, 작은 어미는 합쳐서 0~5% 가능).
+  · 예: 본문에 ~습니다 가 절반쯤 나오고 ~거든요 가 가끔 나오면 [{"ending":"~습니다","ratio":50},{"ending":"~거든요","ratio":8}, ...]
+  · 학습 글이 짧으면(50문장 미만) 어림 가능. 분포 추정이 어려우면 빈 배열 [] 반환.
 - vocabulary는 원문에서 3회 이상 등장하는 단어/표현만 포함해라
 - uniqueExpressions는 원문에서 이 병원만의 독특한 표현을 정확히 인용해라
 - 추측하지 마라. 원문에 근거가 없는 분석은 하지 마라
@@ -843,6 +884,7 @@ ${sampleText.substring(0, 20000)}
 {
   "tone": "전체적인 어조 설명 (2-3문장)",
   "sentenceEndings": ["자주 쓰는 문장 끝 패턴 5-8개"],
+  "sentenceEndingDistribution": [{"ending": "~습니다", "ratio": 50}, {"ending": "~거든요", "ratio": 8}],
   "vocabulary": ["이 병원 고유의 특징적 단어/표현 5-10개"],
   "structure": "글 구조 설명 (TYPE A 에세이형 / TYPE B 정보전달형 명시 + 상세 흐름)",
   "emotionLevel": "low/medium/high",

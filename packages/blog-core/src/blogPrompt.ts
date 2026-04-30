@@ -1611,10 +1611,14 @@ ${req.stylePromptText}
 1. 이 블록의 톤·어미·리듬·단락 구조가 다른 모든 writing_style 지시보다 우선합니다.
 2. greeting_rules의 표준 인사 형식은 적용하지 마세요 — 학습본의 인사 유무/길이를 재현합니다.
 3. writing_style의 "문단당 4문장 150자" 기본 규칙보다 이 블록의 paragraph_rhythm이 우선합니다.
-4. original_paragraphs의 단락 구조를 실제 HTML p 태그에 그대로 재현하세요.
-5. 빈 줄 위치에 빈 p를 삽입해서 시각적 간격을 재현하세요 (연속 2개 이상은 안 됩니다).
-6. 학습본에 인사가 없으면 인사 없이 바로 본론으로 시작하세요.
-7. 의료법 constraints는 여전히 최우선 — 학습본 스타일이더라도 금지어는 사용 불가.
+4. original_paragraphs(또는 representative_paragraphs)의 5개 단락은 **단락 길이·문장 구조·정보 흐름** 의 표본입니다.
+   어미(~거든요, ~습니다 등) 빈도는 표본을 그대로 모방하지 마세요 —
+   sentence_ending_distribution 블록의 분포가 어미의 단일 진실원입니다.
+   분포 블록이 없으면 sentence_endings 리스트를 약하게 가이드로만 사용하고, 같은 어미를 3문장 연속 쓰지 마세요.
+5. original_paragraphs의 단락 구조(문장 수·빈 줄 위치)를 실제 HTML p 태그에 그대로 재현하세요.
+6. 빈 줄 위치에 빈 p를 삽입해서 시각적 간격을 재현하세요 (연속 2개 이상은 안 됩니다).
+7. 학습본에 인사가 없으면 인사 없이 바로 본론으로 시작하세요.
+8. 의료법 constraints는 여전히 최우선 — 학습본 스타일이더라도 금지어는 사용 불가.
 </override_rules>
 </learned_style>`;
   }
