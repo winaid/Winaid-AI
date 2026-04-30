@@ -21,8 +21,8 @@ export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
   const hospitalName = params.get('hospitalName');
   const tagsParam = params.get('tags');
-  // mine=1 → 본인 이미지만. 그 외 → 본인 OR 같은 팀(team_id 일치).
-  // 팀 미배정(team_id NULL) 사용자는 mine 값과 무관하게 본인 것만 조회됨.
+  // mine=1 → 본인 업로드만 (라이브러리 페이지의 "내 것만" 토글용).
+  // 그 외 → 인증된 모든 직원에게 풀 공유 (next-app=내부 직원 도구 정책).
   const mineOnly = params.get('mine') === '1';
   // ?userId= 는 legacy. owner 와 다르면 사칭 시도 → 무시(silent override + 경고).
   // 합법 호출 (owner 와 동일) 은 그대로 통과.
@@ -33,17 +33,6 @@ export async function GET(request: NextRequest) {
   const limit = Math.min(Math.max(parseInt(params.get('limit') || '50', 10) || 50, 1), 100);
   const offset = Math.max(parseInt(params.get('offset') || '0', 10) || 0, 0);
 
-  // owner 의 team_id 조회 (게스트 또는 팀 미배정이면 null).
-  let ownerTeamId: number | null = null;
-  if (owner !== 'guest') {
-    const { data: prof } = await supabase
-      .from('profiles')
-      .select('team_id')
-      .eq('id', owner)
-      .maybeSingle();
-    ownerTeamId = (prof?.team_id ?? null) as number | null;
-  }
-
   let query = supabase
     .from('hospital_images')
     .select('*', { count: 'exact' })
@@ -51,29 +40,17 @@ export async function GET(request: NextRequest) {
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1);
 
-  // user-scope · primary gate. RLS 는 SELECT permissive 라 server-side filter 가
-  // 격리 책임. team_id 비교는 정수 컬럼이라 SQL injection 위험 없음.
-  //
-  // 병원 단위 공유 (scope=hospital): hospitalName + scope=hospital 가 함께 명시되면
-  // user/team 필터를 우회하고 그 병원의 모든 이미지를 반환한다 (업로더·팀 무관).
-  // 사용자 정책: "이미지 있는 병원 선택해서 글 쓰면 무조건 매칭되어야 한다."
-  // 블로그 생성 (blog/page.tsx) 만 이 모드를 사용하고, 라이브러리 페이지는 사용 안 함
-  // → 라이브러리는 소유권·관리 UX 차원에서 팀 단위 격리 유지가 의도된 정책.
-  // 인증 가드는 위 checkAuth 가 담당하므로, scope=hospital 은 익명 노출이 아니라
-  // "인증된 사용자 간 병원 단위 공유" 다.
-  const hospitalScope = params.get('scope') === 'hospital';
-  if (hospitalName && hospitalScope) {
+  // 정책: 내부 직원 풀 공유 (사용자 결정 — "팀 상관 없이, 내부용 관리자 아이디로도 작동").
+  // 인증된 사용자라면 모두 같은 풀 조회. 팀/업로더 격리 없음.
+  // 라이브러리 페이지의 "내 것만" 토글은 mineOnly=1 명시로 처리.
+  // hospitalName 단독 전달 → 그 병원으로 좁힘 (라이브러리 hospital 필터 + 블로그 매칭 공통 사용).
+  // 이전 scope=hospital 우회는 무용지물 — 이제 디폴트가 풀 공유라 파라미터 무관하게 동작.
+  // public-app 의 동일 라우트는 외부 로그인 사용자별 격리를 유지 (별도 정책).
+  if (mineOnly) {
+    query = query.eq('user_id', owner);
+  }
+  if (hospitalName) {
     query = query.eq('hospital_name', hospitalName);
-    // mineOnly 가 함께 오면 hospitalName 안에서도 본인 것만 (예외 케이스).
-    if (mineOnly) query = query.eq('user_id', owner);
-  } else {
-    if (mineOnly || ownerTeamId === null) {
-      query = query.eq('user_id', owner);
-    } else {
-      query = query.or(`user_id.eq.${owner},team_id.eq.${ownerTeamId}`);
-    }
-    // hospitalName 만 단독 전달 (라이브러리 hospital 필터) → 기존처럼 user/team 안에서 추가 필터.
-    if (hospitalName) query = query.eq('hospital_name', hospitalName);
   }
 
   if (tagsParam) {
