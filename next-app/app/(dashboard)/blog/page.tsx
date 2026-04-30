@@ -1173,7 +1173,10 @@ JSON 형식으로 응답해주세요.`;
       }));
 
       let imageResultsPromise: Promise<{ index: number; url: string | null }[]> | null = null;
-      if (imagePrompts.length > 0 && imageCount > 0) {
+      // library 모드는 조기 AI 호출 skip — 라이브러리 매칭 단계(line 1456+) 에서 처리.
+      // hybrid 모드는 매칭 실패 시 fallback AI 호출이 후속 로직 (line 1551+) 에서 발생 — 의도된 동작.
+      // 시간 추정 분기(line 983) 와 일관 (`imageSourceMode !== 'library'`).
+      if (imagePrompts.length > 0 && imageCount > 0 && imageSourceMode !== 'library') {
         setDisplayStage(3);
         imageResultsPromise = Promise.all(
           imagePrompts.slice(0, imageCount).map((p, i) => {
@@ -1205,6 +1208,8 @@ JSON 형식으로 응답해주세요.`;
               .catch(() => ({ index, url: null as string | null }));
           })
         );
+      } else if (imagePrompts.length > 0 && imageCount > 0 && imageSourceMode === 'library') {
+        console.info('[BLOG] library 모드 — 조기 AI 이미지 생성 skip (라이브러리 매칭 단계에서 처리)');
       }
 
       // v4: 경쟁 분석 / 말투 로드 병렬 — 서버가 담당하므로 클라이언트 경로 삭제됨.
