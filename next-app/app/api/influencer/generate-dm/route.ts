@@ -5,6 +5,8 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { callGeminiDirect } from '../../../../lib/geminiDirect';
+import { checkAuth } from '../../../../lib/apiAuth';
+import { sanitizePromptInput } from '@winaid/blog-core';
 
 export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
@@ -47,6 +49,9 @@ function checkMedicalAdViolations(text: string): string[] {
 }
 
 export async function POST(request: NextRequest) {
+  const auth = await checkAuth(request);
+  if (auth) return auth;
+
   let body: GenerateDmRequest;
   try {
     body = await request.json();
@@ -61,7 +66,17 @@ export async function POST(request: NextRequest) {
   }
   if (!hospital.name) hospital.name = '저희 병원';
 
-  const recentPostText = influencer.recent_posts?.[0]?.text || '';
+  // prompt injection 가드 — recent_posts.text 등 외부 IG 데이터가 prompt 에 결합되므로
+  // role-impersonation phrase("ignore previous", "system:" 등) 차단 + 길이 캡.
+  const safeUsername = sanitizePromptInput(influencer.username, 80);
+  const safeFullName = sanitizePromptInput(influencer.full_name, 80);
+  const safeLocation = sanitizePromptInput(influencer.estimated_location, 80);
+  const safeCategory = sanitizePromptInput(influencer.primary_category, 60);
+  const recentPostText = sanitizePromptInput(influencer.recent_posts?.[0]?.text, 150);
+  const safeHospitalName = sanitizePromptInput(hospital.name, 100);
+  const safeHospitalLocation = sanitizePromptInput(hospital.location, 100);
+  const safeHospitalFeatures = sanitizePromptInput(hospital.features, 200);
+  const safeHospitalInstagram = sanitizePromptInput(hospital.instagram, 80);
 
   const toneGuides: Record<string, string> = {
     casual: `캐주얼 톤 — 친구에게 말하듯 가볍고 따뜻하게.
@@ -78,19 +93,19 @@ export async function POST(request: NextRequest) {
   const prompt = `너는 인스타그램 인플루언서 마케팅 전문가다.
 
 [인플루언서 정보]
-- 아이디: @${influencer.username}
-- 이름: ${influencer.full_name || '미확인'}
+- 아이디: @${safeUsername}
+- 이름: ${safeFullName || '미확인'}
 - 팔로워: ${influencer.follower_count.toLocaleString()}명
 - 참여율: ${influencer.engagement_rate}%
-- 지역: ${influencer.estimated_location}
-- 카테고리: ${influencer.primary_category}
-${recentPostText ? `- 최근 게시물: "${recentPostText.substring(0, 150)}"` : ''}
+- 지역: ${safeLocation}
+- 카테고리: ${safeCategory}
+${recentPostText ? `- 최근 게시물: ${recentPostText}` : ''}
 
 [병원 정보]
-- 병원명: ${hospital.name}
-- 위치: ${hospital.location}
-- 특징: ${hospital.features || '미입력'}
-- 인스타: ${hospital.instagram || '미입력'}
+- 병원명: ${safeHospitalName}
+- 위치: ${safeHospitalLocation}
+- 특징: ${safeHospitalFeatures || '미입력'}
+- 인스타: ${safeHospitalInstagram || '미입력'}
 
 [DM 톤]
 ${toneGuides[tone] || toneGuides.casual}
@@ -125,7 +140,7 @@ ${toneGuides[tone] || toneGuides.casual}
     if (!text) {
       console.error('[INFLUENCER DM] Gemini 응답 없음:', error);
       return NextResponse.json({ drafts: [
-        { tone, message: `안녕하세요! ${hospital.name}입니다 😊\n${influencer.full_name || influencer.username || '크리에이터'}님의 콘텐츠를 보고 연락드렸어요.\n같은 ${hospital.location || '동네'}에서 활동하시는 것 같아 소소한 협업을 제안드리고 싶은데, 혹시 관심 있으시면 편하게 답장 주세요~`, warnings: [] },
+        { tone, message: `안녕하세요! ${safeHospitalName}입니다 😊\n${safeFullName || safeUsername || '크리에이터'}님의 콘텐츠를 보고 연락드렸어요.\n같은 ${safeHospitalLocation || '동네'}에서 활동하시는 것 같아 소소한 협업을 제안드리고 싶은데, 혹시 관심 있으시면 편하게 답장 주세요~`, warnings: [] },
       ] });
     }
 
