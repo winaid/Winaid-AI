@@ -654,10 +654,14 @@ export async function* streamGemini(
   const keys = getGeminiKeys();
   if (keys.length === 0) throw new Error('GEMINI_API_KEY 미설정');
 
-  // Flash Lite Preview — Pro Preview 가 reasoning thinking phase 로 첫 byte 30~90s 걸려
-  // Vercel maxDuration 안에서 504. Flash Lite 는 즉시 응답 + search grounding 동일 지원.
-  // 일반 사용자가 실제 Gemini 에서 보게 되는 답변과 더 가까움 (free tier 모델).
-  const model = 'gemini-3.1-flash-lite-preview';
+  // Pro Preview — googleSearch 그라운딩 사용 시 코드베이스 정책 (router.ts).
+  // Flash Lite 는 first-byte 빠르지만 검색 결과 종합 능력 부족 → "구체적 업체 N개 추천"
+  // 같은 local-business retrieval 답변에서 일반 가이드만 반환하는 회귀 발생 (Gemini 웹 UI
+  // 와 답변 품질 격차). 이전에 Pro 가 504 났던 원인(first-byte 30~90s 동안 Vercel
+  // idle timeout)은 stream/route.ts 의 SSE keepalive 로 근본 해결.
+  // commit 29151cd 가 keepalive 미구현 상태에서 Flash Lite 로 임시 전환했으나 답변 품질
+  // 회귀가 더 큰 비용이라 Pro Preview 롤백 + stream/route.ts keepalive 동시 적용.
+  const model = 'gemini-3.1-pro-preview';
   // 실측 철학: systemInstruction / temperature 모두 제거. 사용자가 Gemini 웹에 직접 물었을 때와 동등.
   // tools.googleSearch 는 사용자가 웹 UI 에서 검색을 켠 것과 동치라 유지.
   const apiBody = {

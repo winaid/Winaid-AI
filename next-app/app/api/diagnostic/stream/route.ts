@@ -39,6 +39,12 @@ import type { AIPlatform } from '../../../../lib/diagnostic/types';
 // Vercel Pro plan max = 300s. 600 은 fallback(60s default)으로 떨어져 504 발생.
 // Gemini 3.1 Pro Preview 실측 평균 30~60s, worst ~120s 라 300 이면 충분.
 export const maxDuration = 300;
+
+// Vercel/proxy idle timeout 차단용 SSE keepalive 간격 (ms).
+// Gemini Pro Preview 의 reasoning thinking phase 첫 byte 30~90s 동안 idle 로 판단되면 504.
+// SSE comment(`: ping\n\n`)는 표준 spec 상 클라이언트 파서가 무시 → 본문 영향 없음.
+// 800ms 는 public-app 동일 패턴 (검증된 값).
+const KEEPALIVE_INTERVAL_MS = 800;
 export const dynamic = 'force-dynamic';
 
 // ── 캐시 헬퍼 ──────────────────────────────────────────────
@@ -229,6 +235,19 @@ export async function POST(request: NextRequest) {
         timestamp: new Date().toISOString(),
       });
 
+      // Keepalive — Gemini Pro Preview 는 reasoning phase 로 first-byte 30~90s 걸릴 수
+      // 있고, 그동안 Vercel/proxy 가 idle 로 판단해 504. SSE comment(`: ping\n\n`)는
+      // 이벤트 파서에서 무시되므로 클라이언트엔 영향 없음. 첫 chunk 도착 시 중단.
+      let firstChunkReceived = false;
+      const keepaliveInterval = setInterval(() => {
+        if (firstChunkReceived) return;
+        try {
+          controller.enqueue(encoder.encode(`: ping\n\n`));
+        } catch {
+          // controller 가 이미 닫힘 — finally 에서 clear 됨
+        }
+      }, KEEPALIVE_INTERVAL_MS);
+
       let fullText = '';
       try {
         // manual iteration 으로 generator return value(StreamMeta) 캡처
@@ -240,6 +259,10 @@ export async function POST(request: NextRequest) {
           if (result.done) {
             if (result.value) meta = result.value;
             break;
+          }
+          if (!firstChunkReceived) {
+            firstChunkReceived = true;
+            clearInterval(keepaliveInterval);
           }
           fullText += result.value;
           send({ type: 'chunk', text: result.value });
@@ -307,6 +330,7 @@ export async function POST(request: NextRequest) {
           timestamp: new Date().toISOString(),
         });
       } finally {
+        clearInterval(keepaliveInterval);
         controller.close();
       }
     },
