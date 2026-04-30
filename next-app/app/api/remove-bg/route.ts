@@ -1,12 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { checkAuth } from '../../../lib/apiAuth';
 
 const toBase64 = (buf: ArrayBuffer): string => Buffer.from(buf).toString('base64');
 
+const ALLOWED_MIME = new Set(['image/png', 'image/jpeg', 'image/webp']);
+const MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
+
 export async function POST(req: NextRequest) {
+  const auth = await checkAuth(req);
+  if (auth) return auth;
+
   try {
     const formData = await req.formData();
     const imageFile = formData.get('image') as File;
     if (!imageFile) return NextResponse.json({ error: 'No image' }, { status: 400 });
+
+    // MIME 화이트리스트 + 사이즈 cap (외부 API 비용 + 임의 파일 업로드 방지)
+    if (!ALLOWED_MIME.has(imageFile.type)) {
+      return NextResponse.json({ error: 'png/jpeg/webp 만 허용' }, { status: 400 });
+    }
+    if (imageFile.size > MAX_SIZE_BYTES) {
+      return NextResponse.json({ error: '이미지 10MB 초과' }, { status: 400 });
+    }
 
     const apiKey = process.env.REMOVE_BG_API_KEY;
 

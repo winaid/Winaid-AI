@@ -46,6 +46,12 @@ async function pingModel(model: string, key: string) {
 }
 
 export async function GET() {
+  // prod 노출 차단 — keyMask + 모델 access 정보 누출 방지.
+  // 진단은 Vercel Preview / 로컬에서만. prod 진단이 필요하면 인증 게이트를 도입한 별도 라우트로.
+  if (process.env.VERCEL_ENV === 'production') {
+    return NextResponse.json({ error: 'zdebug disabled in production' }, { status: 404 });
+  }
+
   const keys: string[] = [];
   for (let i = 0; i <= 10; i++) {
     const v = process.env[i === 0 ? 'GEMINI_API_KEY' : `GEMINI_API_KEY_${i}`];

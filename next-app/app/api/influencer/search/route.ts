@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { callGeminiDirect } from '../../../../lib/geminiDirect';
 import { generateInfluencerHashtags, LOCATION_HASHTAGS } from '../../../../lib/influencerHashtags';
+import { checkAuth } from '../../../../lib/apiAuth';
 
 export const maxDuration = 120;
 export const dynamic = 'force-dynamic';
@@ -221,6 +222,9 @@ JSON 배열:
 // ── 메인 핸들러 ──
 
 export async function POST(request: NextRequest) {
+  const auth = await checkAuth(request);
+  if (auth) return auth;
+
   let body: SearchRequest;
   try { body = await request.json(); } catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }); }
   if (!body.location?.trim()) return NextResponse.json({ error: '위치를 입력해주세요' }, { status: 400 });

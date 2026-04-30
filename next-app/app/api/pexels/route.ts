@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { checkAuth } from '../../../lib/apiAuth';
 
 export async function GET(req: NextRequest) {
+  const auth = await checkAuth(req);
+  if (auth) return auth;
+
   const { searchParams } = new URL(req.url);
   const query = searchParams.get('query') || 'hospital';
   const orientation = searchParams.get('orientation') || '';

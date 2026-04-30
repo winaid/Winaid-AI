@@ -6,6 +6,7 @@
  * 미포함: 크레딧 차감, generation token, raw mode, 이미지 생성
  */
 import { NextRequest, NextResponse } from 'next/server';
+import { checkAuth } from '../../../lib/apiAuth';
 
 
 export const maxDuration = 300;
@@ -180,7 +181,10 @@ interface GeminiCandidate {
 }
 
 export async function POST(request: NextRequest) {
-  // 내부용은 인증 스킵 (팀 선택 방식, Supabase 쿠키 없음)
+  // 내부용 — Supabase Bearer 또는 X-Admin-Token 필요. 누락 시 401.
+  // 이전 "인증 스킵" 정책은 prompt 100k자 + maxOutputTokens 65536 무제한 호출 가능 → LLM 비용 직격탄.
+  const auth = await checkAuth(request);
+  if (auth) return auth;
 
   // ═══ body 파싱 (스트리밍/비스트리밍 공통) ═══
   let body: GeminiRequestBody;

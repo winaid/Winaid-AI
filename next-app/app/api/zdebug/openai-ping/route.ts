@@ -52,6 +52,12 @@ async function pingModel(model: string, key: string) {
 }
 
 export async function GET() {
+  // prod 노출 차단 — keyMask + 모델 access 정보 누출 방지.
+  // 진단은 Vercel Preview / 로컬에서만.
+  if (process.env.VERCEL_ENV === 'production') {
+    return NextResponse.json({ error: 'zdebug disabled in production' }, { status: 404 });
+  }
+
   const key = process.env.OPENAI_API_KEY;
 
   if (!key) {
