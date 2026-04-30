@@ -1211,8 +1211,9 @@ JSON 형식으로 응답해주세요.`;
                 const dataUrl = d?.imageDataUrl as string | undefined;
                 // 조기 경로: Storage 업로드 없이 즉시 src 박음. Chrome data URL
                 // 한도(~2MB) + 본문 HTML 비대화 회피 위해 Blob URL 로 변환 (async).
-                // 매우 큰 (5MB+) 경우만 skip → generateAndUpload 정식 경로로 재생성.
-                if (dataUrl && dataUrl.length > 5000 * 1024) {
+                // 매우 큰 (15MB+) 경우만 skip → generateAndUpload 정식 경로로 재생성.
+                // 한도 5MB→15MB: gpt-image-2 (PR #30) 가 2K PNG 로 5~10MB 출력해 기존 한도 초과로 노출 실패.
+                if (dataUrl && dataUrl.length > 15000 * 1024) {
                   console.warn(`[image] base64 too large, skip embed: ${Math.round(dataUrl.length / 1024)}KB`);
                   return { index, url: null as string | null };
                 }
@@ -1679,8 +1680,8 @@ JSON 형식으로 응답해주세요.`;
               }
             }
 
-            // 6c) Storage 실패 시 base64 fallback — 단 700KB 초과는 HTML 비대화 방지로 차단
-            if (dataUrl.length > 5000 * 1024) {
+            // 6c) Storage 실패 시 base64 fallback — 한도 5MB→15MB (gpt-image-2 2K PNG 5~10MB 대응)
+            if (dataUrl.length > 15000 * 1024) {
               console.warn(`[image] Storage 실패 + base64 ${Math.round(dataUrl.length / 1024)}KB 초과 — embed skip`);
               return { index, url: null };
             }
@@ -2238,8 +2239,8 @@ Output ONLY the prompt. No explanation.`;
         } catch { /* Storage 실패 → base64 fallback */ }
       }
 
-      // Storage 실패 → base64 fallback. 단 700KB 초과는 HTML 비대화 방지
-      if (imgData.imageDataUrl.length > 5000 * 1024) {
+      // Storage 실패 → base64 fallback. 한도 5MB→15MB (gpt-image-2 2K PNG 5~10MB 대응)
+      if (imgData.imageDataUrl.length > 15000 * 1024) {
         console.warn(`[image] Storage 실패 + base64 ${Math.round(imgData.imageDataUrl.length / 1024)}KB 초과 — 차단`);
         throw new Error('이미지가 너무 큽니다. 다시 생성해 주세요.');
       }
