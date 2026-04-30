@@ -208,7 +208,10 @@ function BlogSectionPanel({
               : section.title;
         const charLen = section.html.replace(/<[^>]*>/g, '').replace(/\s/g, '').length;
         const isRegenerating = regeneratingSection === section.index;
-        const isDisabled = regeneratingSection !== null && !isRegenerating;
+        // intro 섹션 재생성 임시 비활성화 — replaceSectionHtml 의 빈 title 매칭 + race 로
+        // 본문 일부 손실 회귀. 시연 안정화 후 fix → 본 가드 제거 예정.
+        const isIntroSection = section.type === 'intro';
+        const isDisabled = (regeneratingSection !== null && !isRegenerating) || isIntroSection;
 
         return (
           <div key={section.index} className="p-3 rounded-lg text-sm bg-slate-50 hover:bg-slate-100 transition-colors">
@@ -220,6 +223,7 @@ function BlogSectionPanel({
               <button
                 onClick={() => onRegenerate(section.index)}
                 disabled={isRegenerating || isDisabled}
+                title={isIntroSection ? '도입부 재생성은 일시 비활성화 (회귀 fix 진행 중)' : ''}
                 className={`ml-auto text-xs px-3 py-1 rounded-md font-medium transition-all ${
                   isRegenerating
                     ? 'bg-blue-100 text-blue-600 animate-pulse'

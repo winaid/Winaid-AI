@@ -45,13 +45,37 @@ async function embedImagesAsBase64(html: string): Promise<string> {
   return result;
 }
 
+/** references-footer 블록 제거 — nested div 안전 처리 (depth counter). */
+function stripReferencesFooter(html: string): string {
+  const startRe = /<div\s+[^>]*class=["'][^"']*references-footer[^"']*["'][^>]*>/i;
+  const m = html.match(startRe);
+  if (!m || m.index === undefined) return html;
+  const start = m.index;
+  let i = start + m[0].length;
+  let depth = 1;
+  const tagRe = /<\/?div\b[^>]*>/gi;
+  tagRe.lastIndex = i;
+  while (depth > 0) {
+    const tag = tagRe.exec(html);
+    if (!tag) return html; // 매칭 실패 → 안전하게 미변경
+    if (tag[0].startsWith('</')) depth--;
+    else depth++;
+    i = tagRe.lastIndex;
+  }
+  return html.slice(0, start) + html.slice(i);
+}
+
 /** Word 호환 HTML 변환 (root resultPreviewUtils.convertToWordCompatibleHtml 동일) */
 function convertToWordCompatibleHtml(html: string): string {
   let r = html;
 
-  // naver-post-container 제거
-  r = r.replace(/<div[^>]*class="naver-post-container"[^>]*>/gi, '');
-  r = r.replace(/<\/div>\s*$/gi, '');
+  // naver-post-container 짝 제거 — 시작 태그 + 마지막 </div>.
+  // 이전엔 </div> 무조건 제거 → naver-post-container 미포함 본문의 마지막 wrapper
+  // (content-image-wrapper 등) 가 잘리는 회귀. 시작 태그 존재 시에만 마지막 </div> 제거.
+  if (/<div[^>]*class="[^"]*naver-post-container/i.test(r)) {
+    r = r.replace(/<div[^>]*class="naver-post-container"[^>]*>/gi, '');
+    r = r.replace(/<\/div>\s*$/gi, '');
+  }
 
   // h2 → table (bottom bar)
   r = r.replace(/<h2[^>]*>(.*?)<\/h2>/gi, (_, c) => {
@@ -103,8 +127,10 @@ function convertToWordCompatibleHtml(html: string): string {
 
 /** Word (.doc) 다운로드 — 이미지를 base64로 임베딩 */
 export async function downloadWord(html: string): Promise<void> {
-  // 출처 블록 제거 (워드에는 포함하지 않음)
-  const htmlWithoutRefs = html.replace(/<div[^>]*class="references-footer"[^>]*>[\s\S]*?<\/div>/gi, '');
+  // 출처 블록 제거 (워드에는 포함하지 않음).
+  // LLM 이 references-footer 안에 nested div 를 섞을 수 있어 단순 non-greedy 면
+  // 외부 </div> 가 못 닫히는 케이스. depth counter 로 정확히 매칭.
+  const htmlWithoutRefs = stripReferencesFooter(html);
   // 이미지를 base64로 인라인 임베딩 (오프라인에서도 표시)
   const htmlWithImages = await embedImagesAsBase64(htmlWithoutRefs);
   const wordCompatHtml = convertToWordCompatibleHtml(htmlWithImages);
