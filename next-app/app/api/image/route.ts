@@ -565,8 +565,9 @@ Pure visual illustration for a blog body image — never a poster, flyer, infogr
   // Snapshot pin 권장: OPENAI_IMAGE_MODEL=gpt-image-2-2026-04-21 (silent 업그레이드 차단).
   const MODEL = process.env.OPENAI_IMAGE_MODEL || 'gpt-image-2';
   const sizeStr = aspectRatioToSize(aspectRatio);
-  const qualityStr: 'low' | 'medium' | 'high' | 'auto' =
-    body.quality === 'premium' ? 'high' : 'auto';
+  // 시연 안정성 우선 — 'low' 강제 (5-15s/이미지 vs 30-290s).
+  // 시연 후 원복 PR 예정 (premium → quality='high' 복원).
+  const qualityStr: 'low' | 'medium' | 'high' | 'auto' = 'low';
 
   // ── 첨부 이미지 (referenceImage / logoBase64 / calendarImage) → prompt 텍스트 힌트로 변환 ──
   // gpt-image-2 의 images.edit 는 2026-04-27 부터 SDK v6.34 에서 model validation 으로 거부됨
@@ -587,10 +588,13 @@ Pure visual illustration for a blog body image — never a poster, flyer, infogr
   // (isCardNewsMode + premium quality 는 quality='high' 로 자동 매핑 — 기존 2-Stage 우회.)
 
   // ── OpenAI 호출 + 멀티키 로테이션 ──
+  // 시연: 키 캐스케이드 캡 — 60s × 2 + waits ≤ 130s. Vercel 300s 한도 절반 이하 유지.
+  // (이전: 11키 × 120s = 최악 1320s → 300s 초과로 timeout 발생.)
+  const MAX_KEY_ATTEMPTS = Math.min(keys.length, 2);
   let lastError = '';
-  for (let ki = 0; ki < keys.length; ki++) {
+  for (let ki = 0; ki < MAX_KEY_ATTEMPTS; ki++) {
     const keyIdx = (keyIndex + ki) % keys.length;
-    const openai = new OpenAI({ apiKey: keys[keyIdx], timeout: 120_000 });
+    const openai = new OpenAI({ apiKey: keys[keyIdx], timeout: 60_000 });
 
     try {
       const result = await openai.images.generate({
