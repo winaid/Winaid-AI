@@ -524,6 +524,11 @@ $$;
 REVOKE ALL ON FUNCTION increment_image_usage(uuid[]) FROM public;
 GRANT EXECUTE ON FUNCTION increment_image_usage(uuid[]) TO authenticated;
 
+-- auto-injected: schema gap fix
+-- production Tokyo 의 hospital_images.user_id 는 TEXT (out-of-band 변경)
+-- backfill UPDATE 가 TEXT 가정이라 schema uuid 와 충돌. 미리 변환.
+ALTER TABLE public.hospital_images ALTER COLUMN user_id TYPE TEXT USING user_id::text;
+
 -- ============================================
 -- File: sql/migrations/2026-04-29_image_library_team_share.sql
 -- Idempotency injections: 1 fn DROPs, 8 policy DROPs
