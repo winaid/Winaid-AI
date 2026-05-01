@@ -343,6 +343,11 @@ CREATE INDEX IF NOT EXISTS idx_hospital_images_user
 CREATE INDEX IF NOT EXISTS idx_hospital_images_tags
   ON hospital_images USING GIN (tags);
 
+-- auto-injected: schema gap fix (production Tokyo drift)
+-- hospital_images.user_id 는 운영에서 TEXT ('guest' INSERT 허용용 out-of-band 변경).
+-- 후속 RLS / soft_delete / image_library 모든 파일이 TEXT 가정.
+ALTER TABLE public.hospital_images ALTER COLUMN user_id TYPE TEXT USING user_id::text;
+
 -- ============================================
 -- File: sql/migrations/2026-04-24_hospital_images_rls.sql
 -- Idempotency injections: 4 policy DROPs
@@ -523,11 +528,6 @@ $$;
 -- 기존 public 권한 제거 후 authenticated 만 허용
 REVOKE ALL ON FUNCTION increment_image_usage(uuid[]) FROM public;
 GRANT EXECUTE ON FUNCTION increment_image_usage(uuid[]) TO authenticated;
-
--- auto-injected: schema gap fix
--- production Tokyo 의 hospital_images.user_id 는 TEXT (out-of-band 변경)
--- backfill UPDATE 가 TEXT 가정이라 schema uuid 와 충돌. 미리 변환.
-ALTER TABLE public.hospital_images ALTER COLUMN user_id TYPE TEXT USING user_id::text;
 
 -- ============================================
 -- File: sql/migrations/2026-04-29_image_library_team_share.sql
