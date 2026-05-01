@@ -57,13 +57,13 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 -- auto-injected: column reconciliation (CREATE TABLE IF NOT EXISTS no-op safety)
-ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS id UUID REFERENCES auth.users(id) ON DELETE CASCADE;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS id UUID;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS email TEXT NOT NULL;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS full_name TEXT;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS name TEXT;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS avatar_url TEXT;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS team_id INTEGER;
-ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS plan TEXT DEFAULT 'free' CHECK (plan IN ('free', 'basic', 'standard', 'premium'));
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS plan TEXT DEFAULT 'free';
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS remaining_credits INTEGER DEFAULT 3;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS plan_expires_at TIMESTAMPTZ;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS ip_hash TEXT;
@@ -142,8 +142,8 @@ CREATE TABLE IF NOT EXISTS public.subscriptions (
 );
 -- auto-injected: column reconciliation (CREATE TABLE IF NOT EXISTS no-op safety)
 ALTER TABLE public.subscriptions ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
-ALTER TABLE public.subscriptions ADD COLUMN IF NOT EXISTS user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE;
-ALTER TABLE public.subscriptions ADD COLUMN IF NOT EXISTS plan_type TEXT NOT NULL DEFAULT 'free' CHECK (plan_type IN ('free', 'basic', 'standard', 'premium'));
+ALTER TABLE public.subscriptions ADD COLUMN IF NOT EXISTS user_id UUID NOT NULL;
+ALTER TABLE public.subscriptions ADD COLUMN IF NOT EXISTS plan_type TEXT NOT NULL DEFAULT 'free';
 ALTER TABLE public.subscriptions ADD COLUMN IF NOT EXISTS credits_total INT NOT NULL DEFAULT 3;
 ALTER TABLE public.subscriptions ADD COLUMN IF NOT EXISTS credits_used INT NOT NULL DEFAULT 0;
 ALTER TABLE public.subscriptions ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ;
@@ -200,15 +200,15 @@ CREATE TABLE IF NOT EXISTS public.generated_posts (
 );
 -- auto-injected: column reconciliation (CREATE TABLE IF NOT EXISTS no-op safety)
 ALTER TABLE public.generated_posts ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
-ALTER TABLE public.generated_posts ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL;
+ALTER TABLE public.generated_posts ADD COLUMN IF NOT EXISTS user_id UUID;
 ALTER TABLE public.generated_posts ADD COLUMN IF NOT EXISTS user_email TEXT;
 ALTER TABLE public.generated_posts ADD COLUMN IF NOT EXISTS ip_hash TEXT;
 ALTER TABLE public.generated_posts ADD COLUMN IF NOT EXISTS hospital_name TEXT;
 ALTER TABLE public.generated_posts ADD COLUMN IF NOT EXISTS category TEXT;
 ALTER TABLE public.generated_posts ADD COLUMN IF NOT EXISTS doctor_name TEXT;
 ALTER TABLE public.generated_posts ADD COLUMN IF NOT EXISTS doctor_title TEXT;
-ALTER TABLE public.generated_posts ADD COLUMN IF NOT EXISTS post_type TEXT NOT NULL CHECK (post_type IN ('blog', 'card_news', 'press_release'));
-ALTER TABLE public.generated_posts ADD COLUMN IF NOT EXISTS workflow_type TEXT NOT NULL DEFAULT 'generate' CHECK (workflow_type IN ('generate', 'refine'));
+ALTER TABLE public.generated_posts ADD COLUMN IF NOT EXISTS post_type TEXT NOT NULL;
+ALTER TABLE public.generated_posts ADD COLUMN IF NOT EXISTS workflow_type TEXT NOT NULL DEFAULT 'generate';
 ALTER TABLE public.generated_posts ADD COLUMN IF NOT EXISTS title TEXT NOT NULL;
 ALTER TABLE public.generated_posts ADD COLUMN IF NOT EXISTS content TEXT NOT NULL;
 ALTER TABLE public.generated_posts ADD COLUMN IF NOT EXISTS plain_text TEXT;
@@ -454,7 +454,7 @@ CREATE TABLE IF NOT EXISTS public.api_usage_logs (
 );
 -- auto-injected: column reconciliation (CREATE TABLE IF NOT EXISTS no-op safety)
 ALTER TABLE public.api_usage_logs ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
-ALTER TABLE public.api_usage_logs ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL;
+ALTER TABLE public.api_usage_logs ADD COLUMN IF NOT EXISTS user_id UUID;
 ALTER TABLE public.api_usage_logs ADD COLUMN IF NOT EXISTS total_calls INT NOT NULL DEFAULT 0;
 ALTER TABLE public.api_usage_logs ADD COLUMN IF NOT EXISTS total_input_tokens INT NOT NULL DEFAULT 0;
 ALTER TABLE public.api_usage_logs ADD COLUMN IF NOT EXISTS total_output_tokens INT NOT NULL DEFAULT 0;

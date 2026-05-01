@@ -281,7 +281,7 @@ CREATE TABLE IF NOT EXISTS public.hospitals (
 );
 -- auto-injected: column reconciliation (CREATE TABLE IF NOT EXISTS no-op safety)
 ALTER TABLE public.hospitals ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
-ALTER TABLE public.hospitals ADD COLUMN IF NOT EXISTS team_id INT NOT NULL REFERENCES public.teams(id) ON DELETE CASCADE;
+ALTER TABLE public.hospitals ADD COLUMN IF NOT EXISTS team_id INT NOT NULL;
 ALTER TABLE public.hospitals ADD COLUMN IF NOT EXISTS name TEXT NOT NULL;
 ALTER TABLE public.hospitals ADD COLUMN IF NOT EXISTS manager TEXT NOT NULL DEFAULT '';
 ALTER TABLE public.hospitals ADD COLUMN IF NOT EXISTS address TEXT DEFAULT '';
@@ -680,7 +680,7 @@ CREATE TABLE IF NOT EXISTS user_credits (
 );
 -- auto-injected: column reconciliation (CREATE TABLE IF NOT EXISTS no-op safety)
 ALTER TABLE user_credits ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
-ALTER TABLE user_credits ADD COLUMN IF NOT EXISTS user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE;
+ALTER TABLE user_credits ADD COLUMN IF NOT EXISTS user_id UUID NOT NULL;
 ALTER TABLE user_credits ADD COLUMN IF NOT EXISTS credits INTEGER NOT NULL DEFAULT 10;
 ALTER TABLE user_credits ADD COLUMN IF NOT EXISTS total_used INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE user_credits ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
