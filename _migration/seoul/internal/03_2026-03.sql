@@ -75,6 +75,7 @@ $fn$;
 ALTER TABLE public.generated_posts
   DROP CONSTRAINT IF EXISTS generated_posts_post_type_check;
 
+ALTER TABLE public.generated_posts DROP CONSTRAINT IF EXISTS generated_posts_post_type_check;
 ALTER TABLE public.generated_posts
   ADD CONSTRAINT generated_posts_post_type_check
   CHECK (post_type IN ('blog', 'card_news', 'press_release', 'refine'));
@@ -145,6 +146,7 @@ ALTER TABLE public.generated_posts
   ADD COLUMN IF NOT EXISTS workflow_type TEXT NOT NULL DEFAULT 'generate';
 
 -- 2. workflow_type CHECK 제약 추가
+ALTER TABLE public.generated_posts DROP CONSTRAINT IF EXISTS generated_posts_workflow_type_check;
 ALTER TABLE public.generated_posts
   ADD CONSTRAINT generated_posts_workflow_type_check
   CHECK (workflow_type IN ('generate', 'refine'));
@@ -177,6 +179,7 @@ ALTER TABLE public.generated_posts
 ALTER TABLE public.generated_posts
   DROP CONSTRAINT IF EXISTS generated_posts_post_type_check;
 
+ALTER TABLE public.generated_posts DROP CONSTRAINT IF EXISTS generated_posts_post_type_check;
 ALTER TABLE public.generated_posts
   ADD CONSTRAINT generated_posts_post_type_check
   CHECK (post_type IN ('blog', 'card_news', 'press_release', 'image'));
@@ -455,6 +458,7 @@ CREATE POLICY "Users can delete own feedbacks"
 ALTER TABLE public.generated_posts
   DROP CONSTRAINT IF EXISTS generated_posts_post_type_check;
 
+ALTER TABLE public.generated_posts DROP CONSTRAINT IF EXISTS generated_posts_post_type_check;
 ALTER TABLE public.generated_posts
   ADD CONSTRAINT generated_posts_post_type_check
   CHECK (post_type IN ('blog', 'card_news', 'press_release', 'image'));
@@ -470,6 +474,7 @@ BEGIN
   ) THEN
     ALTER TABLE public.generated_posts
       ADD COLUMN workflow_type TEXT NOT NULL DEFAULT 'generate';
+ALTER TABLE public.generated_posts DROP CONSTRAINT IF EXISTS generated_posts_workflow_type_check;
     ALTER TABLE public.generated_posts
       ADD CONSTRAINT generated_posts_workflow_type_check
       CHECK (workflow_type IN ('generate', 'refine'));
