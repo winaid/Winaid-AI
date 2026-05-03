@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuthGuard } from '../../../hooks/useAuthGuard';
-import { TEAM_DATA } from '../../../lib/teamData';
+import { useTeamData } from '../../../lib/useTeamData';
 
 const STRENGTHS_KEY = 'winaid_hospital_strengths';
 
@@ -27,8 +27,9 @@ function getAllStrengths(): Record<string, string> {
 
 export default function StrengthsPage() {
   useAuthGuard();
+  const { teamData: TEAM_DATA } = useTeamData();
 
-  const [selectedTeam, setSelectedTeam] = useState<number>(TEAM_DATA[0]?.id ?? 1);
+  const [selectedTeam, setSelectedTeam] = useState<number>(1);
   const [hospitalName, setHospitalName] = useState('');
   const [strengths, setStrengths] = useState('');
   const [allStrengths, setAllStrengths] = useState<Record<string, string>>({});

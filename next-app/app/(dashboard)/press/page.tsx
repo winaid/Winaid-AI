@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { TEAM_DATA } from '../../../lib/teamData';
+import { useTeamData } from '../../../lib/useTeamData';
 import { buildPressPrompt, PRESS_TYPES, DOCTOR_TITLES, CATEGORIES, PRESS_CSS, type PressType } from '../../../lib/pressPrompt';
 import { savePost } from '../../../lib/postStorage';
 import { getSessionSafe } from '@winaid/blog-core';
@@ -16,6 +16,7 @@ import { authFetch } from '../../../lib/authFetch';
 
 export default function PressPage() {
   const creditCtx = useCreditContext();
+  const { teamData: TEAM_DATA } = useTeamData();
 
   const [topic, setTopic] = useState('');
   const [keywords, setKeywords] = useState('');
