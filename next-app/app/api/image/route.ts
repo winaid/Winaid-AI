@@ -4,7 +4,6 @@
  * 모델: process.env.OPENAI_IMAGE_MODEL || 'gpt-image-2' (스냅샷 핀 가능: 'gpt-image-2-2026-04-21')
  * 응답: { imageDataUrl: data URL, mimeType: 'image/png', model } — 호출부 호환 위해 shape 고정.
  *
- * Gemini 구현은 ./route.gemini.legacy.ts 로 보존 (5분 롤백 컷).
  * referenceImage / logoBase64 / calendarImage 첨부는 현재 generate 텍스트 힌트로 변환 —
  * openai-node 이슈 #1844 로 images.edit 가 gpt-image-2 거부 중. 픽스되면
  * OPENAI_IMAGE_EDIT_ENABLED=1 로 활성화 가능 (TODO 분기 마련됨).

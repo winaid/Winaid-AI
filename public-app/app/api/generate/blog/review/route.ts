@@ -89,6 +89,10 @@ export async function POST(request: NextRequest) {
   if (!draftHtml || typeof draftHtml !== 'string') {
     return NextResponse.json({ error: 'bad_request', details: 'draftHtml required' }, { status: 400 });
   }
+  // category 화이트리스트 (prompt 보간 방어)
+  if (body.category !== undefined && !['치과', '피부과', '정형외과'].includes(String(body.category))) {
+    return NextResponse.json({ error: 'bad_request', details: 'invalid category' }, { status: 400 });
+  }
 
   // 3) 크레딧 — 감수는 저렴하지만 호출 비용이 있으므로 1 크레딧 차감.
   //    userId 는 Bearer 토큰에서 도출 (client 신뢰 시 다른 사용자 차감 가능).

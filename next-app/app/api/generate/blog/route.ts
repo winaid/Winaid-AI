@@ -37,6 +37,13 @@ export async function POST(request: NextRequest) {
   if (!req || !req.topic || !req.category) {
     return NextResponse.json({ error: 'bad_request', details: 'request.topic/category required' }, { status: 400 });
   }
+  // category 화이트리스트 — ContentCategory enum 외 임의 문자열 차단 (prompt injection 방어).
+  // 사용자 입력이 buildBlogPromptV3 의 categoryHints / TERMINOLOGY_BY_CATEGORY 에 직접 보간되므로
+  // 화이트리스트 enforce 가 1차 책임.
+  const VALID_CATEGORIES = new Set(['치과', '피부과', '정형외과']);
+  if (!VALID_CATEGORIES.has(req.category)) {
+    return NextResponse.json({ error: 'bad_request', details: `invalid category: ${String(req.category).slice(0, 30)}` }, { status: 400 });
+  }
 
   // userId 는 Bearer 토큰에서 도출 (client body.userId 신뢰 금지 — 다른 사용자 크레딧 차감 방지)
   const owner = await resolveImageOwner(request);

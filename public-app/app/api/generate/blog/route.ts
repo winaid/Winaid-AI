@@ -43,6 +43,11 @@ export async function POST(request: NextRequest) {
   if (!req || !req.topic || !req.category) {
     return NextResponse.json({ error: 'bad_request', details: 'request.topic/category required' }, { status: 400 });
   }
+  // category 화이트리스트 — ContentCategory enum 외 임의 문자열 차단 (prompt injection 방어)
+  const VALID_CATEGORIES = new Set(['치과', '피부과', '정형외과']);
+  if (!VALID_CATEGORIES.has(req.category)) {
+    return NextResponse.json({ error: 'bad_request', details: `invalid category: ${String(req.category).slice(0, 30)}` }, { status: 400 });
+  }
 
   // 3) 크레딧 차감 (로그인 사용자만) — userId 는 Bearer 토큰에서 도출
   // (client body.userId 신뢰 시 다른 사용자 크레딧 차감 가능 — 외부 사용자 라우트라 특히 위험)
