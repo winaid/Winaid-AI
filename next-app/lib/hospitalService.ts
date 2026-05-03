@@ -4,8 +4,12 @@
  * DB: teams + hospitals 테이블
  * Fallback: lib/teamData.ts (DB 미설정 또는 빈 테이블일 때)
  */
-import { supabase } from '@winaid/blog-core';
+import { supabase, supabaseAdmin } from '@winaid/blog-core';
 import { TEAM_DATA, type TeamData, type HospitalEntry } from './teamData';
+
+// 모든 write 는 admin UI 에서만 호출됨. teams 는 INSERT 정책 자체가 없어 anon/auth 모두 차단,
+// hospitals 는 정책 광범위해도 service_role 로 일관 처리.
+const writeDb = () => supabaseAdmin ?? supabase;
 
 // ── 조회 ──
 
@@ -56,10 +60,11 @@ export async function addHospital(
   address: string,
   naverBlogUrls: string[],
 ): Promise<{ success: boolean; error?: string }> {
-  if (!supabase) return { success: false, error: 'Supabase 미설정' };
+  const db = writeDb();
+  if (!db) return { success: false, error: 'Supabase 미설정' };
   if (!name.trim()) return { success: false, error: '병원명을 입력하세요' };
 
-  const { error } = await (supabase.from('hospitals') as any).upsert(
+  const { error } = await (db.from('hospitals') as any).upsert(
     {
       team_id: teamId,
       name: name.trim(),
@@ -86,7 +91,8 @@ export async function updateHospital(
     naverBlogUrls?: string[];
   },
 ): Promise<{ success: boolean; error?: string }> {
-  if (!supabase) return { success: false, error: 'Supabase 미설정' };
+  const db = writeDb();
+  if (!db) return { success: false, error: 'Supabase 미설정' };
 
   const updateData: Record<string, unknown> = { updated_at: new Date().toISOString() };
   if (updates.teamId !== undefined) updateData.team_id = updates.teamId;
@@ -94,7 +100,7 @@ export async function updateHospital(
   if (updates.address !== undefined) updateData.address = updates.address;
   if (updates.naverBlogUrls !== undefined) updateData.naver_blog_urls = updates.naverBlogUrls.filter(u => u.trim());
 
-  const { error } = await supabase
+  const { error } = await db
     .from('hospitals')
     .update(updateData)
     .eq('name', hospitalName);
@@ -108,9 +114,10 @@ export async function updateHospital(
 export async function deactivateHospital(
   hospitalName: string,
 ): Promise<{ success: boolean; error?: string }> {
-  if (!supabase) return { success: false, error: 'Supabase 미설정' };
+  const db = writeDb();
+  if (!db) return { success: false, error: 'Supabase 미설정' };
 
-  const { error } = await supabase
+  const { error } = await db
     .from('hospitals')
     .update({ is_active: false, updated_at: new Date().toISOString() })
     .eq('name', hospitalName);
@@ -124,9 +131,10 @@ export async function deactivateHospital(
 export async function addTeam(
   label: string,
 ): Promise<{ success: boolean; id?: number; error?: string }> {
-  if (!supabase) return { success: false, error: 'Supabase 미설정' };
+  const db = writeDb();
+  if (!db) return { success: false, error: 'Supabase 미설정' };
 
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('teams')
     .insert({ label: label.trim(), sort_order: 99 })
     .select('id')

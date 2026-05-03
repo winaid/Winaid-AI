@@ -1,7 +1,7 @@
 /**
  * Admin 전용 서비스 — RPC 헬퍼 + 사용자 관리
  */
-import { supabase } from '@winaid/blog-core';
+import { supabase, supabaseAdmin } from '@winaid/blog-core';
 
 /** 전체 콘텐츠 삭제 — root deleteAllGeneratedPosts 동일 */
 export async function deleteAllGeneratedPosts(
@@ -67,13 +67,15 @@ export async function deleteAllGeneratedPosts(
 
 // ── 사용자 관리 ──
 
-/** 사용자 팀 배정 변경 */
+/** 사용자 팀 배정 변경 — admin 이 다른 사용자 profile 수정. profiles RLS 가
+ * auth.uid()=id 만 허용하므로 anon/일반 사용자 client 로는 차단됨. service_role 필요. */
 export async function updateUserTeam(
   userId: string,
   teamId: number | null,
 ): Promise<{ success: boolean; error?: string }> {
-  if (!supabase) return { success: false, error: 'Supabase 미설정' };
-  const { error } = await supabase
+  const db = supabaseAdmin ?? supabase;
+  if (!db) return { success: false, error: 'Supabase 미설정' };
+  const { error } = await db
     .from('profiles')
     .update({ team_id: teamId })
     .eq('id', userId);
@@ -81,12 +83,13 @@ export async function updateUserTeam(
   return { success: true };
 }
 
-/** 사용자 프로필 삭제 (auth 계정은 유지, profiles 레코드만 삭제) */
+/** 사용자 프로필 삭제 (auth 계정은 유지, profiles 레코드만 삭제). RLS 우회 필요 (위 동일). */
 export async function deleteUserProfile(
   userId: string,
 ): Promise<{ success: boolean; error?: string }> {
-  if (!supabase) return { success: false, error: 'Supabase 미설정' };
-  const { error } = await supabase
+  const db = supabaseAdmin ?? supabase;
+  if (!db) return { success: false, error: 'Supabase 미설정' };
+  const { error } = await db
     .from('profiles')
     .delete()
     .eq('id', userId);
