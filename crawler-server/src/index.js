@@ -7,6 +7,11 @@ const pathModule = require('path');
 const { execSync } = require('child_process');
 require('dotenv').config();
 
+// ── Bearer 인증 미들웨어 (production: secret 미설정 시 fail-fast) ──
+// require 시점에 module-scoped 으로 SHARED_SECRET 결정 — production 환경에서는
+// 부팅 즉시 실패하므로 silent-allow 회귀 차단. dev 에서는 32-byte hex 자동 생성.
+const { bearerAuth } = require('./utils/auth');
+
 // 환경변수에서 YouTube 쿠키 파일 생성
 if (process.env.YOUTUBE_COOKIES) {
   const paths = [
@@ -31,6 +36,11 @@ const youtubeGifRouter = require('./routes/youtube-gif');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// Trust proxy: Railway/Cloudflare 1-hop 뒤에서 X-Forwarded-For 의 첫 항목을
+// req.ip 로 신뢰. 미설정 시 모든 요청이 같은 ingress IP 로 보여 rate limit 무력.
+// 1 = 가장 가까운 한 hop 만 신뢰 (그 이상은 spoof 위험).
+app.set('trust proxy', 1);
 
 // 보안 미들웨어
 app.use(helmet());
@@ -82,7 +92,9 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', checks });
 });
 
-// API 라우트
+// API 라우트 — 모든 /api/* 는 Bearer 인증 통과 필수.
+// /health 만 인증 우회 (LB/uptime probe 용). 정보 최소화는 위 핸들러에서 처리.
+app.use('/api', bearerAuth());
 app.use('/api/naver', naverCrawlerRouter);
 app.use('/api/youtube', youtubeGifRouter);
 
@@ -108,6 +120,7 @@ app.listen(PORT, () => {
   console.log(`🚀 크롤링 서버 시작: http://localhost:${PORT}`);
   console.log(`📝 환경: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🔒 CORS 허용 도메인: ${allowedOrigins.join(', ')}`);
+  console.log('🔑 Auth: Bearer 토큰 필수 (/health 제외)');
 });
 
 // Graceful shutdown
