@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@winaid/blog-core';
+import { supabase, supabaseAdmin } from '@winaid/blog-core';
 import { checkAuth } from '../../../../lib/apiAuth';
 import { resolveImageOwner } from '../../../../lib/serverAuth';
 import { STORAGE_BUCKET } from '../../../../lib/hospitalImageService';
@@ -17,10 +17,12 @@ export async function DELETE(request: NextRequest, ctx: Ctx) {
 
   const owner = await resolveImageOwner(request);
   const { id } = await ctx.params;
+  // checkAuth 통과 + .eq('user_id', owner) 로 소유권 강제. RLS 우회.
+  const db = supabaseAdmin ?? supabase;
 
   // soft delete: is_deleted=true 로 표시만. 파일 물리 삭제는 관리자 전용 cleanup 작업
   // (별도). 기존 블로그의 <img src> 는 Storage 파일 유지되므로 계속 유효.
-  const { data: updated, error } = await supabase
+  const { data: updated, error } = await db
     .from('hospital_images')
     .update({ is_deleted: true, updated_at: new Date().toISOString() })
     .eq('id', id)
@@ -49,12 +51,14 @@ export async function PATCH(request: NextRequest, ctx: Ctx) {
   const owner = await resolveImageOwner(request);
   const { id } = await ctx.params;
   const body = (await request.json()) as { tags?: string[]; altText?: string };
+  // checkAuth 통과 + .eq('user_id', owner) 로 소유권 강제. RLS 우회.
+  const db = supabaseAdmin ?? supabase;
 
   const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
   if (Array.isArray(body.tags)) updates.tags = body.tags;
   if (typeof body.altText === 'string') updates.alt_text = body.altText;
 
-  const { data: row, error } = await supabase
+  const { data: row, error } = await db
     .from('hospital_images')
     .update(updates)
     .eq('id', id)
