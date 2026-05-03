@@ -21,7 +21,7 @@
 
 import { NextRequest } from 'next/server';
 import { gateDiagnosticRequest } from '../../../../lib/guestRateLimit';
-import { supabase } from '@winaid/blog-core';
+import { supabase, supabaseAdmin } from '@winaid/blog-core';
 import { crawlSite } from '../../../../lib/diagnostic/crawler';
 import {
   streamChatGPT,
@@ -270,9 +270,11 @@ export async function POST(request: NextRequest) {
           : false;
 
         // 캐시 저장 (비동기, 실패해도 done 이벤트에 영향 없음)
-        if (supabase && fullText.length > 30) {
+        // RLS 강화 시점에 anon 차단 대비 service_role 우선 사용 (현재 RLS 미활성이라도 방어적)
+        const dbCache = supabaseAdmin ?? supabase;
+        if (dbCache && fullText.length > 30) {
           sha256(query).then((queryHash) => {
-            supabase!
+            dbCache
               .from('diagnostic_stream_cache')
               .upsert(
                 {
