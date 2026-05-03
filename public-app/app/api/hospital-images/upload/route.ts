@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { devLog } from '../../../../lib/devLog';
-import { supabase } from '@winaid/blog-core';
+import { supabase, supabaseAdmin } from '@winaid/blog-core';
 import { gateGuestRequest } from '../../../../lib/guestRateLimit';
 import { ALLOWED_MIME_TYPES, MAX_FILE_SIZE, STORAGE_BUCKET, mimeToExt } from '../../../../lib/hospitalImageService';
 import { resolveImageOwner } from '../../../../lib/serverAuth';
@@ -13,6 +13,8 @@ export async function POST(request: NextRequest) {
     if (!supabase) {
       return NextResponse.json({ error: 'supabase_not_configured' }, { status: 500 });
     }
+    // gateGuestRequest 가 인증 게이트. 그 아래 storage/DB 쓰기는 service_role 로 RLS 우회.
+    const db = supabaseAdmin ?? supabase;
 
     const gate = gateGuestRequest(request, 100);
     if (!gate.ok) return NextResponse.json({ error: gate.error }, { status: gate.status });
@@ -39,7 +41,7 @@ export async function POST(request: NextRequest) {
     devLog('[upload] storage path:', storagePath);
 
     const buf = Buffer.from(await file.arrayBuffer());
-    const { error: uploadErr } = await supabase.storage.from(STORAGE_BUCKET).upload(storagePath, buf, {
+    const { error: uploadErr } = await db.storage.from(STORAGE_BUCKET).upload(storagePath, buf, {
       contentType: file.type,
       upsert: false,
     });
@@ -56,7 +58,7 @@ export async function POST(request: NextRequest) {
     // owner 의 team_id 를 INSERT 에 명시 첨부. DB 트리거가 backup 으로도 채움.
     let ownerTeamId: number | null = null;
     if (owner !== 'guest') {
-      const { data: prof } = await supabase
+      const { data: prof } = await db
         .from('profiles')
         .select('team_id')
         .eq('id', owner)
@@ -64,7 +66,7 @@ export async function POST(request: NextRequest) {
       ownerTeamId = (prof?.team_id ?? null) as number | null;
     }
 
-    const { data: row, error: dbErr } = await supabase
+    const { data: row, error: dbErr } = await db
       .from('hospital_images')
       .insert({
         user_id: owner,
@@ -86,7 +88,7 @@ export async function POST(request: NextRequest) {
     }
     devLog('[upload] db ok, id:', row.id);
 
-    const { data: { publicUrl } } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(storagePath);
+    const { data: { publicUrl } } = db.storage.from(STORAGE_BUCKET).getPublicUrl(storagePath);
 
     return NextResponse.json({
       id: row.id,

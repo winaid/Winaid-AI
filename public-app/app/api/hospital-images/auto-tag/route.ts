@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@winaid/blog-core';
+import { supabase, supabaseAdmin } from '@winaid/blog-core';
 import { gateGuestRequest } from '../../../../lib/guestRateLimit';
 import { callLLM } from '@winaid/blog-core';
 import { resolveImageOwner } from '../../../../lib/serverAuth';
@@ -61,8 +61,10 @@ JSON 만 응답:
         description: typeof parsed.description === 'string' ? parsed.description.slice(0, 200) : '',
       };
 
-      if (supabase && body.imageId) {
-        await supabase.from('hospital_images').update({
+      // gateGuestRequest + 명시적 .eq('user_id', owner) 로 소유권 강제. RLS 우회.
+      const db = supabaseAdmin ?? supabase;
+      if (db && body.imageId) {
+        await db.from('hospital_images').update({
           tags: result.tags,
           alt_text: result.altText,
           ai_description: result.description,
