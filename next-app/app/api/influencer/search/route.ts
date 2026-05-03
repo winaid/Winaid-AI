@@ -10,6 +10,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { callGeminiDirect } from '../../../../lib/geminiDirect';
 import { generateInfluencerHashtags, LOCATION_HASHTAGS } from '../../../../lib/influencerHashtags';
 import { checkAuth } from '../../../../lib/apiAuth';
+import { sanitizePromptInput } from '@winaid/blog-core';
+
+// Instagram username 정규식 — IG 공식 스펙 (1~30자, 영문/숫자/_/.).
+// LLM (Gemini) 결과의 hallucinated username (한국어 phrase, 공백 포함, "user_xxxx"
+// 같은 placeholder 등) 을 1차 차단. 통과한 username 만 DB 저장 + DM 발송 후보.
+// 더 엄격한 검증 (실 IG 프로필 존재 확인) 은 RAPIDAPI_KEY 필요한 별도 PR.
+const IG_USERNAME_RE = /^[a-zA-Z0-9._]{1,30}$/;
 
 export const maxDuration = 120;
 export const dynamic = 'force-dynamic';
@@ -179,20 +186,30 @@ function guessCategory(hashtags: string[], text: string): string {
 // ── Gemini-only fallback ──
 
 async function searchViaGeminiOnly(hashtags: string[], body: SearchRequest, postHints?: string): Promise<InfluencerResult[]> {
-  const hintsBlock = postHints ? `\n\n[참고: 실제 인스타그램에서 수집된 게시물 데이터]\n${postHints}\n→ 위 게시물을 올린 계정의 username을 찾아주세요.\n` : '';
+  // 사용자 입력 sanitize — prompt injection 차단 (`ignore previous`, role
+  // impersonation 등 INJECTION_KEYWORDS 제거 + 길이 cap + 구조 문자 정규화).
+  const safeLocation = sanitizePromptInput(body.location, 80);
+  const safeHashtag = sanitizePromptInput(hashtags[0] || '맛집', 40);
+  // 숫자 필드는 Number + 범위 cap (음수/문자열/Infinity 차단).
+  const followerMin = Math.max(0, Math.min(10_000_000, Number(body.follower_min) || 0));
+  const followerMax = Math.max(followerMin, Math.min(10_000_000, Number(body.follower_max) || followerMin));
+
+  // postHints 는 RapidAPI 응답에서 온 외부 텍스트 — 이미 substring + sanitize 가능
+  const safeHints = postHints ? sanitizePromptInput(postHints, 1500) : '';
+  const hintsBlock = safeHints ? `\n\n[참고: 실제 인스타그램에서 수집된 게시물 데이터]\n${safeHints}\n→ 위 게시물을 올린 계정의 username을 찾아주세요.\n` : '';
 
   const prompt = `너는 인스타그램 마이크로 인플루언서 리서치 전문가다.
 
-${body.location} 지역에서 활동하는 인스타그램 마이크로 인플루언서를 찾아줘.
+<user_location>${safeLocation}</user_location> 지역에서 활동하는 인스타그램 마이크로 인플루언서를 찾아줘.
 
 Google Search로 다음을 검색해:
-1. "instagram ${body.location} ${hashtags[0] || '맛집'} influencer"
-2. "인스타그램 ${body.location} 인플루언서 추천"
-3. "${body.location} 로컬 크리에이터 인스타"
+1. "instagram ${safeLocation} ${safeHashtag} influencer"
+2. "인스타그램 ${safeLocation} 인플루언서 추천"
+3. "${safeLocation} 로컬 크리에이터 인스타"
 ${hintsBlock}
 [조건]
-- 팔로워 ${body.follower_min.toLocaleString()}~${body.follower_max.toLocaleString()}명 범위
-- ${body.location} 지역에서 주로 활동하는 개인 크리에이터
+- 팔로워 ${followerMin.toLocaleString()}~${followerMax.toLocaleString()}명 범위
+- ${safeLocation} 지역에서 주로 활동하는 개인 크리에이터
 - 기업/브랜드 계정 제외
 - 팔로워 수는 추정치도 OK (정확하지 않아도 됨)
 
@@ -200,9 +217,10 @@ ${hintsBlock}
 - 최소 5명 이상 찾아줘. 10명이면 더 좋아.
 - 팔로워 수를 정확히 모르면 게시물 좋아요 수로 추정해. (좋아요 평균 100개 ≈ 팔로워 3000~5000)
 - 실제 존재할 가능성이 높은 계정만 포함. 하지만 확실하지 않아도 포함하되 location_confidence를 "low"로.
+- username 은 인스타그램 실 계정 형식 (영문/숫자/_/. 만, 1~30자) 만 출력.
 
 JSON 배열:
-[{"username":"실제아이디", "full_name":"표시이름", "follower_count":5000, "engagement_rate":3.5, "estimated_location":"${body.location}", "location_confidence":"medium", "primary_category":"맛집/카페", "recent_post_preview":"최근 게시물 텍스트"}]`;
+[{"username":"실제아이디", "full_name":"표시이름", "follower_count":5000, "engagement_rate":3.5, "estimated_location":"${safeLocation}", "location_confidence":"medium", "primary_category":"맛집/카페", "recent_post_preview":"최근 게시물 텍스트"}]`;
 
   const { text } = await callGeminiDirect({ prompt, model: 'gemini-3.1-pro-preview', temperature: 0.3, maxOutputTokens: 4096, googleSearch: true });
   if (!text) return [];
@@ -229,7 +247,20 @@ export async function POST(request: NextRequest) {
   try { body = await request.json(); } catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }); }
   if (!body.location?.trim()) return NextResponse.json({ error: '위치를 입력해주세요' }, { status: 400 });
 
-  const searchHashtags = body.hashtags.length > 0 ? body.hashtags : generateInfluencerHashtags(body.location, body.categories);
+  // body.hashtags 배열 shape 검증 — 각 항목 문자열 + 길이 cap (40자) + 최대 10개.
+  // user 입력이 prompt 까지 흐르는 경로 — sanitizePromptInput 으로 injection 키워드 제거.
+  const rawHashtags = Array.isArray(body.hashtags) ? body.hashtags : [];
+  const cleanedUserHashtags = rawHashtags
+    .filter((h): h is string => typeof h === 'string')
+    .map(h => sanitizePromptInput(h, 40))
+    .filter(h => h.length > 0)
+    .slice(0, 10);
+  const safeCategories = Array.isArray(body.categories)
+    ? body.categories.filter((c): c is string => typeof c === 'string').slice(0, 10).map(c => sanitizePromptInput(c, 40))
+    : [];
+  const searchHashtags = cleanedUserHashtags.length > 0
+    ? cleanedUserHashtags
+    : generateInfluencerHashtags(body.location, safeCategories);
   let results: InfluencerResult[] = [];
   let source = 'gemini';
 
@@ -279,14 +310,23 @@ export async function POST(request: NextRequest) {
     console.info(`[INFLUENCER] 샘플: ${results.slice(0, 3).map(r => `@${r.username}(팔${r.follower_count})`).join(', ')}`);
   }
 
-  // 최종 필터: 팔로워 확인 + 범위 내 + username 확인된 것만
+  // 최종 필터:
+  //  - IG username 정규식 통과 (CR-12 — Gemini hallucinated 'user_xxxx', 한국어
+  //    phrase, 공백/특수문자 포함 등 IG 형식 위반 차단)
+  //  - follower 범위 내
+  // 정규식 차단 후에도 LLM 이 plausible 한 username 을 fabricate 할 수 있으나,
+  // 가장 흔한 hallucination 유형 (placeholder, descriptive phrase) 은 차단됨.
+  // 실 IG 프로필 존재 검증은 RAPIDAPI_KEY 기반 별도 후속 PR 에서.
   const beforeFilter = results.length;
+  const followerMin = Math.max(0, Number(body.follower_min) || 0);
+  const followerMax = Math.max(followerMin, Number(body.follower_max) || followerMin);
   results = results.filter(r =>
     r.username &&
+    IG_USERNAME_RE.test(r.username) &&
     !r.username.startsWith('user_') &&
     r.follower_count > 0 &&
-    r.follower_count >= body.follower_min &&
-    r.follower_count <= body.follower_max
+    r.follower_count >= followerMin &&
+    r.follower_count <= followerMax
   );
   console.info(`[INFLUENCER] 필터 후: ${results.length}명 (${beforeFilter - results.length}명 제외)`);
 
