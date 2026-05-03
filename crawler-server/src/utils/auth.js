@@ -15,10 +15,21 @@
 const { timingSafeEqual, randomBytes } = require('crypto');
 
 function resolveSharedSecret() {
-  const env = process.env.CRAWLER_SHARED_SECRET || '';
+  const raw = process.env.CRAWLER_SHARED_SECRET;
+  const env = (raw || '').trim();
   if (env) return env;
   if (process.env.NODE_ENV === 'production') {
+    // Railway 환경변수 진단 — secret 누설 없이 상태만:
+    //   - 변수 자체 미정의: 'CRAWLER_SHARED_SECRET' in env false
+    //   - 빈 문자열/공백만: trim 후 length=0
+    //   - 다른 service 에 설정: NODE_ENV=production 인데 본 service 환경에 없음
+    const inEnv = 'CRAWLER_SHARED_SECRET' in process.env;
+    const rawLen = raw === undefined ? -1 : raw.length;
+    const trimLen = env.length;
     console.error('FATAL: CRAWLER_SHARED_SECRET is required in production.');
+    console.error(`  diag: NODE_ENV=${process.env.NODE_ENV} in_env=${inEnv} raw_len=${rawLen} trim_len=${trimLen}`);
+    console.error('  fix: Railway Dashboard > crawler-server service > Variables 에 CRAWLER_SHARED_SECRET 설정 후 redeploy.');
+    console.error('       (next-app / video-processor 등 다른 service 가 아닌 crawler-server service 에 설정해야 함.)');
     process.exit(1);
   }
   const generated = randomBytes(32).toString('hex');
