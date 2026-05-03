@@ -1,8 +1,10 @@
 /**
- * 로컬 API 서버
+ * 로컬 API 서버 — 포트 17580.
  *
- * winai.kr 웹에서 이 로컬 앱으로 데이터를 전달하기 위한 REST API.
- * 포트: 17580
+ * 보안:
+ * - 모든 보호 라우트는 Bearer 토큰 검증 (utils/auth)
+ * - CORS: 프로덕션 도메인만 허용 (NODE_ENV=development 시 localhost 추가)
+ * - /status 만 인증 우회 (페어링 전 ping)
  */
 
 import express from 'express';
@@ -10,16 +12,32 @@ import cors from 'cors';
 import { saveCredentials, listAccounts, deleteCredentials, getCredentials } from '../utils/crypto';
 import { getOrCreateContext, closeBrowser } from '../naver/login';
 import { writeToNaverBlog, BlogPost } from '../naver/blogEditor';
+import { bearerAuth } from '../utils/auth';
 import { log } from '../utils/logger';
 
 const app = express();
 
+const isProd = process.env.NODE_ENV === 'production';
+const allowedOrigins = isProd
+  ? ['https://winai.kr', 'https://www.winai.kr']
+  : [
+      'https://winai.kr',
+      'https://www.winai.kr',
+      'http://localhost:3000',
+      'http://localhost:3001',
+    ];
+
 app.use(cors({
-  origin: ['https://winai.kr', 'https://www.winai.kr', 'http://localhost:3000', 'http://localhost:3001'],
+  origin: allowedOrigins,
+  // Authorization 헤더 노출 허용 (브라우저 preflight 통과)
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 app.use(express.json({ limit: '10mb' }));
 
-// ── 상태 확인 ──
+// Bearer 토큰 검증 — /status 제외 (페어링 전 ping 가능해야 함)
+app.use(bearerAuth(['/status']));
+
+// ── 상태 확인 (인증 불필요) ──
 app.get('/status', (_req, res) => {
   res.json({ status: 'running', version: '1.0.0', port: 17580 });
 });
@@ -125,7 +143,7 @@ app.post('/shutdown', async (_req, res) => {
 });
 
 export function startServer() {
-  app.listen(17580, () => {
+  app.listen(17580, '127.0.0.1', () => {
     log.success('WINAI Blog Publisher 실행 중 — http://localhost:17580');
     log.info('winai.kr에서 블로그 발행 버튼을 누르면 자동으로 처리됩니다.');
   });

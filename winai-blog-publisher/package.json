@@ -13,7 +13,8 @@
     "express": "^4.21.0",
     "cors": "^2.8.5",
     "crypto-js": "^4.2.0",
-    "dotenv": "^16.4.0"
+    "dotenv": "^16.4.0",
+    "isomorphic-dompurify": "^2.16.0"
   },
   "devDependencies": {
     "typescript": "^5.5.0",

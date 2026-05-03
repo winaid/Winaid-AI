@@ -2,15 +2,18 @@
  * WINAI Blog Publisher — 메인 진입점
  *
  * 로컬에서 실행하면:
- * 1. API 서버 시작 (포트 17580)
- * 2. winai.kr에서 발행 요청을 받으면
- * 3. Playwright로 네이버 블로그 자동 입력
+ * 1. 페어링 토큰 표시 (사용자가 winai.kr 에 paste)
+ * 2. API 서버 시작 (포트 17580)
+ * 3. winai.kr에서 발행 요청을 받으면 (Bearer 토큰 검증 후)
+ * 4. Playwright로 네이버 블로그 자동 입력
  */
 
 import dotenv from 'dotenv';
 dotenv.config();
 
 import { startServer } from './api/server';
+import { getTokenHex } from './utils/auth';
+import { getStorageDir } from './utils/storage';
 import { log } from './utils/logger';
 
 console.log('');
@@ -23,6 +26,18 @@ console.log('║                                                   ║');
 console.log('║   http://localhost:17580                           ║');
 console.log('║                                                   ║');
 console.log('╚═══════════════════════════════════════════════════╝');
+console.log('');
+
+// 페어링 토큰 표시 — winai.kr 에 paste 필요
+const token = getTokenHex();
+console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+console.log('🔑 페어링 토큰 (winai.kr 페어링 페이지에 paste):');
+console.log('');
+console.log(`  ${token}`);
+console.log('');
+console.log(`   저장 위치: ${getStorageDir()}/token (mode 0600)`);
+console.log('   토큰 노출 시 위 파일 삭제 후 재실행 → 새 토큰 발급');
+console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 console.log('');
 
 startServer();
