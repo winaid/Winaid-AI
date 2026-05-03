@@ -8,6 +8,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { gateGuestRequest } from '../../../../lib/guestRateLimit';
+import { resolveImageOwner } from '../../../../lib/serverAuth';
 import { useCredit } from '../../../../lib/creditService';
 import { getHospitalStylePrompt } from '@winaid/blog-core';
 import { buildBlogPromptV3, buildOutlinePrompt, buildSectionFromOutlinePrompt } from '@winaid/blog-core';
@@ -21,7 +22,7 @@ export const dynamic = 'force-dynamic';
 interface Body {
   request?: GenerationRequest;
   hospitalName?: string;
-  userId?: string | null;
+  // userId 는 client 입력 신뢰 안 함. Bearer 토큰에서 도출.
 }
 
 export async function POST(request: NextRequest) {
@@ -43,8 +44,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'bad_request', details: 'request.topic/category required' }, { status: 400 });
   }
 
-  // 3) 크레딧 차감 (로그인 사용자만)
-  const userId = body.userId || null;
+  // 3) 크레딧 차감 (로그인 사용자만) — userId 는 Bearer 토큰에서 도출
+  // (client body.userId 신뢰 시 다른 사용자 크레딧 차감 가능 — 외부 사용자 라우트라 특히 위험)
+  const owner = await resolveImageOwner(request);
+  const userId = owner === 'guest' ? null : owner;
   if (userId) {
     const credit = await useCredit(userId);
     if (!credit.success) {
