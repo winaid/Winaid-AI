@@ -9,7 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { gateGuestRequest } from '../../../../lib/guestRateLimit';
 import { resolveImageOwner } from '../../../../lib/serverAuth';
-import { useCredit } from '../../../../lib/creditService';
+import { useCredit, refundCredit } from '../../../../lib/creditService';
 import { getHospitalStylePrompt } from '@winaid/blog-core';
 import { buildBlogPromptV3, buildOutlinePrompt, buildSectionFromOutlinePrompt } from '@winaid/blog-core';
 import { filterMedicalLawViolations } from '@winaid/blog-core';
@@ -48,11 +48,13 @@ export async function POST(request: NextRequest) {
   // (client body.userId 신뢰 시 다른 사용자 크레딧 차감 가능 — 외부 사용자 라우트라 특히 위험)
   const owner = await resolveImageOwner(request);
   const userId = owner === 'guest' ? null : owner;
+  let creditDeducted = false;
   if (userId) {
     const credit = await useCredit(userId);
     if (!credit.success) {
       return NextResponse.json({ error: 'insufficient_credits', remaining: credit.remaining }, { status: 402 });
     }
+    creditDeducted = true;
   }
 
   // 4) 병원 스타일 블록 (있으면 cache 블록으로 합쳐짐)
@@ -95,6 +97,13 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     const message = (err as Error).message || 'unknown';
     console.error(`[generate/blog] failed: ${message}`);
+    // generation 실패 시 크레딧 환불 — refund 실패는 swallow
+    if (creditDeducted && userId) {
+      const refund = await refundCredit(userId).catch(() => null);
+      if (refund?.success) {
+        console.log(`[generate/blog] refunded 1 credit for ${userId} (remaining=${refund.remaining})`);
+      }
+    }
     return NextResponse.json(
       { error: 'generation_failed', code: message.slice(0, 200) },
       { status: 500 },

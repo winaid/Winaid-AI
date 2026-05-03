@@ -45,3 +45,29 @@ export async function useCredit(userId: string): Promise<CreditResult> {
     return { success: false, remaining: 0, error: 'unknown_error' };
   }
 }
+
+/**
+ * 크레딧 환불 — generation 실패 / route catch 분기에서 호출.
+ * refund_credit RPC (2026-05-04_credit_refund_rpc.sql) 가 caller 검증 + amount 1~100 enforce.
+ * 환불 실패는 swallow (호출자 흐름 안 막음 — console.warn 으로 운영 가시성).
+ */
+export async function refundCredit(userId: string, amount = 1): Promise<CreditResult> {
+  if (!isSupabaseConfigured) {
+    return { success: true, remaining: 999 };
+  }
+  try {
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase.rpc('refund_credit', {
+      p_user_id: userId,
+      p_amount: amount,
+    });
+    if (error) {
+      console.warn(`[credit] refund failed: ${error.message}`);
+      return { success: false, remaining: 0, error: error.message };
+    }
+    return data as CreditResult;
+  } catch (e) {
+    console.warn(`[credit] refund threw: ${(e as Error).message}`);
+    return { success: false, remaining: 0, error: 'unknown_error' };
+  }
+}

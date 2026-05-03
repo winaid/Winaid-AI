@@ -7,7 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { checkAuth } from '../../../../../lib/apiAuth';
 import { resolveImageOwner } from '../../../../../lib/serverAuth';
-import { useCredit } from '../../../../../lib/creditService';
+import { useCredit, refundCredit } from '../../../../../lib/creditService';
 import { buildBlogReviewPrompt } from '@winaid/blog-core';
 import { applyContentFilters } from '@winaid/blog-core';
 import { callLLM } from '@winaid/blog-core';
@@ -71,11 +71,13 @@ export async function POST(request: NextRequest) {
 
   const owner = await resolveImageOwner(request);
   const userId = owner === 'guest' ? null : owner;
+  let creditDeducted = false;
   if (userId) {
     const credit = await useCredit(userId);
     if (!credit.success) {
       return NextResponse.json({ error: 'insufficient_credits', remaining: credit.remaining }, { status: 402 });
     }
+    creditDeducted = true;
   }
 
   // 관리자 학습 경로(DB 프로파일) 의 hospitalStyleBlock 을 계산해 styleOverride 트리거에 반영.
@@ -123,6 +125,15 @@ export async function POST(request: NextRequest) {
     const filtered = applyContentFilters(draftHtml);
     const fellbackVerdict: 'minor_fix' | 'major_fix' = filtered.replacedCount > 0 ? 'minor_fix' : 'major_fix';
     console.warn(`[generate/blog/review] LLM 실패 fallback: verdict=${fellbackVerdict}, replacedCount=${filtered.replacedCount}`);
+    // 감수 LLM 실패 시 1 크레딧 환불 — 사용자는 fallback 결과를 받지만 정상 review 비용 부담은 X
+    let refundedRemaining: number | null = null;
+    if (creditDeducted && userId) {
+      const refund = await refundCredit(userId).catch(() => null);
+      if (refund?.success) {
+        refundedRemaining = refund.remaining;
+        console.log(`[generate/blog/review] refunded 1 credit for ${userId} (remaining=${refund.remaining})`);
+      }
+    }
     return NextResponse.json({
       verdict: fellbackVerdict,
       issues: [{
@@ -138,6 +149,7 @@ export async function POST(request: NextRequest) {
       usage: null,
       model: '',
       warning: `review_failed: ${message.slice(0, 200)}`,
+      ...(refundedRemaining !== null ? { refundedRemaining } : {}),
     });
   }
 
