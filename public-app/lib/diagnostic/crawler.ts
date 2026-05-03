@@ -6,6 +6,7 @@
  */
 
 import * as cheerio from 'cheerio';
+import { safeFetch, SsrfBlockedError } from '@winaid/blog-core/src/utils/safeFetch';
 import type { CrawlResult, CrawlImage, CrawlLink, CrawlHeading } from './types';
 import { checkRobotsTxt, checkSitemap, parseAiCrawlerPolicy, checkLlmsTxt } from './robotsSitemap';
 
@@ -14,6 +15,7 @@ const USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 
 const DEFAULT_TIMEOUT_MS = 6_000;
+const MAX_HTML_BYTES = 10 * 1024 * 1024;
 
 // ── 의료/치과 특화 키워드 ──────────────────────────────────
 
@@ -61,23 +63,31 @@ export async function decodeWithCharset(res: Response): Promise<string> {
   return new TextDecoder('utf-8').decode(buf);
 }
 
+/**
+ * SSRF-safe fetch wrapper — 사설 IP / IMDS / link-local 차단 + redirect 매 hop 재검증.
+ * SsrfBlockedError 는 그대로 propagate (caller 가 401/500 분기 가능).
+ */
 export async function fetchWithTimeout(
   url: string,
   timeoutMs: number = DEFAULT_TIMEOUT_MS,
   init?: RequestInit,
 ): Promise<Response> {
-  return fetch(url, {
+  return safeFetch(url, {
     ...init,
-    signal: AbortSignal.timeout(timeoutMs),
+    timeout: timeoutMs,
+    maxBytes: MAX_HTML_BYTES,
     headers: {
       'User-Agent': USER_AGENT,
       Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
       'Accept-Language': 'ko,en-US;q=0.9,en;q=0.8',
       ...(init?.headers ?? {}),
     },
-    redirect: 'follow',
   });
 }
+
+// SsrfBlockedError 를 import 했지만 wrapper 자체 throw 만 하므로 명시적 사용은 caller 측.
+// re-export 가 필요하면 './types' 로 노출. 본 모듈에선 wrapper 만 제공.
+export { SsrfBlockedError };
 
 // ── 메인 크롤러 ────────────────────────────────────────────
 
