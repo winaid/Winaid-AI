@@ -6,7 +6,9 @@
  */
 
 import * as cheerio from 'cheerio';
-import { safeFetch, SsrfBlockedError } from '@winaid/blog-core/src/utils/safeFetch';
+// safeFetch 는 Node 'dns' / 'net' 의존 → server-only.
+// relative path 직접 import (barrel 통한 import 는 turbopack client bundle 차단됨).
+import { safeFetch, SsrfBlockedError } from '../../../packages/blog-core/src/utils/safeFetch';
 import type { CrawlResult, CrawlImage, CrawlLink, CrawlHeading } from './types';
 import { checkRobotsTxt, checkSitemap, parseAiCrawlerPolicy, checkLlmsTxt } from './robotsSitemap';
 

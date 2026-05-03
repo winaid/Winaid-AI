@@ -15,7 +15,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, supabaseAdmin } from '@winaid/blog-core';
-import { safeFetch } from '@winaid/blog-core/src/utils/safeFetch';
+// safeFetch 는 server-only (Node 'dns' / 'net') — relative path 로 직접 import.
+import { safeFetch } from '../../../../../packages/blog-core/src/utils/safeFetch';
 import { gateGuestRequest } from '../../../../lib/guestRateLimit';
 import { resolveImageOwner } from '../../../../lib/serverAuth';
 

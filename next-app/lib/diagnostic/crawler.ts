@@ -8,7 +8,10 @@
 import * as cheerio from 'cheerio';
 import * as nodeHttps from 'node:https';
 import * as nodeHttp from 'node:http';
-import { safeFetch, SsrfBlockedError } from '@winaid/blog-core/src/utils/safeFetch';
+// safeFetch 는 Node 'dns' / 'net' 의존 → server-only.
+// barrel (`@winaid/blog-core`) 으로 import 하면 turbopack 이 client bundle 에
+// 끌어들여 빌드 실패 → relative path 직접 import 만 사용.
+import { safeFetch, SsrfBlockedError } from '../../../packages/blog-core/src/utils/safeFetch';
 
 // node:http IncomingMessage 최소 인터페이스 — @types/node 없이 사용하기 위함
 interface NodeIncomingMessage {
