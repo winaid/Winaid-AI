@@ -165,6 +165,7 @@ export async function callGemini(req: LLMRequest): Promise<LLMResponse> {
   // per-request 랜덤 시작점 — 전역 keyIndex race condition 제거
   const startIdx = Math.floor(Math.random() * keys.length);
 
+  let usedModel = model; // 폴백 시 FLASH 로 갱신 (cost / response model 정확성)
   const started = Date.now();
   let result = await fetchGemini(keys, startIdx, model, apiBody, 60_000);
 
@@ -175,6 +176,7 @@ export async function callGemini(req: LLMRequest): Promise<LLMResponse> {
     (result.status === 500 || result.status === 503 || result.status === 429 || result.status === 504)
   ) {
     console.warn(`[llm/gemini] FALLBACK ${model} ${result.status} → ${FLASH}`);
+    usedModel = FLASH; // ← 폴백 시 갱신. fillGeminiUsage 가 FLASH 단가로 계산. 응답 model 도 FLASH.
     result = await fetchGemini(keys, startIdx, FLASH, apiBody, 25_000);
   }
 
@@ -185,7 +187,6 @@ export async function callGemini(req: LLMRequest): Promise<LLMResponse> {
     throw new Error(`Gemini error (${result.status}) ${result.error}${detail}`);
   }
 
-  const usedModel = model; // (폴백이 일어났어도 위 로그로 이미 노출)
   const text = (result.data.candidates?.[0]?.content?.parts || [])
     .map(p => p.text || '')
     .join('');
