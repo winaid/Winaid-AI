@@ -1446,7 +1446,7 @@ function buildUserInputBlock(req: GenerationRequest): string {
     `  <blog_title>${blogTitle && blogTitle !== topic ? blogTitle : '(없음 — topic 기준)'}</blog_title>`,
     `  <keywords>${keywords || '(없음)'}</keywords>`,
     disease ? `  <disease>${disease}</disease>` : '',
-    `  <category>${req.category || '(미지정)'}</category>`,
+    `  <category>${sanitizePromptInput(req.category, 50) || '(미지정)'}</category>`,
     hospitalName ? `  <hospital_name>${hospitalName}</hospital_name>` : '',
     patientPersona ? `  <patient_persona>${patientPersona}</patient_persona>` : '',
     `  <audience>${audience}</audience>`,
