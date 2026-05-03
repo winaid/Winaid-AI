@@ -7,10 +7,34 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { gateGuestRequest } from '../../../lib/guestRateLimit';
+import { resolveImageOwner } from '../../../lib/serverAuth';
 
 
 export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
+
+// ── 비용 폭탄 가드 — 게스트/인증 사용자 입력 클램프 ──
+//
+// 과거: 게스트가 model 자유 지정 (gemini-3.1-pro-preview), systemInstruction 임의,
+// googleSearch:true (per-call billed), inlineImages 길이 cap 없음, maxOutputTokens
+// 65536 까지 지정 가능 → 10/min × pro × 65536 토큰 = Gemini 청구 폭발.
+//
+// 수정: 호출자 게스트 여부에 따라 model / systemInstruction / googleSearch /
+// inlineImages / maxOutputTokens 모두 silent clamp. clamp 발생 시 console.warn 로
+// 운영 가시성 확보.
+const GUEST_ALLOWED_MODELS = new Set([
+  'gemini-3.1-flash-lite-preview',
+]);
+const AUTH_ALLOWED_MODELS = new Set([
+  'gemini-3.1-flash-lite-preview',
+  'gemini-3.1-pro-preview',
+]);
+const GUEST_MAX_OUTPUT_TOKENS = 8192;
+const AUTH_MAX_OUTPUT_TOKENS = 32768;
+const GUEST_MAX_INLINE_IMAGES = 2;
+const AUTH_MAX_INLINE_IMAGES = 4;
+const GUEST_MAX_INLINE_IMAGE_BYTES = 1 * 1024 * 1024;   // 1 MB base64 ≈ 750 KB binary
+const AUTH_MAX_INLINE_IMAGE_BYTES = 5 * 1024 * 1024;    // 5 MB base64 ≈ 3.7 MB binary
 
 // ── CORS 화이트리스트 ──
 // 이전엔 OPTIONS 와 POST 응답에서 `Access-Control-Allow-Origin: *` 을 반환해
@@ -205,6 +229,71 @@ export async function POST(request: NextRequest) {
   const keys = getKeys();
   if (keys.length === 0) {
     return NextResponse.json({ error: '[env] GEMINI_API_KEY 누락' }, { status: 500 });
+  }
+
+  // ═══ 게스트/인증 분기 — 비용 폭탄 가드 (silent clamp + 경고 로그) ═══
+  const owner = await resolveImageOwner(request);
+  const isGuest = owner === 'guest';
+
+  // model 화이트리스트 enforce
+  const allowedModels = isGuest ? GUEST_ALLOWED_MODELS : AUTH_ALLOWED_MODELS;
+  if (body.model && !allowedModels.has(body.model)) {
+    console.warn(`[gemini] model clamp ${isGuest ? 'guest' : 'auth'}: ${body.model} → flash-lite`);
+    body.model = 'gemini-3.1-flash-lite-preview';
+  }
+  // systemInstruction: 게스트는 무시 (서버 default 만)
+  if (isGuest && body.systemInstruction) {
+    console.warn('[gemini] systemInstruction stripped (guest)');
+    body.systemInstruction = undefined;
+  }
+  // googleSearch: 게스트 false 강제
+  if (isGuest && body.googleSearch) {
+    console.warn('[gemini] googleSearch disabled (guest)');
+    body.googleSearch = false;
+  }
+  // inlineImages: 게스트 length <= 2, 각 base64 size <= 1MB / 인증 length <= 4, 5MB
+  if (Array.isArray(body.inlineImages)) {
+    const maxLen = isGuest ? GUEST_MAX_INLINE_IMAGES : AUTH_MAX_INLINE_IMAGES;
+    const maxBytes = isGuest ? GUEST_MAX_INLINE_IMAGE_BYTES : AUTH_MAX_INLINE_IMAGE_BYTES;
+    if (body.inlineImages.length > maxLen) {
+      console.warn(`[gemini] inlineImages truncated ${body.inlineImages.length}→${maxLen} (${isGuest ? 'guest' : 'auth'})`);
+      body.inlineImages = body.inlineImages.slice(0, maxLen);
+    }
+    body.inlineImages = body.inlineImages.filter((url) => {
+      if (typeof url !== 'string') return false;
+      if (url.length > maxBytes) {
+        console.warn(`[gemini] inlineImage dropped, size ${url.length} > ${maxBytes} (${isGuest ? 'guest' : 'auth'})`);
+        return false;
+      }
+      return true;
+    });
+  }
+  // images (legacy): 동일 cap
+  if (Array.isArray(body.images)) {
+    const maxLen = isGuest ? GUEST_MAX_INLINE_IMAGES : AUTH_MAX_INLINE_IMAGES;
+    const maxBytes = isGuest ? GUEST_MAX_INLINE_IMAGE_BYTES : AUTH_MAX_INLINE_IMAGE_BYTES;
+    if (body.images.length > maxLen) {
+      console.warn(`[gemini] images truncated ${body.images.length}→${maxLen} (${isGuest ? 'guest' : 'auth'})`);
+      body.images = body.images.slice(0, maxLen);
+    }
+    body.images = body.images.filter((img) => {
+      if (!img || typeof img.base64 !== 'string') return false;
+      if (img.base64.length > maxBytes) {
+        console.warn(`[gemini] image dropped, size ${img.base64.length} > ${maxBytes}`);
+        return false;
+      }
+      return true;
+    });
+  }
+  // maxOutputTokens cap
+  const tokenCap = isGuest ? GUEST_MAX_OUTPUT_TOKENS : AUTH_MAX_OUTPUT_TOKENS;
+  if (body.maxOutputTokens !== undefined && body.maxOutputTokens > tokenCap) {
+    console.warn(`[gemini] maxOutputTokens clamp ${body.maxOutputTokens}→${tokenCap} (${isGuest ? 'guest' : 'auth'})`);
+    body.maxOutputTokens = tokenCap;
+  }
+  // 게스트가 model 미지정 시 default 도 flash-lite (인증은 기존 pro 유지)
+  if (isGuest && !body.model) {
+    body.model = 'gemini-3.1-flash-lite-preview';
   }
 
   // ═══ 스트리밍 모드 ═══
