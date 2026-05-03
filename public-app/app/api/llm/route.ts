@@ -5,12 +5,19 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { gateGuestRequest } from '../../../lib/guestRateLimit';
+import { resolveImageOwner } from '../../../lib/serverAuth';
 import { callLLM } from '@winaid/blog-core';
 import { resolveRoute } from '@winaid/blog-core';
 import type { LLMTaskKind } from '@winaid/blog-core';
 
 export const maxDuration = 120;
 export const dynamic = 'force-dynamic';
+
+// ── 게스트 비용 폭탄 가드 ──
+// 과거: 게스트가 임의 systemInstruction + maxOutputTokens 지정 가능 (clamp 없음).
+// 수정: 게스트는 systemInstruction 무시 (서버 default 만), maxOutputTokens cap 8192.
+// 인증 사용자는 기존 동작 유지.
+const GUEST_MAX_OUTPUT_TOKENS = 8192;
 
 const VALID_TASKS: Set<string> = new Set([
   'blog_title_recommend', 'blog_seo_eval', 'blog_image_prompt',
@@ -43,6 +50,18 @@ export async function POST(request: NextRequest) {
   }
   if (!VALID_TASKS.has(body.task)) {
     return NextResponse.json({ error: `허용되지 않는 task: ${body.task}` }, { status: 400 });
+  }
+
+  // 게스트 분기 — silent clamp + 경고 로그
+  const owner = await resolveImageOwner(request);
+  const isGuest = owner === 'guest';
+  if (isGuest && body.systemInstruction) {
+    console.warn('[llm] systemInstruction stripped (guest)');
+    body.systemInstruction = undefined;
+  }
+  if (isGuest && body.maxOutputTokens !== undefined && body.maxOutputTokens > GUEST_MAX_OUTPUT_TOKENS) {
+    console.warn(`[llm] maxOutputTokens clamp ${body.maxOutputTokens}→${GUEST_MAX_OUTPUT_TOKENS} (guest)`);
+    body.maxOutputTokens = GUEST_MAX_OUTPUT_TOKENS;
   }
 
   // API 키 사전 확인
