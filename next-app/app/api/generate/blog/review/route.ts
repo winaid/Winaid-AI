@@ -68,6 +68,10 @@ export async function POST(request: NextRequest) {
   if (!draftHtml || typeof draftHtml !== 'string') {
     return NextResponse.json({ error: 'bad_request', details: 'draftHtml required' }, { status: 400 });
   }
+  // category 화이트리스트 (prompt 보간 방어 — undefined 는 OK, 명시 입력 시 enum 만 허용)
+  if (body.category !== undefined && !['치과', '피부과', '정형외과'].includes(String(body.category))) {
+    return NextResponse.json({ error: 'bad_request', details: 'invalid category' }, { status: 400 });
+  }
 
   const owner = await resolveImageOwner(request);
   const userId = owner === 'guest' ? null : owner;
