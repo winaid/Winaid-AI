@@ -10,7 +10,11 @@ const MEDICAL_LAW_REPLACEMENTS: Array<[RegExp, string]> = [
   // ── 기존 패턴 ──
   [/극대화/g, '향상'],
   [/최첨단/g, '최신'],
+  // 완벽 + loanword variant (퍼펙트/퍼팩트) + 동의어 (완전무결/흠잡을 데 없는)
   [/완벽(한|하게|히)?/g, '꼼꼼$1'],
+  [/완전무결(한|하게)?/g, '뛰어난$1'],
+  [/흠잡을\s?데\s?없는/g, '훌륭한'],
+  [/퍼[펙팩]트(한|하게)?/g, '뛰어난$1'],
   [/확실한/g, '체계적인'],
   [/확실하게/g, '체계적으로'],
   [/확실히/g, '체계적으로'],
@@ -30,14 +34,22 @@ const MEDICAL_LAW_REPLACEMENTS: Array<[RegExp, string]> = [
   [/완치/g, '호전'],
   [/근본\s?치료/g, '근본적인 관리'],
   [/영구적(인|으로)?/g, '장기적$1'],
+  // 100% / 100퍼 / 백퍼 — 보건복지부 의료광고 심의기준 2024 update 강화
   [/100\s?%/g, '높은 비율로'],
+  [/100\s?퍼\s?센트/g, '대부분의 경우'],
+  [/100\s?퍼/g, '대부분의 경우'],
+  [/백\s?퍼\s?센트/g, '대부분의 경우'],
+  [/백프로/g, '대부분의 경우'],
   [/가장\s(좋은|뛰어난|우수한)/g, '매우 $1'],
   [/최소\s?침습/g, '부담을 줄인'],
   [/최소\s?통증/g, '불편감을 줄인'],
   [/최대\s?효과/g, '효과를 높인'],
-  [/무통\s/g, '불편감을 줄인 '],
+  // '무통' — 시술명 ('무통주사', '무통분만') 은 보존, 표현 '무통 시술' / '무통의' 만 매칭
+  // (?!주사|분만|마취) lookahead 로 시술명 false positive 차단
+  [/무통(?!주사|분만|마취)\s/g, '불편감을 줄인 '],
   [/부작용\s?(없는|제로|zero)/g, '부작용 위험을 줄인'],
   [/통증\s?없는/g, '불편감을 줄인'],
+  [/통증\s?제로/g, '불편감을 줄인'],
   [/기적적인/g, '의미 있는'],
   [/기적적으로/g, '의미 있게'],
   [/기적적(?=[^인으])/g, '의미 있는'],
@@ -58,10 +70,14 @@ const MEDICAL_LAW_REPLACEMENTS: Array<[RegExp, string]> = [
   [/국내\s?최초/g, '선도적인'],
   [/업계\s?최초로/g, '앞서'],
   [/업계\s?최초/g, '앞서가는'],
-  [/최고(의|로)?/g, '높은 수준$1'],
+  // '최고치' (peak) false positive 방지 — '최고' 뒤에 '치' 가 오면 매칭 X
+  [/최고급/g, '높은 수준'],
+  [/최고(의|로)?(?!치)/g, '높은 수준$1'],
   [/최상(의|급)?/g, '우수한 수준'],
+  [/최우수/g, '우수한 수준의'],
   [/No\.?\s*1(?!\d)/gi, '많은 분들이 선택하는'],
   [/넘버원/g, '많은 분들이 선택하는'],
+  [/넘버\s?1(?!\d)/gi, '많은 분들이 선택하는'],
   // 한글은 \b가 동작하지 않으므로 lookbehind/lookahead 사용 (11위/21위는 제외)
   [/(?<![0-9])1위(?![0-9])/g, '많은 분들이 선택되는'],
   [/기적의/g, '주목할 만한'],
@@ -104,24 +120,54 @@ export interface MedicalLawFilterResult {
 }
 
 /**
- * 의료광고법 금지어를 자동 대체한다.
- * @param text HTML 또는 평문
+ * HTML 태그 / 속성을 보존하면서 텍스트 노드만 transform 적용.
+ *
+ * 과거: 정규식이 raw HTML 에 직접 적용 → `<h3>가장 좋은 치과</h3>` 의 헤딩 태그
+ * 손상, `<a href="rank-1위">` 의 attribute 안 '1위' 도 mutate.
+ *
+ * 수정: HTML 태그 (속성 포함) 를 placeholder (\x00<index>\x00) 로 치환 후 텍스트
+ * 영역에만 transform 실행 → 다시 placeholder 를 원본 태그로 복원.
+ * 외부 의존성 0 (cheerio 등 미사용 — blog-core shared package 부피 최소화).
+ *
+ * 한계: HTML 주석 (<!-- ... -->) 은 일반 태그처럼 보호. <script>/<style> 의 본문은
+ * 텍스트로 매칭됨 — 의료 콘텐츠에선 사용 안 함이라 OK.
+ */
+function transformTextOnly(input: string, fn: (text: string) => string): string {
+  // <...> 매칭. 속성값에 '>' 가 있으면 깨지지만 의료 블로그 HTML 에선 거의 없음.
+  // 안전을 위해 attribute 안 ", '" 로 감싸진 '>' 도 보호:
+  //   <a href="x>y">  →  href 안 '>' 가 종결자로 잘못 잡힘. 매우 드문 케이스 — accept.
+  const TAG_RE = /<[^>]+>|<!--[\s\S]*?-->/g;
+  const tags: string[] = [];
+  const placeheld = input.replace(TAG_RE, (tag) => {
+    tags.push(tag);
+    return `\x00${tags.length - 1}\x00`;
+  });
+  const transformed = fn(placeheld);
+  return transformed.replace(/\x00(\d+)\x00/g, (_, n) => tags[parseInt(n, 10)] ?? '');
+}
+
+/**
+ * 의료광고법 금지어를 자동 대체한다. HTML 태그 / 속성은 보존, 텍스트 노드만 변환.
+ * @param text HTML 또는 평문 — 평문은 태그 0건이라 그대로 변환
  */
 export function filterMedicalLawViolations(text: string): MedicalLawFilterResult {
-  let result = text;
   let replacedCount = 0;
   const foundTerms: string[] = [];
 
-  for (const [pattern, replacement] of MEDICAL_LAW_REPLACEMENTS) {
-    const matches = result.match(pattern);
-    if (matches && matches.length > 0) {
-      foundTerms.push(`${matches[0]}(${matches.length}건)`);
-      replacedCount += matches.length;
-      result = result.replace(pattern, replacement);
+  const filtered = transformTextOnly(text, (textOnly) => {
+    let result = textOnly;
+    for (const [pattern, replacement] of MEDICAL_LAW_REPLACEMENTS) {
+      const matches = result.match(pattern);
+      if (matches && matches.length > 0) {
+        foundTerms.push(`${matches[0]}(${matches.length}건)`);
+        replacedCount += matches.length;
+        result = result.replace(pattern, replacement);
+      }
     }
-  }
+    return result;
+  });
 
-  return { filtered: result, replacedCount, foundTerms };
+  return { filtered, replacedCount, foundTerms };
 }
 
 /**

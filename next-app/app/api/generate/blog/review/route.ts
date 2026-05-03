@@ -115,11 +115,26 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     const message = (err as Error).message || 'unknown';
     console.error(`[generate/blog/review] callLLM failed: ${message}`);
+    // ⚠️ 과거: verdict='pass' 반환 → 클라이언트가 'compliant — publish OK' 로 처리 →
+    // 의료광고법 검증 우회 (fail-open). H3 (Agent 5).
+    // 수정: regex 안전망 (applyContentFilters) 적용 후 결과에 따라 verdict 결정.
+    //  - replacedCount > 0: minor_fix (자동 치환된 안전 표현)
+    //  - replacedCount === 0: major_fix (수동 검토 필요 — auto-pass 절대 X)
+    const filtered = applyContentFilters(draftHtml);
+    const fellbackVerdict: 'minor_fix' | 'major_fix' = filtered.replacedCount > 0 ? 'minor_fix' : 'major_fix';
+    console.warn(`[generate/blog/review] LLM 실패 fallback: verdict=${fellbackVerdict}, replacedCount=${filtered.replacedCount}`);
     return NextResponse.json({
-      verdict: 'pass',
-      issues: [],
-      revisedHtml: null,
-      summaryNote: 'review_call_failed_passthrough',
+      verdict: fellbackVerdict,
+      issues: [{
+        category: 'medical_law',
+        severity: 'high',
+        problem: `감수 LLM 호출이 실패했습니다 (${message.slice(0, 80)}). 정규식 안전망이 ${filtered.replacedCount}건 치환했습니다. 게시 전 수동 검토를 권장합니다.`,
+        suggestion: '안전망 결과를 검토하거나, 잠시 후 감수를 재시도해 주세요.',
+      }],
+      revisedHtml: filtered.replacedCount > 0 ? filtered.filtered : null,
+      summaryNote: filtered.replacedCount > 0
+        ? `auto_replaced_after_review_failure (${filtered.replacedCount}건)`
+        : 'review_call_failed_manual_review_required',
       usage: null,
       model: '',
       warning: `review_failed: ${message.slice(0, 200)}`,
