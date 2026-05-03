@@ -14,6 +14,7 @@ import { readFile, writeFile, mkdir, readdir, unlink } from 'fs/promises';
 import { existsSync } from 'fs';
 import path from 'path';
 import { loadOrCreateSecret } from './storage';
+import { log } from './logger';
 
 const CRED_DIR = path.join(process.cwd(), 'credentials');
 const KEY_FILENAME = 'encryption.key';
@@ -157,8 +158,9 @@ export async function listAccounts(): Promise<
       try {
         const creds = await getCredentials(id);
         accounts.push({ id, hospitalName: creds.hospitalName, blogId: creds.blogId });
-      } catch {
-        /* 손상된 파일 무시 — 사용자가 재로그인 필요 */
+      } catch (e) {
+        // 손상된 파일 — silent skip 금지, warn 으로 사용자 알림
+        log.warn(`account ${id} 자격증명 손상 — 재로그인 필요: ${(e as Error).message}`);
       }
     }
   }
