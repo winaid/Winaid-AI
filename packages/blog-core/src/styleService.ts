@@ -3,7 +3,12 @@
  *
  * old app writingStyleService.ts에서 이식.
  */
-import { supabase } from '@winaid/blog-core';
+import { supabase, supabaseAdmin } from '@winaid/blog-core';
+
+// 서울 RLS 가 hospital_* 테이블의 INSERT/UPDATE/DELETE 를 'authenticated' 만 허용.
+// styleService 는 cron(crawl-all) 등 server-side / no-session 에서도 호출되어 anon 으로는
+// 모두 차단. supabaseAdmin (service_role) 우선 사용. read 도 동일 클라이언트로 일관.
+const db = () => (supabaseAdmin ?? supabase)!;
 import type { CrawledPostScore, DBCrawledPost } from '@winaid/blog-core';
 import type { BrandPreset } from '@winaid/blog-core';
 import { filterMedicalLawViolations, FORBIDDEN_EXPRESSIONS } from '@winaid/blog-core';
@@ -134,7 +139,7 @@ export async function saveBrandPreset(hospitalName: string, preset: BrandPreset)
     // 공급한 필드만 갱신되므로 기존 style_profile 등은 보존됨.
     // (.from().upsert 의 타입 제네릭이 DB 스키마와 연결돼 있지 않아 as any 사용 —
     //  기존 styleService 의 다른 upsert 호출과 동일한 패턴)
-    const { error } = await (supabase.from('hospital_style_profiles') as any).upsert(
+    const { error } = await (db().from('hospital_style_profiles') as any).upsert(
       {
         hospital_name: hospitalName,
         brand_preset: presetWithTimestamp,
@@ -469,7 +474,7 @@ export async function saveHospitalBlogUrl(
   blogUrl: string,
 ): Promise<void> {
   if (!supabase) throw new Error('Supabase 미설정');
-  const { error } = await (supabase.from('hospital_style_profiles') as any).upsert(
+  const { error } = await (db().from('hospital_style_profiles') as any).upsert(
     {
       hospital_name: hospitalName,
       naver_blog_url: blogUrl,
@@ -623,7 +628,7 @@ export async function crawlAndLearnHospitalStyle(
   } catch { /* ignore */ }
 
   if (supabase) {
-    await (supabase.from('hospital_style_profiles') as any).upsert(
+    await (db().from('hospital_style_profiles') as any).upsert(
       {
         hospital_name: hospitalName,
         naver_blog_url: blogUrls.join(','),
@@ -687,7 +692,7 @@ export async function crawlAndLearnHospitalStyle(
       }
       console.log(`[순위] 최종: "${naverRankKeyword}" → ${naverRank !== null ? naverRank + '위' : '순위외'}`);
 
-      await (supabase.from('hospital_crawled_posts') as any).upsert(
+      await (db().from('hospital_crawled_posts') as any).upsert(
         {
           hospital_name: hospitalName,
           url: post.url,
@@ -1451,7 +1456,7 @@ export async function crawlAndScoreAllHospitals(
 
           console.log(`[순위] 최종 결과 — "${naverRankKeyword}": ${naverRank !== null ? naverRank + '위' : '순위외'}`);
           if (supabase) {
-            await (supabase.from('hospital_crawled_posts') as any).upsert(
+            await (db().from('hospital_crawled_posts') as any).upsert(
               {
                 hospital_name: name,
                 url: post.url,
@@ -1525,7 +1530,7 @@ export async function crawlAndScoreAllHospitals(
         if (pii.removedCount > 0) console.warn(`[style-learn] PII ${pii.removedCount}건 마스킹 from "${name}"`);
         profileData.raw_sample_text = pii.text.slice(0, 25000);
       }
-      await (supabase.from('hospital_style_profiles') as any).upsert(
+      await (db().from('hospital_style_profiles') as any).upsert(
         profileData,
         { onConflict: 'hospital_name' },
       );

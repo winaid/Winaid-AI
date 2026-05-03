@@ -22,14 +22,17 @@ function getLogClient(): SupabaseClient | null {
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  const key = serviceKey || anonKey;
 
-  if (!url || !key) {
+  // service role 만 사용. 서울 RLS 가 api_usage_logs INSERT 를 service_role 에만 허용.
+  // anon 폴백을 두면 모든 insert 가 RLS 차단되어 silent 데이터 손실.
+  if (!url || !serviceKey) {
+    if (url && !serviceKey) {
+      console.warn('[llm/logUsage] SUPABASE_SERVICE_ROLE_KEY missing — usage logging disabled');
+    }
     cachedClient = null;
     return null;
   }
-  cachedClient = createClient(url, key, { auth: { persistSession: false } });
+  cachedClient = createClient(url, serviceKey, { auth: { persistSession: false } });
   return cachedClient;
 }
 

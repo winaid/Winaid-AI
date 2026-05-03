@@ -62,13 +62,17 @@ function getDb(): SupabaseClient | null {
   if (cachedDb !== undefined) return cachedDb;
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  const key = serviceKey || anonKey;
-  if (!url || !key) {
+
+  // service role 만 사용. 서울 RLS 가 llm_batches 를 service_role 만 허용.
+  // anon 폴백을 두면 Anthropic 청구는 발생하지만 DB 추적이 끊겨 결과 수령 불가.
+  if (!url || !serviceKey) {
+    if (url && !serviceKey) {
+      console.warn('[llm/claudeBatch] SUPABASE_SERVICE_ROLE_KEY missing — batch tracking disabled');
+    }
     cachedDb = null;
     return null;
   }
-  cachedDb = createClient(url, key, { auth: { persistSession: false } });
+  cachedDb = createClient(url, serviceKey, { auth: { persistSession: false } });
   return cachedDb;
 }
 
