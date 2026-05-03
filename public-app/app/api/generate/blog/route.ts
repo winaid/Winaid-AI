@@ -124,6 +124,32 @@ function parseOutlineJson(raw: string): BlogOutline | null {
   }
 }
 
+/**
+ * 동시성 cap 헬퍼 — Promise.allSettled 와 동일 출력 형태.
+ * Anthropic Tier 1 RPM 보호: 외부 의존성 0, env BLOG_SECTION_CONCURRENCY (기본 3, 1~10 clamp).
+ */
+async function pLimitedSettled<T, R>(
+  items: T[],
+  fn: (item: T, index: number) => Promise<R>,
+  limit: number,
+): Promise<Array<PromiseSettledResult<R>>> {
+  const results: Array<PromiseSettledResult<R>> = new Array(items.length);
+  let next = 0;
+  const safeLimit = Math.max(1, Math.min(10, Math.floor(limit) || 3));
+  const worker = async () => {
+    while (next < items.length) {
+      const i = next++;
+      try { results[i] = { status: 'fulfilled', value: await fn(items[i], i) }; }
+      catch (err) { results[i] = { status: 'rejected', reason: err }; }
+    }
+  };
+  const workerCount = Math.min(safeLimit, items.length);
+  await Promise.all(Array.from({ length: workerCount }, () => worker()));
+  return results;
+}
+
+const SECTION_CONCURRENCY = Math.max(1, Math.min(10, parseInt(process.env.BLOG_SECTION_CONCURRENCY || '3', 10) || 3));
+
 async function generate2Pass(
   req: GenerationRequest,
   hospitalStyleBlock: string | null,
@@ -157,26 +183,29 @@ async function generate2Pass(
     return generate1Pass(req, hospitalStyleBlock, userId);
   }
 
-  // ── Pass 2: 섹션별 병렬 생성 ──
-  const sectionPromises = outline.sections.map((section, idx) => {
-    const prompt = buildSectionFromOutlinePrompt({
-      section,
-      sectionIndex: idx,
-      outline,
-      req,
-      hospitalStyleBlock,
-    });
-    return callLLM({
-      task: 'blog_unified',
-      systemBlocks: prompt.systemBlocks,
-      userPrompt: prompt.userPrompt,
-      temperature: 0.8,
-      maxOutputTokens: 4096,
-      userId,
-    });
-  });
-
-  const results = await Promise.allSettled(sectionPromises);
+  // ── Pass 2: 섹션별 병렬 생성 (동시성 cap = SECTION_CONCURRENCY) ──
+  // 무제한 fan-out 시 Anthropic Tier 1 RPM 초과 → 부분 발행 + full credit. cap 으로 안정성 확보.
+  const results = await pLimitedSettled(
+    outline.sections,
+    (section, idx) => {
+      const prompt = buildSectionFromOutlinePrompt({
+        section,
+        sectionIndex: idx,
+        outline,
+        req,
+        hospitalStyleBlock,
+      });
+      return callLLM({
+        task: 'blog_unified',
+        systemBlocks: prompt.systemBlocks,
+        userPrompt: prompt.userPrompt,
+        temperature: 0.8,
+        maxOutputTokens: 4096,
+        userId,
+      });
+    },
+    SECTION_CONCURRENCY,
+  );
 
   const htmlParts: string[] = [];
   let totalInput = 0;

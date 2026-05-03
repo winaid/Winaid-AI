@@ -158,6 +158,36 @@ function parseOutlineJson(raw: string, imageCount: number): BlogOutline | null {
   return parsed;
 }
 
+/**
+ * 동시성 cap 헬퍼 — Promise.allSettled 와 동일 출력 형태 (status='fulfilled'|'rejected').
+ *
+ * Anthropic Tier 1 (50 RPM, 4000 ITPM) 에서 8 섹션 무제한 병렬 + 이미지 동시 호출 시
+ * 429 빈번 → 부분 발행 + full credit 차감 위험. cap=3 으로 제한해 throughput 확보.
+ *
+ * env: BLOG_SECTION_CONCURRENCY (기본 3, 1~10 clamp). 외부 의존성 0.
+ */
+async function pLimitedSettled<T, R>(
+  items: T[],
+  fn: (item: T, index: number) => Promise<R>,
+  limit: number,
+): Promise<Array<PromiseSettledResult<R>>> {
+  const results: Array<PromiseSettledResult<R>> = new Array(items.length);
+  let next = 0;
+  const safeLimit = Math.max(1, Math.min(10, Math.floor(limit) || 3));
+  const worker = async () => {
+    while (next < items.length) {
+      const i = next++;
+      try { results[i] = { status: 'fulfilled', value: await fn(items[i], i) }; }
+      catch (err) { results[i] = { status: 'rejected', reason: err }; }
+    }
+  };
+  const workerCount = Math.min(safeLimit, items.length);
+  await Promise.all(Array.from({ length: workerCount }, () => worker()));
+  return results;
+}
+
+const SECTION_CONCURRENCY = Math.max(1, Math.min(10, parseInt(process.env.BLOG_SECTION_CONCURRENCY || '3', 10) || 3));
+
 async function generate2Pass(
   req: GenerationRequest,
   hospitalStyleBlock: string | null,
@@ -197,27 +227,31 @@ async function generate2Pass(
     const distribution = Array.from({ length: bodyCount }, (_, i) => base + (i < bonus ? 1 : 0));
     console.info(`[BLOG] 키워드 분배: density=${req.keywordDensity} bodyCount=${bodyCount} base=${base} bonusCount=${bonus} → 본문 섹션별 [${distribution.join(',')}] / intro·outro 는 0~1회`);
   }
-  const sectionPromises = outline.sections.map((section, idx) => {
-    const prompt = buildSectionFromOutlinePrompt({
-      section,
-      sectionIndex: idx,
-      outline,
-      req,
-      hospitalStyleBlock,
-      density: req.keywordDensity,
-      totalSections: totalSectionsForDistribution,
-    });
-    return callLLM({
-      task: 'blog_unified',
-      systemBlocks: prompt.systemBlocks,
-      userPrompt: prompt.userPrompt,
-      temperature: 0.8,
-      maxOutputTokens: 4096,
-      userId,
-    });
-  });
-
-  const results = await Promise.allSettled(sectionPromises);
+  // Anthropic Tier 1 RPM 보호: 동시 섹션 호출을 SECTION_CONCURRENCY (기본 3) 로 제한.
+  // outline 8 섹션 → 무제한 fan-out 시 429 빈번 → Promise.allSettled 가 swallow → 부분 발행.
+  const results = await pLimitedSettled(
+    outline.sections,
+    (section, idx) => {
+      const prompt = buildSectionFromOutlinePrompt({
+        section,
+        sectionIndex: idx,
+        outline,
+        req,
+        hospitalStyleBlock,
+        density: req.keywordDensity,
+        totalSections: totalSectionsForDistribution,
+      });
+      return callLLM({
+        task: 'blog_unified',
+        systemBlocks: prompt.systemBlocks,
+        userPrompt: prompt.userPrompt,
+        temperature: 0.8,
+        maxOutputTokens: 4096,
+        userId,
+      });
+    },
+    SECTION_CONCURRENCY,
+  );
 
   const htmlParts: string[] = [];
   let totalInput = 0;
@@ -372,37 +406,39 @@ async function generate2PassWithProgress(
   }
 
   let completedCount = 0;
-  const sectionPromises = outline.sections.map((section, idx) => {
-    const prompt = buildSectionFromOutlinePrompt({
-      section,
-      sectionIndex: idx,
-      outline: outline!,
-      req,
-      hospitalStyleBlock,
-      density: req.keywordDensity,
-      totalSections,
-    });
-    return callLLM({
-      task: 'blog_unified',
-      systemBlocks: prompt.systemBlocks,
-      userPrompt: prompt.userPrompt,
-      temperature: 0.8,
-      maxOutputTokens: 4096,
-      userId,
-    })
-      .then(result => {
+  // pLimitedSettled 로 SECTION_CONCURRENCY (기본 3) 개씩 순차 실행 — Anthropic Tier 1 RPM 보호.
+  const results = await pLimitedSettled(
+    outline.sections,
+    async (section, idx) => {
+      const prompt = buildSectionFromOutlinePrompt({
+        section,
+        sectionIndex: idx,
+        outline: outline!,
+        req,
+        hospitalStyleBlock,
+        density: req.keywordDensity,
+        totalSections,
+      });
+      try {
+        const result = await callLLM({
+          task: 'blog_unified',
+          systemBlocks: prompt.systemBlocks,
+          userPrompt: prompt.userPrompt,
+          temperature: 0.8,
+          maxOutputTokens: 4096,
+          userId,
+        });
         completedCount++;
         send('stage', { name: 'section_done', index: idx, completed: completedCount, total: totalSections });
-        return { status: 'fulfilled' as const, value: result };
-      })
-      .catch(reason => {
+        return result;
+      } catch (err) {
         completedCount++;
         send('stage', { name: 'section_failed', index: idx, completed: completedCount, total: totalSections });
-        return { status: 'rejected' as const, reason };
-      });
-  });
-
-  const results = await Promise.all(sectionPromises);
+        throw err;
+      }
+    },
+    SECTION_CONCURRENCY,
+  );
 
   const htmlParts: string[] = [];
   let totalInput = 0;

@@ -1051,55 +1051,62 @@ JSON 형식으로 응답해주세요.`;
         return;
       }
 
-      // SSE 스트림 읽기
+      // SSE 스트림 읽기 — abort / unmount / 정상 종료 시 reader.cancel() 보장.
+      // 과거: AbortController 만 호출 → fetch 는 끊겨도 reader 가 stream 보유 → GC 까지 지연,
+      // upstream LLM 도 살아있어 비용 + cross-talk. (B4 — Agent 5)
       const reader = draftRes.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
       let finalData: { text?: string; violations?: string[]; usage?: unknown; model?: string } | null = null;
       let streamError: string | null = null;
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
 
-        const events = buffer.split('\n\n');
-        buffer = events.pop() || '';
+          const events = buffer.split('\n\n');
+          buffer = events.pop() || '';
 
-        for (const evtBlock of events) {
-          let eventName = '';
-          let dataStr = '';
-          for (const line of evtBlock.split('\n')) {
-            if (line.startsWith('event:')) eventName = line.slice(6).trim();
-            else if (line.startsWith('data:')) dataStr = line.slice(5).trim();
-          }
-          if (!eventName || !dataStr) continue;
-
-          try {
-            const data = JSON.parse(dataStr);
-            if (eventName === 'stage') {
-              const stageName = data.name as string;
-              setStageInfo({
-                name: stageName,
-                completed: typeof data.completed === 'number' ? data.completed : undefined,
-                total: typeof data.total === 'number' ? data.total : undefined,
-              });
-              console.info(`[BLOG] [STAGE] ${stageName}`, data);
-              // SSE stage 이름에 따라 displayStage 자동 전환 (라벨/힌트 동기화)
-              if (stageName === 'outline_start' || stageName === 'outline_done' || stageName === 'fallback_1pass') {
-                setDisplayStage(0); // 글 설계 중
-              } else if (stageName === 'sections_start' || stageName === 'section_done' || stageName === 'section_failed') {
-                setDisplayStage(1); // 본문 작성 중
-              }
-            } else if (eventName === 'complete') {
-              finalData = { text: data.text, violations: data.violations, usage: data.usage, model: data.model };
-            } else if (eventName === 'error') {
-              streamError = (data.message as string) || 'stream error';
+          for (const evtBlock of events) {
+            let eventName = '';
+            let dataStr = '';
+            for (const line of evtBlock.split('\n')) {
+              if (line.startsWith('event:')) eventName = line.slice(6).trim();
+              else if (line.startsWith('data:')) dataStr = line.slice(5).trim();
             }
-          } catch (e) {
-            console.warn('[BLOG] SSE parse error:', e);
+            if (!eventName || !dataStr) continue;
+
+            try {
+              const data = JSON.parse(dataStr);
+              if (eventName === 'stage') {
+                const stageName = data.name as string;
+                setStageInfo({
+                  name: stageName,
+                  completed: typeof data.completed === 'number' ? data.completed : undefined,
+                  total: typeof data.total === 'number' ? data.total : undefined,
+                });
+                console.info(`[BLOG] [STAGE] ${stageName}`, data);
+                // SSE stage 이름에 따라 displayStage 자동 전환 (라벨/힌트 동기화)
+                if (stageName === 'outline_start' || stageName === 'outline_done' || stageName === 'fallback_1pass') {
+                  setDisplayStage(0); // 글 설계 중
+                } else if (stageName === 'sections_start' || stageName === 'section_done' || stageName === 'section_failed') {
+                  setDisplayStage(1); // 본문 작성 중
+                }
+              } else if (eventName === 'complete') {
+                finalData = { text: data.text, violations: data.violations, usage: data.usage, model: data.model };
+              } else if (eventName === 'error') {
+                streamError = (data.message as string) || 'stream error';
+              }
+            } catch (e) {
+              console.warn('[BLOG] SSE parse error:', e);
+            }
           }
         }
+      } finally {
+        // reader.cancel() 은 stream 종료 후에도 no-op (정상). abort 시엔 backpressure 해제 + GC.
+        try { await reader.cancel(); } catch { /* already closed */ }
       }
 
       if (streamError) {
@@ -1192,8 +1199,12 @@ JSON 형식으로 응답해주세요.`;
                 imageStyle,
                 customImagePrompt: imageStyle === 'custom' ? (customPrompt?.trim() || undefined) : undefined,
               }),
+              // 사용자가 새 generation 시작 / unmount 시 즉시 abort → 비용 burst 차단 (PERF Agent 5)
+              signal: abortSignal,
             }).then(r => r.ok ? r.json() : null)
               .then(async d => {
+                // abort 후 응답 도착해도 setGeneratedContent skip — cross-talk 방지
+                if (abortSignal.aborted) return { index, url: null as string | null };
                 const dataUrl = d?.imageDataUrl as string | undefined;
                 // 조기 경로: Storage 업로드 없이 즉시 src 에 dataURL 직접 embed.
                 // blob: URL 미사용 — blob: 은 페이지 컨텍스트에서만 유효해 저장된 HTML 을
@@ -1630,8 +1641,12 @@ JSON 형식으로 응답해주세요.`;
                 imageStyle,
                 customImagePrompt: imageStyle === 'custom' ? (customPrompt?.trim() || undefined) : undefined,
               }),
+              // 새 generation / unmount 시 즉시 abort — cross-talk + 비용 burst 차단
+              signal: abortSignal,
             });
             if (!imgRes.ok) return { index, url: null };
+            // abort 후 응답 도착해도 후속 처리 skip
+            if (abortSignal.aborted) return { index, url: null };
             const imgData = await imgRes.json() as { imageDataUrl?: string };
             const dataUrl = imgData.imageDataUrl;
             if (!dataUrl) return { index, url: null };
