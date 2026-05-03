@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@winaid/blog-core';
+import { supabase, supabaseAdmin } from '@winaid/blog-core';
 import { checkAuth } from '../../../../lib/apiAuth';
 import { resolveImageOwner } from '../../../../lib/serverAuth';
 
@@ -58,8 +58,10 @@ export async function POST(request: NextRequest) {
         description: typeof parsed.description === 'string' ? parsed.description.slice(0, 200) : '',
       };
 
-      if (supabase && body.imageId) {
-        const { data: updated, error } = await supabase.from('hospital_images').update({
+      // checkAuth 통과 + 명시적 .eq('user_id', owner) 로 소유권 강제. RLS 우회.
+      const db = supabaseAdmin ?? supabase;
+      if (db && body.imageId) {
+        const { data: updated, error } = await db.from('hospital_images').update({
           tags: result.tags,
           alt_text: result.altText,
           ai_description: result.description,
