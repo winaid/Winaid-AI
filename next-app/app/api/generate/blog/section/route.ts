@@ -4,6 +4,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { checkAuth } from '../../../../../lib/apiAuth';
+import { resolveImageOwner } from '../../../../../lib/serverAuth';
 import { useCredit } from '../../../../../lib/creditService';
 import {
   buildBlogSectionPromptV3,
@@ -17,7 +18,7 @@ export const dynamic = 'force-dynamic';
 
 interface Body {
   input?: SectionRegenerateInputV3;
-  userId?: string | null;
+  // userId 는 client 입력 신뢰 안 함. Bearer 토큰에서 도출.
 }
 
 export async function POST(request: NextRequest) {
@@ -34,7 +35,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'bad_request', details: 'input.currentSection/fullBlogContent required' }, { status: 400 });
   }
 
-  const userId = body.userId || null;
+  const owner = await resolveImageOwner(request);
+  const userId = owner === 'guest' ? null : owner;
   if (userId) {
     const credit = await useCredit(userId);
     if (!credit.success) {

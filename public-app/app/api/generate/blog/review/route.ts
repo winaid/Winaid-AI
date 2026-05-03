@@ -12,6 +12,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { gateGuestRequest } from '../../../../../lib/guestRateLimit';
+import { resolveImageOwner } from '../../../../../lib/serverAuth';
 import { useCredit } from '../../../../../lib/creditService';
 import { buildBlogReviewPrompt } from '@winaid/blog-core';
 import { applyContentFilters } from '@winaid/blog-core';
@@ -43,7 +44,7 @@ interface Body {
   hospitalName?: string;
   ruleFilterViolations?: string[];
   stylePromptText?: string;
-  userId?: string | null;
+  // userId 는 client 입력 신뢰 안 함. Bearer 토큰에서 도출.
 }
 
 function tryParseJson(raw: string): ReviewJson | null {
@@ -90,8 +91,9 @@ export async function POST(request: NextRequest) {
   }
 
   // 3) 크레딧 — 감수는 저렴하지만 호출 비용이 있으므로 1 크레딧 차감.
-  //    추후 creditService 에 0.5 지원 추가되면 조정.
-  const userId = body.userId || null;
+  //    userId 는 Bearer 토큰에서 도출 (client 신뢰 시 다른 사용자 차감 가능).
+  const owner = await resolveImageOwner(request);
+  const userId = owner === 'guest' ? null : owner;
   if (userId) {
     const credit = await useCredit(userId);
     if (!credit.success) {
