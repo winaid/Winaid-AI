@@ -22,11 +22,12 @@
 
 const express = require('express');
 const multer = require('multer');
-const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { v4: uuidv4 } = require('uuid');
+const { runFfmpeg } = require('../utils/safeFfmpeg');
+const { safeExt, VIDEO_EXTS } = require('../utils/safeExt');
 
 const {
   getRandomSfx,
@@ -146,7 +147,7 @@ function ruleBasedPlacement(subtitles, density) {
  * FFmpeg amix 필터로 원본 오디오 + 효과음들을 한 번에 합성.
  * 효과음이 0개거나 모두 매칭 실패면 원본을 그대로 outputPath에 복사.
  */
-function mixSoundEffects(inputPath, outputPath, effects) {
+async function mixSoundEffects(inputPath, outputPath, effects) {
   // 실제 매칭된 효과음만
   const valid = effects.filter(e => e.sfxFile && fs.existsSync(e.sfxFile.path));
   if (valid.length === 0) {
@@ -154,13 +155,13 @@ function mixSoundEffects(inputPath, outputPath, effects) {
     return;
   }
 
-  // -i 인자 + 필터 구성
-  const inputArgs = [`-i "${inputPath}"`];
+  // -i 인자 + 필터 구성 — 모든 인자 array (셸 보간 없음)
+  const args = ['-y', '-i', inputPath];
   const adelayParts = [];
   const labels = [];
 
   valid.forEach((e, i) => {
-    inputArgs.push(`-i "${e.sfxFile.path}"`);
+    args.push('-i', e.sfxFile.path);
     const inputIdx = i + 1; // 0번은 원본
     const delayMs = Math.max(0, Math.round((e.time || 0) * 1000));
     const volume = typeof e.volume === 'number' ? e.volume : 0.6;
@@ -171,14 +172,17 @@ function mixSoundEffects(inputPath, outputPath, effects) {
 
   const filter = `${adelayParts.join(';')};[0:a]${labels.join('')}amix=inputs=${labels.length + 1}:duration=first:dropout_transition=0[out]`;
 
-  const cmd =
-    `ffmpeg -y ${inputArgs.join(' ')} ` +
-    `-filter_complex "${filter}" ` +
-    `-map 0:v? -map "[out]" ` +
-    `-c:v copy -c:a aac -b:a 192k ` +
-    `"${outputPath}"`;
+  args.push(
+    '-filter_complex', filter,
+    '-map', '0:v?',
+    '-map', '[out]',
+    '-c:v', 'copy',
+    '-c:a', 'aac',
+    '-b:a', '192k',
+    outputPath,
+  );
 
-  execSync(cmd, { timeout: 300000, stdio: 'pipe' });
+  await runFfmpeg(args, { timeout: 300000 });
 }
 
 // ──────────────────────────────────────────────────────────────────
@@ -201,12 +205,17 @@ router.post('/', upload.single('file'), async (req, res) => {
       subtitles = null;
     }
 
-    const ext = path.extname(req.file.originalname || '') || '.mp4';
+    // 영상/오디오 모두 허용 — 비디오 우선, 매칭 안되면 .mp3 audio fallback
+    const rawExt = (req.file.originalname || '').toLowerCase();
+    const isAudio = /\.(mp3|wav|m4a|aac|ogg|flac)$/.test(rawExt);
+    const ext = isAudio
+      ? safeExt(req.file.originalname, ['.mp3', '.wav', '.m4a', '.aac', '.ogg', '.flac'], '.mp3')
+      : safeExt(req.file.originalname, VIDEO_EXTS);
     const inputPath = path.join(workDir, `input${ext}`);
     const outputPath = path.join(workDir, `output${ext}`);
     fs.renameSync(req.file.path, inputPath);
 
-    const contentType = ext.toLowerCase() === '.mp3' ? 'audio/mpeg' : 'video/mp4';
+    const contentType = ext === '.mp3' ? 'audio/mpeg' : 'video/mp4';
 
     // 1) 라이브러리가 비었으면 원본 반환 — 에러 아님
     const totalSfx = getTotalSfxCount();
@@ -241,7 +250,7 @@ router.post('/', upload.single('file'), async (req, res) => {
       .filter(e => e.sfxFile !== null);
 
     // 4) 합성 (effects 0개여도 mix 함수가 원본 복사로 처리)
-    mixSoundEffects(inputPath, outputPath, effects);
+    await mixSoundEffects(inputPath, outputPath, effects);
 
     if (!fs.existsSync(outputPath)) {
       throw new Error('출력 파일이 생성되지 않았습니다.');

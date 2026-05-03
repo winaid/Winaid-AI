@@ -1,10 +1,11 @@
 const express = require('express');
 const multer = require('multer');
-const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { v4: uuidv4 } = require('uuid');
+const { runFfmpeg } = require('../utils/safeFfmpeg');
+const { safeExt, VIDEO_EXTS } = require('../utils/safeExt');
 
 const router = express.Router();
 const upload = multer({ dest: os.tmpdir(), limits: { fileSize: 500 * 1024 * 1024 } });
@@ -17,19 +18,40 @@ router.post('/', upload.single('file'), async (req, res) => {
     if (!req.file) return res.status(400).json({ error: '파일이 필요합니다.' });
     const { frame_time = '1', text = '', text_color = 'white', text_position = 'center' } = req.body || {};
 
-    const inputPath = path.join(workDir, `input${path.extname(req.file.originalname) || '.mp4'}`);
+    const ext = safeExt(req.file.originalname, VIDEO_EXTS);
+    const inputPath = path.join(workDir, `input${ext}`);
     const framePath = path.join(workDir, 'frame.jpg');
     const outputPath = path.join(workDir, 'thumbnail.jpg');
     fs.renameSync(req.file.path, inputPath);
 
-    execSync(`ffmpeg -y -i "${inputPath}" -ss ${parseFloat(frame_time) || 1} -frames:v 1 -q:v 2 "${framePath}"`, { timeout: 15000, stdio: 'pipe' });
-    if (!fs.existsSync(framePath)) execSync(`ffmpeg -y -i "${inputPath}" -ss 0 -frames:v 1 -q:v 2 "${framePath}"`, { timeout: 15000, stdio: 'pipe' });
+    const seekTime = String(parseFloat(frame_time) || 1);
+
+    await runFfmpeg([
+      '-y',
+      '-i', inputPath,
+      '-ss', seekTime,
+      '-frames:v', '1',
+      '-q:v', '2',
+      framePath,
+    ], { timeout: 15000 });
+
+    if (!fs.existsSync(framePath)) {
+      await runFfmpeg([
+        '-y',
+        '-i', inputPath,
+        '-ss', '0',
+        '-frames:v', '1',
+        '-q:v', '2',
+        framePath,
+      ], { timeout: 15000 });
+    }
 
     if (text.trim()) {
       const fontPaths = ['/usr/share/fonts/truetype/noto/NotoSansKR-Black.ttf', '/usr/share/fonts/noto-cjk/NotoSansCJK-Bold.ttc'];
       let fontOpt = '';
       for (const fp of fontPaths) { if (fs.existsSync(fp)) { fontOpt = `:fontfile=${fp}`; break; } }
 
+      // text_color, text_position 화이트리스트 — lookup key only
       const colors = { white: 'fontcolor=white:borderw=5:bordercolor=black', yellow: 'fontcolor=yellow:borderw=5:bordercolor=black', red: 'fontcolor=red:borderw=5:bordercolor=white' };
       const positions = { top: 'y=h*0.12', center: 'y=(h-text_h)/2', bottom: 'y=h*0.78' };
 
@@ -45,7 +67,13 @@ router.post('/', upload.single('file'), async (req, res) => {
       fs.writeFileSync(textFile, cleaned, { encoding: 'utf8' });
 
       const vf = `drawtext=textfile='${textFile}':fontsize=60${fontOpt}:${colors[text_color] || colors.white}:x=(w-text_w)/2:${positions[text_position] || positions.center}`;
-      execSync(`ffmpeg -y -i "${framePath}" -vf "${vf}" -q:v 2 "${outputPath}"`, { timeout: 15000, stdio: 'pipe' });
+      await runFfmpeg([
+        '-y',
+        '-i', framePath,
+        '-vf', vf,
+        '-q:v', '2',
+        outputPath,
+      ], { timeout: 15000 });
     } else {
       fs.copyFileSync(framePath, outputPath);
     }
@@ -55,6 +83,7 @@ router.post('/', upload.single('file'), async (req, res) => {
     fs.createReadStream(outputPath).pipe(res).on('end', () => { try { fs.rmSync(workDir, { recursive: true, force: true }); } catch {} });
   } catch (err) {
     try { fs.rmSync(workDir, { recursive: true, force: true }); } catch {}
+    console.error('[generate-thumbnail] err:', err.message?.slice(0, 200));
     res.status(500).json({ error: '썸네일 생성 실패' });
   }
 });
