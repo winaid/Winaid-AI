@@ -5,7 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { checkAuth } from '../../../../../lib/apiAuth';
 import { resolveImageOwner } from '../../../../../lib/serverAuth';
-import { useCredit } from '../../../../../lib/creditService';
+import { useCredit, refundCredit } from '../../../../../lib/creditService';
 import {
   buildBlogSectionPromptV3,
   type SectionRegenerateInputV3,
@@ -37,11 +37,13 @@ export async function POST(request: NextRequest) {
 
   const owner = await resolveImageOwner(request);
   const userId = owner === 'guest' ? null : owner;
+  let creditDeducted = false;
   if (userId) {
     const credit = await useCredit(userId);
     if (!credit.success) {
       return NextResponse.json({ error: 'insufficient_credits', remaining: credit.remaining }, { status: 402 });
     }
+    creditDeducted = true;
   }
 
   const { systemBlocks, userPrompt } = buildBlogSectionPromptV3(input);
@@ -64,6 +66,13 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     const message = (err as Error).message || 'unknown';
     console.error(`[generate/blog/section] callLLM failed: ${message}`);
+    // 섹션 재생성 실패 시 1 크레딧 환불 (refund 실패는 swallow)
+    if (creditDeducted && userId) {
+      const refund = await refundCredit(userId).catch(() => null);
+      if (refund?.success) {
+        console.log(`[generate/blog/section] refunded 1 credit for ${userId} (remaining=${refund.remaining})`);
+      }
+    }
     return NextResponse.json(
       { error: 'generation_failed', code: message.slice(0, 200) },
       { status: 500 },

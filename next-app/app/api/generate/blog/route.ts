@@ -7,7 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { checkAuth } from '../../../../lib/apiAuth';
 import { resolveImageOwner } from '../../../../lib/serverAuth';
-import { useCredit } from '../../../../lib/creditService';
+import { useCredit, refundCredit } from '../../../../lib/creditService';
 import { getHospitalStylePrompt } from '@winaid/blog-core';
 import { buildBlogPromptV3, buildOutlinePrompt, buildSectionFromOutlinePrompt } from '@winaid/blog-core';
 import { filterMedicalLawViolations } from '@winaid/blog-core';
@@ -41,11 +41,13 @@ export async function POST(request: NextRequest) {
   // userId 는 Bearer 토큰에서 도출 (client body.userId 신뢰 금지 — 다른 사용자 크레딧 차감 방지)
   const owner = await resolveImageOwner(request);
   const userId = owner === 'guest' ? null : owner;
+  let creditDeducted = false;
   if (userId) {
     const credit = await useCredit(userId);
     if (!credit.success) {
       return NextResponse.json({ error: 'insufficient_credits', remaining: credit.remaining }, { status: 402 });
     }
+    creditDeducted = true;
   }
 
   let hospitalStyleBlock: string | null = null;
@@ -76,7 +78,7 @@ export async function POST(request: NextRequest) {
   const isStream = url.searchParams.get('stream') === '1';
 
   if (isStream) {
-    return streamResponse(req, hospitalStyleBlock, userId);
+    return streamResponse(req, hospitalStyleBlock, userId, creditDeducted);
   }
 
   try {
@@ -93,6 +95,13 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     const message = (err as Error).message || 'unknown';
     console.error(`[generate/blog] failed: ${message}`);
+    // generation 실패 시 크레딧 환불 — refund 실패는 swallow (호출자 흐름 영향 X)
+    if (creditDeducted && userId) {
+      const refund = await refundCredit(userId).catch(() => null);
+      if (refund?.success) {
+        console.log(`[generate/blog] refunded 1 credit for ${userId} (remaining=${refund.remaining})`);
+      }
+    }
     return NextResponse.json(
       { error: 'generation_failed', code: message.slice(0, 200) },
       { status: 500 },
@@ -273,6 +282,7 @@ function streamResponse(
   req: GenerationRequest,
   hospitalStyleBlock: string | null,
   userId: string | null,
+  creditDeducted: boolean,
 ): Response {
   const encoder = new TextEncoder();
   const startTime = Date.now();
@@ -295,6 +305,13 @@ function streamResponse(
           mode: result.mode,
         });
       } catch (err) {
+        // SSE generation 실패 시 환불 (50%+ 섹션 실패 fallback 도 못 가서 throw 한 케이스)
+        if (creditDeducted && userId) {
+          const refund = await refundCredit(userId).catch(() => null);
+          if (refund?.success) {
+            send('refunded', { remaining: refund.remaining, amount: 1 });
+          }
+        }
         send('error', { message: ((err as Error).message || 'unknown').slice(0, 200) });
       } finally {
         controller.close();
