@@ -6,7 +6,7 @@
  */
 
 import * as cheerio from 'cheerio';
-import { safeFetch, SsrfBlockedError } from '@winaid/blog-core';
+import { safeFetch, SsrfBlockedError } from '@winaid/blog-core/src/utils/safeFetch';
 import type { CrawlResult, CrawlImage, CrawlLink, CrawlHeading } from './types';
 import { checkRobotsTxt, checkSitemap, parseAiCrawlerPolicy, checkLlmsTxt } from './robotsSitemap';
 

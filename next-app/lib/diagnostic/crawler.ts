@@ -8,7 +8,7 @@
 import * as cheerio from 'cheerio';
 import * as nodeHttps from 'node:https';
 import * as nodeHttp from 'node:http';
-import { safeFetch, SsrfBlockedError } from '@winaid/blog-core';
+import { safeFetch, SsrfBlockedError } from '@winaid/blog-core/src/utils/safeFetch';
 
 // node:http IncomingMessage 최소 인터페이스 — @types/node 없이 사용하기 위함
 interface NodeIncomingMessage {

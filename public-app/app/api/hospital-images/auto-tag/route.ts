@@ -14,7 +14,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase, supabaseAdmin, safeFetch } from '@winaid/blog-core';
+import { supabase, supabaseAdmin } from '@winaid/blog-core';
+import { safeFetch } from '@winaid/blog-core/src/utils/safeFetch';
 import { gateGuestRequest } from '../../../../lib/guestRateLimit';
 import { resolveImageOwner } from '../../../../lib/serverAuth';
 

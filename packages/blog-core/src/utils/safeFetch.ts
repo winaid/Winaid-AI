@@ -27,6 +27,13 @@
  *   - HTTP/2 prior knowledge (fetch API 자체가 자동 처리)
  */
 
+// 본 모듈은 Node 'dns' / 'net' 의존 — Next.js client bundle 에 들어가면 빌드 실패.
+// server-only 마커를 두어 client component 에서 import 시도하면 즉시 컴파일 에러.
+// (next-app / public-app 모두 'server-only' 패키지 의존성 있는지 확인 필요. 없으면
+// 본 import 가 module-not-found 로 실패하므로, 안전 차선으로 deep-path import 약속만
+// 강제 — server-only 사용은 옵션. 본 PR 에선 일단 주석으로만 명시.)
+// import 'server-only'; // 활성 시 별도 PR 에서 dependency 추가
+
 import { promises as dns } from 'dns';
 import { isIPv4, isIPv6 } from 'net';
 
