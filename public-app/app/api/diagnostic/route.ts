@@ -23,7 +23,7 @@ import { buildActionPlan } from '../../../lib/diagnostic/actionPlan';
 import { enrichDiagnostic } from '../../../lib/diagnostic/enrich';
 import { extractRegion } from '../../../lib/diagnostic/discovery';
 import { logDiagnostic, generateTraceId } from '../../../lib/diagnostic/logger';
-import { supabase } from '@winaid/blog-core';
+import { supabase, supabaseAdmin } from '@winaid/blog-core';
 import type { DiagnosticResponse, DiagnosticErrorResponse } from '../../../lib/diagnostic/types';
 
 // 실측(discovery) 은 /api/diagnostic/stream 별도 엔드포인트로 분리 (단계 S-A, 플랫폼별 SSE).
@@ -202,8 +202,10 @@ export async function POST(request: NextRequest) {
   logDiagnostic({ traceId, step: 'done', duration: Date.now() - t0, url: normalizedUrl, detail: `score=${final.overallScore}` });
 
   // 히스토리 저장 (fire-and-forget — 응답 지연 안 함)
-  if (supabase) {
-    supabase.from('diagnostic_history').insert({
+  // RLS 강화 시점에 anon 차단 대비 service_role 우선 사용 (현재 RLS 미활성이라도 방어적)
+  const dbHist = supabaseAdmin ?? supabase;
+  if (dbHist) {
+    dbHist.from('diagnostic_history').insert({
       url: final.url,
       site_name: final.siteName,
       overall_score: Math.round(final.overallScore),

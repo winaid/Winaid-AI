@@ -13,7 +13,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateShareToken, buildPublicView } from '../../../../lib/diagnostic/publicShare';
 import { getSessionSafe } from '@winaid/blog-core';
-import { getSupabaseClient } from '@winaid/blog-core';
+import { getSupabaseClient, supabaseAdmin } from '@winaid/blog-core';
 import { checkRateLimit, getClientIp } from '../../../../lib/rateLimit';
 import type { DiagnosticResponse } from '../../../../lib/diagnostic/types';
 
@@ -68,7 +68,9 @@ export async function POST(request: NextRequest) {
     return err('result 필드가 올바르지 않습니다.', 400);
   }
 
-  const db = getSupabaseClient();
+  // diagnostic_public_shares INSERT 정책이 'authenticated' 만 허용. 게스트 발급은
+  // 본 라우트가 user_id 검증 후 service_role 로 처리.
+  const db = supabaseAdmin ?? getSupabaseClient();
 
   const session = await getSessionSafe();
   const userId = session?.userId ?? null;

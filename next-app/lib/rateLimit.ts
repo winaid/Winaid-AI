@@ -10,7 +10,7 @@
  *  - DB 왕복 2회 이상 (조회 + upsert/update). 절대 처리량 보다 spam 방지가 목적.
  */
 
-import { getSupabaseClient } from '@winaid/blog-core';
+import { getSupabaseClient, supabaseAdmin } from '@winaid/blog-core';
 
 export interface RateLimitResult {
   allowed: boolean;
@@ -27,7 +27,9 @@ export async function checkRateLimit(
   limit: number,
   windowSec: number,
 ): Promise<RateLimitResult> {
-  const db = getSupabaseClient();
+  // api_rate_limit RLS 가 service_role 만 허용. anon 으로는 모든 write 차단되어
+  // checkRateLimit 가 silent fail-open 으로 빠져 rate limit 이 효과 없게 됨.
+  const db = supabaseAdmin ?? getSupabaseClient();
   const now = new Date();
   const windowStartCutoff = new Date(now.getTime() - windowSec * 1000);
 
