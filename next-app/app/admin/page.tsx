@@ -55,7 +55,6 @@ export default function AdminPage() {
   const [loginError, setLoginError] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(true);
 
   // 팀/병원 데이터 (DB 우선, fallback: teamData.ts)
   const [TEAM_DATA, setTeamData] = useState<TeamData[]>(TEAM_DATA_FALLBACK);
@@ -233,14 +232,27 @@ export default function AdminPage() {
     }
   }, [rankCheckKeyword]);
 
-  // 세션 복원
+  // 세션 복원 — HttpOnly admin_session cookie 유효성만 확인.
+  // password 는 reload 후 복원 X (state 만 사용 — XSS 표면 축소).
+  // RPC 호출에 password 가 필요한 한 reload 시 재로그인 필요 (PR 2 의 SQL
+  // 마이그레이션이 admin_password 인자를 제거하면 password 자체 불필요).
   useEffect(() => {
-    const saved = localStorage.getItem('ADMIN_AUTHENTICATED') || sessionStorage.getItem('ADMIN_AUTHENTICATED');
-    const savedToken = localStorage.getItem('ADMIN_TOKEN') || sessionStorage.getItem('ADMIN_TOKEN');
-    if (saved === 'true' && savedToken) {
-      setAuthenticated(true);
-      setPassword(savedToken);
-    }
+    let mounted = true;
+    (async () => {
+      try {
+        const r = await fetch('/api/admin/whoami', { credentials: 'include' });
+        if (!mounted) return;
+        // cookie 만 살아있어도 password 가 비어있으면 RPC 호출이 막혀 무의미.
+        // 명시적으로 재로그인 강제 — cookie 자체는 logout 으로 명확히 종료.
+        if (r.ok) {
+          // cookie 살아있지만 password state 없음 — login form 그대로 표시 (UX)
+          // 사용자가 password 입력 시 /api/admin/login 이 cookie 갱신 + state 채움
+        }
+      } catch {
+        // ignore
+      }
+    })();
+    return () => { mounted = false; };
   }, []);
 
   // 팀/병원 데이터 DB 로드
@@ -283,9 +295,9 @@ export default function AdminPage() {
     }
   }, [tab, authenticated]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const getToken = useCallback(() => {
-    return localStorage.getItem('ADMIN_TOKEN') || sessionStorage.getItem('ADMIN_TOKEN') || password;
-  }, [password]);
+  // password 는 React state 만 사용 (localStorage/sessionStorage 평문 저장 폐기 — XSS 차단).
+  // 본 토큰은 PR 2 SQL 마이그레이션 후 RPC admin_password 인자 제거 시 더 이상 필요 X.
+  const getToken = useCallback(() => password, [password]);
 
   const loadStats = useCallback(async () => {
     const s = await getAdminStats(getToken());
@@ -526,33 +538,62 @@ export default function AdminPage() {
     setLoginLoading(true);
     setLoginError('');
 
-    const s = await getAdminStats(password.trim());
-    if (s) {
-      sessionStorage.setItem('ADMIN_AUTHENTICATED', 'true');
-      sessionStorage.setItem('ADMIN_TOKEN', password.trim());
-      try { localStorage.setItem('winaid_admin', 'true'); } catch { /* ignore */ }
-      if (rememberMe) {
-        localStorage.setItem('ADMIN_AUTHENTICATED', 'true');
-        localStorage.setItem('ADMIN_TOKEN', password.trim());
+    try {
+      // 서버측 password ↔ ADMIN_API_TOKEN timing-safe 비교 + HttpOnly cookie 발급
+      const res = await fetch('/api/admin/login', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: password.trim() }),
+      });
+
+      if (res.status === 503) {
+        setLoginError('관리자 인증이 서버에 설정되어 있지 않습니다 (ADMIN_API_TOKEN).');
+        setLoginLoading(false);
+        return;
       }
+      if (res.status === 429) {
+        setLoginError('로그인 시도가 너무 많습니다. 잠시 후 다시 시도해주세요.');
+        setLoginLoading(false);
+        return;
+      }
+      if (!res.ok) {
+        setLoginError('비밀번호가 올바르지 않습니다.');
+        setLoginLoading(false);
+        return;
+      }
+
+      // cookie 발급 완료 — RPC 호출은 cookie 만으로는 불가하므로 password 는 state 에 유지
+      // (PR 2 SQL 마이그레이션 후 admin_password RPC 인자 제거되면 본 state 도 폐기)
+      try { localStorage.setItem('winaid_admin', 'true'); } catch { /* ignore */ }
       setAuthenticated(true);
-      setStats(s);
-    } else {
-      setLoginError('비밀번호가 올바르지 않습니다.');
+      // password state 유지 (legacy RPC 호출용) — 단, 어떤 storage 에도 영속화 X
+      const s = await getAdminStats(password.trim());
+      if (s) setStats(s);
+    } catch (err) {
+      console.error('[admin/login] 에러:', err);
+      setLoginError('로그인 중 오류가 발생했습니다.');
+    } finally {
+      setLoginLoading(false);
     }
-    setLoginLoading(false);
   };
 
-  const handleLogout = () => {
-    sessionStorage.removeItem('ADMIN_AUTHENTICATED');
-    sessionStorage.removeItem('ADMIN_TOKEN');
-    sessionStorage.removeItem('ADMIN_PERSIST');
-    localStorage.removeItem('ADMIN_AUTHENTICATED');
-    localStorage.removeItem('ADMIN_TOKEN');
-    localStorage.removeItem('winaid_admin');
-    // legacy cleanup
-    localStorage.removeItem('ADMIN_PERSIST');
-    localStorage.removeItem('ADMIN_TOKEN');
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/admin/logout', { method: 'POST', credentials: 'include' });
+    } catch {
+      // 네트워크 실패 시에도 클라이언트 상태는 초기화
+    }
+    // legacy localStorage/sessionStorage 항목 정리 (이전 버전 잔존 가능성 대비)
+    try {
+      sessionStorage.removeItem('ADMIN_AUTHENTICATED');
+      sessionStorage.removeItem('ADMIN_TOKEN');
+      sessionStorage.removeItem('ADMIN_PERSIST');
+      localStorage.removeItem('ADMIN_AUTHENTICATED');
+      localStorage.removeItem('ADMIN_TOKEN');
+      localStorage.removeItem('ADMIN_PERSIST');
+      localStorage.removeItem('winaid_admin');
+    } catch { /* ignore */ }
     setAuthenticated(false);
     setPassword('');
     setStats(null);
@@ -773,10 +814,9 @@ export default function AdminPage() {
                 </button>
               </div>
             </div>
-            <label className="flex items-center gap-2 mb-5 cursor-pointer select-none">
-              <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} className="w-4 h-4 rounded border-slate-300 text-blue-500 focus:ring-blue-500/30" />
-              <span className="text-sm text-slate-500">이 기기에서 로그인 유지</span>
-            </label>
+            <p className="text-xs text-slate-400 mb-5 leading-relaxed">
+              세션 쿠키 1시간 유효 — 만료 시 다시 로그인.
+            </p>
             <button
               type="submit"
               disabled={loginLoading}

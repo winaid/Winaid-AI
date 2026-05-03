@@ -39,6 +39,8 @@ export function useAuthGuard(): AuthGuardResult {
           if (session?.user) {
             setUser(session.user);
           } else {
+            // winaid_admin: localStorage UI 힌트 (자격 증명 X — 자격은 admin_session HttpOnly cookie).
+            // 단, /auth 자동 redirect 만 우회. 실제 admin API 인증은 cookie 검증으로만 통과.
             const isAdmin = typeof window !== 'undefined' && localStorage.getItem('winaid_admin') === 'true';
             if (!isAdmin && typeof window !== 'undefined') {
               window.location.href = '/auth';
