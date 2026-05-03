@@ -316,14 +316,21 @@ ${escapeXml(as_.tableOfContents)}
   if (repParagraphs.length > 0) {
     referenceBlock = `<original_paragraphs priority="highest">
 <instruction>
-아래 원문 단락의 물리적 구조를 그대로 재현하세요:
+아래 원문 단락의 **리듬과 구조**만 흡수하세요 (verbatim 복사 금지):
+
+학습 대상 (구조·리듬만):
 - 한 단락의 문장 수 (1문장짜리 단락이면 1문장만)
 - 단락 사이 빈 줄 위치 (빈 줄이 있으면 빈 p 삽입)
 - 긴 단락 vs 짧은 단락의 리듬 패턴
 - 문장 길이의 장단 교차
+- 어미 분포 (~다 / ~요 / ~죠 / ~네요 의 자연 분포)
 
-단어·내용을 베끼지 마세요 — 구조와 리듬만 복제합니다.
-의료광고법 위반 표현이 원문에 있어도 따라 쓰지 마세요.
+**verbatim 가드 (절대 위반 금지)**:
+- 원문의 phrase 를 **10자 이상 그대로 복사 금지** — 표절·중복 콘텐츠 위험.
+- 단어·고유명사·구체 사실 (병원명·시술명·환자 사례 등) 은 새 글 주제에 맞게
+  **새로 생성**하세요. 원문에서 가져오면 안 됩니다.
+- "구조 모방"은 OK, "phrase 재사용"은 NG.
+- 의료광고법 위반 표현이 원문에 있어도 절대 따라 쓰지 마세요.
 </instruction>
 
 ${repParagraphs.slice(0, 5).map((p, i) => `<sample index="${i + 1}">\n${escapeXml(p)}\n</sample>`).join('\n\n')}
