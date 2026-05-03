@@ -4,14 +4,15 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { isSupabaseConfigured, supabase } from '@winaid/blog-core';
 import { signInWithTeam, signUpWithTeam } from '../../lib/auth';
-import { TEAM_DATA } from '../../lib/teamData';
+import { useTeamData } from '../../lib/useTeamData';
 
 type AuthMode = 'login' | 'register';
 
 export default function AuthPage() {
   const router = useRouter();
+  const { teamData: TEAM_DATA } = useTeamData();
   const [mode, setMode] = useState<AuthMode>('login');
-  const [teamId, setTeamId] = useState<number>(TEAM_DATA[0].id);
+  const [teamId, setTeamId] = useState<number>(0);
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');

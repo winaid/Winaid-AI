@@ -1,7 +1,7 @@
 'use client';
 
 import { CATEGORIES, PERSONAS, TONES } from '../../../lib/constants';
-import { TEAM_DATA } from '../../../lib/teamData';
+import { useTeamData } from '../../../lib/useTeamData';
 import type { ContentCategory, AudienceMode, ImageStyle, ImageSourceMode, CssTheme } from '@winaid/blog-core';
 import type { KeywordStat, KeywordRankResult, SaturationLevel } from '../../../lib/keywordAnalysisService';
 import type { HospitalImage } from '../../../lib/hospitalImageService';
@@ -139,6 +139,7 @@ function SaturationBadge({ level }: { level?: SaturationLevel }) {
 }
 
 export default function BlogFormPanel(props: BlogFormPanelProps) {
+  const { teamData: TEAM_DATA } = useTeamData();
   const {
     topic, blogTitle, keywords, keywordDensity, disease, category, persona, tone, audienceMode, imageStyle, imageCount, recommendedImageCount, imageAspectRatio, textLength,
     hospitalName, selectedTeam, showHospitalDropdown, selectedManager, selectedHospitalAddress,

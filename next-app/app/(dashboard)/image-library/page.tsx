@@ -5,13 +5,14 @@ import { isSupabaseConfigured } from '@winaid/blog-core';
 import { useAuthGuard } from '../../../hooks/useAuthGuard';
 import { authFetch } from '../../../lib/authFetch';
 import { IMAGE_TAG_PRESETS, type HospitalImage } from '../../../lib/hospitalImageService';
-import { TEAM_DATA } from '../../../lib/teamData';
+import { useTeamData } from '../../../lib/useTeamData';
 
 type SortBy = 'newest' | 'most_used' | 'name';
 type ViewMode = 'mine' | 'all';
 
 export default function ImageLibraryPage() {
   const { user } = useAuthGuard();
+  const { teamData: TEAM_DATA } = useTeamData();
   const userId = user?.id || 'guest';
   const [images, setImages] = useState<HospitalImage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,7 +33,7 @@ export default function ImageLibraryPage() {
 
   const hospitals = useMemo(() =>
     TEAM_DATA.flatMap(t => t.hospitals.map(h => h.name.replace(/ \(.*\)$/, ''))),
-  []);
+  [TEAM_DATA]);
 
   const loadImages = useCallback(async () => {
     setLoading(true);

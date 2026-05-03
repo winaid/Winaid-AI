@@ -1,13 +1,26 @@
 /**
- * 팀 데이터 — 기존 src/constants/teamHospitals.ts와 동일한 구조
+ * 팀/병원 데이터 — 타입 + 빈 fallback.
  *
- * 마이그레이션 완료 후 단일 소스로 통합 예정.
- * 현재는 Next.js 앱의 독립 실행을 위해 복사본 유지.
+ * ⚠️ PII 제거 (PIPA Article 23):
+ *   과거 본 파일은 TEAM_DATA 에 매니저 실명·병원 주소·네이버 블로그 URL 30+ entry
+ *   하드코딩. import 한 client component 가 Next.js bundle (.next/static/chunks/*.js)
+ *   에 PII 평문 포함 → anon / 권한 없는 사용자가 dev tools / 빌드 산출물에서
+ *   매니저 명단 / 병원 매핑 조회 가능.
+ *
+ *   수정: TEAM_DATA 를 빈 array 로 축소. 실제 데이터는 hospitals / teams 테이블에
+ *   저장하고 lib/hospitalService.getTeamDataFromDB() 또는 lib/useTeamData() 훅으로
+ *   client-side 조회. anon SELECT 는 hospitals.RLS 정책으로 허용되지만 manager /
+ *   address 컬럼 노출 정책은 별도 PR 에서 정리 권장 (column-level RLS / view).
+ *
+ * 단일 fallback 정책:
+ *   - DB 사용 가능: getTeamDataFromDB() 가 hospitals 테이블 row 반환
+ *   - DB 실패: 빈 array — 명시적 에러 처리 권장 (silent fallback 금지)
+ *   - production .next/static/chunks/*.js grep '담당자 실명' → 0건
  */
 
 export interface HospitalEntry {
   name: string;
-  manager: string;
+  manager: string;          // DB 에서 항상 string (빈 값은 '')
   address?: string;
   naverBlogUrls?: string[];
 }
@@ -18,75 +31,18 @@ export interface TeamData {
   hospitals: HospitalEntry[];
 }
 
+/**
+ * Fallback ONLY — DB 미설정 또는 hospitals 테이블 빈 결과 시.
+ * 실 운영 시 hospitals 테이블에 row 가 있어야 한다.
+ *
+ * `[]` 가 아닌 placeholder team 1개 유지 — 빈 array 가 admin UI 의
+ * `TEAM_DATA[0].id` 같은 패턴에서 undefined access 로 깨지는 것을 방지하기 위함.
+ * 실제 운영에선 DB 가 채워져 본 fallback 은 사용 안 됨.
+ */
 export const TEAM_DATA: TeamData[] = [
-  {
-    id: 0,
-    label: '본부장님',
-    hospitals: [
-      { name: '광화문선치과', manager: '본부장님', address: '서울 종로구 광화문', naverBlogUrls: ['https://blog.naver.com/sundent21'] },
-    ],
-  },
-  {
-    id: 1,
-    label: '1팀',
-    hospitals: [
-      // 김주열 팀장님
-      { name: '맘애든어린이치과', manager: '김주열 팀장님', address: '충남 천안시 서북구 불당동', naverBlogUrls: ['https://blog.naver.com/x577wqy3', 'https://blog.naver.com/ekttwj8518'] },
-      { name: '코랄치과', manager: '김주열 팀장님', address: '서울 강동구 성내동' },
-      { name: '미소모아치과', manager: '김주열 팀장님', address: '전북 전주시 완산구 서신동', naverBlogUrls: ['https://blog.naver.com/usmisomore', 'https://blog.naver.com/w02aqvujp', 'https://blog.naver.com/qwglfo4481'] },
-      { name: '에버유의원', manager: '김주열 팀장님', address: '서울 마포구 도화동', naverBlogUrls: ['https://blog.naver.com/eah8fsd9f8'] },
-      { name: '청주새롬탑치과', manager: '김주열 팀장님', address: '충북 청주시 흥덕구 복대동', naverBlogUrls: ['https://blog.naver.com/qwrtuipp184', 'https://blog.naver.com/qwrtuipp169'] },
-      { name: '서울삼성치과', manager: '김주열 팀장님', address: '서울 관악구 봉천동', naverBlogUrls: ['https://blog.naver.com/pagfoco0q3q', 'https://blog.naver.com/i0v5id9o'] },
-      // 최휘원 매니저님
-      { name: '부천그랜드치과', manager: '최휘원 매니저님', address: '경기 부천시 원미구 중동', naverBlogUrls: ['https://blog.naver.com/dnautmqq'] },
-      { name: '닥터신치과', manager: '최휘원 매니저님', address: '경기 성남시 중원구 상대원동', naverBlogUrls: ['https://blog.naver.com/hkyrsp9710'] },
-      { name: '검단일등치과', manager: '최휘원 매니저님', address: '인천 서구 불로동', naverBlogUrls: ['https://blog.naver.com/geomdan1stdental', 'https://blog.naver.com/o48j69omlwlnj6'] },
-      { name: '코랄치과 (최휘원)', manager: '최휘원 매니저님', address: '서울 강동구 성내동', naverBlogUrls: ['https://blog.naver.com/timber12502', 'https://blog.naver.com/ffpvksk4i', 'https://blog.naver.com/ran2hoho'] },
-    ],
-  },
-  {
-    id: 2,
-    label: '2팀',
-    hospitals: [
-      // 신미정 팀장님
-      { name: '유성온치과', manager: '신미정 팀장님', address: '대전 유성구 봉명동', naverBlogUrls: ['https://blog.naver.com/yuseong_on'] },
-      { name: 'A플란트치과', manager: '신미정 팀장님', address: '서울 성동구 도선동', naverBlogUrls: ['https://blog.naver.com/aplant2020'] },
-      { name: '다대치과', manager: '신미정 팀장님', address: '부산 사하구 다대동', naverBlogUrls: ['https://blog.naver.com/guntj185r3'] },
-      { name: '최창수치과', manager: '신미정 팀장님', address: '부산 동구 초량동', naverBlogUrls: ['https://blog.naver.com/basket1992'] },
-      // 오진희 매니저님
-      { name: '에이스플란트치과', manager: '오진희 매니저님', address: '서울 강남구 역삼동', naverBlogUrls: ['https://blog.naver.com/stfoaiatovc57525'] },
-      { name: '신사이사랑치과', manager: '오진희 매니저님', address: '서울 강남구 논현동', naverBlogUrls: ['https://blog.naver.com/pauls2001n'] },
-      { name: '동그라미치과', manager: '오진희 매니저님', address: '경기 고양시 덕양구 화정동', naverBlogUrls: ['https://blog.naver.com/evacuate14570'] },
-      { name: '청담클린치과', manager: '오진희 매니저님', address: '서울 강남구 삼성동', naverBlogUrls: ['https://blog.naver.com/melovenus'] },
-    ],
-  },
-  {
-    id: 3,
-    label: '3팀',
-    hospitals: [
-      // 김태광 팀장님
-      { name: '루원퍼스트치과', manager: '김태광 팀장님', address: '인천 서구 가정동', naverBlogUrls: ['https://blog.naver.com/hance1978'] },
-      { name: '연세조이플란트치과', manager: '김태광 팀장님', address: '서울 강동구 성내동', naverBlogUrls: ['https://blog.naver.com/ii24h0um'] },
-      { name: '전주예일치과', manager: '김태광 팀장님', address: '전북 전주시 완산구 효자동2가', naverBlogUrls: ['https://blog.naver.com/zmkz4oeq'] },
-      { name: '연세하늘치과', manager: '김태광 팀장님', address: '서울 중구 충무로2가', naverBlogUrls: ['https://blog.naver.com/skydentalgreen'] },
-      { name: '아산베스트치과', manager: '김태광 팀장님', address: '충남 아산시 용화동', naverBlogUrls: ['https://blog.naver.com/soiidinmfve75174', 'https://blog.naver.com/czzhuy6104'] },
-      // 이도화 선임님
-      { name: '오늘안치과', manager: '이도화 선임님', address: '경기 성남시 수정구 태평동', naverBlogUrls: ['https://blog.naver.com/spssmaster77'] },
-      { name: '라이프치과', manager: '이도화 선임님', address: '서울 강서구 화곡동', naverBlogUrls: ['https://blog.naver.com/bgfsdvyhd'] },
-      { name: '미도치과', manager: '이도화 선임님', address: '서울 강남구 대치동', naverBlogUrls: ['https://blog.naver.com/m02jgiaz6'] },
-      { name: '더착한치과', manager: '이도화 선임님', address: '부산 강서구 명지동', naverBlogUrls: ['https://blog.naver.com/mg2032875'] },
-      { name: '이고운치과', manager: '이도화 선임님', address: '경기 파주시 목동동', naverBlogUrls: ['https://blog.naver.com/tdhhnx5899'] },
-      // 최소현 매니저님
-      { name: '오늘안치과 (최소현)', manager: '최소현 매니저님', address: '경기 성남시 수정구 태평동', naverBlogUrls: ['https://blog.naver.com/clinical641'] },
-      { name: '연세하늘치과 (최소현)', manager: '최소현 매니저님', address: '서울 중구 충무로2가', naverBlogUrls: ['https://blog.naver.com/jkj9799'] },
-      { name: '바른플란트치과', manager: '최소현 매니저님', address: '서울 중랑구 망우동', naverBlogUrls: ['https://blog.naver.com/brplant', 'https://blog.naver.com/wwwlsl123'] },
-      // 이지안 매니저님
-      { name: '논산중앙치과', manager: '이지안 매니저님', address: '충남 논산시 반월동', naverBlogUrls: ['https://blog.naver.com/cha1636ndsu'] },
-    ],
-  },
-  {
-    id: 4,
-    label: '콘텐츠팀',
-    hospitals: [],
-  },
+  { id: 0, label: '본부장님', hospitals: [] },
+  { id: 1, label: '1팀', hospitals: [] },
+  { id: 2, label: '2팀', hospitals: [] },
+  { id: 3, label: '3팀', hospitals: [] },
+  { id: 4, label: '콘텐츠팀', hospitals: [] },
 ];

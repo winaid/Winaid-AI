@@ -4,7 +4,7 @@ import { devLog } from '../../../lib/devLog';
 import { useState, useEffect, useMemo, useRef, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { CATEGORIES, PERSONAS, TONES } from '../../../lib/constants';
-import { TEAM_DATA } from '../../../lib/teamData';
+import { useTeamData } from '../../../lib/useTeamData';
 import { ContentCategory, type GenerationRequest, type AudienceMode, type ImageStyle, type ImageSourceMode, type WritingStyle, type CssTheme, type TrendingItem, type SeoTitleItem, type SeoReport } from '@winaid/blog-core';
 import { applyContentFilters } from '@winaid/blog-core';
 import { savePost } from '../../../lib/postStorage';
@@ -35,6 +35,7 @@ import { authFetch } from '../../../lib/authFetch';
 function BlogForm() {
   const creditCtx = useCreditContext();
   const searchParams = useSearchParams();
+  const { teamData: TEAM_DATA } = useTeamData();
 
   // ── 폼 상태 ──
   const topicParam = searchParams.get('topic');
