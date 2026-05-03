@@ -3,10 +3,45 @@ const { execFile } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const { LruCache } = require('../utils/lruCache');
 
 const router = express.Router();
 
 const PROXY_URL = process.env.PROXY_URL || '';
+
+// ── YouTube hostname 화이트리스트 ──
+//
+// 과거의 `extractVideoId(url)` 만 통과하면 yt-dlp 에 넘기는 패턴은 path 만 검사 →
+// 임의 host 의 URL (예: 'https://evil/?youtube.com/watch?v=AAAAAAAAAAA') 도
+// videoId 추출 통과 + yt-dlp generic extractor 가 호스트로 HTTP fetch → SSRF.
+//
+// 수정: new URL 파싱 후 hostname 정확 매칭 + http/https 만 허용.
+const ALLOWED_HOSTS = new Set([
+  'youtube.com',
+  'www.youtube.com',
+  'm.youtube.com',
+  'youtu.be',
+  'music.youtube.com',
+]);
+
+function validateYouTubeUrl(rawUrl) {
+  if (typeof rawUrl !== 'string' || !rawUrl) {
+    return { ok: false, message: 'videoUrl 이 필요합니다.' };
+  }
+  let parsed;
+  try {
+    parsed = new URL(rawUrl);
+  } catch {
+    return { ok: false, message: '올바른 URL 형식이 아닙니다.' };
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    return { ok: false, message: 'http/https URL 만 지원합니다.' };
+  }
+  if (!ALLOWED_HOSTS.has(parsed.hostname)) {
+    return { ok: false, message: 'YouTube URL 만 지원합니다.' };
+  }
+  return { ok: true };
+}
 
 // ── 쿠키 탐색 ──
 function findCookiePath() {
@@ -20,24 +55,31 @@ function findCookiePath() {
   return null;
 }
 
-// ── 영상 캐시: videoId → 파일 경로 (10분 TTL) ──
-const videoCache = new Map();
-const CACHE_TTL = 10 * 60 * 1000;
+// ── 영상 캐시: videoId → 파일 경로 (max 50, TTL 10분, evict 시 파일 삭제) ──
+//
+// 과거: Map + setInterval + refCount > 0 시 영구 보존 → cleanup 누락 시 /tmp 고갈.
+// 수정: LRU + 강제 TTL. evict 시 onEvict 로 파일 unlink. refCount 매커니즘 제거.
 const CACHE_DIR = path.join(os.tmpdir(), 'yt-gif-cache');
 try { fs.mkdirSync(CACHE_DIR, { recursive: true }); } catch {}
 
-setInterval(() => {
-  const now = Date.now();
-  for (const [videoId, entry] of videoCache.entries()) {
-    if (now - entry.createdAt > CACHE_TTL && entry.refCount <= 0) {
-      try { fs.unlinkSync(entry.path); } catch {}
-      videoCache.delete(videoId);
-      console.log(`[cache] 만료 삭제: ${videoId}`);
-    }
-  }
-}, 60000);
+const videoCache = new LruCache({
+  max: 50,
+  ttlMs: 10 * 60 * 1000,
+  onEvict: (key, entry) => {
+    try {
+      if (entry && entry.path && fs.existsSync(entry.path)) {
+        fs.unlinkSync(entry.path);
+      }
+    } catch {}
+    console.log(`[cache] evict: ${key}`);
+  },
+});
+
+// 5분마다 만료 entry lazy cleanup
+setInterval(() => videoCache.cleanup(), 5 * 60 * 1000).unref();
 
 function extractVideoId(url) {
+  // validateYouTubeUrl 통과 후 hostname 이 ALLOWED_HOSTS 라는 전제 — 안전.
   const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/);
   return match?.[1] || '';
 }
@@ -48,7 +90,6 @@ async function getCachedVideo(videoUrl) {
 
   const cached = videoCache.get(videoId);
   if (cached && fs.existsSync(cached.path)) {
-    cached.refCount++;
     console.log(`[cache] ✅ 히트: ${videoId} (${(fs.statSync(cached.path).size / 1024 / 1024).toFixed(1)}MB)`);
     return { path: cached.path, videoId, fromCache: true };
   }
@@ -61,15 +102,10 @@ async function getCachedVideo(videoUrl) {
   const actualPath = findOutputFile(outputPath);
   if (!actualPath) throw new Error('영상 다운로드 실패');
 
-  videoCache.set(videoId, { path: actualPath, createdAt: Date.now(), refCount: 1 });
+  videoCache.set(videoId, { path: actualPath });
   console.log(`[cache] 💾 저장: ${videoId} (${(fs.statSync(actualPath).size / 1024 / 1024).toFixed(1)}MB)`);
 
   return { path: actualPath, videoId, fromCache: false };
-}
-
-function releaseCachedVideo(videoId) {
-  const cached = videoCache.get(videoId);
-  if (cached) cached.refCount = Math.max(0, cached.refCount - 1);
 }
 
 // ── 영상 다운로드 (240p 최적화) ──
@@ -188,6 +224,12 @@ router.post('/gif', async (req, res) => {
     return res.status(400).json({ success: false, error: 'videoUrl, start, end가 필요합니다.' });
   }
 
+  // hostname 화이트리스트 — SSRF 차단
+  const check = validateYouTubeUrl(videoUrl);
+  if (!check.ok) {
+    return res.status(400).json({ success: false, error: check.message });
+  }
+
   const duration = Math.min(end - start, 10);
   if (duration <= 0) {
     return res.status(400).json({ success: false, error: 'end는 start보다 커야 합니다.' });
@@ -197,18 +239,16 @@ router.post('/gif', async (req, res) => {
   const gifPath = path.join(os.tmpdir(), `gif_${videoId}_${start}_${end}_${Date.now()}.gif`);
 
   try {
-    const { path: videoPath, videoId: vid, fromCache } = await getCachedVideo(videoUrl);
+    const { path: videoPath, fromCache } = await getCachedVideo(videoUrl);
     console.log(`[gif] 영상 준비 완료 (캐시: ${fromCache ? '히트' : '미스'})`);
 
     await ffmpegExtractGif(videoPath, gifPath, start, duration, Math.min(width, 360));
 
     if (!fs.existsSync(gifPath)) {
-      releaseCachedVideo(vid);
       return res.status(500).json({ success: false, error: 'GIF 변환 실패' });
     }
 
     const gifBuffer = fs.readFileSync(gifPath);
-    releaseCachedVideo(vid);
 
     if (gifBuffer.length > 10 * 1024 * 1024) {
       return res.status(413).json({ success: false, error: 'GIF가 10MB 초과. 더 짧은 구간을 시도하세요.' });
@@ -224,7 +264,6 @@ router.post('/gif', async (req, res) => {
     });
   } catch (err) {
     console.error('[gif] Error:', err.message);
-    releaseCachedVideo(videoId);
     res.status(500).json({ success: false, error: err.message || '서버 오류' });
   } finally {
     try { if (fs.existsSync(gifPath)) fs.unlinkSync(gifPath); } catch {}
@@ -232,6 +271,6 @@ router.post('/gif', async (req, res) => {
 });
 
 // 캐시 상태 (헬스체크용)
-router.getCacheSize = () => videoCache.size;
+router.getCacheSize = () => videoCache.size();
 
 module.exports = router;

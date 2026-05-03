@@ -3,9 +3,29 @@ const router = express.Router();
 const { crawlNaverBlogs, crawlBlogContent, crawlHospitalBlogPosts } = require('../services/crawler');
 
 // Rate limiting 간단 구현
+//
+// 과거: requestCounts Map 에 IP 별 timestamps 누적. 만료 timestamps 는 filter 로
+// 제거되지만 빈 array 가 그대로 set → IP 키 영구 보존 → 장기 운영 시 메모리 누수.
+// trust proxy 1 적용 후 req.ip 가 실 client IP 라 unique IP 다양성 ↑ → 누수 가속.
+//
+// 수정:
+//  - lazy cleanup: checkRateLimit 호출 시 빈 array 면 key delete
+//  - periodic cleanup: 5분마다 stale entry sweep (long-running container 안전)
+//  - hard cap: MAX_TRACKED_IPS 초과 시 oldest 1개 evict (best-effort, FIFO)
 const requestCounts = new Map();
 const RATE_LIMIT_WINDOW = 60000; // 1분
 const MAX_REQUESTS = parseInt(process.env.MAX_REQUESTS_PER_MINUTE) || 30;
+const MAX_TRACKED_IPS = 10000;
+
+// 5분마다 만료된 entry sweep
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, timestamps] of requestCounts.entries()) {
+    const recent = timestamps.filter(t => now - t < RATE_LIMIT_WINDOW);
+    if (recent.length === 0) requestCounts.delete(ip);
+    else if (recent.length !== timestamps.length) requestCounts.set(ip, recent);
+  }
+}, 5 * 60 * 1000).unref();
 
 /**
  * 네이버 블로그 URL을 hostname 기반으로 엄격하게 검증.
@@ -39,15 +59,24 @@ function validateNaverBlogUrl(rawUrl) {
 function checkRateLimit(ip) {
   const now = Date.now();
   const userRequests = requestCounts.get(ip) || [];
-  
+
   // 1분 이내의 요청만 필터링
   const recentRequests = userRequests.filter(time => now - time < RATE_LIMIT_WINDOW);
-  
+
   if (recentRequests.length >= MAX_REQUESTS) {
+    // 누적 timestamps 만 갱신 (성공 횟수 추가 X)
+    requestCounts.set(ip, recentRequests);
     return false;
   }
-  
+
   recentRequests.push(now);
+
+  // hard cap — 신규 IP 진입 시 추적 IP 수 초과면 oldest 1개 evict (FIFO)
+  if (!requestCounts.has(ip) && requestCounts.size >= MAX_TRACKED_IPS) {
+    const oldestKey = requestCounts.keys().next().value;
+    if (oldestKey !== undefined) requestCounts.delete(oldestKey);
+  }
+
   requestCounts.set(ip, recentRequests);
   return true;
 }
