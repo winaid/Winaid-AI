@@ -164,13 +164,12 @@ export function parseAiCrawlerPolicy(
 export async function checkLlmsTxt(baseUrl: string): Promise<boolean> {
   for (const path of ['/llms.txt', '/.well-known/llms.txt']) {
     try {
-      const res = await fetch(new URL(path, baseUrl).href, {
-        signal: AbortSignal.timeout(5_000),
+      const res = await fetchWithTimeout(new URL(path, baseUrl).href, 5_000, {
         headers: { 'User-Agent': 'WinaidBot/1.0' },
       });
       if (res.ok) return true;
     } catch {
-      /* skip */
+      /* skip — SSRF 차단도 silent (false 반환) */
     }
   }
   return false;
