@@ -1,10 +1,11 @@
 const express = require('express');
 const multer = require('multer');
-const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { v4: uuidv4 } = require('uuid');
+const { runFfmpeg, runFfprobe } = require('../utils/safeFfmpeg');
+const { safeExt, VIDEO_EXTS } = require('../utils/safeExt');
 
 const router = express.Router();
 const upload = multer({ dest: os.tmpdir(), limits: { fileSize: 500 * 1024 * 1024 } });
@@ -17,7 +18,7 @@ router.post('/', upload.single('file'), async (req, res) => {
     if (!req.file) return res.status(400).json({ error: '파일이 필요합니다.' });
     const { aspect_ratio = '9:16', crop_mode = 'center', output_resolution = '1080x1920' } = req.body || {};
 
-    const ext = path.extname(req.file.originalname) || '.mp4';
+    const ext = safeExt(req.file.originalname, VIDEO_EXTS);
     const inputPath = path.join(workDir, `input${ext}`);
     const outputPath = path.join(workDir, `output.mp4`);
     fs.renameSync(req.file.path, inputPath);
@@ -25,7 +26,14 @@ router.post('/', upload.single('file'), async (req, res) => {
     // 원본 해상도
     let srcW = 1920, srcH = 1080;
     try {
-      const probe = JSON.parse(execSync(`ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of json "${inputPath}"`, { timeout: 10000 }).toString());
+      const { stdout } = await runFfprobe([
+        '-v', 'error',
+        '-select_streams', 'v:0',
+        '-show_entries', 'stream=width,height',
+        '-of', 'json',
+        inputPath,
+      ], { timeout: 10000 });
+      const probe = JSON.parse(stdout.toString());
       srcW = probe.streams?.[0]?.width || 1920;
       srcH = probe.streams?.[0]?.height || 1080;
     } catch { /* */ }
@@ -43,7 +51,17 @@ router.post('/', upload.single('file'), async (req, res) => {
 
     const vf = `crop=${cropW}:${cropH}:(iw-${cropW})/2:(ih-${cropH})/2,scale=${outW}:${outH}`;
 
-    execSync(`ffmpeg -y -i "${inputPath}" -vf "${vf}" -c:v libx264 -preset fast -crf 23 -c:a aac -b:a 128k "${outputPath}"`, { timeout: 300000, stdio: 'pipe' });
+    await runFfmpeg([
+      '-y',
+      '-i', inputPath,
+      '-vf', vf,
+      '-c:v', 'libx264',
+      '-preset', 'fast',
+      '-crf', '23',
+      '-c:a', 'aac',
+      '-b:a', '128k',
+      outputPath,
+    ]);
 
     res.setHeader('Content-Type', 'video/mp4');
     res.setHeader('X-Crop-Metadata', JSON.stringify({
@@ -59,6 +77,7 @@ router.post('/', upload.single('file'), async (req, res) => {
     stream.on('end', () => { try { fs.rmSync(workDir, { recursive: true, force: true }); } catch {} });
   } catch (err) {
     try { fs.rmSync(workDir, { recursive: true, force: true }); } catch {}
+    console.error('[crop-vertical] err:', err.message?.slice(0, 200));
     res.status(500).json({ error: '크롭 실패' });
   }
 });

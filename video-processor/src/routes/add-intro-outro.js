@@ -1,10 +1,11 @@
 const express = require('express');
 const multer = require('multer');
-const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { v4: uuidv4 } = require('uuid');
+const { runFfmpeg, runFfprobe } = require('../utils/safeFfmpeg');
+const { safeExt, VIDEO_EXTS } = require('../utils/safeExt');
 
 const router = express.Router();
 const upload = multer({ dest: os.tmpdir(), limits: { fileSize: 500 * 1024 * 1024 } });
@@ -46,14 +47,22 @@ router.post('/', upload.single('file'), async (req, res) => {
       return;
     }
 
-    const ext = path.extname(req.file.originalname) || '.mp4';
+    const ext = safeExt(req.file.originalname, VIDEO_EXTS);
     const mainPath = path.join(workDir, `main${ext}`);
     fs.renameSync(req.file.path, mainPath);
 
     let vw = 1080, vh = 1920;
     try {
-      const probe = JSON.parse(execSync(`ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of json "${mainPath}"`, { timeout: 10000 }).toString());
-      vw = probe.streams?.[0]?.width || 1080; vh = probe.streams?.[0]?.height || 1920;
+      const { stdout } = await runFfprobe([
+        '-v', 'error',
+        '-select_streams', 'v:0',
+        '-show_entries', 'stream=width,height',
+        '-of', 'json',
+        mainPath,
+      ], { timeout: 10000 });
+      const probe = JSON.parse(stdout.toString());
+      vw = probe.streams?.[0]?.width || 1080;
+      vh = probe.streams?.[0]?.height || 1920;
     } catch { /* */ }
 
     const fontPaths = ['/usr/share/fonts/truetype/noto/NotoSansKR-Bold.ttf', '/usr/share/fonts/noto-cjk/NotoSansCJK-Bold.ttc', '/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc'];
@@ -78,7 +87,19 @@ router.post('/', upload.single('file'), async (req, res) => {
             vf += `,drawtext=textfile='${descFile}':fontsize=${Math.round(sz * 0.5)}${fontOpt}:fontcolor=0x888888:x=(w-text_w)/2:y=(h+text_h)/2+${Math.round(sz * 0.8)}`;
           }
         }
-        execSync(`ffmpeg -y -f lavfi -i color=c=white:s=${vw}x${vh}:d=${dur} -f lavfi -i anullsrc=r=44100:cl=stereo -vf "${vf}" -t ${dur} -c:v libx264 -preset ultrafast -pix_fmt yuv420p -c:a aac -shortest "${introPath}"`, { timeout: 30000, stdio: 'pipe' });
+        await runFfmpeg([
+          '-y',
+          '-f', 'lavfi', '-i', `color=c=white:s=${vw}x${vh}:d=${dur}`,
+          '-f', 'lavfi', '-i', 'anullsrc=r=44100:cl=stereo',
+          '-vf', vf,
+          '-t', String(dur),
+          '-c:v', 'libx264',
+          '-preset', 'ultrafast',
+          '-pix_fmt', 'yuv420p',
+          '-c:a', 'aac',
+          '-shortest',
+          introPath,
+        ], { timeout: 30000 });
         parts.push(introPath);
       }
     }
@@ -100,15 +121,39 @@ router.post('/', upload.single('file'), async (req, res) => {
             vf += `,drawtext=textfile='${phoneFile}':fontsize=${Math.round(sz * 0.55)}${fontOpt}:fontcolor=0x555555:x=(w-text_w)/2:y=(h-text_h)/2`;
           }
         }
-        execSync(`ffmpeg -y -f lavfi -i color=c=white:s=${vw}x${vh}:d=${dur} -f lavfi -i anullsrc=r=44100:cl=stereo -vf "${vf}" -t ${dur} -c:v libx264 -preset ultrafast -pix_fmt yuv420p -c:a aac -shortest "${outroPath}"`, { timeout: 30000, stdio: 'pipe' });
+        await runFfmpeg([
+          '-y',
+          '-f', 'lavfi', '-i', `color=c=white:s=${vw}x${vh}:d=${dur}`,
+          '-f', 'lavfi', '-i', 'anullsrc=r=44100:cl=stereo',
+          '-vf', vf,
+          '-t', String(dur),
+          '-c:v', 'libx264',
+          '-preset', 'ultrafast',
+          '-pix_fmt', 'yuv420p',
+          '-c:a', 'aac',
+          '-shortest',
+          outroPath,
+        ], { timeout: 30000 });
         parts.push(outroPath);
       }
     }
 
     const outputPath = path.join(workDir, 'final.mp4');
     const concatList = path.join(workDir, 'concat.txt');
-    fs.writeFileSync(concatList, parts.map(p => `file '${p}'`).join('\n'));
-    execSync(`ffmpeg -y -f concat -safe 0 -protocol_whitelist file,pipe -i "${concatList}" -c copy "${outputPath}"`, { timeout: 120000, stdio: 'pipe' });
+    // concat 리스트 라인은 ffmpeg 가 파싱 — single quote escape 는 ffmpeg concat demuxer 문법 준수.
+    fs.writeFileSync(
+      concatList,
+      parts.map(p => `file '${p.replace(/'/g, "'\\''")}'`).join('\n'),
+    );
+    await runFfmpeg([
+      '-y',
+      '-f', 'concat',
+      '-safe', '0',
+      '-protocol_whitelist', 'file,pipe',
+      '-i', concatList,
+      '-c', 'copy',
+      outputPath,
+    ], { timeout: 120000 });
 
     res.setHeader('Content-Type', 'video/mp4');
     res.setHeader('X-Intro-Metadata', JSON.stringify({ intro_added: intro_style !== 'none', outro_added: outro_style !== 'none' }));
@@ -117,6 +162,7 @@ router.post('/', upload.single('file'), async (req, res) => {
     stream.on('end', () => { try { fs.rmSync(workDir, { recursive: true, force: true }); } catch {} });
   } catch (err) {
     try { fs.rmSync(workDir, { recursive: true, force: true }); } catch {}
+    console.error('[add-intro-outro] err:', err.message?.slice(0, 200));
     res.status(500).json({ error: '인트로/아웃로 실패' });
   }
 });

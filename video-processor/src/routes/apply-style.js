@@ -8,15 +8,19 @@
 
 const express = require('express');
 const multer = require('multer');
-const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { v4: uuidv4 } = require('uuid');
+const { runFfmpeg, runFfprobe } = require('../utils/safeFfmpeg');
+const { safeExt, VIDEO_EXTS } = require('../utils/safeExt');
 const { FFMPEG_STYLES, GEMINI_STYLE_PROMPTS } = require('../config/styles');
 
 const router = express.Router();
 const upload = multer({ dest: os.tmpdir(), limits: { fileSize: 500 * 1024 * 1024 } });
+
+// style_id 화이트리스트는 FFMPEG_STYLES / GEMINI_STYLE_PROMPTS 객체로 enforce.
+// 입력은 lookup 키로만 사용 — 셸 보간 차단.
 
 router.post('/', upload.single('file'), async (req, res) => {
   const workDir = path.join(os.tmpdir(), `style-${uuidv4()}`);
@@ -34,7 +38,7 @@ router.post('/', upload.single('file'), async (req, res) => {
       return;
     }
 
-    const ext = path.extname(req.file.originalname) || '.mp4';
+    const ext = safeExt(req.file.originalname, VIDEO_EXTS);
     const inputPath = path.join(workDir, `input${ext}`);
     const outputPath = path.join(workDir, 'output.mp4');
     fs.renameSync(req.file.path, inputPath);
@@ -42,10 +46,13 @@ router.post('/', upload.single('file'), async (req, res) => {
     // ── FFmpeg 필터 스타일 ──
     if (FFMPEG_STYLES[style_id]) {
       console.log(`[style] FFmpeg 스타일: ${style_id}`);
-      execSync(
-        `ffmpeg -y -i "${inputPath}" -vf "${FFMPEG_STYLES[style_id]}" -c:a copy "${outputPath}"`,
-        { timeout: 120000, stdio: 'pipe' }
-      );
+      await runFfmpeg([
+        '-y',
+        '-i', inputPath,
+        '-vf', FFMPEG_STYLES[style_id],
+        '-c:a', 'copy',
+        outputPath,
+      ], { timeout: 120000 });
 
       res.setHeader('Content-Type', 'video/mp4');
       res.setHeader('X-Style-Metadata', JSON.stringify({ style_applied: style_id, method: 'ffmpeg' }));
@@ -73,7 +80,12 @@ router.post('/', upload.single('file'), async (req, res) => {
     // 1. 대표 프레임 추출 (2초 간격)
     const framesDir = path.join(workDir, 'frames');
     fs.mkdirSync(framesDir);
-    execSync(`ffmpeg -i "${inputPath}" -vf "fps=0.5" -q:v 2 "${framesDir}/frame_%04d.jpg"`, { timeout: 60000, stdio: 'pipe' });
+    await runFfmpeg([
+      '-i', inputPath,
+      '-vf', 'fps=0.5',
+      '-q:v', '2',
+      path.join(framesDir, 'frame_%04d.jpg'),
+    ], { timeout: 60000 });
 
     const frameFiles = fs.readdirSync(framesDir).filter(f => f.endsWith('.jpg')).sort();
     if (frameFiles.length === 0) {
@@ -170,13 +182,25 @@ router.post('/', upload.single('file'), async (req, res) => {
     // 3. 원본 오디오 추출
     const audioPath = path.join(workDir, 'audio.mp3');
     try {
-      execSync(`ffmpeg -i "${inputPath}" -vn -acodec libmp3lame -q:a 2 "${audioPath}"`, { timeout: 30000, stdio: 'pipe' });
+      await runFfmpeg([
+        '-i', inputPath,
+        '-vn',
+        '-acodec', 'libmp3lame',
+        '-q:a', '2',
+        audioPath,
+      ], { timeout: 30000 });
     } catch { /* 오디오 없는 영상 */ }
 
     // 4. 변환된 프레임 → 영상 세그먼트
     let totalDuration = 0;
     try {
-      totalDuration = parseFloat(execSync(`ffprobe -v error -show_entries format=duration -of csv=p=0 "${inputPath}"`, { timeout: 10000 }).toString().trim()) || 0;
+      const { stdout } = await runFfprobe([
+        '-v', 'error',
+        '-show_entries', 'format=duration',
+        '-of', 'csv=p=0',
+        inputPath,
+      ], { timeout: 10000 });
+      totalDuration = parseFloat(stdout.toString().trim()) || 0;
     } catch { /* */ }
 
     const segDuration = totalDuration / selectedFrames.length || 2;
@@ -191,13 +215,19 @@ router.post('/', upload.single('file'), async (req, res) => {
       const zoom = i % 2 === 0 ? '1+0.0006*on' : '1.04-0.0002*on';
 
       try {
-        execSync(
-          `ffmpeg -y -loop 1 -i "${styledFrame}" -t ${segDuration} ` +
-          `-vf "scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:black,` +
-          `zoompan=z='${zoom}':d=${frames}:x=iw/2-(iw/zoom/2):y=ih/2-(ih/zoom/2):s=1080x1920:fps=30" ` +
-          `-c:v libx264 -pix_fmt yuv420p -preset fast "${segPath}"`,
-          { timeout: 30000, stdio: 'pipe' }
-        );
+        await runFfmpeg([
+          '-y',
+          '-loop', '1',
+          '-i', styledFrame,
+          '-t', String(segDuration),
+          '-vf',
+            `scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:black,` +
+            `zoompan=z='${zoom}':d=${frames}:x=iw/2-(iw/zoom/2):y=ih/2-(ih/zoom/2):s=1080x1920:fps=30`,
+          '-c:v', 'libx264',
+          '-pix_fmt', 'yuv420p',
+          '-preset', 'fast',
+          segPath,
+        ], { timeout: 30000 });
         segments.push(segPath);
       } catch { /* 스킵 */ }
     }
@@ -209,14 +239,34 @@ router.post('/', upload.single('file'), async (req, res) => {
 
     // 5. concat
     const concatList = path.join(workDir, 'concat.txt');
-    fs.writeFileSync(concatList, segments.map(s => `file '${s}'`).join('\n'));
+    fs.writeFileSync(
+      concatList,
+      segments.map(s => `file '${s.replace(/'/g, "'\\''")}'`).join('\n'),
+    );
 
     const videoOnly = path.join(workDir, 'video_only.mp4');
-    execSync(`ffmpeg -y -f concat -safe 0 -protocol_whitelist file,pipe -i "${concatList}" -c copy "${videoOnly}"`, { timeout: 120000, stdio: 'pipe' });
+    await runFfmpeg([
+      '-y',
+      '-f', 'concat',
+      '-safe', '0',
+      '-protocol_whitelist', 'file,pipe',
+      '-i', concatList,
+      '-c', 'copy',
+      videoOnly,
+    ], { timeout: 120000 });
 
     // 6. 오디오 합성
     if (fs.existsSync(audioPath)) {
-      execSync(`ffmpeg -y -i "${videoOnly}" -i "${audioPath}" -map 0:v -map 1:a -c:v copy -shortest "${outputPath}"`, { timeout: 60000, stdio: 'pipe' });
+      await runFfmpeg([
+        '-y',
+        '-i', videoOnly,
+        '-i', audioPath,
+        '-map', '0:v',
+        '-map', '1:a',
+        '-c:v', 'copy',
+        '-shortest',
+        outputPath,
+      ], { timeout: 60000 });
     } else {
       fs.copyFileSync(videoOnly, outputPath);
     }
@@ -234,7 +284,7 @@ router.post('/', upload.single('file'), async (req, res) => {
     stream.on('end', () => cleanup(workDir));
 
   } catch (err) {
-    console.error('[style] 에러:', err);
+    console.error('[style] 에러:', err.message?.slice(0, 200));
     cleanup(workDir);
     res.status(500).json({ error: '스타일 변환 실패' });
   }
