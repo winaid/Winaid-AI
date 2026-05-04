@@ -1933,26 +1933,33 @@ export function buildOutlinePrompt(
   opts: { hospitalStyleBlock?: string | { systemBlock: string; fewShotBlock?: string } | null } = {},
 ): BlogPromptV3 {
   const systemBlocks: CacheableBlock[] = [];
+  const SEP = '\n\n---\n\n';
 
-  systemBlocks.push({ type: 'text', text: OUTLINE_PERSONA, cacheable: true, cacheTtl: '1h' });
-  systemBlocks.push({ type: 'text', text: PRIORITY_ORDER_BLOCK, cacheable: true, cacheTtl: '1h' });
-  systemBlocks.push({ type: 'text', text: E_E_A_T_GUIDE, cacheable: true, cacheTtl: '1h' });
-  systemBlocks.push({ type: 'text', text: MEDICAL_LAW_CONSTRAINTS, cacheable: true, cacheTtl: '1h' });
+  // 슬롯 1/4: STATIC_PRELUDE — persona + priority + e_e_a_t + medical_law (변경 없음, 1h)
+  // Anthropic prompt cache 한도 4 — 9개 push → silent downgrade 방지 위해 4 슬롯 통합 (audit Q-4).
+  systemBlocks.push({
+    type: 'text',
+    text: [OUTLINE_PERSONA, PRIORITY_ORDER_BLOCK, E_E_A_T_GUIDE, MEDICAL_LAW_CONSTRAINTS].join(SEP),
+    cacheable: true,
+    cacheTtl: '1h',
+  });
 
-  // static 상수 블록 → 1h 캐시 (프로세스 종료 전까지 불변, 캐시 히트율 ↑)
-  if (req.category && CATEGORY_DEPTH_GUIDES[req.category]) {
-    systemBlocks.push({ type: 'text', text: CATEGORY_DEPTH_GUIDES[req.category], cacheable: true, cacheTtl: '1h' });
+  // 슬롯 2/4: CATEGORY_PACK — 카테고리 가이드 + (조건부) DENTAL_PROSTHETIC_GUIDE
+  const categoryParts: string[] = [];
+  if (req.category && CATEGORY_DEPTH_GUIDES[req.category]) categoryParts.push(CATEGORY_DEPTH_GUIDES[req.category]);
+  if (req.category === '치과' && isProstheticTopic(req.topic, req.disease)) categoryParts.push(DENTAL_PROSTHETIC_GUIDE);
+  if (categoryParts.length > 0) {
+    systemBlocks.push({ type: 'text', text: categoryParts.join(SEP), cacheable: true, cacheTtl: '1h' });
   }
-  if (req.category === '치과' && isProstheticTopic(req.topic, req.disease)) {
-    systemBlocks.push({ type: 'text', text: DENTAL_PROSTHETIC_GUIDE, cacheable: true, cacheTtl: '1h' });
-  }
+
+  // 슬롯 3/4: TERM_TOPIC_PACK — termGuide + topicGuide
+  const termTopicParts: string[] = [];
   const termGuideOutline = TERMINOLOGY_GUIDE[req.category || ''];
-  if (termGuideOutline) {
-    systemBlocks.push({ type: 'text', text: termGuideOutline, cacheable: true, cacheTtl: '1h' });
-  }
+  if (termGuideOutline) termTopicParts.push(termGuideOutline);
   const topicGuideOutline = TOPIC_TYPE_GUIDES[classifyTopicType(req.topic, req.disease)];
-  if (topicGuideOutline) {
-    systemBlocks.push({ type: 'text', text: topicGuideOutline, cacheable: true, cacheTtl: '1h' });
+  if (topicGuideOutline) termTopicParts.push(topicGuideOutline);
+  if (termTopicParts.length > 0) {
+    systemBlocks.push({ type: 'text', text: termTopicParts.join(SEP), cacheable: true, cacheTtl: '1h' });
   }
   // outline 은 JSON 구조만 출력 — E-E-A-T, journey, seasonal, learnedStyle, reference, kd 불필요
 
@@ -1960,6 +1967,7 @@ export function buildOutlinePrompt(
 
   const targetLength = req.textLength || 1500;
   const imageCount = req.imageCount ?? 0;
+  // 슬롯 4/4: BUDGET — char_budget block (textLength 별로 변동, but 같은 textLength 면 cache hit)
   systemBlocks.push({
     type: 'text',
     text: buildCharBudgetBlock({ mode: 'outline', totalTarget: targetLength, imageCount }),
@@ -2002,53 +2010,54 @@ export function buildSectionFromOutlinePrompt(
 ): BlogPromptV3 {
   const { section, sectionIndex, outline, req, hospitalStyleBlock, density, totalSections } = input;
   const systemBlocks: CacheableBlock[] = [];
+  const SEP = '\n\n---\n\n';
 
-  systemBlocks.push({ type: 'text', text: SECTION_PERSONA, cacheable: true, cacheTtl: '1h' });
-  systemBlocks.push({ type: 'text', text: PRIORITY_ORDER_BLOCK, cacheable: true, cacheTtl: '1h' });
-  systemBlocks.push({ type: 'text', text: COMMON_WRITING_STYLE, cacheable: true, cacheTtl: '1h' });
-  systemBlocks.push({ type: 'text', text: SELF_CHECK_GUIDE, cacheable: true, cacheTtl: '1h' });
-  if ((req.imageCount ?? 0) > 0 && section.imageIndex) {
-    systemBlocks.push({ type: 'text', text: IMAGE_PROMPT_GUIDE, cacheable: true, cacheTtl: '1h' });
-  }
-  // MEDICAL_LAW_CONSTRAINTS 는 learned_style 블록 뒤로 이동 (아래) —
-  // Claude attention 가중치가 후순위 블록에 더 강하므로 learned_style 의 금지어 재현 방지 강화.
+  // 슬롯 1/4: STATIC_PRELUDE — persona + priority + common_writing_style + self_check + e_e_a_t
+  // (16개 push → 4 슬롯 통합. Anthropic prompt cache 한도 4. audit Q-4)
+  // E_E_A_T 는 끝쪽 attention 위해 후미 슬롯이 더 좋지만, MEDICAL_LAW 가 후미 우선이라 여기 배치.
+  systemBlocks.push({
+    type: 'text',
+    text: [SECTION_PERSONA, PRIORITY_ORDER_BLOCK, COMMON_WRITING_STYLE, SELF_CHECK_GUIDE, E_E_A_T_GUIDE].join(SEP),
+    cacheable: true,
+    cacheTtl: '1h',
+  });
 
-  if (req.category && CATEGORY_DEPTH_GUIDES[req.category]) {
-    systemBlocks.push({ type: 'text', text: CATEGORY_DEPTH_GUIDES[req.category], cacheable: true, cacheTtl: '1h' });
+  // 슬롯 2/4: CATEGORY_PACK — 카테고리 + (조건부) DENTAL + IMAGE_PROMPT_GUIDE
+  const categoryParts: string[] = [];
+  if (req.category && CATEGORY_DEPTH_GUIDES[req.category]) categoryParts.push(CATEGORY_DEPTH_GUIDES[req.category]);
+  if (req.category === '치과' && isProstheticTopic(req.topic, req.disease)) categoryParts.push(DENTAL_PROSTHETIC_GUIDE);
+  if ((req.imageCount ?? 0) > 0 && section.imageIndex) categoryParts.push(IMAGE_PROMPT_GUIDE);
+  if (categoryParts.length > 0) {
+    systemBlocks.push({ type: 'text', text: categoryParts.join(SEP), cacheable: true, cacheTtl: '1h' });
   }
-  if (req.category === '치과' && isProstheticTopic(req.topic, req.disease)) {
-    systemBlocks.push({ type: 'text', text: DENTAL_PROSTHETIC_GUIDE, cacheable: true, cacheTtl: '1h' });
-  }
+
+  // 슬롯 3/4: TOPIC_PACK — termGuide + topicGuide + journeyGuide + FAQ
+  const topicParts: string[] = [];
   const termGuide = TERMINOLOGY_GUIDE[req.category || ''];
-  if (termGuide) {
-    systemBlocks.push({ type: 'text', text: termGuide, cacheable: true, cacheTtl: '1h' });
-  }
+  if (termGuide) topicParts.push(termGuide);
   const topicGuideSection = TOPIC_TYPE_GUIDES[classifyTopicType(req.topic, req.disease)];
-  if (topicGuideSection) {
-    systemBlocks.push({ type: 'text', text: topicGuideSection, cacheable: true, cacheTtl: '1h' });
-  }
+  if (topicGuideSection) topicParts.push(topicGuideSection);
   const journeyGuide = JOURNEY_STAGE_GUIDES[inferJourneyStage(classifyTopicType(req.topic, req.disease))];
-  if (journeyGuide) {
-    systemBlocks.push({ type: 'text', text: journeyGuide, cacheable: true, cacheTtl: '1h' });
-  }
+  if (journeyGuide) topicParts.push(journeyGuide);
   // FAQ 섹션 감지 — outline LLM 이 "FAQ" / "Q&A" / "궁금" 등으로 다양하게 생성하므로 정규식 매칭
   const _faqHeading = section.heading || '';
   if (/자주\s*묻는|자주\s*하는|FAQ|Q\s*&\s*A|궁금한\s*점|질문/i.test(_faqHeading)) {
-    systemBlocks.push({ type: 'text', text: FAQ_SECTION_GUIDE, cacheable: true, cacheTtl: '1h' });
+    topicParts.push(FAQ_SECTION_GUIDE);
   }
-  systemBlocks.push({ type: 'text', text: E_E_A_T_GUIDE, cacheable: true, cacheTtl: '1h' });
+  if (topicParts.length > 0) {
+    systemBlocks.push({ type: 'text', text: topicParts.join(SEP), cacheable: true, cacheTtl: '1h' });
+  }
 
-  // 학습 스타일이 있으면 override_all_style 블록을, 없으면 의료 블로그 표준 톤(default_voice) fallback 을 주입.
-  // fallback 은 5개 실제 병원 블로그 분석 기반 16개 패턴 — 학습 미선택 시 베이스라인 톤 보장.
+  // 슬롯 4/4: STYLE_PACK — learnedStyle 또는 fallback + MEDICAL_LAW (후미 attention 강화 보존)
+  // mixed cacheTtl: learnedStyle (5m) 가 있으면 슬롯 전체 5m. 없으면 1h.
   const learnedStyle = buildLearnedStyleBlock(req, hospitalStyleBlock);
-  if (learnedStyle) {
-    systemBlocks.push({ type: 'text', text: learnedStyle, cacheable: true, cacheTtl: '5m' });
-  } else {
-    systemBlocks.push({ type: 'text', text: buildFallbackStyleBlock(), cacheable: true, cacheTtl: '1h' });
-  }
-
-  // 의료광고법 — learned_style 뒤에 배치해 attention 가중 강화
-  systemBlocks.push({ type: 'text', text: MEDICAL_LAW_CONSTRAINTS, cacheable: true, cacheTtl: '1h' });
+  const styleText = learnedStyle ?? buildFallbackStyleBlock();
+  systemBlocks.push({
+    type: 'text',
+    text: [styleText, MEDICAL_LAW_CONSTRAINTS].join(SEP),
+    cacheable: true,
+    cacheTtl: learnedStyle ? '5m' : '1h',
+  });
 
   // user prompt
   const parts: string[] = [buildUserInputBlock(req)];
@@ -2105,6 +2114,7 @@ ${nextHeading ? `  <next_heading>${sanitizePromptInput(nextHeading, 100)}</next_
 
   const typeLabel = section.type === 'intro' ? '도입부' : section.type === 'outro' ? '마무리' : `"${sanitizePromptInput(section.heading || '', 100)}"`;
   const charLimit = section.charTarget ?? 300;
+  // char_budget — 섹션마다 charTarget 이 달라 cache hit 어려움. 4 슬롯 초과 (audit Q-4) — non-cacheable.
   systemBlocks.push({
     type: 'text',
     text: buildCharBudgetBlock({
@@ -2112,8 +2122,6 @@ ${nextHeading ? `  <next_heading>${sanitizePromptInput(nextHeading, 100)}</next_
       sectionCharTarget: charLimit,
       sectionType: section.type as 'intro' | 'section' | 'outro',
     }),
-    cacheable: true,
-    cacheTtl: '5m',
   });
 
   // 키워드 섹션별 분배 계산 — 본문(section) 만 분배 대상, intro/outro 는 가볍게 언급만
@@ -2177,63 +2185,55 @@ export function buildBlogPromptV3(
   opts: { hospitalStyleBlock?: string | { systemBlock: string; fewShotBlock?: string } | null } = {},
 ): BlogPromptV3 {
   const systemBlocks: CacheableBlock[] = [];
+  const SEP = '\n\n---\n\n';
 
-  systemBlocks.push({ type: 'text', text: BLOG_PERSONA, cacheable: true, cacheTtl: '1h' });
-  systemBlocks.push({ type: 'text', text: PRIORITY_ORDER_BLOCK, cacheable: true, cacheTtl: '1h' });
-  systemBlocks.push({ type: 'text', text: COMMON_WRITING_STYLE, cacheable: true, cacheTtl: '1h' });
-  systemBlocks.push({ type: 'text', text: BLOG_EXAMPLES, cacheable: true, cacheTtl: '1h' });
-  systemBlocks.push({ type: 'text', text: SELF_CHECK_GUIDE, cacheable: true, cacheTtl: '1h' });
-  if ((req.imageCount ?? 0) > 0) {
-    systemBlocks.push({ type: 'text', text: IMAGE_PROMPT_GUIDE, cacheable: true, cacheTtl: '1h' });
-  }
-  // MEDICAL_LAW_CONSTRAINTS 는 learned_style 블록 뒤로 이동 (아래) —
-  // Claude attention 가중치가 후순위 블록에 더 강하므로 learned_style 의 금지어 재현 방지 강화.
+  // 슬롯 1/4: STATIC_PRELUDE — persona + priority + common_writing_style + blog_examples + self_check + e_e_a_t
+  // (18개 push → 4 슬롯 통합. Anthropic prompt cache 한도 4. audit Q-4)
+  systemBlocks.push({
+    type: 'text',
+    text: [BLOG_PERSONA, PRIORITY_ORDER_BLOCK, COMMON_WRITING_STYLE, BLOG_EXAMPLES, SELF_CHECK_GUIDE, E_E_A_T_GUIDE].join(SEP),
+    cacheable: true,
+    cacheTtl: '1h',
+  });
 
-  if (req.category && CATEGORY_DEPTH_GUIDES[req.category]) {
-    systemBlocks.push({ type: 'text', text: CATEGORY_DEPTH_GUIDES[req.category], cacheable: true, cacheTtl: '1h' });
+  // 슬롯 2/4: CATEGORY_PACK — 카테고리 + (조건부) DENTAL + IMAGE_PROMPT_GUIDE
+  const categoryParts: string[] = [];
+  if (req.category && CATEGORY_DEPTH_GUIDES[req.category]) categoryParts.push(CATEGORY_DEPTH_GUIDES[req.category]);
+  if (req.category === '치과' && isProstheticTopic(req.topic, req.disease)) categoryParts.push(DENTAL_PROSTHETIC_GUIDE);
+  if ((req.imageCount ?? 0) > 0) categoryParts.push(IMAGE_PROMPT_GUIDE);
+  if (categoryParts.length > 0) {
+    systemBlocks.push({ type: 'text', text: categoryParts.join(SEP), cacheable: true, cacheTtl: '1h' });
   }
-  if (req.category === '치과' && isProstheticTopic(req.topic, req.disease)) {
-    systemBlocks.push({ type: 'text', text: DENTAL_PROSTHETIC_GUIDE, cacheable: true, cacheTtl: '1h' });
-  }
+
+  // 슬롯 3/4: TOPIC_PACK — termGuide + topicGuide + journeyGuide + FAQ + seasonal
+  const topicParts: string[] = [];
   const termGuide = TERMINOLOGY_GUIDE[req.category || ''];
-  if (termGuide) {
-    systemBlocks.push({ type: 'text', text: termGuide, cacheable: true, cacheTtl: '1h' });
-  }
+  if (termGuide) topicParts.push(termGuide);
   const topicGuideBlog = TOPIC_TYPE_GUIDES[classifyTopicType(req.topic, req.disease)];
-  if (topicGuideBlog) {
-    systemBlocks.push({ type: 'text', text: topicGuideBlog, cacheable: true, cacheTtl: '1h' });
-  }
-  systemBlocks.push({ type: 'text', text: E_E_A_T_GUIDE, cacheable: true, cacheTtl: '1h' });
-  // CITATION/MOBILE/AI_SNIPPET 제거 — BLOG_PERSONA 안 <e_e_a_t>/<ai_snippet>/<featured_snippet> + COMMON으로 충분
+  if (topicGuideBlog) topicParts.push(topicGuideBlog);
   const journeyGuide = JOURNEY_STAGE_GUIDES[inferJourneyStage(classifyTopicType(req.topic, req.disease))];
-  if (journeyGuide) {
-    systemBlocks.push({ type: 'text', text: journeyGuide, cacheable: true, cacheTtl: '1h' });
-  }
-  systemBlocks.push({ type: 'text', text: FAQ_SECTION_GUIDE, cacheable: true, cacheTtl: '1h' });
-
+  if (journeyGuide) topicParts.push(journeyGuide);
+  topicParts.push(FAQ_SECTION_GUIDE);
   const seasonal = getSeasonalContext(req.category || '');
-  if (seasonal) {
-    systemBlocks.push({ type: 'text', text: seasonal, cacheable: true, cacheTtl: '1h' });
-  }
+  if (seasonal) topicParts.push(seasonal);
+  systemBlocks.push({ type: 'text', text: topicParts.join(SEP), cacheable: true, cacheTtl: '1h' });
 
-  // 학습 스타일이 있으면 override_all_style 블록을, 없으면 의료 블로그 표준 톤(default_voice) fallback 을 주입.
-  // fallback 은 5개 실제 병원 블로그 분석 기반 16개 패턴 — 학습 미선택 시 베이스라인 톤 보장.
+  // 슬롯 4/4: STYLE_PACK — learnedStyle 또는 fallback + MEDICAL_LAW (후미 attention 보존)
+  // mixed cacheTtl: learnedStyle (5m) 가 있으면 슬롯 전체 5m. char_budget 은 textLength 별 변동이라
+  // 슬롯 4 와 별도 non-cacheable 로 push (5번째 슬롯이라 어차피 cache 안 됨).
   const learnedStyle = buildLearnedStyleBlock(req, opts.hospitalStyleBlock);
-  if (learnedStyle) {
-    systemBlocks.push({ type: 'text', text: learnedStyle, cacheable: true, cacheTtl: '5m' });
-  } else {
-    systemBlocks.push({ type: 'text', text: buildFallbackStyleBlock(), cacheable: true, cacheTtl: '1h' });
-  }
+  const styleText = learnedStyle ?? buildFallbackStyleBlock();
+  systemBlocks.push({
+    type: 'text',
+    text: [styleText, MEDICAL_LAW_CONSTRAINTS].join(SEP),
+    cacheable: true,
+    cacheTtl: learnedStyle ? '5m' : '1h',
+  });
 
-  // 의료광고법 — learned_style 뒤에 배치해 attention 가중 강화
-  systemBlocks.push({ type: 'text', text: MEDICAL_LAW_CONSTRAINTS, cacheable: true, cacheTtl: '1h' });
-
-  // 글자수 전담 블록 — 최후미 배치로 attention 최고 강화
+  // 글자수 전담 블록 — 최후미 배치로 attention 최고 강화 (4 슬롯 초과, non-cacheable)
   systemBlocks.push({
     type: 'text',
     text: buildCharBudgetBlock({ mode: 'one-pass', totalTarget: req.textLength || 1500, imageCount: req.imageCount }),
-    cacheable: true,
-    cacheTtl: '1h',
   });
 
   // user prompt
@@ -2342,38 +2342,39 @@ export function buildBlogSectionPromptV3(
   input: SectionRegenerateInputV3,
 ): BlogPromptV3 {
   const systemBlocks: CacheableBlock[] = [];
+  const SEP = '\n\n---\n\n';
 
-  systemBlocks.push({ type: 'text', text: SECTION_REGEN_PERSONA, cacheable: true, cacheTtl: '1h' });
-  systemBlocks.push({ type: 'text', text: COMMON_WRITING_STYLE, cacheable: true, cacheTtl: '1h' });
-  systemBlocks.push({ type: 'text', text: MEDICAL_LAW_CONSTRAINTS, cacheable: true, cacheTtl: '1h' });
+  // 슬롯 1/3: STATIC_PRELUDE — persona + common_writing_style (audit Q-4 — 6개 push → 3 슬롯)
+  systemBlocks.push({
+    type: 'text',
+    text: [SECTION_REGEN_PERSONA, COMMON_WRITING_STYLE].join(SEP),
+    cacheable: true,
+    cacheTtl: '1h',
+  });
 
+  // 슬롯 2/3: CATEGORY_PACK — 조건부
   if (input.category && CATEGORY_DEPTH_GUIDES[input.category]) {
     systemBlocks.push({ type: 'text', text: CATEGORY_DEPTH_GUIDES[input.category], cacheable: true, cacheTtl: '1h' });
   }
 
+  // 슬롯 3/3: STYLE_PACK — learned_style 또는 fallback + MEDICAL_LAW (후미 attention 보존)
   // 학습 있으면 learned_style, 없으면 medical_blog_voice fallback 주입.
   // (PR #25 가 buildSectionFromOutlinePrompt / buildBlogPromptV3 에는 fallback 추가했으나
   //  본 수동 재생성 경로는 누락됐었음. 학습 미적용 + 섹션 재생성 시 generic 톤 회귀 방지.)
   // NOTE: priority="override_greeting" 은 다른 두 path 의 "override_all_style" 보다 약함 —
   //       의도된 차이인지 후속 PR 에서 정합성 검토.
-  if (input.stylePromptText?.trim()) {
-    systemBlocks.push({
-      type: 'text',
-      text: `<learned_style priority="override_greeting">
+  const styleText = input.stylePromptText?.trim()
+    ? `<learned_style priority="override_greeting">
 ${input.stylePromptText}
 <instruction>이 말투/화자 설정이 다른 모든 정체성/톤 지시보다 우선합니다.</instruction>
-</learned_style>`,
-      cacheable: true,
-      cacheTtl: '5m',
-    });
-  } else {
-    systemBlocks.push({
-      type: 'text',
-      text: buildFallbackStyleBlock(),
-      cacheable: true,
-      cacheTtl: '1h',
-    });
-  }
+</learned_style>`
+    : buildFallbackStyleBlock();
+  systemBlocks.push({
+    type: 'text',
+    text: [styleText, MEDICAL_LAW_CONSTRAINTS].join(SEP),
+    cacheable: true,
+    cacheTtl: input.stylePromptText?.trim() ? '5m' : '1h',
+  });
 
   // user prompt
   const safeKeywords = sanitizePromptInput(input.keywords, 300);
