@@ -1,10 +1,9 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { buildClinicalPrompt, ARTICLE_TYPES } from '../../../lib/clinicalPrompt';
+import { ARTICLE_TYPES } from '../../../lib/clinicalPrompt';
 import { getSessionSafe, supabase } from '@winaid/blog-core';
 import { useCreditContext } from '../layout';
-import { useCredit } from '../../../lib/creditService';
 import { consumeGuestCredit } from '../../../lib/guestCredits';
 import { CATEGORIES } from '../../../lib/constants';
 import { sanitizeHtml } from '../../../lib/sanitize';
@@ -229,28 +228,21 @@ JSON만 출력: { "analysis": "...", "topics": [{ "topic": "...", "title": "..."
     setScores(null);
 
     try {
-      const { systemInstruction, prompt } = buildClinicalPrompt({
-        topic,
-        category,
-        hospitalName: hospitalName || undefined,
-        doctorName: doctorName || undefined,
-        imageAnalysis: analysisResult,
-        imageCount: images.length,
-        articleType,
-        textLength,
-        keywords: keywords || undefined,
-      });
-
-      const res = await fetch('/api/gemini', {
+      // dedicated route: server-side buildClinicalPrompt + 1 credit deduct + refund
+      // (audit Q-2b — client-side useCredit revenue leak 차단)
+      const res = await fetch('/api/generate/clinical', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt,
-          systemInstruction,
-          model: 'gemini-3.1-pro-preview',
-          temperature: 0.7,
-          maxOutputTokens: 65536,
-          timeout: 120000,
+          topic,
+          category,
+          hospitalName: hospitalName || undefined,
+          doctorName: doctorName || undefined,
+          imageAnalysis: analysisResult,
+          imageCount: images.length,
+          articleType,
+          textLength,
+          keywords: keywords || undefined,
         }),
       });
 
@@ -292,10 +284,14 @@ JSON만 출력: { "analysis": "...", "topics": [{ "topic": "...", "title": "..."
       setPipelineStep('result');
 
       // 생성 성공 → 크레딧 차감
+      // 인증 사용자 차감은 server-side (/api/generate/clinical, audit Q-2b) — client 는 optimistic UI.
+      // 게스트는 server 차감 skip 이라 client-side guest credit 만 그대로 차감.
       if (creditCtx.creditInfo) {
         if (creditCtx.userId) {
-          const cr = await useCredit(creditCtx.userId);
-          if (cr.success) creditCtx.setCreditInfo({ credits: cr.remaining, totalUsed: (creditCtx.creditInfo.totalUsed || 0) + 1 });
+          creditCtx.setCreditInfo({
+            credits: Math.max(0, creditCtx.creditInfo.credits - 1),
+            totalUsed: (creditCtx.creditInfo.totalUsed || 0) + 1,
+          });
         } else {
           const next = consumeGuestCredit();
           if (next) creditCtx.setCreditInfo({ credits: next.credits, totalUsed: next.totalUsed });
