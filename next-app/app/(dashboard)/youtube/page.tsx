@@ -1,13 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { buildYoutubePrompt, YOUTUBE_WRITING_STYLES } from '../../../lib/youtubePrompt';
+import { YOUTUBE_WRITING_STYLES } from '../../../lib/youtubePrompt';
 import { supabase } from '@winaid/blog-core';
 import { CATEGORIES } from '../../../lib/constants';
 import { sanitizeHtml } from '../../../lib/sanitize';
 import { applyContentFilters } from '@winaid/blog-core';
 import { useCreditContext } from '../layout';
-import { useCredit } from '../../../lib/creditService';
 
 const inputCls = 'w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm outline-none focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-500/10 transition-all placeholder:text-slate-300';
 
@@ -197,27 +196,20 @@ ${summaryText.slice(0, 2000)}
     setScores(null);
 
     try {
-      const { systemInstruction, prompt } = buildYoutubePrompt({
-        topic,
-        transcript,
-        writingStyle,
-        category,
-        hospitalName: hospitalName || undefined,
-        doctorName: writingStyle === 'clinical' ? (doctorName || undefined) : undefined,
-        textLength,
-        keywords: keywords || undefined,
-      });
-
-      const res = await fetch('/api/gemini', {
+      // dedicated route: server-side buildYoutubePrompt + 1 credit deduct + refund
+      // (audit Q-2d — client-side useCredit revenue leak 차단, prompt injection surface 차단)
+      const res = await fetch('/api/generate/youtube', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt, systemInstruction,
-          model: 'gemini-3.1-pro-preview',
-          temperature: 0.7,
-          maxOutputTokens: 65536,
-          googleSearch: true,
-          timeout: 120000,
+          topic,
+          transcript,
+          writingStyle,
+          category,
+          hospitalName: hospitalName || undefined,
+          doctorName: writingStyle === 'clinical' ? (doctorName || undefined) : undefined,
+          textLength,
+          keywords: keywords || undefined,
         }),
       });
 
@@ -246,10 +238,12 @@ ${summaryText.slice(0, 2000)}
       setGeneratedContent(html);
       setPipelineStep('result');
 
-      // 생성 성공 → 크레딧 차감
+      // 차감은 server-side (/api/generate/youtube, audit Q-2d). client 는 optimistic UI 만.
       if (creditCtx.userId && creditCtx.creditInfo) {
-        const creditResult = await useCredit(creditCtx.userId);
-        if (creditResult.success) creditCtx.setCreditInfo({ credits: creditResult.remaining, totalUsed: (creditCtx.creditInfo.totalUsed || 0) + 1 });
+        creditCtx.setCreditInfo({
+          credits: Math.max(0, creditCtx.creditInfo.credits - 1),
+          totalUsed: (creditCtx.creditInfo.totalUsed || 0) + 1,
+        });
       }
     } catch (err) {
       alert(err instanceof Error ? err.message : '생성 실패');
