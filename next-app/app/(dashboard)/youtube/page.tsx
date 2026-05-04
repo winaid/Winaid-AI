@@ -7,6 +7,7 @@ import { CATEGORIES } from '../../../lib/constants';
 import { sanitizeHtml } from '../../../lib/sanitize';
 import { applyContentFilters } from '@winaid/blog-core';
 import { useCreditContext } from '../layout';
+import { authFetch } from '../../../lib/authFetch';
 
 const inputCls = 'w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm outline-none focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-500/10 transition-all placeholder:text-slate-300';
 
@@ -198,7 +199,7 @@ ${summaryText.slice(0, 2000)}
     try {
       // dedicated route: server-side buildYoutubePrompt + 1 credit deduct + refund
       // (audit Q-2d — client-side useCredit revenue leak 차단, prompt injection surface 차단)
-      const res = await fetch('/api/generate/youtube', {
+      const res = await authFetch('/api/generate/youtube', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
