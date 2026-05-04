@@ -225,6 +225,9 @@ export async function POST(request: NextRequest) {
       analyzed_at: final.analyzedAt,
     }).then(({ error }) => {
       if (error) console.warn('[history] 저장 실패:', error.message);
+    }).catch((err: unknown) => {
+      // network/throw 도 unhandled rejection 으로 새지 않게 한다.
+      console.warn('[history] insert threw:', (err as Error).message);
     });
   }
 

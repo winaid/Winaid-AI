@@ -12,8 +12,11 @@ export async function POST(req: NextRequest) {
 
   try {
     const formData = await req.formData();
-    const imageFile = formData.get('image') as File;
-    if (!imageFile) return NextResponse.json({ error: 'No image' }, { status: 400 });
+    const imageFile = formData.get('image');
+    // FormData.get 은 string|File|null. instanceof 로 narrow (as File 단언은 string 도 통과됨).
+    if (!(imageFile instanceof File)) {
+      return NextResponse.json({ error: 'No image' }, { status: 400 });
+    }
 
     // MIME 화이트리스트 + 사이즈 cap (외부 API 비용 + 임의 파일 업로드 방지)
     if (!ALLOWED_MIME.has(imageFile.type)) {
@@ -78,7 +81,8 @@ export async function POST(req: NextRequest) {
       });
     }
     return NextResponse.json({ error: 'Background removal failed' }, { status: 500 });
-  } catch {
+  } catch (err) {
+    console.error('[remove-bg] failed:', (err as Error).message);
     return NextResponse.json({ error: 'Failed' }, { status: 500 });
   }
 }

@@ -2,11 +2,18 @@
  * POST /api/generate/blog/review (next-app 내부용) — Phase 2A v4 감수 (Opus 4.6)
  *
  * public-app 버전과 동일. guestRateLimit → apiAuth.checkAuth 로 교체만.
+ *
+ * 정책:
+ *   - 크레딧 차감은 메인 /api/generate/blog 에서 1회. review 는 후속이라 추가 차감 없음.
+ *     (public-app PR #88 과 동일. 과거 next-app 만 차감 잔존하던 버그를 동기화.)
+ *   - LLM 실패 시 fail-closed: regex 안전망(applyContentFilters) 적용 후 verdict 결정.
+ *     replacedCount > 0 → minor_fix, 0 → major_fix (절대 auto-pass 금지).
+ *   - userId 는 client 입력 신뢰 X. Bearer 토큰에서 도출 (resolveImageOwner).
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { checkAuth } from '../../../../../lib/apiAuth';
-import { useCredit } from '../../../../../lib/creditService';
+import { resolveImageOwner } from '../../../../../lib/serverAuth';
 import { buildBlogReviewPrompt } from '@winaid/blog-core';
 import { applyContentFilters } from '@winaid/blog-core';
 import { callLLM } from '@winaid/blog-core';
@@ -37,7 +44,7 @@ interface Body {
   hospitalName?: string;
   ruleFilterViolations?: string[];
   stylePromptText?: string;
-  userId?: string | null;
+  // userId 는 client 입력 신뢰 X. Bearer 토큰에서 도출.
 }
 
 function tryParseJson(raw: string): ReviewJson | null {
@@ -68,13 +75,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'bad_request', details: 'draftHtml required' }, { status: 400 });
   }
 
-  const userId = body.userId || null;
-  if (userId) {
-    const credit = await useCredit(userId);
-    if (!credit.success) {
-      return NextResponse.json({ error: 'insufficient_credits', remaining: credit.remaining }, { status: 402 });
-    }
-  }
+  // 크레딧은 메인 /api/generate/blog 에서 1회 차감. review 는 후속 단계라 추가 차감 없음.
+  const owner = await resolveImageOwner(request);
+  const userId = owner === 'guest' ? null : owner;
 
   // 관리자 학습 경로(DB 프로파일) 의 hospitalStyleBlock 을 계산해 styleOverride 트리거에 반영.
   // 4-A 정책: stylePromptText(UI 학습) 가 있으면 DB 프로파일은 어차피 V3 메인에서 버려지므로 review 에서도 조회 스킵.
@@ -113,11 +116,22 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     const message = (err as Error).message || 'unknown';
     console.error(`[generate/blog/review] callLLM failed: ${message}`);
+    // fail-closed (public-app PR #78 과 동기화). 의료광고법 검증 우회 차단.
+    const filtered = applyContentFilters(draftHtml);
+    const fellbackVerdict: 'minor_fix' | 'major_fix' = filtered.replacedCount > 0 ? 'minor_fix' : 'major_fix';
+    console.warn(`[generate/blog/review] LLM 실패 fallback: verdict=${fellbackVerdict}, replacedCount=${filtered.replacedCount}`);
     return NextResponse.json({
-      verdict: 'pass',
-      issues: [],
-      revisedHtml: null,
-      summaryNote: 'review_call_failed_passthrough',
+      verdict: fellbackVerdict,
+      issues: [{
+        category: 'medical_law',
+        severity: 'high',
+        problem: `감수 LLM 호출이 실패했습니다 (${message.slice(0, 80)}). 정규식 안전망이 ${filtered.replacedCount}건 치환했습니다. 게시 전 수동 검토를 권장합니다.`,
+        suggestion: '안전망 결과를 검토하거나, 잠시 후 감수를 재시도해 주세요.',
+      }],
+      revisedHtml: filtered.replacedCount > 0 ? filtered.filtered : null,
+      summaryNote: filtered.replacedCount > 0
+        ? `auto_replaced_after_review_failure (${filtered.replacedCount}건)`
+        : 'review_call_failed_manual_review_required',
       usage: null,
       model: '',
       warning: `review_failed: ${message.slice(0, 200)}`,
