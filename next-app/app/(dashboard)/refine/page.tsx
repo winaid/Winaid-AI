@@ -89,7 +89,7 @@ export default function RefinePage() {
     setIsRefining(true); setError(null); setRefinedHtml(null); setSaveStatus(null);
     try {
       const { systemInstruction, prompt } = buildRefinePrompt({ originalText: originalText.trim(), mode: selectedMode });
-      const res = await fetch('/api/gemini', {
+      const res = await authFetch('/api/gemini', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt, systemInstruction, model: 'gemini-3.1-pro-preview', temperature: 0.6, maxOutputTokens: 32768, googleSearch: selectedMode === 'seo' || selectedMode === 'professional' || selectedMode === 'longer' }),
       });
@@ -146,7 +146,7 @@ export default function RefinePage() {
       const { systemInstruction, prompt } = buildChatRefinePrompt({
         workingContent: getWorkingContent(), userMessage: msg, crawledContent: crawledContent || undefined,
       });
-      const res = await fetch('/api/gemini', {
+      const res = await authFetch('/api/gemini', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt, systemInstruction, model: 'gemini-3.1-pro-preview', temperature: 0.6, maxOutputTokens: 32768, googleSearch: true }),
       });

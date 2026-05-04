@@ -3,6 +3,7 @@
  * state setter 없이 결과만 반환. 호출부에서 state 관리.
  */
 import type { SlideData, SlideLayoutType, SlideComparisonColumn } from '@winaid/blog-core';
+import { authFetch } from './authFetch';
 import { SLIDE_IMAGE_STYLES } from '@winaid/blog-core';
 
 /**
@@ -152,7 +153,7 @@ export async function fillLayoutContent(
   if (!fields) return null;
 
   try {
-    const res = await fetch('/api/gemini', {
+    const res = await authFetch('/api/gemini', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -241,7 +242,7 @@ export async function suggestSlideText(
     subtitle: '위 슬라이드의 부제를 써줘. 25자 이내. 부제 한 줄만 출력. 따옴표·설명 금지.',
     body: '위 슬라이드의 본문을 구체적 수치 포함해 다시 써줘. 3문장 이내. 본문만 출력. 따옴표·설명 금지.',
   };
-  const res = await fetch('/api/gemini', {
+  const res = await authFetch('/api/gemini', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -277,7 +278,7 @@ export async function suggestImagePrompt(
     columns: slide.columns,
     compareLabels: slide.compareLabels,
   });
-  const res = await fetch('/api/gemini', {
+  const res = await authFetch('/api/gemini', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -320,7 +321,7 @@ ${slideDetail}
 
 /** AI 웹 검색 보강. 반환: Partial<SlideData> patch 또는 null */
 export async function enrichSlide(slide: SlideData): Promise<Partial<SlideData> | null> {
-  const res = await fetch('/api/gemini', {
+  const res = await authFetch('/api/gemini', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -364,7 +365,7 @@ ${JSON.stringify(slide, null, 2)}`,
 export async function suggestComparison(
   slide: SlideData,
 ): Promise<{ columns: SlideComparisonColumn[]; compareLabels: string[] } | null> {
-  const res = await fetch('/api/gemini', {
+  const res = await authFetch('/api/gemini', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

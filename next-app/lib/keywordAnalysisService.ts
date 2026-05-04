@@ -197,7 +197,7 @@ function isMetroArea(address: string): boolean {
 // ── Gemini 호출 (next-app의 /api/gemini 사용) ──
 
 async function callGeminiForKeywords(prompt: string, options?: { temperature?: number }): Promise<string> {
-  const res = await fetch('/api/gemini', {
+  const res = await authFetch('/api/gemini', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

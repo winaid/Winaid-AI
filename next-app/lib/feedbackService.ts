@@ -6,6 +6,7 @@
  * 3/31 이후 로그인 연동 시 작성자 식별 강화 예정.
  */
 import { supabase } from '@winaid/blog-core';
+import { authFetch } from './authFetch';
 
 export interface InternalFeedback {
   id: string;
@@ -174,7 +175,7 @@ ${numbered.join('\n')}
 7. 피드백이 1건뿐이면 해당 내용으로 cluster 1개만 만들어라.`;
 
   try {
-    const resp = await fetch('/api/gemini', {
+    const resp = await authFetch('/api/gemini', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

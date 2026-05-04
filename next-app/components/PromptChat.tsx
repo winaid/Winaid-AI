@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { authFetch } from '../lib/authFetch';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -81,7 +82,7 @@ export function PromptChat({ onApplyPrompt, disabled }: Props) {
         ? `[참고 이미지가 첨부됨]\n\n${historyContext}\n\n사용자의 최신 요청: ${userMessage}\n\n참고 이미지를 분석하고, 사용자의 요청에 맞는 최적의 이미지 프롬프트를 한국어/영어로 제안해주세요.`
         : `${historyContext}\n\n사용자의 최신 요청: ${userMessage}\n\n사용자의 요청에 맞는 최적의 이미지 프롬프트를 한국어/영어로 제안해주세요.`;
 
-      const res = await fetch('/api/gemini', {
+      const res = await authFetch('/api/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
