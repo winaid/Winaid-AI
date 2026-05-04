@@ -111,16 +111,34 @@ export function buildImagePrompt(args: {
   };
   const subjectHint = categoryHints[category] || 'Korean medical clinic interior';
 
+  // 섹션별 다양화 키워드 — Sonnet alt 가 비슷하거나 fallback 분기일 때 슬롯 간 시각적 차별화 강제.
+  // gpt-image-2 quality:'low' 가 미세한 단어 차이는 무시하므로 장면·각도·인물 구성을 명시 (audit hotfix).
+  const sceneVariants = [
+    'patient consultation, doctor explaining with monitor or X-ray, eye-level shot',
+    'close-up of medical tools and procedure, hands and instruments focus',
+    'wide view of bright modern clinic interior, examination chair, soft natural light',
+    'patient receiving treatment, side angle, medical staff focused on procedure',
+    'medical scan or imaging on screen, professional setting, focused detail',
+    'reception desk and waiting area, calm welcoming atmosphere',
+  ];
+  const variant = args.sectionIndex
+    ? sceneVariants[(args.sectionIndex - 1) % sceneVariants.length]
+    : '';
+
   // alt 부족 시 섹션 헤딩 또는 인덱스 suffix 로 슬롯별 차별화
   const trimmedAlt = altText.trim();
   let subject: string;
   if (trimmedAlt.length >= 5) {
-    subject = trimmedAlt;
+    // Sonnet alt 가 슬롯 간 비슷할 risk — 2번째부터 sceneVariant append 로 강제 다양화.
+    const diversify = args.sectionIndex && args.sectionIndex >= 2 && variant ? `, ${variant}` : '';
+    subject = `${trimmedAlt}${diversify}`;
   } else if (args.sectionHint && args.sectionHint.length >= 3) {
-    subject = `${args.sectionHint}, ${topic}${disease ? ` (${disease})` : ''}`;
+    const v = variant ? `${variant}, ` : '';
+    subject = `${args.sectionHint}, ${v}${topic}${disease ? ` (${disease})` : ''}`;
   } else {
-    const idxSuffix = args.sectionIndex ? ` 섹션 ${args.sectionIndex}` : '';
-    subject = `${topic}${disease ? ` (${disease})` : ''}${idxSuffix}`;
+    const v = variant ? `${variant}, ` : '';
+    const idxSuffix = !variant && args.sectionIndex ? ` 섹션 ${args.sectionIndex}` : '';
+    subject = `${v}${topic}${disease ? ` (${disease})` : ''}${idxSuffix}`;
   }
 
   // custom 스타일일 때 customImagePrompt 는 alt 를 보강 (스타일은 route 에서 처리)
@@ -556,6 +574,13 @@ export const IMAGE_PROMPT_GUIDE = `<image_prompt_guide>
 8. 시술 직접 묘사 금지 (피·수술 도구·절개 노출 ❌). 상담·설명·관리 장면 위주.
 9. 이미지 수(image_count)가 0이면 [IMG_N] 마커를 전혀 포함하지 마세요.
 10. 한글 alt 금지. 항상 영문. (짧은 "임플란트 설명" 류 alt는 의미 없는 프롬프트가 됨)
+11. **각 [IMG_N] alt 는 반드시 서로 다른 장면·각도·인물 구성으로 차별화**.
+    같은 prompt 또는 매우 비슷한 prompt 금지 (이미지 슬롯 간 시각적 구분 필수).
+    예 (imageCount=3):
+      - IMG_1: "Korean dentist explaining X-ray to female patient in chair, eye-level shot"
+      - IMG_2: "close-up of dental implant tools and instruments on tray, hands focus"
+      - IMG_3: "wide view of bright modern clinic reception area, soft natural light"
+    같은 시술 주제라도 슬롯마다 장면(consultation/procedure/wide-shot/tools/scan)을 의도적으로 분산.
 </rules>
 
 <style_mapping>
