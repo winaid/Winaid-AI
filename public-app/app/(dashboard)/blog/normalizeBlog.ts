@@ -68,6 +68,15 @@ export function normalizeBlogStructure(html: string, topicFallback: string): { h
     log.push(`[STRUCTURE] h2→h3 변환: ${h2Count}개`);
   }
 
+  // 2b) <p><strong>짧은 문자열</strong></p> → <h3> (LLM 이 소제목을 strong 으로 출력한 케이스).
+  //     30자 이하 + strong 안 다른 태그 없을 때만 — 본문 강조 (긴 문장) 는 보존.
+  const pStrongPattern = /<p>\s*<strong>([^<]{1,30})<\/strong>\s*<\/p>/g;
+  const pStrongMatches = out.match(pStrongPattern) || [];
+  if (pStrongMatches.length > 0) {
+    out = out.replace(pStrongPattern, '<h3>$1</h3>');
+    log.push(`[STRUCTURE] <p><strong>...</strong></p> → h3 변환: ${pStrongMatches.length}개 (≤30자 단순 강조)`);
+  }
+
   // 3) markdown ## → h3
   const mdHeadings = out.match(/^#{1,3}\s+.+$/gm) || [];
   if (mdHeadings.length > 0) {
