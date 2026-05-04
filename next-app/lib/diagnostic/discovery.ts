@@ -570,44 +570,49 @@ export async function* streamChatGPT(
   let fullText = '';
   let finishReason: string | undefined;
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split('\n');
-    buffer = lines.pop() ?? '';
-    for (const rawLine of lines) {
-      const line = rawLine.trimEnd();
-      if (!line.startsWith('data: ')) continue;
-      const data = line.slice(6);
-      if (data === '[DONE]') {
-        const truncated = finishReason === 'length';
-        return {
-          truncated,
-          reason: truncated ? 'MAX_TOKENS' : finishReason,
-          sources: extractSourcesFromText(fullText),
-        };
-      }
-      try {
-        const parsed = JSON.parse(data) as {
-          choices?: {
-            delta?: { content?: string };
-            finish_reason?: string | null;
-          }[];
-        };
-        const choice = parsed.choices?.[0];
-        const content = choice?.delta?.content;
-        if (typeof content === 'string' && content.length > 0) {
-          fullText += content;
-          yield content;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() ?? '';
+      for (const rawLine of lines) {
+        const line = rawLine.trimEnd();
+        if (!line.startsWith('data: ')) continue;
+        const data = line.slice(6);
+        if (data === '[DONE]') {
+          const truncated = finishReason === 'length';
+          return {
+            truncated,
+            reason: truncated ? 'MAX_TOKENS' : finishReason,
+            sources: extractSourcesFromText(fullText),
+          };
         }
-        if (typeof choice?.finish_reason === 'string') {
-          finishReason = choice.finish_reason;
+        try {
+          const parsed = JSON.parse(data) as {
+            choices?: {
+              delta?: { content?: string };
+              finish_reason?: string | null;
+            }[];
+          };
+          const choice = parsed.choices?.[0];
+          const content = choice?.delta?.content;
+          if (typeof content === 'string' && content.length > 0) {
+            fullText += content;
+            yield content;
+          }
+          if (typeof choice?.finish_reason === 'string') {
+            finishReason = choice.finish_reason;
+          }
+        } catch {
+          /* 불완전 JSON — skip */
         }
-      } catch {
-        /* 불완전 JSON — skip */
       }
     }
+  } finally {
+    // SSE consumer abandon 시 generator finally → reader.cancel() 로 upstream OpenAI 청구 중단 (audit Q-3 / C-6).
+    reader.cancel().catch(() => { /* swallow */ });
   }
 
   const truncated = finishReason === 'length';
@@ -734,35 +739,40 @@ export async function* streamGemini(
     }
   };
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    // Gemini SSE 는 CRLF 가능성 있음 — \r?\n\r?\n 로 안전 분리
-    const events = buffer.split(/\r?\n\r?\n/);
-    buffer = events.pop() ?? '';
-    for (const ev of events) {
-      const line = ev.trim();
-      if (!line.startsWith('data: ')) continue;
-      const data = line.slice(6);
-      if (!data || data === '[DONE]') continue;
-      let chunk: GeminiStreamChunk;
-      try {
-        chunk = JSON.parse(data) as GeminiStreamChunk;
-      } catch {
-        continue;
-      }
-      const candidate = chunk.candidates?.[0];
-      if (candidate?.finishReason) finishReason = candidate.finishReason;
-      collectGrounding(chunk);
-      const parts = candidate?.content?.parts ?? [];
-      for (const p of parts) {
-        if (typeof p.text === 'string' && p.text.length > 0) {
-          fullText += p.text;
-          yield p.text;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      // Gemini SSE 는 CRLF 가능성 있음 — \r?\n\r?\n 로 안전 분리
+      const events = buffer.split(/\r?\n\r?\n/);
+      buffer = events.pop() ?? '';
+      for (const ev of events) {
+        const line = ev.trim();
+        if (!line.startsWith('data: ')) continue;
+        const data = line.slice(6);
+        if (!data || data === '[DONE]') continue;
+        let chunk: GeminiStreamChunk;
+        try {
+          chunk = JSON.parse(data) as GeminiStreamChunk;
+        } catch {
+          continue;
+        }
+        const candidate = chunk.candidates?.[0];
+        if (candidate?.finishReason) finishReason = candidate.finishReason;
+        collectGrounding(chunk);
+        const parts = candidate?.content?.parts ?? [];
+        for (const p of parts) {
+          if (typeof p.text === 'string' && p.text.length > 0) {
+            fullText += p.text;
+            yield p.text;
+          }
         }
       }
     }
+  } finally {
+    // SSE consumer abandon 시 generator finally → reader.cancel() 로 upstream Gemini 청구 중단 (audit Q-3).
+    reader.cancel().catch(() => { /* swallow */ });
   }
 
   const truncated = finishReason !== undefined && !GEMINI_CLEAN_FINISH.has(finishReason);

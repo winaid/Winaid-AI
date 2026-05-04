@@ -127,15 +127,20 @@ export async function callClaude(req: LLMRequest): Promise<LLMResponse> {
     const client = new Anthropic({ apiKey: keys[ki] });
 
     try {
-      const resp = await client.messages.create({
-        model: route.model,
-        max_tokens: req.maxOutputTokens ?? 8192,
-        // temperature: 신 reasoning 모델 (claude-opus-4-7, claude-sonnet-4-6 등) 에서
-        // "deprecated for this model" 400 응답. SDK 가 받지 않게 아예 omit.
-        // 구 모델은 default temperature 사용 (Anthropic 기본값).
-        system,
-        messages: [{ role: 'user', content: req.userPrompt }],
-      });
+      // abortSignal 전달 (audit Q-3) — SSE client disconnect 시 SDK 가 in-flight 종료.
+      // SDK v0.88+ 의 RequestOptions 두 번째 인자로 signal 전달.
+      const resp = await client.messages.create(
+        {
+          model: route.model,
+          max_tokens: req.maxOutputTokens ?? 8192,
+          // temperature: 신 reasoning 모델 (claude-opus-4-7, claude-sonnet-4-6 등) 에서
+          // "deprecated for this model" 400 응답. SDK 가 받지 않게 아예 omit.
+          // 구 모델은 default temperature 사용 (Anthropic 기본값).
+          system,
+          messages: [{ role: 'user', content: req.userPrompt }],
+        },
+        req.abortSignal ? { signal: req.abortSignal } : undefined,
+      );
 
       const text = resp.content
         .map(block => (block.type === 'text' ? block.text : ''))

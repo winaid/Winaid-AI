@@ -96,6 +96,7 @@ export async function GET(request: NextRequest) {
       userPrompt: text,
       temperature: 0.5,
       maxOutputTokens: 512,
+      abortSignal: request.signal,
     });
     return NextResponse.json(resp);
   } catch (err) {

@@ -110,6 +110,8 @@ export async function POST(request: NextRequest) {
         googleSearch: true,
         timeout: 120000,
       }),
+      // client SSE disconnect 시 in-flight 즉시 종료 (audit Q-3)
+      signal: request.signal,
     });
 
     const data = await geminiRes.json();

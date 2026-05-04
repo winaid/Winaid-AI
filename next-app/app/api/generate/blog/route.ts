@@ -85,11 +85,11 @@ export async function POST(request: NextRequest) {
   const isStream = url.searchParams.get('stream') === '1';
 
   if (isStream) {
-    return streamResponse(req, hospitalStyleBlock, userId, creditDeducted);
+    return streamResponse(req, hospitalStyleBlock, userId, creditDeducted, request.signal);
   }
 
   try {
-    const result = await generate2Pass(req, hospitalStyleBlock, userId);
+    const result = await generate2Pass(req, hospitalStyleBlock, userId, request.signal);
     const detected = filterMedicalLawViolations(result.text);
 
     return NextResponse.json({
@@ -199,6 +199,7 @@ async function generate2Pass(
   req: GenerationRequest,
   hospitalStyleBlock: string | null,
   userId: string | null,
+  abortSignal?: AbortSignal,
 ): Promise<{ text: string; usage: { inputTokens: number; outputTokens: number; costUsd: number }; model: string; mode: '2pass' | '1pass' }> {
   let outline: BlogOutline | null = null;
   try {
@@ -210,6 +211,7 @@ async function generate2Pass(
       temperature: 0.4,
       maxOutputTokens: 2048,
       userId,
+      abortSignal,
     });
     outline = parseOutlineJson(outlineResp.text, req.imageCount ?? 0);
     if (!outline) {
@@ -223,7 +225,7 @@ async function generate2Pass(
   }
 
   if (!outline) {
-    return generate1Pass(req, hospitalStyleBlock, userId);
+    return generate1Pass(req, hospitalStyleBlock, userId, abortSignal);
   }
 
   const totalSectionsForDistribution = outline.sections.length;
@@ -255,6 +257,7 @@ async function generate2Pass(
         temperature: 0.8,
         maxOutputTokens: 4096,
         userId,
+        abortSignal,
       });
     },
     SECTION_CONCURRENCY,
@@ -282,7 +285,7 @@ async function generate2Pass(
 
   if (failedCount > results.length / 2) {
     console.warn(`[generate/blog] ${failedCount}/${results.length} sections failed, falling back to 1-pass`);
-    return generate1Pass(req, hospitalStyleBlock, userId);
+    return generate1Pass(req, hospitalStyleBlock, userId, abortSignal);
   }
 
   return {
@@ -297,6 +300,7 @@ async function generate1Pass(
   req: GenerationRequest,
   hospitalStyleBlock: string | null,
   userId: string | null,
+  abortSignal?: AbortSignal,
 ): Promise<{ text: string; usage: { inputTokens: number; outputTokens: number; costUsd: number }; model: string; mode: '1pass' }> {
   const { systemBlocks, userPrompt } = buildBlogPromptV3(req, { hospitalStyleBlock });
   const resp = await callLLM({
@@ -306,6 +310,7 @@ async function generate1Pass(
     temperature: 0.85,
     maxOutputTokens: 8192,
     userId,
+    abortSignal,
   });
   return {
     text: resp.text,
@@ -324,6 +329,7 @@ function streamResponse(
   hospitalStyleBlock: string | null,
   userId: string | null,
   creditDeducted: boolean,
+  abortSignal?: AbortSignal,
 ): Response {
   const encoder = new TextEncoder();
   const startTime = Date.now();
@@ -336,7 +342,7 @@ function streamResponse(
       };
 
       try {
-        const result = await generate2PassWithProgress(req, hospitalStyleBlock, userId, send);
+        const result = await generate2PassWithProgress(req, hospitalStyleBlock, userId, send, abortSignal);
         const detected = filterMedicalLawViolations(result.text);
         send('complete', {
           text: result.text,
@@ -375,6 +381,7 @@ async function generate2PassWithProgress(
   hospitalStyleBlock: string | null,
   userId: string | null,
   send: ProgressSend,
+  abortSignal?: AbortSignal,
 ): Promise<{ text: string; usage: { inputTokens: number; outputTokens: number; costUsd: number }; model: string; mode: '2pass' | '1pass' }> {
   send('stage', { name: 'outline_start' });
 
@@ -388,6 +395,7 @@ async function generate2PassWithProgress(
       temperature: 0.4,
       maxOutputTokens: 2048,
       userId,
+      abortSignal,
     });
     outline = parseOutlineJson(outlineResp.text, req.imageCount ?? 0);
   } catch (err) {
@@ -398,7 +406,7 @@ async function generate2PassWithProgress(
 
   if (!outline) {
     send('stage', { name: 'fallback_1pass' });
-    return generate1Pass(req, hospitalStyleBlock, userId);
+    return generate1Pass(req, hospitalStyleBlock, userId, abortSignal);
   }
 
   const totalSections = outline.sections.length;
@@ -434,6 +442,7 @@ async function generate2PassWithProgress(
           temperature: 0.8,
           maxOutputTokens: 4096,
           userId,
+          abortSignal,
         });
         completedCount++;
         send('stage', { name: 'section_done', index: idx, completed: completedCount, total: totalSections });
@@ -468,7 +477,7 @@ async function generate2PassWithProgress(
 
   if (failedCount > results.length / 2) {
     send('stage', { name: 'fallback_1pass_too_many_failures' });
-    return generate1Pass(req, hospitalStyleBlock, userId);
+    return generate1Pass(req, hospitalStyleBlock, userId, abortSignal);
   }
 
   return {

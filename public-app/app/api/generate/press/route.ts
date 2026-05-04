@@ -129,6 +129,8 @@ export async function POST(request: NextRequest) {
         maxOutputTokens: 32768,
         googleSearch: true,
       }),
+      // client SSE disconnect 시 in-flight 즉시 종료 (audit Q-3)
+      signal: request.signal,
     });
 
     const data = await res.json() as { text?: string; error?: string; details?: string };
