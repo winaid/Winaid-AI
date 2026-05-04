@@ -1,16 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { buildPressPrompt, PRESS_TYPES, DOCTOR_TITLES, CATEGORIES, PRESS_CSS, type PressType } from '../../../lib/pressPrompt';
+import { PRESS_TYPES, DOCTOR_TITLES, CATEGORIES, PRESS_CSS, type PressType } from '../../../lib/pressPrompt';
 import { savePost } from '../../../lib/postStorage';
 import { getSessionSafe, getSupabaseClient, isSupabaseConfigured } from '@winaid/blog-core';
-import { getHospitalStylePrompt } from '@winaid/blog-core';
 import { ErrorPanel } from '../../../components/GenerationResult';
 import { sanitizeHtml } from '../../../lib/sanitize';
 import { stripDoctype } from '../../../lib/htmlUtils';
 import { applyContentFilters } from '@winaid/blog-core';
 import { useCreditContext } from '../layout';
-import { useCredit } from '../../../lib/creditService';
 import { consumeGuestCredit } from '../../../lib/guestCredits';
 
 export default function PressPage() {
@@ -58,30 +56,22 @@ export default function PressPage() {
     setSaveStatus(null);
 
     try {
-      // 프롬프트 조립
+      // dedicated route: server-side buildPressPrompt + 학습 말투 + 1 credit + refund
+      // (audit Q-2c — client-side useCredit revenue leak 차단, prompt injection surface 차단)
       setProgress('🗞️ 보도자료 작성 중...');
-      const { systemInstruction, prompt } = buildPressPrompt({
-        topic: topic.trim(), keywords: keywords.trim() || undefined, hospitalName: hospitalName || undefined,
-        doctorName: doctorName.trim(), doctorTitle, pressType, textLength, category,
-      });
 
-      // 병원 말투 적용
-      let finalPrompt = prompt;
-      if (hospitalName) {
-        try {
-          const stylePrompt = await getHospitalStylePrompt(hospitalName);
-          if (stylePrompt) finalPrompt = `${prompt}\n\n[병원 블로그 학습 말투 - 보도자료 스타일 유지하며 적용]\n${stylePrompt}`;
-        } catch { /* 프로파일 없으면 기본 */ }
-      }
-
-      // Google Search 연동으로 생성
-      setProgress('🔍 최신 의료 정보 검색 + 기사 작성 중...');
-      const res = await fetch('/api/gemini', {
+      const res = await fetch('/api/generate/press', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt: finalPrompt, systemInstruction, model: 'gemini-3.1-pro-preview',
-          temperature: 0.7, maxOutputTokens: 32768, googleSearch: true,
+          topic: topic.trim(),
+          keywords: keywords.trim() || undefined,
+          hospitalName: hospitalName || undefined,
+          doctorName: doctorName.trim(),
+          doctorTitle,
+          pressType,
+          textLength,
+          category,
         }),
       });
       const data = await res.json() as { text?: string; error?: string; details?: string };
@@ -103,11 +93,14 @@ export default function PressPage() {
       const finalHtml = PRESS_CSS + html;
       setGeneratedHtml(finalHtml);
 
-      // 생성 성공 → 크레딧 차감
+      // 인증 사용자 차감은 server-side (/api/generate/press, audit Q-2c) — client 는 optimistic UI.
+      // 게스트는 server 차감 skip 이라 client-side guest credit 만 그대로 차감.
       if (creditCtx.creditInfo) {
         if (creditCtx.userId) {
-          const cr = await useCredit(creditCtx.userId);
-          if (cr.success) creditCtx.setCreditInfo({ credits: cr.remaining, totalUsed: (creditCtx.creditInfo.totalUsed || 0) + 1 });
+          creditCtx.setCreditInfo({
+            credits: Math.max(0, creditCtx.creditInfo.credits - 1),
+            totalUsed: (creditCtx.creditInfo.totalUsed || 0) + 1,
+          });
         } else {
           const next = consumeGuestCredit();
           if (next) creditCtx.setCreditInfo({ credits: next.credits, totalUsed: next.totalUsed });

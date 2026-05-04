@@ -2,16 +2,14 @@
 
 import { useState } from 'react';
 import { useTeamData } from '../../../lib/useTeamData';
-import { buildPressPrompt, PRESS_TYPES, DOCTOR_TITLES, CATEGORIES, PRESS_CSS, type PressType } from '../../../lib/pressPrompt';
+import { PRESS_TYPES, DOCTOR_TITLES, CATEGORIES, PRESS_CSS, type PressType } from '../../../lib/pressPrompt';
 import { savePost } from '../../../lib/postStorage';
 import { getSessionSafe } from '@winaid/blog-core';
-import { getHospitalStylePrompt } from '@winaid/blog-core';
 import { ErrorPanel } from '../../../components/GenerationResult';
 import { sanitizeHtml } from '../../../lib/sanitize';
 import { stripDoctype } from '../../../lib/htmlUtils';
 import { applyContentFilters } from '@winaid/blog-core';
 import { useCreditContext } from '../layout';
-import { useCredit } from '../../../lib/creditService';
 import { authFetch } from '../../../lib/authFetch';
 
 export default function PressPage() {
@@ -59,71 +57,33 @@ export default function PressPage() {
     setSaveStatus(null);
 
     try {
-      // 1) 병원 크롤링 + 말투 로드 병렬 실행
-      setProgress('🏥 병원 정보 수집 중...');
+      // dedicated route: server-side crawl + buildPressPrompt + 1 credit + refund
+      // (audit Q-2c — client-side useCredit revenue leak 차단, prompt injection surface 차단)
+      setProgress('🗞️ 보도자료 작성 중 (병원 정보 수집 + 기사 작성)...');
 
-      const crawlPromise = (async (): Promise<string> => {
-        if (!hospitalWebsite.trim()) return '';
-        try {
-          // next-app 의 /api/naver/crawl-hospital-blog 는 checkAuth(Bearer) 필요. authFetch 로 토큰 자동 첨부.
-          const crawlRes = await authFetch('/api/naver/crawl-hospital-blog', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ blogUrl: hospitalWebsite.trim(), maxPosts: 1 }),
-          });
-          if (!crawlRes.ok) return '';
-          const crawlData = await crawlRes.json() as { posts?: Array<{ content?: string }> };
-          const siteContent = crawlData.posts?.[0]?.content || '';
-          if (!siteContent) return '';
-          const analysisRes = await fetch('/api/gemini', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              prompt: `다음은 ${hospitalName || 'OO병원'}의 웹사이트 내용입니다.\n\n${siteContent.slice(0, 3000)}\n\n위 병원 웹사이트에서 다음 정보를 추출해주세요:\n1. 병원의 핵심 강점 (3~5개)\n2. 특화 진료과목이나 특별한 의료 서비스\n3. 차별화된 특징 (장비, 시스템, 의료진 등)\n4. 수상 경력이나 인증 사항\n\n간결하게 핵심만 추출해주세요.`,
-              model: 'gemini-3.1-flash-lite-preview', temperature: 0.3, maxOutputTokens: 1000,
-            }),
-          });
-          if (!analysisRes.ok) return '';
-          const analysis = await analysisRes.json() as { text?: string };
-          return analysis.text ? `[🏥 ${hospitalName || 'OO병원'} 병원 정보 - 웹사이트 분석 결과]\n${analysis.text}` : '';
-        } catch { return ''; }
-      })();
-
-      const stylePromise = (async (): Promise<string> => {
-        if (!hospitalName) return '';
-        try { return await getHospitalStylePrompt(hospitalName) || ''; } catch { return ''; }
-      })();
-
-      // 병렬 대기
-      const [hospitalInfo, stylePrompt] = await Promise.all([crawlPromise, stylePromise]);
-
-      // 2) 프롬프트 조립
-      setProgress('🗞️ 보도자료 작성 중...');
-      const { systemInstruction, prompt } = buildPressPrompt({
-        topic: topic.trim(), keywords: keywords.trim() || undefined, hospitalName: hospitalName || undefined,
-        doctorName: doctorName.trim(), doctorTitle, pressType, textLength, category,
-        hospitalInfo: hospitalInfo || undefined,
-      });
-
-      // 3) 병원 말투 주입
-      let finalPrompt = prompt;
-      if (stylePrompt) finalPrompt = `${prompt}\n\n[병원 블로그 학습 말투 - 보도자료 스타일 유지하며 적용]\n${stylePrompt}`;
+      // localStorage 의 병원 특장점 — server 가 직접 못 읽으니 body 에 포함하여 송신
+      let hospitalStrengths: string | undefined;
       if (hospitalName) {
         try {
           const data = JSON.parse(localStorage.getItem('winaid_hospital_strengths') || '{}');
-          const hs = data[hospitalName];
-          if (hs) finalPrompt += `\n\n[병원 특장점]\n${hs}\n→ 주제와 관련 있는 부분만 기사체로 반영.`;
+          if (data[hospitalName]) hospitalStrengths = String(data[hospitalName]);
         } catch { /* ignore */ }
       }
 
-      // 4) Google Search 연동으로 생성
-      setProgress('🔍 최신 의료 정보 검색 + 기사 작성 중...');
-      const res = await fetch('/api/gemini', {
+      const res = await authFetch('/api/generate/press', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt: finalPrompt, systemInstruction, model: 'gemini-3.1-pro-preview',
-          temperature: 0.7, maxOutputTokens: 32768, googleSearch: true,
+          topic: topic.trim(),
+          keywords: keywords.trim() || undefined,
+          hospitalName: hospitalName || undefined,
+          hospitalWebsite: hospitalWebsite.trim() || undefined,
+          doctorName: doctorName.trim(),
+          doctorTitle,
+          pressType,
+          textLength,
+          category,
+          hospitalStrengths,
         }),
       });
       const data = await res.json() as { text?: string; error?: string; details?: string };
@@ -145,10 +105,12 @@ export default function PressPage() {
       const finalHtml = PRESS_CSS + html;
       setGeneratedHtml(finalHtml);
 
-      // 생성 성공 → 크레딧 차감
+      // 차감은 server-side (/api/generate/press, audit Q-2c). client 는 optimistic UI 만.
       if (creditCtx.userId && creditCtx.creditInfo) {
-        const creditResult = await useCredit(creditCtx.userId);
-        if (creditResult.success) creditCtx.setCreditInfo({ credits: creditResult.remaining, totalUsed: (creditCtx.creditInfo.totalUsed || 0) + 1 });
+        creditCtx.setCreditInfo({
+          credits: Math.max(0, creditCtx.creditInfo.credits - 1),
+          totalUsed: (creditCtx.creditInfo.totalUsed || 0) + 1,
+        });
       }
 
       // 5.5) 품질 평가 (규칙 기반, OLD evaluateContentQuality 동등)
