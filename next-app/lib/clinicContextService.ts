@@ -62,7 +62,7 @@ async function crawlSinglePage(url: string): Promise<string> {
 // ─── Gemini 분석 ─────────────────────────────────────────
 
 async function callGeminiForContext(prompt: string): Promise<string> {
-  const res = await fetch('/api/gemini', {
+  const res = await authFetch('/api/gemini', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

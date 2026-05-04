@@ -107,7 +107,7 @@ export default function WritingStyleLearner({
         const base64 = event.target?.result as string;
         try {
           // Gemini Vision OCR via /api/gemini
-          const res = await fetch('/api/gemini', {
+          const res = await authFetch('/api/gemini', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -159,7 +159,7 @@ export default function WritingStyleLearner({
         // pdf/docx → base64 → Gemini
         const buf = await file.arrayBuffer();
         const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
-        const res = await fetch('/api/gemini', {
+        const res = await authFetch('/api/gemini', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

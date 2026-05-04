@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import type { SlideData, SlideDecoration, CardNewsTheme, SlideLayoutType, SlideImagePosition, SlideImageStyle, SlideComparisonColumn, DesignPresetStyle } from '@winaid/blog-core';
 import { LAYOUT_LABELS, CARD_FONTS, FONT_CATEGORIES, getCardFont, SLIDE_IMAGE_STYLES } from '@winaid/blog-core';
 import type { CardTemplate } from '../lib/cardTemplateService';
+import { authFetch } from '../lib/authFetch';
 
 /**
  * CSS 선언 문자열 "height: 6px; background: red" 를 React 스타일 객체로 파싱.
@@ -365,7 +366,7 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
         subtitle: '위 슬라이드의 부제를 써줘. 25자 이내. 부제 한 줄만 출력. 따옴표·설명 금지.',
         body: '위 슬라이드의 본문을 구체적 수치 포함해 다시 써줘. 3문장 이내. 본문만 출력. 따옴표·설명 금지.',
       };
-      const res = await fetch('/api/gemini', {
+      const res = await authFetch('/api/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -407,7 +408,7 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
         columns: slide.columns,
         compareLabels: slide.compareLabels,
       });
-      const res = await fetch('/api/gemini', {
+      const res = await authFetch('/api/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -459,7 +460,7 @@ ${slideDetail}
     const key = `${idx}:enrich`;
     setAiSuggestingKey(key);
     try {
-      const res = await fetch('/api/gemini', {
+      const res = await authFetch('/api/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -510,7 +511,7 @@ ${JSON.stringify(slide, null, 2)}`,
     const key = `${idx}:comparison`;
     setAiSuggestingKey(key);
     try {
-      const res = await fetch('/api/gemini', {
+      const res = await authFetch('/api/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -2579,7 +2580,7 @@ function SlideEditor({
         afterItems: slide.afterItems,
       };
 
-      const res = await fetch('/api/gemini', {
+      const res = await authFetch('/api/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
+import { authFetch } from '../lib/authFetch';
 
 interface ContentAnalysisPanelProps {
   html: string;
@@ -119,7 +120,7 @@ export default function ContentAnalysisPanel({ html, keyword, enableAiCheck }: C
     setAiLawCheck({ loading: true, result: null, issues: [] });
     try {
       const textOnly = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 4000);
-      const res = await fetch('/api/gemini', {
+      const res = await authFetch('/api/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

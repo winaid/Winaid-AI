@@ -702,7 +702,7 @@ SEO 점수 기준:
 6. 네이버 블로그 SEO에 유리한 롱테일 키워드 포함`;
       }
 
-      const res = await fetch('/api/gemini', {
+      const res = await authFetch('/api/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -76,7 +76,7 @@ export default function YoutubePage() {
 
     try {
       // ── 1단계: 영상 전체 시간순 분석 ──
-      const summaryRes = await fetch('/api/gemini', {
+      const summaryRes = await authFetch('/api/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -138,7 +138,7 @@ YouTube URL: ${youtubeUrl.trim()}
 
       // ── 2단계: 주제 추천 ──
       try {
-        const topicsRes = await fetch('/api/gemini', {
+        const topicsRes = await authFetch('/api/gemini', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

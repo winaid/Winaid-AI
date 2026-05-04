@@ -7,6 +7,8 @@
  *     추출해서 렌더러가 거의 동일한 디자인을 재현할 수 있게 확장.
  */
 
+import { authFetch } from './authFetch';
+
 export interface CardTemplateBackgroundStyle {
   type: 'solid' | 'gradient' | 'pattern';
   gradient?: string;         // CSS gradient (e.g. "linear-gradient(180deg, #111 0%, #222 100%)")
@@ -215,7 +217,7 @@ CSS 값은 반드시 실제 동작하는 CSS여야 합니다.
   "description": "이 디자인의 전체 느낌과 특징을 2~3문장으로"
 }`;
 
-    const res = await fetch('/api/gemini', {
+    const res = await authFetch('/api/gemini', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
