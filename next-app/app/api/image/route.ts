@@ -587,9 +587,10 @@ Pure visual illustration for a blog body image — never a poster, flyer, infogr
   // Snapshot pin 권장: OPENAI_IMAGE_MODEL=gpt-image-2-2026-04-21 (silent 업그레이드 차단).
   const MODEL = process.env.OPENAI_IMAGE_MODEL || 'gpt-image-2';
   const sizeStr = aspectRatioToSize(aspectRatio);
-  // 시연 안정성 우선 — 'low' 강제 (5-15s/이미지 vs 30-290s).
-  // 시연 후 원복 PR 예정 (premium → quality='high' 복원).
-  const qualityStr: 'low' | 'medium' | 'high' | 'auto' = 'low';
+  // 'medium' 복원 (audit 후속 hotfix). 'low' 의 다양성 부족 회귀 차단 —
+  // 비슷 prompt 가 거의 같은 결과로 수렴해 슬롯 중복 발생.
+  // 비용: $0.011 → $0.042/장 (~4배). premium → quality='high' 추가 복원은 사용자 결정.
+  const qualityStr: 'low' | 'medium' | 'high' | 'auto' = 'medium';
 
   // ── 첨부 이미지 (referenceImage / logoBase64 / calendarImage) → prompt 텍스트 힌트로 변환 ──
   // gpt-image-2 의 images.edit 는 2026-04-27 부터 SDK v6.34 에서 model validation 으로 거부됨
