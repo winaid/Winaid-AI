@@ -549,10 +549,11 @@ export function ResultPanel({
               /* ── main-title (old resultAssembler.ts + cssThemes.ts modern 기준) ── */
               .rp-preview .main-title { font-size: 32px; font-weight: 900; color: #1a1a1a; margin: 0 0 30px 0; padding-bottom: 20px; line-height: 1.4; word-break: keep-all; }
 
-              /* ── bare tag fallback (Gemini HTML에 rp-* 클래스가 없는 경우, old applyThemeToHtml 동일) ── */
+              /* ── 소제목 일관 스타일: h2/h3 모두 보라색 (LLM 이 h2/h3 혼용해도 동일 표시).
+                 .rp-h2/.rp-h3 클래스는 더 높은 specificity 유지하지만 색·border 는 본 룰이 적용. ── */
               .rp-preview h1:not([class]) { font-size: 32px; font-weight: 900; margin: 30px 0 15px; line-height: 1.4; color: #1a1a1a; }
-              .rp-preview h2:not([class]) { font-size: 24px; font-weight: 700; margin: 25px 0 12px; line-height: 1.35; color: #1a1a1a; }
-              .rp-preview h3:not([class]) { font-size: 19px; font-weight: bold; margin: 30px 0 15px 0; padding: 12px 0 12px 16px; border-left: 4px solid #787fff; color: #1e40af; line-height: 1.5; }
+              .rp-preview h2 { font-size: 21px; font-weight: bold; margin: 30px 0 15px 0; padding: 12px 0 12px 16px; border-left: 4px solid #787fff; color: #1e40af; line-height: 1.5; }
+              .rp-preview h3 { font-size: 19px; font-weight: bold; margin: 30px 0 15px 0; padding: 12px 0 12px 16px; border-left: 4px solid #787fff; color: #1e40af; line-height: 1.5; }
               .rp-preview p:not([class]) { font-size: 17px; color: #333; margin-bottom: 25px; line-height: 1.85; }
 
               /* ── content-image-wrapper ── */
@@ -598,7 +599,7 @@ export function ResultPanel({
               .rp-theme-warm .rp-h1 { color: #c46d3d; padding: 20px 25px; background: #fff; border-radius: 15px; box-shadow: 0 2px 10px rgba(196,109,61,0.1); }
               .rp-theme-warm .rp-h2 { color: #c46d3d; }
               .rp-theme-warm .main-title { font-size: 32px; font-weight: 800; color: #c46d3d; padding: 20px 25px; background: #fff; border-radius: 15px; box-shadow: 0 2px 10px rgba(196,109,61,0.1); }
-              .rp-theme-warm .rp-h3, .rp-theme-warm h3:not([class]) { border-left-color: #c46d3d; color: #c46d3d; }
+              .rp-theme-warm h2, .rp-theme-warm h3 { border-left-color: #c46d3d; color: #c46d3d; }
               .rp-theme-warm .rp-p, .rp-theme-warm p:not([class]) { color: #4a4a4a; }
 
               /* ── professional ── */

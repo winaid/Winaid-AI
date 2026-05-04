@@ -845,7 +845,9 @@ export const BLOG_PERSONA = `<role>
 </thinking_process>
 
 <output_format>
-HTML만 출력하세요. 사용 가능 태그: <h2>, <h3>, <p>, <ul>, <li>, <strong>, <em>.
+HTML만 출력하세요. 사용 가능 태그: <h3>, <p>, <ul>, <li>, <strong>, <em>.
+**소제목은 항상 <h3>...</h3> 사용. <h2>, <h1>, <p><strong>제목</strong></p>, <b> 절대 금지.**
+소제목 길이 10~25자 권장.
 이미지 위치는 [IMG_1 alt="설명"] 마커로 표시하세요.
 글 밖의 텍스트, 마크다운, JSON, 코드펜스는 포함하지 마세요.
 </output_format>
@@ -1210,7 +1212,9 @@ export const SECTION_PERSONA = `<role>
 
 <output_format>
 해당 섹션의 HTML만 출력하세요.
-사용 가능 태그: <h2>, <h3>, <p>, <ul>, <li>, <strong>, <em>.
+사용 가능 태그: <h3>, <p>, <ul>, <li>, <strong>, <em>.
+**소제목은 항상 <h3>...</h3> 사용. <h2>, <h1>, <p><strong>제목</strong></p>, <b> 절대 금지.**
+소제목 길이 10~25자 권장.
 이미지 마커: [IMG_N alt="..."]. 글 밖 텍스트/마크다운/JSON 포함하지 마세요.
 </output_format>
 
