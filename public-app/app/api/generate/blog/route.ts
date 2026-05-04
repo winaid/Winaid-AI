@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
 
   // 5) 2-pass 시도 → 실패 시 1-pass fallback
   try {
-    const result = await generate2Pass(req, hospitalStyleBlock, userId);
+    const result = await generate2Pass(req, hospitalStyleBlock, userId, request.signal);
     const detected = filterMedicalLawViolations(result.text);
 
     return NextResponse.json({
@@ -159,6 +159,7 @@ async function generate2Pass(
   req: GenerationRequest,
   hospitalStyleBlock: string | null,
   userId: string | null,
+  abortSignal?: AbortSignal,
 ): Promise<{ text: string; usage: { inputTokens: number; outputTokens: number; costUsd: number }; model: string; mode: '2pass' | '1pass' }> {
   // ── Pass 1: 아웃라인 ──
   let outline: BlogOutline | null = null;
@@ -171,6 +172,7 @@ async function generate2Pass(
       temperature: 0.4,
       maxOutputTokens: 2048,
       userId,
+      abortSignal,
     });
     outline = parseOutlineJson(outlineResp.text);
     if (!outline) {
@@ -185,7 +187,7 @@ async function generate2Pass(
 
   // ── Fallback: 1-pass ──
   if (!outline) {
-    return generate1Pass(req, hospitalStyleBlock, userId);
+    return generate1Pass(req, hospitalStyleBlock, userId, abortSignal);
   }
 
   // ── Pass 2: 섹션별 병렬 생성 (동시성 cap = SECTION_CONCURRENCY) ──
@@ -207,6 +209,7 @@ async function generate2Pass(
         temperature: 0.8,
         maxOutputTokens: 4096,
         userId,
+        abortSignal,
       });
     },
     SECTION_CONCURRENCY,
@@ -235,7 +238,7 @@ async function generate2Pass(
   // 절반 이상 실패 → 1-pass fallback
   if (failedCount > results.length / 2) {
     console.warn(`[generate/blog] ${failedCount}/${results.length} sections failed, falling back to 1-pass`);
-    return generate1Pass(req, hospitalStyleBlock, userId);
+    return generate1Pass(req, hospitalStyleBlock, userId, abortSignal);
   }
 
   return {
@@ -250,6 +253,7 @@ async function generate1Pass(
   req: GenerationRequest,
   hospitalStyleBlock: string | null,
   userId: string | null,
+  abortSignal?: AbortSignal,
 ): Promise<{ text: string; usage: { inputTokens: number; outputTokens: number; costUsd: number }; model: string; mode: '1pass' }> {
   const { systemBlocks, userPrompt } = buildBlogPromptV3(req, { hospitalStyleBlock });
   const resp = await callLLM({
@@ -259,6 +263,7 @@ async function generate1Pass(
     temperature: 0.85,
     maxOutputTokens: 8192,
     userId,
+    abortSignal,
   });
   return {
     text: resp.text,

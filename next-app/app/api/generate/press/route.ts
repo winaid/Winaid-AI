@@ -107,6 +107,7 @@ export async function POST(request: NextRequest) {
           method: 'POST',
           headers: fwHeaders,
           body: JSON.stringify({ blogUrl: body.hospitalWebsite.trim(), maxPosts: 1 }),
+          signal: request.signal,
         });
         if (crawlRes.ok) {
           const crawlData = await crawlRes.json() as { posts?: Array<{ content?: string }> };
@@ -119,6 +120,7 @@ export async function POST(request: NextRequest) {
                 prompt: `다음은 ${body.hospitalName || 'OO병원'}의 웹사이트 내용입니다.\n\n${siteContent.slice(0, 3000)}\n\n위 병원 웹사이트에서 다음 정보를 추출해주세요:\n1. 병원의 핵심 강점 (3~5개)\n2. 특화 진료과목이나 특별한 의료 서비스\n3. 차별화된 특징 (장비, 시스템, 의료진 등)\n4. 수상 경력이나 인증 사항\n\n간결하게 핵심만 추출해주세요.`,
                 model: 'gemini-3.1-flash-lite-preview', temperature: 0.3, maxOutputTokens: 1000,
               }),
+              signal: request.signal,
             });
             if (analysisRes.ok) {
               const analysis = await analysisRes.json() as { text?: string };
@@ -176,6 +178,8 @@ export async function POST(request: NextRequest) {
         maxOutputTokens: 32768,
         googleSearch: true,
       }),
+      // client SSE disconnect 시 in-flight 즉시 종료 (audit Q-3)
+      signal: request.signal,
     });
 
     const data = await res.json() as { text?: string; error?: string; details?: string };

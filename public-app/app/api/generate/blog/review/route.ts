@@ -129,6 +129,7 @@ export async function POST(request: NextRequest) {
       temperature: 0.3,
       maxOutputTokens: 4096,
       userId,
+      abortSignal: request.signal,
     });
     rawText = resp.text;
     usage = resp.usage;

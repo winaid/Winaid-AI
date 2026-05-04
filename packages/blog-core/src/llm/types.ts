@@ -80,6 +80,12 @@ export interface LLMRequest {
   googleSearch?: boolean;
   /** 로깅용 user_id (미지정 시 null) */
   userId?: string | null;
+  /**
+   * 호출자 abort signal (audit Q-3). client SSE disconnect 시 server route 가
+   * `request.signal` 을 callLLM 으로 전달 → Anthropic/Gemini in-flight 즉시 종료.
+   * 미지정 시 기존 동작 (provider 내부 timeout 만 적용).
+   */
+  abortSignal?: AbortSignal;
 }
 
 export interface LLMUsage {

@@ -62,6 +62,7 @@ export async function POST(request: NextRequest) {
       temperature: 0.7,
       maxOutputTokens: 4096,
       userId,
+      abortSignal: request.signal,
     });
 
     const filtered = applyContentFilters(resp.text);

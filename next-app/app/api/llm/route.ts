@@ -53,6 +53,7 @@ export async function POST(request: NextRequest) {
       userPrompt: body.prompt,
       temperature: body.temperature ?? 0.5,
       maxOutputTokens: body.maxOutputTokens ?? 4096,
+      abortSignal: request.signal,
     });
 
     let text = res.text ?? '';

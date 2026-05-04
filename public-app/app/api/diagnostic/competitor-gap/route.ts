@@ -120,6 +120,7 @@ ${gap.strongerItems.length > 0 ? gap.strongerItems.join(', ') : '없음'}
       userPrompt: gapPrompt,
       temperature: 0.5,
       maxOutputTokens: 1000,
+      abortSignal: request.signal,
     });
     narrative = (res.text ?? '').trim();
   } catch (e) {
