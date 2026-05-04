@@ -1189,7 +1189,7 @@ JSON 형식으로 응답해주세요.`;
         imageResultsPromise = Promise.all(
           imagePrompts.slice(0, imageCount).map((p, i) => {
             const index = i + 1;
-            return fetch('/api/image', {
+            return authFetch('/api/image', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -1631,7 +1631,7 @@ JSON 형식으로 응답해주세요.`;
         const generateAndUpload = async (prompt: string, index: number): Promise<{ index: number; url: string | null }> => {
           try {
             // 6a) /api/image → base64
-            const imgRes = await fetch('/api/image', {
+            const imgRes = await authFetch('/api/image', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -2225,7 +2225,7 @@ Output ONLY the prompt. No explanation.`;
     console.info(`[BLOG] 이미지 ${imageIndex} 재생성 시작 — 프롬프트: "${newPrompt.substring(0, 60)}..."${referenceImage ? ' (참고 이미지 포함)' : ''}`);
 
     try {
-      const imgRes = await fetch('/api/image', {
+      const imgRes = await authFetch('/api/image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

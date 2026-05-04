@@ -13,6 +13,7 @@ import type { CategoryTemplate } from '../../../lib/categoryTemplateTypes';
 import { TemplateSVGPreview } from '../../../components/TemplatePreviews';
 import { CalendarThemePreview, ThemePreview } from '../../../components/CalendarPreviews';
 import { useCreditContext } from '../layout';
+import { authFetch } from '../../../lib/authFetch';
 
 type AspectRatio = '1:1' | '4:5' | 'A4' | '16:9' | '3:4' | '9:16' | '4:3' | 'auto';
 type DayMark = 'closed' | 'shortened' | 'vacation' | 'night';
@@ -1073,7 +1074,7 @@ If the result looks significantly different from the reference, you have FAILED.
         effectivePrompt += `\n\n⛔ 병원명이 입력되지 않았습니다. 이미지에 "병원명", "OO병원", "OO치과" 같은 placeholder 병원명을 절대 표시하지 마세요. 병원명 자리를 완전히 비워두세요.`;
       }
 
-      const res = await fetch('/api/image', {
+      const res = await authFetch('/api/image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

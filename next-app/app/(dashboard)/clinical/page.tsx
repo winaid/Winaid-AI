@@ -8,6 +8,7 @@ import { sanitizeHtml } from '../../../lib/sanitize';
 import { stripDoctype } from '../../../lib/htmlUtils';
 import { applyContentFilters } from '@winaid/blog-core';
 import { useCreditContext } from '../layout';
+import { authFetch } from '../../../lib/authFetch';
 
 const inputCls = 'w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm outline-none focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-500/10 transition-all placeholder:text-slate-300';
 
@@ -229,7 +230,7 @@ JSON만 출력: { "analysis": "...", "topics": [{ "topic": "...", "title": "..."
     try {
       // dedicated route: server-side buildClinicalPrompt + 1 credit deduct + refund
       // (audit Q-2b — client-side useCredit revenue leak 차단)
-      const res = await fetch('/api/generate/clinical', {
+      const res = await authFetch('/api/generate/clinical', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
