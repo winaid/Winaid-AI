@@ -461,8 +461,8 @@ interface ImageRequestBody {
 }
 
 export async function POST(request: NextRequest) {
-  // 게스트 허용: 로그인 쿠키 없으면 IP 기반 분당 10회 제한
-  const gate = gateGuestRequest(request);
+  // 게스트 허용: 로그인 쿠키 없으면 IP 기반 분당 5회 (gpt-image-2 비용 burst 차단, audit Q-1).
+  const gate = gateGuestRequest(request, 5);
   if (!gate.ok) {
     return NextResponse.json({ error: gate.error }, { status: gate.status });
   }
