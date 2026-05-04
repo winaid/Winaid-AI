@@ -501,26 +501,10 @@ export async function resetHospitalCrawlData(
 }
 
 // ── 크롤링 + 학습 ──
-
-const CRAWLER_URL = process.env.NEXT_PUBLIC_CRAWLER_URL || '';
-
-/**
- * 크롤러 엔드포인트 URL 결정.
- * 네이버 블로그는 서버사이드 fetch를 차단(403)하므로
- * 반드시 Puppeteer 기반 외부 크롤러(crawler-server/)가 필요하다.
- * NEXT_PUBLIC_CRAWLER_URL이 미설정이면 에러를 던진다.
- */
-function getCrawlerBaseUrl(): string {
-  if (CRAWLER_URL) return CRAWLER_URL;
-  throw new Error(
-    '크롤러 서버 URL이 설정되지 않았습니다.\n' +
-    '네이버 블로그는 서버사이드 fetch를 차단하므로 Puppeteer 기반 크롤러가 필요합니다.\n\n' +
-    '1. crawler-server/를 Railway에 배포하세요 (DEPLOY_GUIDE.md 참조)\n' +
-    '2. Vercel Dashboard → Settings → Environment Variables에서\n' +
-    '   NEXT_PUBLIC_CRAWLER_URL = https://your-crawler.railway.app\n' +
-    '   을 추가하세요.',
-  );
-}
+//
+// crawler-server (Railway, Puppeteer) 호출은 PR #70 이후 Bearer 인증 필수.
+// shared secret 노출 방지를 위해 next-app /api/internal/crawl-hospital-blog
+// (server-side proxy) 를 경유한다. 따라서 이 파일에서 CRAWLER_URL 직접 참조 불필요.
 
 /** 서버사이드(cron 등)에서도 /api/* 상대경로를 절대 URL로 resolve */
 function resolveApiUrl(path: string): string {
@@ -548,19 +532,21 @@ export async function crawlAndLearnHospitalStyle(
   onProgress?: (msg: string) => void,
 ): Promise<{ posts: CrawledPost[] }> {
   // 1단계: 모든 URL에서 글 크롤링
+  // PR #70 이후 crawler-server 가 Bearer 강제 → next-app 의 server-side proxy
+  // (/api/internal/crawl-hospital-blog) 로 호출. shared secret 은 server-only env.
   const allPosts: CrawledPost[] = [];
   const errors: string[] = [];
-  const crawlerBase = getCrawlerBaseUrl();
 
   for (let i = 0; i < blogUrls.length; i++) {
     const urlLabel = blogUrls.length > 1 ? ` (${i + 1}/${blogUrls.length})` : '';
     onProgress?.(`블로그 글 수집 중${urlLabel}... (최대 5개)`);
 
     try {
-      const res = await fetch(`${crawlerBase}/api/naver/crawl-hospital-blog`, {
+      const res = await fetch(resolveApiUrl('/api/internal/crawl-hospital-blog'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ blogUrl: blogUrls[i], maxPosts: 5 }),
+        credentials: 'include',
       });
       if (!res.ok) {
         const errBody = await res.text().catch(() => '');
@@ -1337,7 +1323,6 @@ export async function crawlAndScoreAllHospitals(
   options?: { includeStyleAnalysis?: boolean },
 ): Promise<void> {
   const includeStyle = options?.includeStyleAnalysis ?? false;
-  const crawlerBase = getCrawlerBaseUrl();
 
   // DB 프로필에서 URL이 있는 병원 목록 구성
   const profiles = await getAllStyleProfiles();
@@ -1371,10 +1356,12 @@ export async function crawlAndScoreAllHospitals(
 
       let posts: { url: string; content: string; title?: string; publishedAt?: string; summary?: string; thumbnail?: string }[] = [];
       try {
-        const res = await fetch(`${crawlerBase}/api/naver/crawl-hospital-blog`, {
+        // PR #70 이후 crawler-server Bearer 강제 → next-app server-side proxy 경유.
+        const res = await fetch(resolveApiUrl('/api/internal/crawl-hospital-blog'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ blogUrl: urls[urlIdx], maxPosts: 5 }),
+          credentials: 'include',
         });
         if (!res.ok) {
           onProgress?.(`${name}${urlLabel} 크롤링 실패 (${res.status})`, index, total);
