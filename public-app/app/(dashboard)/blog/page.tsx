@@ -1553,8 +1553,8 @@ JSON 형식으로 응답해주세요.`;
         // 서버 차감 반영 — 잔여는 서버 응답이 아닌 로컬 감산으로 즉시 UI 업데이트.
         // (다음 getCredits 조회 시 서버 실제값으로 재동기화됨)
         creditCtx.setCreditInfo({
-          credits: Math.max(0, creditCtx.creditInfo.credits - 2), // blog(1) + review(1)
-          totalUsed: (creditCtx.creditInfo.totalUsed || 0) + 2,
+          credits: Math.max(0, creditCtx.creditInfo.credits - 1),
+          totalUsed: (creditCtx.creditInfo.totalUsed || 0) + 1,
         });
       }
 

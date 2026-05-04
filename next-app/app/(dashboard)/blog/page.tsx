@@ -1012,8 +1012,8 @@ JSON 형식으로 응답해주세요.`;
       : null;
     if (prevCredits) {
       creditCtx.setCreditInfo({
-        credits: Math.max(0, prevCredits.credits - 2),
-        totalUsed: prevCredits.totalUsed + 2,
+        credits: Math.max(0, prevCredits.credits - 1),
+        totalUsed: prevCredits.totalUsed + 1,
       });
     }
 
