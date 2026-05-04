@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { devLog } from '../../../../lib/devLog';
 import { supabase, supabaseAdmin } from '@winaid/blog-core';
 import { checkAuth } from '../../../../lib/apiAuth';
+import { resolveImageOwner } from '../../../../lib/serverAuth';
 import { ALLOWED_MIME_TYPES, MAX_FILE_SIZE, STORAGE_BUCKET, mimeToExt } from '../../../../lib/hospitalImageService';
 
 export const maxDuration = 30;
@@ -19,9 +20,17 @@ export async function POST(request: NextRequest) {
     const auth = await checkAuth(request);
     if (auth) return auth;
 
+    // userId 는 Bearer 토큰에서 도출 (audit CR-1). client formData.userId 신뢰 차단 —
+    // 다른 user 로 위장해 storage path / DB row.user_id 점유하던 surface 차단.
+    // public-app mirror 는 이미 resolveImageOwner 사용 중 (PR #93).
+    const owner = await resolveImageOwner(request);
+    if (owner === 'guest') {
+      return NextResponse.json({ error: 'auth_required' }, { status: 401 });
+    }
+    const userId = owner;
+
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
-    const userId = (formData.get('userId') as string || '').trim() || 'guest';
 
     if (!file) {
       return NextResponse.json({ error: 'no_file' }, { status: 400 });
