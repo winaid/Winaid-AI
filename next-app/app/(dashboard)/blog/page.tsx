@@ -61,7 +61,8 @@ function BlogForm() {
   const [cssTheme, setCssTheme] = useState<CssTheme>('modern');
   const [imageStyle, setImageStyle] = useState<ImageStyle>('photo');
   const [imageCount, setImageCount] = useState(6);
-  const [imageSourceMode, setImageSourceMode] = useState<ImageSourceMode>('hybrid');
+  // default 'ai' — 사용자 인지 못한 채 library 매칭 회귀 방지 (hotfix). 라이브러리 사용자는 명시 토글.
+  const [imageSourceMode, setImageSourceMode] = useState<ImageSourceMode>('ai');
   const [imageAspectRatio, setImageAspectRatio] = useState<'4:3' | '16:9' | '1:1'>('4:3');
   const [textLength, setTextLength] = useState(1500);
 
@@ -243,13 +244,11 @@ function BlogForm() {
       }
       if (s.imageAspectRatio !== undefined) setImageAspectRatio(s.imageAspectRatio);
       if (s.imageStyle !== undefined) setImageStyle(s.imageStyle);
-      // 이미지 소스 모드 마이그레이션: 기존 useImageLibrary boolean 에서 3-way 로 자동 변환
+      // imageSourceMode — useImageLibrary boolean 자동 마이그레이션 폐지 (hotfix).
+      // 옛 staff 가 모드 인지 못한 채 library 매칭으로 회귀하던 함정 차단.
+      // 옛 useImageLibrary 키는 무시되며 다음 save 시 자연스럽게 제거됨.
       if (s.imageSourceMode !== undefined) {
         setImageSourceMode(s.imageSourceMode);
-      } else if (s.useImageLibrary !== undefined) {
-        const migrated: ImageSourceMode = s.useImageLibrary ? 'library' : 'ai';
-        setImageSourceMode(migrated);
-        console.info(`[BLOG] 이미지 소스 모드 마이그레이션: useImageLibrary=${s.useImageLibrary} → ${migrated}`);
       }
       if (s.learnedStyleId !== undefined) setLearnedStyleId(s.learnedStyleId);
       if (s.audienceMode !== undefined) setAudienceMode(s.audienceMode);
