@@ -4,7 +4,16 @@
  * Supabase RPC: get_credits, use_credit
  * Supabase 미설정 시 크레딧 무제한 (개발 환경)
  */
-import { isSupabaseConfigured, getSupabaseClient } from '@winaid/blog-core';
+import { isSupabaseConfigured, getSupabaseClient, supabaseAdmin } from '@winaid/blog-core';
+
+/**
+ * RPC 호출용 클라이언트 — supabaseAdmin (service_role) 우선, 미설정 시 anon.
+ * SQL hotfix (2026-05-04_credit_rpc_service_bypass.sql) 가 service_role 우회를
+ * 허용하므로 서버 라우트는 supabaseAdmin 으로 호출해야 forbidden 회피.
+ */
+function getRpcClient() {
+  return supabaseAdmin ?? getSupabaseClient();
+}
 
 export interface CreditInfo {
   credits: number;
@@ -21,7 +30,7 @@ export interface CreditResult {
 export async function getCredits(userId: string): Promise<CreditInfo | null> {
   if (!isSupabaseConfigured) return null;
   try {
-    const supabase = getSupabaseClient();
+    const supabase = getRpcClient();
     const { data, error } = await supabase.rpc('get_credits', { p_user_id: userId });
     if (error || !data) return null;
     const d = data as { credits: number; total_used: number };
@@ -37,7 +46,7 @@ export async function useCredit(userId: string): Promise<CreditResult> {
     return { success: true, remaining: 999 };
   }
   try {
-    const supabase = getSupabaseClient();
+    const supabase = getRpcClient();
     const { data, error } = await supabase.rpc('use_credit', { p_user_id: userId });
     if (error) return { success: false, remaining: 0, error: error.message };
     return data as CreditResult;
@@ -63,7 +72,7 @@ export async function refundCredit(userId: string, amount = 1): Promise<CreditRe
     return { success: true, remaining: 999 };
   }
   try {
-    const supabase = getSupabaseClient();
+    const supabase = getRpcClient();
     const { data, error } = await supabase.rpc('refund_credit', {
       p_user_id: userId,
       p_amount: amount,
