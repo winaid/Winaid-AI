@@ -8,10 +8,12 @@
  * openai-node 이슈 #1844 로 images.edit 가 gpt-image-2 거부 중. 픽스되면
  * OPENAI_IMAGE_EDIT_ENABLED=1 로 활성화 가능 (TODO 분기 마련됨).
  *
- * next-app 은 internal admin 도구라 게스트 IP rate limit 미적용 (대시보드 자체에 인증 가드).
+ * next-app 은 internal admin 도구. POST 핸들러는 checkAuth (Bearer/cookie) 로 보호 —
+ * 대시보드 인증 가드는 client route 보호일 뿐 API endpoint 직접 curl 차단 X (audit Q-1).
  */
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { checkAuth } from '../../../lib/apiAuth';
 
 export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
@@ -461,7 +463,10 @@ interface ImageRequestBody {
 }
 
 export async function POST(request: NextRequest) {
-  // next-app 은 internal admin (대시보드 인증 가드 의존). guest rate limit 미적용.
+  // 인증 가드 — Bearer/admin cookie 없으면 401. 익명 OpenAI 호출 차단 (audit Q-1).
+  const auth = await checkAuth(request);
+  if (auth) return auth;
+
   const keys = getOpenAIKeys();
   if (keys.length === 0) {
     return NextResponse.json(
