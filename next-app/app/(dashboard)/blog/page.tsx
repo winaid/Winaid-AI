@@ -1796,10 +1796,33 @@ JSON 형식으로 응답해주세요.`;
               revisedWithImages = revisedWithImages.replace(markerPattern, '');
             }
           }
+
+          // library 모드 보호: 원본 blogText 의 <img data-image-index="N"> 를 revisedHtml 의
+          // 남아있는 [IMG_N] 마커 위치로 복원 (Opus 가 [IMG_N] 보존하면 swap, 이미 <img> 있으면 no-op).
+          const originalImgs = [...blogText.matchAll(/<img[^>]*data-image-index="(\d+)"[^>]*>/g)];
+          for (const m of originalImgs) {
+            const num = m[1];
+            const imgTag = m[0];
+            const markerPattern = new RegExp(`\\[IMG_${num}(?:\\s+alt="[^"]*")?[^\\]]*\\]`, 'gi');
+            revisedWithImages = revisedWithImages.replace(
+              markerPattern,
+              `<div class="content-image-wrapper">${imgTag}</div>`,
+            );
+          }
+
           revisedWithImages = revisedWithImages.replace(/\[IMG_\d+[^\]]*\]\n*/g, '');
-          setGeneratedContent(revisedWithImages);
-          blogText = revisedWithImages;
-          console.info(`[BLOG] [V4] revisedHtml 적용 완료`);
+
+          // defense-in-depth: revisedHtml 의 <img> 가 원본보다 적으면 (Opus 가 마커·태그 모두 drop)
+          // 원본 유지 — 의료법 fix 손해보다 라이브러리 이미지 0개 회귀가 더 큼.
+          const originalImgCount = (blogText.match(/<img[^>]*data-image-index/g) || []).length;
+          const revisedImgCount = (revisedWithImages.match(/<img[^>]*data-image-index/g) || []).length;
+          if (originalImgCount > 0 && revisedImgCount < originalImgCount) {
+            console.warn(`[BLOG] [V4] revisedHtml <img> 손실 (${revisedImgCount}/${originalImgCount}) — 원본 유지`);
+          } else {
+            setGeneratedContent(revisedWithImages);
+            blogText = revisedWithImages;
+            console.info(`[BLOG] [V4] revisedHtml 적용 완료`);
+          }
         }
       } catch (revErr) {
         console.warn('[BLOG] [V4] review 처리 실패 — 원본 유지:', revErr);

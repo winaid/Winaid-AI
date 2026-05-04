@@ -1318,6 +1318,11 @@ issues 최대 5개.
   재작성 허용. 인사·마무리·소제목은 절대 보존.
 - 구조 high fix 도 동일 — 문제 단락만 재작성, 전체 흐름은 보존.
 - [IMG_N] 마커 위치·개수 보존.
+- **<img> 태그 보존 (library 이미지 보호)**: 입력 HTML 안에 <img src="..." data-image-index="N" ...>
+  태그가 이미 들어 있으면 위치, src, alt, data-image-index, style 모두 그대로 유지.
+  단어 수준 교체 룰 적용 시에도 <img> 태그 자체는 절대 수정·제거 금지.
+- **<div class="content-image-wrapper"> 래퍼 보존**: 이미지 wrapper div 도 그대로 유지.
+- 이미지 alt 텍스트는 의료법 위반 시에만 단어 교체 가능 (URL/태그 구조는 손대지 말 것).
 </verdict_rules>
 `;
 
