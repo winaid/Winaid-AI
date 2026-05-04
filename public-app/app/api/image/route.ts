@@ -12,6 +12,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { gateGuestRequest } from '../../../lib/guestRateLimit';
+import { resolveImageOwner } from '../../../lib/serverAuth';
+import { useCredit, refundCredit } from '../../../lib/creditService';
 
 export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
@@ -486,6 +488,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'prompt is required' }, { status: 400 });
   }
 
+  // 1 user action = 1 credit (audit Q-2a). 게스트는 차감 skip (cap 만 적용). validation 후 차감.
+  const owner = await resolveImageOwner(request);
+  const userId = owner === 'guest' ? null : owner;
+  let creditDeducted = false;
+  if (userId) {
+    const credit = await useCredit(userId);
+    if (!credit.success) {
+      return NextResponse.json(
+        { error: 'insufficient_credits', remaining: credit.remaining },
+        { status: 402 },
+      );
+    }
+    creditDeducted = true;
+  }
+
   const aspectRatio = body.aspectRatio || '1:1';
   // size 파라미터로 처리되므로 prompt 자연어 비율 지시는 제거 (중복 방지).
   // getAspectInstruction / getAspectInstructionEn 함수 정의는 롤백 대비 보존.
@@ -631,6 +648,14 @@ Pure visual illustration for a blog body image — never a poster, flyer, infogr
       if (status === 400 || status === 401 || status === 404) break;
       // 기타 (5xx, 네트워크) → 다음 키
       continue;
+    }
+  }
+
+  // 모든 키 실패 — 차감 환불 (audit Q-2a).
+  if (creditDeducted && userId) {
+    const refund = await refundCredit(userId).catch(() => null);
+    if (refund?.success) {
+      console.log(`[image] refunded 1 credit for ${userId} (remaining=${refund.remaining})`);
     }
   }
 

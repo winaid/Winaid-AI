@@ -13,7 +13,6 @@ import type { CategoryTemplate } from '../../../lib/categoryTemplateTypes';
 import { TemplateSVGPreview } from '../../../components/TemplatePreviews';
 import { CalendarThemePreview, ThemePreview } from '../../../components/CalendarPreviews';
 import { useCreditContext } from '../layout';
-import { useCredit } from '../../../lib/creditService';
 
 type AspectRatio = '1:1' | '4:5' | 'A4' | '16:9' | '3:4' | '9:16' | '4:3' | 'auto';
 type DayMark = 'closed' | 'shortened' | 'vacation' | 'night';
@@ -1104,10 +1103,12 @@ If the result looks significantly different from the reference, you have FAILED.
       if (data.imageDataUrl) {
         setResultImages(prev => { const next = [...prev, data.imageDataUrl]; setCurrentPage(next.length - 1); return next; });
 
-        // 생성 성공 → 크레딧 차감
+        // 차감은 server-side (/api/image, audit Q-2a). client 는 optimistic UI 만 갱신.
         if (creditCtx.userId && creditCtx.creditInfo) {
-          const creditResult = await useCredit(creditCtx.userId);
-          if (creditResult.success) creditCtx.setCreditInfo({ credits: creditResult.remaining, totalUsed: (creditCtx.creditInfo.totalUsed || 0) + 1 });
+          creditCtx.setCreditInfo({
+            credits: Math.max(0, creditCtx.creditInfo.credits - 1),
+            totalUsed: (creditCtx.creditInfo.totalUsed || 0) + 1,
+          });
         }
         setProgress('');
 
