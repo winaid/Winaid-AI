@@ -82,6 +82,20 @@ export function isProstheticTopic(topic: string, disease?: string): boolean {
  *
  * LLM 호출 없이 템플릿 기반 — 비용/지연 0. altText 가 비거나 너무 짧으면 topic fallback.
  */
+
+/**
+ * 슬롯 간 시각 다양화 키워드 (sectionIndex modulo 매핑).
+ * 치과 톤이 강하지만 보편 진료 장면이라 다른 카테고리도 재사용 OK.
+ */
+const SCENE_VARIANTS = [
+  'patient consultation, dentist explaining with X-ray on monitor, eye-level shot',
+  'close-up of dental tools and procedure, hands and instruments focus',
+  'wide view of bright modern clinic interior, examination chair, soft natural light',
+  'patient receiving treatment, side angle, dentist focused on procedure',
+  'dental scan or X-ray imaging on screen, professional setting',
+  'reception desk and waiting area, calm welcoming atmosphere',
+];
+
 export function buildImagePrompt(args: {
   altText: string;
   imageStyle: 'photo' | 'illustration' | 'medical' | 'custom';
@@ -112,17 +126,10 @@ export function buildImagePrompt(args: {
   const subjectHint = categoryHints[category] || 'Korean medical clinic interior';
 
   // 섹션별 다양화 키워드 — Sonnet alt 가 비슷하거나 fallback 분기일 때 슬롯 간 시각적 차별화 강제.
-  // gpt-image-2 quality:'low' 가 미세한 단어 차이는 무시하므로 장면·각도·인물 구성을 명시 (audit hotfix).
-  const sceneVariants = [
-    'patient consultation, doctor explaining with monitor or X-ray, eye-level shot',
-    'close-up of medical tools and procedure, hands and instruments focus',
-    'wide view of bright modern clinic interior, examination chair, soft natural light',
-    'patient receiving treatment, side angle, medical staff focused on procedure',
-    'medical scan or imaging on screen, professional setting, focused detail',
-    'reception desk and waiting area, calm welcoming atmosphere',
-  ];
+  // gpt-image-2 가 미세한 단어 차이는 무시하므로 장면·각도·인물 구성을 명시 (audit hotfix).
+  // 치과 톤이 강하지만 다른 카테고리도 보편적 진료 장면이라 그대로 재사용 가능.
   const variant = args.sectionIndex
-    ? sceneVariants[(args.sectionIndex - 1) % sceneVariants.length]
+    ? SCENE_VARIANTS[(args.sectionIndex - 1) % SCENE_VARIANTS.length]
     : '';
 
   // alt 부족 시 섹션 헤딩 또는 인덱스 suffix 로 슬롯별 차별화
@@ -574,13 +581,14 @@ export const IMAGE_PROMPT_GUIDE = `<image_prompt_guide>
 8. 시술 직접 묘사 금지 (피·수술 도구·절개 노출 ❌). 상담·설명·관리 장면 위주.
 9. 이미지 수(image_count)가 0이면 [IMG_N] 마커를 전혀 포함하지 마세요.
 10. 한글 alt 금지. 항상 영문. (짧은 "임플란트 설명" 류 alt는 의미 없는 프롬프트가 됨)
-11. **각 [IMG_N] alt 는 반드시 서로 다른 장면·각도·인물 구성으로 차별화**.
-    같은 prompt 또는 매우 비슷한 prompt 금지 (이미지 슬롯 간 시각적 구분 필수).
-    예 (imageCount=3):
-      - IMG_1: "Korean dentist explaining X-ray to female patient in chair, eye-level shot"
-      - IMG_2: "close-up of dental implant tools and instruments on tray, hands focus"
-      - IMG_3: "wide view of bright modern clinic reception area, soft natural light"
-    같은 시술 주제라도 슬롯마다 장면(consultation/procedure/wide-shot/tools/scan)을 의도적으로 분산.
+11. **각 [IMG_N] alt 는 반드시 서로 다른 장면·각도·인물 구성**으로 작성.
+    같은 prompt 또는 매우 비슷한 prompt 금지. 다양화 가이드:
+    - IMG_1: 의료진-환자 대화/상담 장면 (eye-level shot)
+    - IMG_2: 시술 도구·기구 close-up 또는 손/장비 focus
+    - IMG_3: 진료실 wide view 또는 대기실/리셉션 분위기
+    - IMG_4+: X-ray·CT·3D 스캔 화면, 또는 관리/회복 장면
+    같은 토픽이라도 시각 구도(close-up vs wide, eye-level vs overhead)와
+    초점 대상(dentist vs patient vs tools vs interior) 을 반드시 분산.
 </rules>
 
 <style_mapping>
