@@ -15,7 +15,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { checkAuth } from '../../../lib/apiAuth';
-import { crawlSite } from '../../../lib/diagnostic/crawler';
+import { crawlSite, detectCategory } from '../../../lib/diagnostic/crawler';
 import { fetchPsi } from '../../../lib/diagnostic/psi';
 import { scoreCategories, computeOverallScore } from '../../../lib/diagnostic/scoring';
 import { predictAIVisibility } from '../../../lib/diagnostic/aiVisibility';
@@ -31,7 +31,9 @@ import type { DiagnosticResponse, DiagnosticErrorResponse } from '../../../lib/d
 export const maxDuration = 120;
 export const dynamic = 'force-dynamic';
 
-interface Body { url?: string; customQuery?: string }
+interface Body { url?: string; customQuery?: string; category?: string }
+
+const VALID_DIAG_CATEGORIES = new Set(['치과', '피부과', '정형외과', '성형외과']);
 
 /** 사용자 직접 입력 검색어 상한 — 프론트와 일치. 초과 시 절단(거부 아님). */
 const MAX_QUERY_LEN = 100;
@@ -203,11 +205,15 @@ export async function POST(request: NextRequest) {
   logDiagnostic({ traceId, step: 'enrich', duration: Date.now() - tEnrich });
 
   const detectedRegion = customQuery ? undefined : (extractRegion(crawl) ?? undefined);
-  const availableQueries = buildDiscoveryQueries(crawl, '치과', customQuery);
+  // 카테고리 결정 우선순위: client body.category (화이트리스트) → crawler 자동 검출 (detectCategory).
+  // 이전: '치과' 하드코딩 → 정형외과/피부과 사이트도 "[지역] 치과 추천" 으로 query 생성됐던 회귀 차단.
+  const userCategory = body.category && VALID_DIAG_CATEGORIES.has(body.category) ? body.category : null;
+  const detectedCategory = userCategory ?? detectCategory(crawl);
+  const availableQueries = buildDiscoveryQueries(crawl, detectedCategory, customQuery);
 
   const final: DiagnosticResponse = {
     ...enriched,
-    detectedCategory: '치과',
+    detectedCategory,
     ...(detectedRegion ? { detectedRegion } : {}),
     availableQueries,
   };
