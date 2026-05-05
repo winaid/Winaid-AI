@@ -153,7 +153,11 @@ export function buildImagePrompt(args: {
     ? `, ${customImagePrompt.trim()}`
     : '';
 
-  return `${subjectHint}, ${subject}${customBoost}, Korean patient context, warm approachable atmosphere`;
+  const result = `${subjectHint}, ${subject}${customBoost}, Korean patient context, warm approachable atmosphere`;
+  // gpt-image-2 prompt 길이 cap (audit A-5). subjectHint + subject + customBoost +
+  // SCENE_VARIANTS + 'Korean patient...' 누적 시 1500+ 가능 → LLM context truncate /
+  // gpt-image-2 prompt 잘림 risk. customImagePrompt 가 sanitize(300) 통과해도 concat 누적.
+  return result.length > 1500 ? result.slice(0, 1500) : result;
 }
 
 export type TopicType = 'info' | 'compare' | 'aftercare' | 'symptom' | 'qna' | 'general';
