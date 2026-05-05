@@ -466,8 +466,39 @@ export function extractSourcesFromText(text: string): StreamSource[] {
 const GEMINI_CLEAN_FINISH = new Set(['STOP', 'OTHER', 'FINISH_REASON_UNSPECIFIED']);
 
 /**
+ * OpenAI 429 응답에서 retry 대기 시간 (ms) 추출.
+ * 우선순위: retry-after-ms 헤더 → retry-after 헤더 (초) → 응답 본문 'try again in Xms'.
+ */
+async function parseRetryAfterMs(res: Response): Promise<number | null> {
+  const headerMs = res.headers.get('retry-after-ms');
+  if (headerMs) {
+    const n = parseInt(headerMs, 10);
+    if (Number.isFinite(n)) return n;
+  }
+  const headerSec = res.headers.get('retry-after');
+  if (headerSec) {
+    const n = parseFloat(headerSec);
+    if (Number.isFinite(n)) return Math.round(n * 1000);
+  }
+  try {
+    const txt = await res.clone().text();
+    const m = txt.match(/try again in\s+(\d+(?:\.\d+)?)\s*(ms|s)/i);
+    if (m) {
+      const n = parseFloat(m[1]);
+      return m[2].toLowerCase() === 's' ? Math.round(n * 1000) : Math.round(n);
+    }
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
+
+/**
  * OpenAI Chat Completions 실측 — 진짜 SSE 스트림.
  * yield 된 문자열은 delta.content. 생성 완료 후 return 으로 StreamMeta 전달.
+ *
+ * gpt-5-search-api 는 모델별 별도 TPM 한도. max_tokens 3000 + 429 자동 재시도
+ * (Retry-After 헤더/본문 파싱, max 5초 cap, 최대 2회 재시도).
  */
 export async function* streamChatGPT(
   query: string,
@@ -475,22 +506,33 @@ export async function* streamChatGPT(
   const key = process.env.OPENAI_API_KEY;
   if (!key) throw new Error('OPENAI_API_KEY 미설정');
 
-  const res = await fetch(OPENAI_CHAT_COMPLETIONS_URL, {
-    method: 'POST',
-    signal: AbortSignal.timeout(300_000),
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${key}`,
-    },
-    body: JSON.stringify({
-      model: 'gpt-5-search-api',
-      // 실측 철학: 서버는 질문 한 줄만. 형식 지시 금지.
-      messages: [{ role: 'user', content: wrapAsQuestion(query) }],
-      max_tokens: 8_192,
-      stream: true,
-    }),
-  });
-  if (!res.ok || !res.body) {
+  let res: Response | null = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    res = await fetch(OPENAI_CHAT_COMPLETIONS_URL, {
+      method: 'POST',
+      signal: AbortSignal.timeout(300_000),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${key}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-5-search-api',
+        // 실측 철학: 서버는 질문 한 줄만. 형식 지시 금지.
+        messages: [{ role: 'user', content: wrapAsQuestion(query) }],
+        max_tokens: 3_000,
+        stream: true,
+      }),
+    });
+    if (res.ok && res.body) break;
+
+    if (res.status === 429 && attempt < 2) {
+      const retryMs = (await parseRetryAfterMs(res)) ?? 1000;
+      const wait = Math.min(retryMs, 5000);
+      console.warn(`[chatgpt] 429 rate limit, retry in ${wait}ms (attempt ${attempt + 1}/3)`);
+      await new Promise((r) => setTimeout(r, wait));
+      continue;
+    }
+
     let detail = `HTTP ${res.status}`;
     try {
       const body = (await res.json()) as { error?: { message?: string } };
@@ -499,6 +541,9 @@ export async function* streamChatGPT(
       /* ignore */
     }
     throw new Error(`OpenAI stream 실패: ${detail}`);
+  }
+  if (!res || !res.ok || !res.body) {
+    throw new Error('OpenAI stream 실패: max retries exhausted');
   }
 
   const reader = res.body.getReader();
