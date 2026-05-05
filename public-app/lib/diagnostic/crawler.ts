@@ -31,6 +31,43 @@ const SERVICE_KEYWORDS = [
   '비만', '다이어트', '탈모', '모발', '레이저', '보톡스', '필러', '여드름', '색소',
 ];
 
+// 진단 라우트 카테고리 자동 검출 — title + metaDescription + textContent + detectedServices
+// 에서 카테고리별 키워드 매치 카운트. 0 매치면 '치과' fallback (기존 동작 보존).
+const CATEGORY_KEYWORDS: Record<string, string[]> = {
+  '치과': ['치과', '임플란트', '교정', '사랑니', '보철', '치아', '라미네이트', '충치', '신경치료', '틀니', '스케일링', '미백', '턱관절'],
+  '피부과': ['피부', '여드름', '색소', '주름', '레이저', '보톡스', '필러', '리프팅', '제모', '탈모', '모발'],
+  '정형외과': ['정형외과', '관절', '척추', '디스크', '도수치료', '체외충격파', '관절경', '오십견', '회전근개'],
+  '성형외과': ['성형', '코성형', '눈성형', '안면윤곽', '가슴성형', '지방흡입'],
+};
+
+const CATEGORY_PRIORITY = ['치과', '피부과', '정형외과', '성형외과'];
+
+export function detectCategory(crawl: CrawlResult): string {
+  const corpus = [
+    crawl.title || '',
+    crawl.metaDescription || '',
+    (crawl.detectedServices || []).join(' '),
+    crawl.textContent || '',
+  ].join(' ').toLowerCase();
+
+  if (!corpus.trim()) return '치과';
+
+  const scores: Array<[string, number]> = [];
+  for (const [cat, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
+    let count = 0;
+    for (const kw of keywords) {
+      if (corpus.includes(kw.toLowerCase())) count++;
+    }
+    if (count > 0) scores.push([cat, count]);
+  }
+  if (scores.length === 0) return '치과';
+  scores.sort((a, b) => {
+    if (b[1] !== a[1]) return b[1] - a[1];
+    return CATEGORY_PRIORITY.indexOf(a[0]) - CATEGORY_PRIORITY.indexOf(b[0]);
+  });
+  return scores[0][0];
+}
+
 const FAQ_KEYWORDS = ['faq', '자주', '질문', '궁금', 'q&a', 'qna'];
 const LOCATION_KEYWORDS = ['오시는', '위치', '찾아오', '약도', 'location', 'map', 'directions'];
 const CONTACT_KEYWORDS = ['연락처', 'contact', '문의', '전화'];

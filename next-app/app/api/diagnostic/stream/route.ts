@@ -22,7 +22,7 @@
 import { NextRequest } from 'next/server';
 import { checkAuth } from '../../../../lib/apiAuth';
 import { supabase, supabaseAdmin } from '@winaid/blog-core';
-import { crawlSite } from '../../../../lib/diagnostic/crawler';
+import { crawlSite, detectCategory } from '../../../../lib/diagnostic/crawler';
 import {
   streamChatGPT,
   streamGemini,
@@ -118,7 +118,11 @@ interface Body {
   platform?: string;
   /** Phase 3: 다중 쿼리 패턴 ID (recommend/service/price/urgent). 없으면 customQuery 또는 기본값. */
   queryId?: string;
+  /** 카테고리 명시 (화이트리스트 외 무시 → detectCategory 자동 검출). */
+  category?: string;
 }
+
+const VALID_DIAG_CATEGORIES = new Set(['치과', '피부과', '정형외과', '성형외과']);
 
 function sanitizeCustomQuery(raw: unknown): string | undefined {
   if (typeof raw !== 'string') return undefined;
@@ -185,15 +189,19 @@ export async function POST(request: NextRequest) {
     return jsonError(502, '사이트 크롤에 실패했습니다.', { detail: msg });
   }
 
+  // 카테고리 결정 — '치과' 하드코딩 제거 (audit hotfix). client body.category 화이트리스트 우선.
+  const userCategory = body.category && VALID_DIAG_CATEGORIES.has(body.category) ? body.category : null;
+  const detectedCategory = userCategory ?? detectCategory(crawl);
+
   // Phase 3: queryId 가 있으면 다중 쿼리에서 매칭, 없으면 단일 쿼리(customQuery 또는 자동).
   const queryId = typeof body.queryId === 'string' ? body.queryId.trim() : '';
   let query: string;
   if (queryId && !customQuery) {
-    const queries = buildDiscoveryQueries(crawl, '치과');
+    const queries = buildDiscoveryQueries(crawl, detectedCategory);
     const matched = queries.find((q) => q.id === queryId);
-    query = matched?.query ?? buildDiscoveryQuery(crawl, '치과');
+    query = matched?.query ?? buildDiscoveryQuery(crawl, detectedCategory);
   } else {
-    query = buildDiscoveryQuery(crawl, '치과', customQuery);
+    query = buildDiscoveryQuery(crawl, detectedCategory, customQuery);
   }
   const selfHost = hostOf(crawl.finalUrl);
 
