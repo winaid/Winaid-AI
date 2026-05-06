@@ -132,10 +132,9 @@ function BlogForm() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const [selectedHospitalAddress, setSelectedHospitalAddress] = useState('');
-  const [medicalLawMode, setMedicalLawMode] = useState<'strict' | 'relaxed'>(() => {
-    if (typeof window === 'undefined') return 'strict';
-    return (localStorage.getItem('medicalLawMode') as 'strict' | 'relaxed') || 'strict';
-  });
+  // BL-A-004: medicalLawMode 'relaxed' 토글은 builder 에서 참조 0건의 dead code 였다.
+  // UI 거짓 약속 + 향후 회귀 risk 차단을 위해 state/요청 필드/타입 정의 일괄 제거.
+  // 의료법 정책은 strict-only 로 일원화 (기존 동작과 동일).
   const [includeFaq, setIncludeFaq] = useState(false);
   const [faqCount, setFaqCount] = useState(3);
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -219,11 +218,11 @@ function BlogForm() {
   );
 
   const handleSaveSettings = useCallback(() => {
-    const s = { category, hospitalName, selectedHospitalAddress, homepageUrl, textLength, imageCount, imageAspectRatio, imageStyle, audienceMode, persona, tone, writingStyle, medicalLawMode, includeFaq, faqCount, includeHospitalIntro, customSubheadings };
+    const s = { category, hospitalName, selectedHospitalAddress, homepageUrl, textLength, imageCount, imageAspectRatio, imageStyle, audienceMode, persona, tone, writingStyle, includeFaq, faqCount, includeHospitalIntro, customSubheadings };
     localStorage.setItem(getSettingsKey(), JSON.stringify(s));
     setSettingsToast('💾 설정 저장됨');
     setTimeout(() => setSettingsToast(''), 1500);
-  }, [category, hospitalName, selectedHospitalAddress, homepageUrl, textLength, imageCount, imageAspectRatio, imageStyle, audienceMode, persona, tone, writingStyle, medicalLawMode, includeFaq, faqCount, includeHospitalIntro, customSubheadings, getSettingsKey]);
+  }, [category, hospitalName, selectedHospitalAddress, homepageUrl, textLength, imageCount, imageAspectRatio, imageStyle, audienceMode, persona, tone, writingStyle, includeFaq, faqCount, includeHospitalIntro, customSubheadings, getSettingsKey]);
 
   const applySettings = useCallback((raw: string) => {
     try {
@@ -240,7 +239,7 @@ function BlogForm() {
       if (s.persona) setPersona(s.persona);
       if (s.tone) setTone(s.tone);
       if (s.writingStyle) setWritingStyle(s.writingStyle);
-      if (s.medicalLawMode) setMedicalLawMode(s.medicalLawMode);
+      // BL-A-004: medicalLawMode 는 dead code 로 제거 — 과거 저장본은 무시.
       if (s.includeFaq !== undefined) setIncludeFaq(s.includeFaq);
       if (s.faqCount) setFaqCount(s.faqCount);
       // includeHospitalIntro 는 항상 true — localStorage 복원 skip
@@ -932,7 +931,7 @@ JSON 형식으로 응답해주세요.`;
       keywordDensity,
       youtubeTranscript: youtubeTranscript || undefined,
       clinicalContext: clinicalContext || undefined,
-      medicalLawMode,
+      // BL-A-004: medicalLawMode 'relaxed' 는 builder 미참조 dead toggle 이라 request 필드도 제거.
       includeFaq,
       faqCount: includeFaq ? faqCount : undefined,
       customSubheadings: customSubheadings.trim() || undefined,
@@ -1814,7 +1813,7 @@ Output ONLY the prompt. No explanation.`;
             fullBlogContent: generatedContent,
             category,
             keywords,
-            medicalLawMode,
+            // BL-A-004: medicalLawMode 제거 (dead code).
             stylePromptText: sectionLearnedStylePrompt,
           },
           userId: creditCtx.userId || null,
@@ -1855,7 +1854,7 @@ Output ONLY the prompt. No explanation.`;
     } finally {
       setRegeneratingSection(null);
     }
-  }, [blogSections, generatedContent, regeneratingSection, category, keywords, medicalLawMode, sectionLearnedStylePrompt]);
+  }, [blogSections, generatedContent, regeneratingSection, category, keywords, sectionLearnedStylePrompt]);
 
   // ── Word / PDF 다운로드 ──
   const handleDownloadWord = useCallback(async () => {

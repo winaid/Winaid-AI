@@ -27,7 +27,7 @@ export interface SectionRegenerateInputV3 {
   fullBlogContent: string;
   category?: string;
   keywords?: string;
-  medicalLawMode?: 'strict' | 'relaxed';
+  // BL-A-004: medicalLawMode 'relaxed' 토글은 builder 미참조 dead code — 제거.
   stylePromptText?: string;
 }
 
