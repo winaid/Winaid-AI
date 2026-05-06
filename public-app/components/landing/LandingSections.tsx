@@ -611,6 +611,11 @@ function LandingSections() {
             </span>
           </div>
           <div className="pt-8 border-t border-slate-800/50 text-center text-xs text-slate-600 font-medium">
+            <div className="mb-3">
+              <a href="/privacy" className="text-slate-500 hover:text-blue-400 transition-colors">
+                개인정보처리방침
+              </a>
+            </div>
             &copy; {new Date().getFullYear()} WINAI. All rights reserved.
           </div>
         </div>
