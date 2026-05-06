@@ -201,6 +201,10 @@ async function generate2Pass(
         outline,
         req,
         hospitalStyleBlock,
+        // BL-A-003: 사용자 keywordDensity 입력이 2-pass 정상 경로에서 silently 무시되던 회귀 수정.
+        // builder 가 'number' density 분기로 섹션별 분배 계산하도록 인자 복원.
+        density: req.keywordDensity,
+        totalSections: outline.sections.length,
       });
       return callLLM({
         task: 'blog_unified',
