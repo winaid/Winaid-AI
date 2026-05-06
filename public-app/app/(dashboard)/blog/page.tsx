@@ -65,6 +65,8 @@ function BlogForm() {
   // 이미지 수량 자동 추천
   const imageCountManualRef = useRef(false);
   const generateAbortRef = useRef<AbortController | null>(null);
+  // BL-A-001: 섹션 재생성 전용 AbortController — 페이지 이탈 시 백그라운드 fetch 정리
+  const sectionAbortRef = useRef<AbortController | null>(null);
   const recommendedImageCount = useMemo(() => {
     if (textLength <= 1000) return 4;
     if (textLength <= 1500) return 6;
@@ -260,12 +262,16 @@ function BlogForm() {
     if (raw) applySettings(raw);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // 언마운트 시 진행 중 SSE abort
+  // 언마운트 시 진행 중 SSE / 섹션 재생성 abort (BL-A-001)
   useEffect(() => {
     return () => {
       if (generateAbortRef.current) {
         generateAbortRef.current.abort();
         generateAbortRef.current = null;
+      }
+      if (sectionAbortRef.current) {
+        sectionAbortRef.current.abort();
+        sectionAbortRef.current = null;
       }
     };
   }, []);
@@ -1053,6 +1059,7 @@ JSON 형식으로 응답해주세요.`;
           stylePromptText: request.stylePromptText,
           userId: creditCtx.userId || null,
         }),
+        signal: abortSignal, // BL-A-001: 페이지 이탈 시 Opus 4.7 호출 중단
       }).then(r => r.json()).catch((err: unknown) => ({
         verdict: 'pass' as const,
         issues: [] as Array<{ category: string; severity: string; problem?: string; suggestion?: string }>,
@@ -1072,6 +1079,7 @@ JSON 형식으로 응답해주세요.`;
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ prompt: p, aspectRatio: imageAspectRatio, mode: 'blog' as const }),
+              signal: abortSignal, // BL-A-001: 페이지 이탈 시 이미지 fan-out 중단
             }).then(r => r.ok ? r.json() : null)
               .then(d => ({ index, url: (d?.imageDataUrl as string | undefined) || null }))
               .catch(() => ({ index, url: null as string | null }));
@@ -1285,6 +1293,7 @@ JSON 형식으로 응답해주세요.`;
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ prompt, aspectRatio: imageAspectRatio, mode: 'blog' as const }),
+                signal: abortSignal, // BL-A-001: 페이지 이탈 시 fallback 이미지 재생성도 중단
               });
               if (!imgRes.ok) { if (attempt === 0) { await new Promise(r => setTimeout(r, 2000)); continue; } break; }
               const imgData = await imgRes.json() as { imageDataUrl?: string };
@@ -1786,6 +1795,11 @@ Output ONLY the prompt. No explanation.`;
     setRegeneratingSection(sectionIndex);
     setSectionProgress(`"${section.type === 'intro' ? '도입부' : section.title}" 재생성 중...`);
 
+    // BL-A-001: 진행 중 섹션 재생성이 있다면 abort 후 새 controller 발급
+    if (sectionAbortRef.current) sectionAbortRef.current.abort();
+    sectionAbortRef.current = new AbortController();
+    const sectionAbortSignal = sectionAbortRef.current.signal;
+
     try {
       const sectionTitle = section.type === 'intro' ? '도입부' : section.title;
 
@@ -1805,6 +1819,7 @@ Output ONLY the prompt. No explanation.`;
           },
           userId: creditCtx.userId || null,
         }),
+        signal: sectionAbortSignal, // BL-A-001: 페이지 이탈 시 섹션 재생성 중단
       });
 
       const data = await res.json() as { text?: string; error?: string };

@@ -2,18 +2,34 @@
  * 프롬프트 인젝션 방어 — 사용자 입력을 LLM 프롬프트에 삽입하기 전 정리.
  *
  * 방어 포인트:
- *  1) 구조 문자 제거: 대괄호 `[ ]`, 중괄호 `{ }`, 백틱, 따옴표 타입 정규화
+ *  1) Unicode 정규화 (NFKC) — 한자/전각/유사문자 fold → homoglyph 우회 차단
+ *  2) Zero-width / BiDi / 비가시 문자 제거 — `i​gnore previous` (ZWSP 삽입) 우회 차단
+ *     (AI-002 / BL-A-009 회귀 fix — 2026-05-06)
+ *  3) 구조 문자 제거: 대괄호 `[ ]`, 중괄호 `{ }`, 백틱, 따옴표 타입 정규화
  *     → 시스템 블록을 가장하는 `[system]`, `[new instruction]` 같은 wrapping 방지
- *  2) XML 태그 제거 (`<...>`): 시스템 프롬프트가 <heading>/<facts>/<draft_to_review>
+ *  4) XML 태그 제거 (`<...>`): 시스템 프롬프트가 <heading>/<facts>/<draft_to_review>
  *     같은 envelope 사용 → 사용자 입력의 `</heading>` 같은 closing tag 가
  *     LLM 의 attention boundary 를 깰 수 있음 (B9 — Agent 5)
- *  3) 역할 가장 키워드 제거: "시스템/지시/instruction/ignore previous/override" 등
- *  4) 연속 줄바꿈 압축 → prompt 경계 흐림 방지
- *  5) 길이 캡(기본 300자) → 토큰 경제 + 공격 페이로드 축소
+ *  5) 역할 가장 키워드 제거: "시스템/지시/instruction/ignore previous/override" 등
+ *  6) 연속 줄바꿈 압축 → prompt 경계 흐림 방지
+ *  7) 길이 캡(기본 300자) → 토큰 경제 + 공격 페이로드 축소
  *
  * 참고: 100% 방어는 불가능 — 이 함수는 가장 흔한 패턴만 차단.
  *       구조화된 출력(responseSchema)이 더 강력한 방어라는 점 기억할 것.
  */
+
+/**
+ * 비가시 / 제로폭 / BiDi override / NBSP — 인젝션 우회에 악용되는 Unicode.
+ * - U+200B ZWSP, U+200C ZWNJ, U+200D ZWJ, U+2060 WORD JOINER
+ * - U+2061..U+2064 invisible math operators
+ * - U+FEFF BOM / ZWNBSP
+ * - U+00A0 NBSP (`ignore previous` 류)
+ * - U+202A..U+202E BiDi embedding/override (LRE/RLE/PDF/LRO/RLO)
+ * - U+2066..U+2069 BiDi isolate (LRI/RLI/FSI/PDI)
+ * - U+180E Mongolian Vowel Separator
+ */
+const INVISIBLE_CHARS_RE =
+  /[\u00A0\u180E\u200B-\u200F\u202A-\u202E\u2060-\u2064\u2066-\u2069\uFEFF]/g;
 
 const INJECTION_KEYWORDS: RegExp[] = [
   // 한국어 — 역할 가장 / 지시 변경 명령
@@ -51,9 +67,15 @@ export function sanitizePromptInput(text: string | undefined | null, maxLen = 30
   if (!text) return '';
   let s = String(text);
 
+  // Unicode 정규화 (NFKC) — 한자/전각/유사문자 fold (homoglyph 우회 차단, AI-002)
+  s = s.normalize('NFKC');
+
   // 제어문자 제거 (탭/줄바꿈 유지)
   // eslint-disable-next-line no-control-regex
   s = s.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+
+  // 비가시/제로폭/BiDi/NBSP 제거 — `i​gnore previous` 류 우회 차단 (AI-002 / BL-A-009)
+  s = s.replace(INVISIBLE_CHARS_RE, '');
 
   // XML/HTML envelope tag 제거 (closing/opening 모두) — prompt 경계 가장 차단
   s = s.replace(TAG_LIKE_RE, ' ');
@@ -103,9 +125,15 @@ export function sanitizeSourceContent(text: string | undefined | null, maxLen = 
   if (!text) return '';
   let s = String(text);
 
+  // Unicode 정규화 (NFKC) — 한자/전각/유사문자 fold (homoglyph 우회 차단, AI-002)
+  s = s.normalize('NFKC');
+
   // 제어문자 제거 (탭/줄바꿈 유지)
   // eslint-disable-next-line no-control-regex
   s = s.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+
+  // 비가시/제로폭/BiDi/NBSP 제거 — envelope tag 가장 결합 우회 차단 (AI-002 / BL-A-009)
+  s = s.replace(INVISIBLE_CHARS_RE, '');
 
   // XML/HTML envelope tag 제거 — review/route.ts 가 source 를 <draft_to_review>{src}</draft_to_review>
   // 안에 보간하므로 source 안 closing tag 가 envelope 종결을 가장 가능 (B9 — Agent 5).
