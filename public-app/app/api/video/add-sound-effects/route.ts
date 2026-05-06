@@ -14,10 +14,16 @@
  *   - video-processor 미설정 → 503
  *   - 처리 실패 → 원본 그대로 반환 (BGM 라우트와 동일 패턴)
  *   - sfx 라이브러리 비어있는 경우는 video-processor 자체가 원본 + applied:false로 응답
+ *
+ * BIZ-001: step별 1 credit 차감 (PR #109 BIZ-003 패턴 동일).
+ *   - graceful skip (원본 반환) 은 정상 200 응답이므로 환불하지 않음.
+ *   - 예외 발생 시에만 환불.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { gateGuestRequest } from '../../../../lib/guestRateLimit';
+import { resolveImageOwner } from '../../../../lib/serverAuth';
+import { useCredit, refundCredit } from '../../../../lib/creditService';
 import { proxyFormData, isVideoProcessorConfigured, translateVideoError } from '../../../../lib/videoProxy';
 
 export const maxDuration = 300;
@@ -30,6 +36,32 @@ export async function POST(request: NextRequest) {
   if (!isVideoProcessorConfigured()) {
     return NextResponse.json({ error: '영상 처리 서버가 설정되지 않았습니다.' }, { status: 503 });
   }
+
+  // BIZ-001: 인증 → 차감 (게스트 skip)
+  const owner = await resolveImageOwner(request);
+  const userId = owner === 'guest' ? null : owner;
+  let creditDeducted = false;
+  if (userId) {
+    const credit = await useCredit(userId);
+    if (!credit.success) {
+      return NextResponse.json(
+        { error: 'insufficient_credits', remaining: credit.remaining },
+        { status: 402 },
+      );
+    }
+    creditDeducted = true;
+  }
+
+  const refundOnFail = async () => {
+    if (creditDeducted && userId) {
+      const refund = await refundCredit(userId).catch(() => null);
+      if (refund?.success) {
+        console.log(
+          `[video/add-sound-effects] refunded 1 credit for ${userId.slice(0, 8)} (remaining=${refund.remaining})`,
+        );
+      }
+    }
+  };
 
   try {
     const formData = await request.formData();
@@ -55,6 +87,8 @@ export async function POST(request: NextRequest) {
           },
         });
       }
+      // file 없는 경우만 진짜 에러 — 환불
+      await refundOnFail();
       return NextResponse.json({ error: '효과음 합성 실패' }, { status: 500 });
     }
 
@@ -68,6 +102,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (err) {
+    await refundOnFail();
     const msg = err instanceof Error ? translateVideoError(err.message) : '효과음 합성 실패';
     return NextResponse.json({ error: msg }, { status: 500 });
   }
