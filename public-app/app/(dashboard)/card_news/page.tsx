@@ -21,7 +21,6 @@ import { saveDraft, loadDraft, clearDraft, type CardNewsDraft, type CardRatio, t
 import { ContentCategory } from '@winaid/blog-core';
 import type { WritingStyle, CardNewsDesignTemplateId, TrendingItem, AudienceMode } from '@winaid/blog-core';
 import { useCreditContext } from '../layout';
-import { useCredit as cardNewsUseCredit } from '../../../lib/creditService';
 import { consumeGuestCredit } from '../../../lib/guestCredits';
 import { overlayLogo } from '../../../lib/cardDownloadUtils';
 import { applyContentFilters } from '@winaid/blog-core';
@@ -851,7 +850,9 @@ export default function CardNewsPage() {
 비주얼 키워드: ${safeVisualKeyword}
 모든 슬라이드의 visualKeyword 필드에 "${safeVisualKeyword}" 스타일을 반영하세요. 카드 전체 분위기를 이 이미지와 통일해야 합니다.`
         : '';
-      const res = await fetch('/api/gemini', {
+      // BIZ-003 시교정: 크레딧 차감을 클라이언트 사이드에서 서버 라우트로 이동.
+      // 서버가 인증 → useCredit → Gemini 호출 → 실패 시 refundCredit 흐름을 강제.
+      const res = await fetch('/api/generate/card_news', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -865,7 +866,11 @@ export default function CardNewsPage() {
       });
       const data = await res.json() as { text?: string; error?: string; details?: string };
       if (!res.ok || !data.text) {
-        setError(data.error || data.details || `서버 오류 (${res.status})`);
+        if (res.status === 402) {
+          setError('크레딧이 부족합니다. 충전 후 다시 시도해주세요.');
+        } else {
+          setError(data.error || data.details || `서버 오류 (${res.status})`);
+        }
         return;
       }
       let slides: ProSlideData[];
@@ -904,11 +909,16 @@ export default function CardNewsPage() {
       setPipelineStep('idle');
       setPageStep(2); // 생성 완료 → 편집 단계로 전환
 
-      // 생성 성공 → 크레딧 차감
+      // BIZ-003 시교정: 로그인 사용자의 크레딧 차감은 /api/generate/card_news 가
+      // 이미 처리. 클라이언트는 표시값만 optimistic 업데이트. 게스트는 기존대로
+      // localStorage 카운터 (consumeGuestCredit) 유지.
       if (creditCtx.creditInfo) {
         if (creditCtx.userId) {
-          const creditResult = await cardNewsUseCredit(creditCtx.userId);
-          if (creditResult.success) creditCtx.setCreditInfo({ credits: creditResult.remaining, totalUsed: (creditCtx.creditInfo.totalUsed || 0) + 1 });
+          const prev = creditCtx.creditInfo;
+          creditCtx.setCreditInfo({
+            credits: Math.max(0, (prev.credits ?? 0) - 1),
+            totalUsed: (prev.totalUsed || 0) + 1,
+          });
         } else {
           const next = consumeGuestCredit();
           if (next) creditCtx.setCreditInfo({ credits: next.credits, totalUsed: next.totalUsed });
