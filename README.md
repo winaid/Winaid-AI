@@ -236,6 +236,12 @@ RUN_INTEGRATION=1 npm run test:e2e
 
 ---
 
+## CI (GitHub Actions)
+
+PR 생성 시 자동으로 양쪽 앱(`public-app`, `next-app`)의 `tsc --noEmit` + `next build` 가 실행됩니다 (`.github/workflows/ci.yml`). 4개 job 중 하나라도 실패하면 머지 차단을 권장하며, **브랜치 보호 규칙**(필수 status checks)은 GitHub 저장소 Settings → Branches 에서 활성화해야 합니다 (코드 영역이 아닌 저장소 설정). secret 이 필요한 작업(Sentry source map 업로드 등)은 본 워크플로우 범위 밖이며 별도 PR 로 분리합니다. Playwright e2e 도 본 워크플로우에는 포함되지 않습니다.
+
+---
+
 ### 브랜치 전환 후 tsc 가짜 오류
 
 `.tsbuildinfo` 또는 `.next/types/validator.ts` 가 이전 브랜치의 라우트를 참조하면서 `Cannot find module '...route.js'` 가짜 오류가 나는 경우가 있다. 다음 명령으로 캐시 정리:
