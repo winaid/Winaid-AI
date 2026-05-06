@@ -3,7 +3,8 @@
  *
  * 흐름:
  *   1) Opus 4.6 이 11개 체크리스트로 초안을 JSON 감수.
- *   2) JSON parse 실패 → graceful degrade (verdict='pass', summaryNote='parse_failed_passthrough').
+ *   2) JSON parse 실패 → fail-closed (BL-A-P2). regex 안전망(applyContentFilters) 결과로
+ *      verdict='minor_fix' (치환 발생) / 'major_fix' (치환 0) 결정. 절대 'pass' 자동 통과 X.
  *   3) verdict !== 'pass' 이고 revisedHtml 있으면 regex 안전망(applyContentFilters) 적용.
  *   4) verdict === 'pass' 인데 ruleFilterViolations 가 비어있지 않으면,
  *      서버가 자체적으로 applyContentFilters(draftHtml) 을 돌려 revisedHtml 로 채우고
@@ -171,10 +172,27 @@ export async function POST(request: NextRequest) {
   let qualityScores: { safety?: number; conversion?: number } | undefined;
 
   if (!parsed) {
-    verdict = 'pass';
-    issues = [];
-    revisedHtml = null;
-    summaryNote = 'parse_failed_passthrough';
+    // BL-A-P2 fail-closed: parse 실패 시 verdict='pass' 로 우회하던 fail-open 제거.
+    // LLM 호출 실패 분기와 동일한 정책 — regex 안전망 결과로 minor_fix / major_fix 결정.
+    const filtered = applyContentFilters(draftHtml);
+    const fellbackVerdict: 'minor_fix' | 'major_fix' = filtered.replacedCount > 0 ? 'minor_fix' : 'major_fix';
+    console.warn(`[generate/blog/review] JSON parse 실패 fail-closed: verdict=${fellbackVerdict}, replacedCount=${filtered.replacedCount}`);
+    return NextResponse.json({
+      verdict: fellbackVerdict,
+      issues: [{
+        category: 'medical_law',
+        severity: 'high',
+        problem: `감수 결과 JSON 파싱에 실패했습니다. 정규식 안전망이 ${filtered.replacedCount}건 치환했습니다. 게시 전 수동 검토를 권장합니다.`,
+        suggestion: '안전망 결과를 검토하거나, 잠시 후 감수를 재시도해 주세요.',
+      }],
+      revisedHtml: filtered.replacedCount > 0 ? filtered.filtered : null,
+      summaryNote: filtered.replacedCount > 0
+        ? `parse_failed_safetynet_replaced (${filtered.replacedCount}건)`
+        : 'parse_failed_manual_review_required',
+      usage,
+      model,
+      warning: 'review_parse_failed',
+    });
   } else {
     verdict = parsed.verdict === 'minor_fix' || parsed.verdict === 'major_fix' ? parsed.verdict : 'pass';
     issues = Array.isArray(parsed.issues) ? parsed.issues.slice(0, 5) : [];
