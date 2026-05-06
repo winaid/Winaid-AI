@@ -4,8 +4,8 @@
  * BGM 합성 프록시 — video-processor 서버로 요청을 전달한다.
  *
  * BIZ-001: step별 1 credit 차감 (PR #109 BIZ-003 패턴 동일).
- *   - graceful skip (원본 반환) 은 정상 200 응답이므로 환불하지 않음.
- *   - 예외 발생 시에만 환불.
+ *   - graceful skip (원본 반환) 은 가치 미전달이므로 풀 환불 (PR #114 follow-up).
+ *   - 예외 발생 시에도 환불.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -60,6 +60,13 @@ export async function POST(request: NextRequest) {
       const file = formData.get('file') as File | null;
       if (file) {
         const buf = await file.arrayBuffer();
+        // graceful skip refund: external provider failed, value not delivered
+        if (creditDeducted && userId) {
+          const refund = await refundCredit(userId).catch(() => null);
+          if (refund?.success) {
+            console.log(`[video/add-bgm] graceful-skip refunded 1 credit for ${userId.slice(0, 8)} (remaining=${refund.remaining})`);
+          }
+        }
         return new NextResponse(buf, {
           status: 200,
           headers: {
