@@ -529,6 +529,23 @@ export function extractSourcesFromText(text: string): StreamSource[] {
 const GEMINI_CLEAN_FINISH = new Set(['STOP', 'OTHER', 'FINISH_REASON_UNSPECIFIED']);
 
 /**
+ * 429 backoff 계산 정책 — TPM bucket 은 분 단위 회복이라 OpenAI 가 보고하는
+ * retry-after-ms (예: 80ms) 를 그대로 신뢰하면 다음 분 한도에 또 부딪혀 폭주.
+ * floor 2s · cap 30s · ±20% jitter 로 안정화. 호출부에서 attempt 별로 사용.
+ */
+const RETRY_FLOOR_MS = 2_000;
+const RETRY_CAP_MS = 30_000;
+
+function clampRetryDelay(rawMs: number | null, attempt: number): number {
+  // raw null 이면 attempt 기반 exponential (2s · 4s · 8s …) 적용
+  const base = rawMs ?? Math.min(RETRY_FLOOR_MS * Math.pow(2, attempt), RETRY_CAP_MS);
+  const clamped = Math.max(RETRY_FLOOR_MS, Math.min(base, RETRY_CAP_MS));
+  // ±20% jitter — 동시 사용자 retry lockstep 방지
+  const jitter = clamped * (0.8 + Math.random() * 0.4);
+  return Math.round(jitter);
+}
+
+/**
  * OpenAI 429 응답에서 retry 대기 시간 (ms) 추출.
  * 우선순위: retry-after-ms 헤더 → retry-after 헤더 (초) → 응답 본문 'try again in Xms'.
  * 실패 시 null. 호출부에서 default fallback 적용.
@@ -563,7 +580,8 @@ async function parseRetryAfterMs(res: Response): Promise<number | null> {
  *
  * gpt-5-search-api 는 모델별 별도 TPM 한도 (organization tier 무관). 6000 TPM 가정 시
  * max_tokens 8192 한 호출만으로 한도 초과 가능 → max_tokens 3000 으로 절감 + 429 자동
- * 재시도 (Retry-After 헤더/본문 파싱, max 5초 cap, 최대 2회 재시도).
+ * 재시도 (Retry-After 헤더/본문 파싱, clampRetryDelay: floor 2s · cap 30s · ±20% jitter,
+ * 최대 2회 재시도).
  */
 export async function* streamChatGPT(
   query: string,
@@ -591,9 +609,12 @@ export async function* streamChatGPT(
     if (res.ok && res.body) break;
 
     if (res.status === 429 && attempt < 2) {
-      const retryMs = (await parseRetryAfterMs(res)) ?? 1000;
-      const wait = Math.min(retryMs, 5000);
-      console.warn(`[chatgpt] 429 rate limit, retry in ${wait}ms (attempt ${attempt + 1}/3)`);
+      // OpenAI retry-after-ms 가 80ms 처럼 비현실적으로 짧을 수 있음 (TPM bucket 은
+      // 분 단위 회복). raw 값 그대로 신뢰하면 다음 분 한도에 또 부딪혀 폭주.
+      // clampRetryDelay 로 floor 2s / cap 30s / ±20% jitter 적용.
+      const rawMs = await parseRetryAfterMs(res);
+      const wait = clampRetryDelay(rawMs, attempt);
+      console.warn(`[chatgpt] 429 rate limit, retry in ${wait}ms (raw=${rawMs ?? 'null'}, attempt ${attempt + 1}/3)`);
       await new Promise((r) => setTimeout(r, wait));
       continue;
     }
