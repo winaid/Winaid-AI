@@ -236,6 +236,16 @@ RUN_INTEGRATION=1 npm run test:e2e
 
 ---
 
+### 브랜치 전환 후 tsc 가짜 오류
+
+`.tsbuildinfo` 또는 `.next/types/validator.ts` 가 이전 브랜치의 라우트를 참조하면서 `Cannot find module '...route.js'` 가짜 오류가 나는 경우가 있다. 다음 명령으로 캐시 정리:
+
+```
+npm run clean
+```
+
+---
+
 ## 라이선스
 
 Private — 비공개 프로젝트

@@ -6,5 +6,8 @@
     "next-app",
     "public-app",
     "packages/*"
-  ]
+  ],
+  "scripts": {
+    "clean": "rm -rf next-app/.next public-app/.next next-app/.tsbuildinfo public-app/.tsbuildinfo packages/*/dist next-app/tsconfig.tsbuildinfo public-app/tsconfig.tsbuildinfo"
+  }
 }

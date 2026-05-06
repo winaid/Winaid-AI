@@ -53,6 +53,12 @@ cookies.txt
 youtube-cookies.txt
 pnpm-lock.yaml
 
+# Branch-switch cache guard (PR #111: stale .tsbuildinfo / .next/types caused fake tsc errors)
+**/.tsbuildinfo
+**/.next/
+**/tsconfig.tsbuildinfo
+**/dist/
+
 # DB-020: 운영 DB wipe / 파괴적 SQL 스크립트는 git tracking 차단.
 # 자동화 도구가 *.sql 일괄 순회 시 실수 적용 방지.
 _migration/**/internal/*wipe*.sql
