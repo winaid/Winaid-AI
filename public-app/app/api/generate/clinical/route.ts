@@ -12,6 +12,7 @@ import { gateGuestRequest } from '../../../../lib/guestRateLimit';
 import { resolveImageOwner } from '../../../../lib/serverAuth';
 import { useCredit, refundCredit } from '../../../../lib/creditService';
 import { buildClinicalPrompt } from '../../../../lib/clinicalPrompt';
+import { maskPII, unmaskPII, DEFAULT_PII_MASKING_LEVEL } from '@winaid/blog-core';
 
 export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
@@ -91,16 +92,27 @@ export async function POST(request: NextRequest) {
   };
 
   try {
+    // ADR-1 §6.1 Table 2.1 #11 — clinical 라우트 PII 마스킹 (POC, PR #127 후속).
+    // 사용자 자유 텍스트 5 필드를 LLM 전송 전 결정적 토큰으로 치환하고, 응답에서
+    // 동일 토큰을 원본으로 복원. credit/refund 흐름은 한 줄도 건드리지 않음.
+    const allReplacements = new Map<string, string>();
+    const mask = <T extends string | undefined>(v: T): T => {
+      if (typeof v !== 'string' || v.length === 0) return v;
+      const { masked, replacements } = maskPII(v, DEFAULT_PII_MASKING_LEVEL);
+      for (const [token, original] of replacements) allReplacements.set(token, original);
+      return masked as T;
+    };
+
     const { systemInstruction, prompt } = buildClinicalPrompt({
-      topic: body.topic,
+      topic: mask(body.topic) ?? '',
       category: body.category,
-      hospitalName: body.hospitalName,
-      doctorName: body.doctorName,
-      imageAnalysis: body.imageAnalysis,
+      hospitalName: mask(body.hospitalName),
+      doctorName: mask(body.doctorName),
+      imageAnalysis: mask(body.imageAnalysis) ?? '',
       imageCount: body.imageCount,
       articleType,
       textLength: body.textLength,
-      keywords: body.keywords,
+      keywords: mask(body.keywords),
     });
 
     const cookieHeader = request.headers.get('cookie');
@@ -131,7 +143,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({ text: data.text, usage: data.usage, model: data.model });
+    // 응답 토큰 복원 — LLM 이 토큰을 변형(`[name_1]`) 한 경우 복원되지 않고
+    // 그대로 남는다 (안전 방향: 식별 정보가 의도와 다른 위치에 새는 것보다 토큰 노출 우선).
+    const finalText = data.text ? unmaskPII(data.text as string, allReplacements) : data.text;
+    return NextResponse.json({ text: finalText, usage: data.usage, model: data.model });
   } catch (err) {
     await refundOnFail();
     const message = (err as Error).message || 'unknown';
