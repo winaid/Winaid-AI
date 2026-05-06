@@ -33,6 +33,9 @@ logs/
 .idea/
 .vscode/
 *.swp
+
+# Claude Code harness (isolation worktree metadata, local-only)
+.claude/
 # Database
 server/data/
 *.db
