@@ -4,7 +4,17 @@ const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 // Stealth 플러그인 적용 — headless 브라우저 탐지 우회
 puppeteer.use(StealthPlugin());
 
+// Browser 싱글톤 — race condition 차단을 위해 launch promise 자체를 캐싱.
+//
+// 과거 (SVR-013 회귀): `if (browser && browser.isConnected()) return browser; ...
+// browser = await puppeteer.launch(...)`. 동시 요청 N 개가 첫 hit 면 모두 launch
+// 분기에 진입 → N 개 인스턴스 생성, 마지막 1개만 모듈 변수에 남고 N-1 leak.
+// Railway memory (~250MB × N) 폭증 → OOM kill.
+//
+// 수정: launchPromise 를 캐시해서 동시 호출은 같은 promise 를 await. 인스턴스가
+// disconnect 되면 promise 와 browser 둘 다 null 로 리셋.
 let browser = null;
+let launchPromise = null;
 
 // ────────────────────────────────────────────────
 // 유틸리티
@@ -89,17 +99,29 @@ function findChromiumPath() {
 }
 
 /**
- * 브라우저 인스턴스 가져오기 (싱글톤)
+ * 브라우저 인스턴스 가져오기 (싱글톤 + launch promise 캐싱).
+ *
+ * 동시 호출 race 차단: launchPromise 가 in-flight 면 같은 promise 를 await.
+ * 첫 호출자가 launch 완료하면 browser 변수에 저장 + launchPromise 는 null 리셋.
+ * launch 실패 시에도 launchPromise 를 null 로 풀어 다음 호출이 재시도 가능하게 함.
  */
 async function getBrowser() {
   if (browser && browser.isConnected()) {
     return browser;
   }
+  // disconnect 된 stale 인스턴스는 정리 — promise 캐시도 같이 무효화하지 않으면
+  // 이미 닫힌 browser 를 다시 await 해 반환할 위험.
+  if (browser && !browser.isConnected()) {
+    browser = null;
+  }
+  if (launchPromise) {
+    return launchPromise;
+  }
 
   const executablePath = findChromiumPath();
   console.log(`[Browser] Puppeteer+Stealth 시작 중... (${executablePath})`);
 
-  browser = await puppeteer.launch({
+  launchPromise = puppeteer.launch({
     executablePath,
     headless: 'new',
     args: [
@@ -114,10 +136,23 @@ async function getBrowser() {
       '--window-size=1920,1080',
     ],
     timeout: parseInt(process.env.BROWSER_TIMEOUT) || 30000
+  }).then((b) => {
+    browser = b;
+    console.log('[Browser] Puppeteer+Stealth 시작 완료');
+    // disconnect 시 캐시 무효화 — 다음 getBrowser 호출이 새 인스턴스 launch 함
+    b.on('disconnected', () => {
+      if (browser === b) browser = null;
+    });
+    return b;
+  }).catch((err) => {
+    // 실패 시 promise 캐시 풀어 재시도 허용. browser 는 그대로 null.
+    console.error('[Browser] launch 실패:', err.message);
+    throw err;
+  }).finally(() => {
+    launchPromise = null;
   });
 
-  console.log('[Browser] Puppeteer+Stealth 시작 완료');
-  return browser;
+  return launchPromise;
 }
 
 // ────────────────────────────────────────────────
