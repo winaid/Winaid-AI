@@ -85,6 +85,13 @@ function checkRateLimit(ip) {
  * POST /api/naver/crawl-search
  * 네이버 블로그 검색 크롤링
  */
+// SVR-015: search query 길이 cap.
+// 과거: query 의 length cap 없음. encodeURIComponent 만 거치고 search.naver.com
+// URL 에 그대로 삽입. 비정상 길이 (수 MB) 입력 시 puppeteer 가 거대한 URL 로
+// navigate → puppeteer/네이버 측 throttle, 메모리 일시 점유. 실제 검색어로 200자
+// 초과는 정상 케이스 0 → 200자 hard cap.
+const MAX_QUERY_LENGTH = 200;
+
 router.post('/crawl-search', async (req, res) => {
   try {
     const { query, maxResults = 30 } = req.body;
@@ -94,6 +101,15 @@ router.post('/crawl-search', async (req, res) => {
       return res.status(400).json({
         error: 'Query is required',
         message: '검색어를 입력해주세요.'
+      });
+    }
+
+    // 길이 cap (SVR-015). encodeURIComponent 후 URL 길이는 최악 3배까지 부풀 수
+    // 있지만 200자 입력이면 ≤ 600 byte 로 search.naver.com 측 한도 안에 들어감.
+    if (query.length > MAX_QUERY_LENGTH) {
+      return res.status(400).json({
+        error: 'Query too long',
+        message: `검색어는 ${MAX_QUERY_LENGTH}자 이하로 입력해주세요.`
       });
     }
 
