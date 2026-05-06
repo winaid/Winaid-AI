@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next';
+import { withSentryConfig } from '@sentry/nextjs';
 
 const nextConfig: NextConfig = {
   turbopack: {
@@ -21,4 +22,8 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  silent: !process.env.SENTRY_AUTH_TOKEN, // 토큰 없으면 source map 업로드 skip
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+});
