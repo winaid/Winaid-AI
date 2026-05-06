@@ -21,6 +21,7 @@ const MOOD_MAP: Record<string, string> = {
 };
 
 export async function GET(request: NextRequest) {
+  // BIZ-001: no credit charge — external search only, no Railway/ffmpeg compute
   // 게스트 rate limit — Jamendo 외부 API, 분당 20회
   const gate = gateGuestRequest(request, 20, '/api/video/search-bgm');
   if (!gate.ok) return NextResponse.json({ tracks: [], error: gate.error }, { status: gate.status });
