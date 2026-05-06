@@ -1018,6 +1018,7 @@ JSON 형식으로 응답해주세요.`;
       for (let i = 1; i <= imageCount; i++) {
         const markerRx = new RegExp(`\\[IMG_${i}(?:\\s+alt="([^"]*)")?[^\\]]*\\]`);
         const m = fullText.match(markerRx);
+        if (!m) continue; // orphan 차단: 본문에 마커 부재 시 Imagen 호출 스킵 (크레딧 낭비 방지)
         const alt = m?.[1]?.trim() || '';
         if (alt.length >= 5) {
           imagePrompts.push(alt);
