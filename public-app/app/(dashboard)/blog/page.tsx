@@ -1472,12 +1472,33 @@ JSON 형식으로 응답해주세요.`;
 
           revisedWithImages = revisedWithImages.replace(/\[IMG_\d+[^\]]*\]\n*/g, '');
 
-          // defense-in-depth: revisedHtml 의 <img> 가 원본보다 적으면 (Opus 가 마커·태그 모두 drop)
+          // defense-in-depth (1): 같은 data-image-index 가 머지 결과에 2회 이상 등장하면
+          // 첫 occurrence 만 남기고 제거 (Loop 1·2 혹은 LLM 의 마커 중복으로 인한 dup 차단).
+          // wrapper <div class="content-image-wrapper"> 도 함께 제거해 빈 div 잔존 방지.
+          {
+            const seenIdx = new Set<string>();
+            revisedWithImages = revisedWithImages.replace(
+              /<div class="content-image-wrapper"[^>]*>\s*<img[^>]*data-image-index="(\d+)"[^>]*>\s*<\/div>/g,
+              (match, idx: string) => {
+                if (seenIdx.has(idx)) {
+                  console.warn(`[BLOG] [V4] dedupe: data-image-index="${idx}" 중복 occurrence 제거`);
+                  return '';
+                }
+                seenIdx.add(idx);
+                return match;
+              },
+            );
+          }
+
+          // defense-in-depth (2): revisedHtml 의 <img> 가 원본보다 적으면 (Opus 가 마커·태그 모두 drop)
           // 원본 유지 — 의료법 fix 손해보다 라이브러리 이미지 0개 회귀가 더 큼.
+          // 명시적으로 setGeneratedContent(blogText) 를 호출해 placeholder swap 등 중간 상태 잔재로 인한
+          // 이미지 중복/누락 가능성을 차단한다 (이전: state drift 의존, 함묵적 fallback).
           const originalImgCount = (blogText.match(/<img[^>]*data-image-index/g) || []).length;
           const revisedImgCount = (revisedWithImages.match(/<img[^>]*data-image-index/g) || []).length;
           if (originalImgCount > 0 && revisedImgCount < originalImgCount) {
             console.warn(`[BLOG] [V4] revisedHtml <img> 손실 (${revisedImgCount}/${originalImgCount}) — 원본 유지`);
+            setGeneratedContent(blogText); // 명시적 reaffirm — 중간 setGeneratedContent 잔재 차단
           } else {
             setGeneratedContent(revisedWithImages);
             blogText = revisedWithImages;
