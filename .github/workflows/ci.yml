@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# 같은 PR/branch 의 이전 실행은 새 push 시 자동 취소
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Build 에 사용되는 dummy 환경변수.
+# 실제 secret 사용 금지 — secret 이 필요한 작업 (Sentry source map 업로드 등)은
+# 별도 workflow / 별도 PR 로 분리.
+env:
+  NODE_VERSION: '22'
+  NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: fake-anon-key-for-ci
+  SUPABASE_URL: https://example.supabase.co
+  SUPABASE_ANON_KEY: fake-anon-key-for-ci
+  SUPABASE_SERVICE_ROLE_KEY: fake-service-role-key-for-ci
+  GEMINI_API_KEY: fake-gemini-key-for-ci
+  OPENAI_API_KEY: fake-openai-key-for-ci
+  ANTHROPIC_API_KEY: fake-anthropic-key-for-ci
+
+jobs:
+  tsc-public:
+    name: tsc — public-app
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci --workspaces --include-workspace-root
+      - name: Type-check (public-app)
+        working-directory: public-app
+        run: npm run lint
+
+  tsc-next:
+    name: tsc — next-app
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci --workspaces --include-workspace-root
+      - name: Type-check (next-app)
+        working-directory: next-app
+        run: npm run lint
+
+  build-public:
+    name: build — public-app
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci --workspaces --include-workspace-root
+      - name: Next.js build (public-app)
+        working-directory: public-app
+        run: npm run build
+
+  build-next:
+    name: build — next-app
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci --workspaces --include-workspace-root
+      - name: Next.js build (next-app)
+        working-directory: next-app
+        run: npm run build
