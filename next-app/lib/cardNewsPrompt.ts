@@ -268,7 +268,7 @@ function buildSlideGuide(slideCount: number, topicType: CardTopicType): string {
  * 이 함수는 AI가 슬라이드별로 최적의 레이아웃(cover/comparison/icon-grid/steps/
  * checklist/data-highlight/closing)을 선택하고 구조화된 JSON을 출력하게 한다.
  *
- * 이 JSON은 이후 CardNewsProRenderer가 레이아웃별 HTML/CSS로 렌더링한다.
+ * 이 JSON은 이후 카드뉴스 렌더 컴포넌트가 레이아웃별 HTML/CSS로 렌더링한다.
  */
 export function buildCardNewsProPrompt(req: CardNewsRequest): {
   systemInstruction: string;
