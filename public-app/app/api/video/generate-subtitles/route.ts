@@ -12,6 +12,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { gateGuestRequest } from '../../../../lib/guestRateLimit';
+import { resolveImageOwner } from '../../../../lib/serverAuth';
+import { useCredit, refundCredit } from '../../../../lib/creditService';
 import { validateMedicalAd, countViolations, type ViolationResult } from '../../../../lib/medicalAdValidation';
 import { generateSrt, type SrtSegment } from '../../../../lib/srtUtils';
 
@@ -48,6 +50,20 @@ export async function POST(request: NextRequest) {
   // ── 게스트 rate limit ──
   const gate = gateGuestRequest(request, 5, '/api/video/generate-subtitles');
   if (!gate.ok) return NextResponse.json({ error: gate.error }, { status: gate.status });
+
+  // BIZ-001: refund 헬퍼 (try 블록 밖에서도 접근 가능하도록 외부 선언)
+  let creditDeducted = false;
+  let userIdForRefund: string | null = null;
+  const refundOnFail = async () => {
+    if (creditDeducted && userIdForRefund) {
+      const refund = await refundCredit(userIdForRefund).catch(() => null);
+      if (refund?.success) {
+        console.log(
+          `[video/generate-subtitles] refunded 1 credit for ${userIdForRefund.slice(0, 8)} (remaining=${refund.remaining})`,
+        );
+      }
+    }
+  };
 
   try {
     // ── 환경변수 확인 ──
@@ -94,6 +110,22 @@ export async function POST(request: NextRequest) {
     // 파일 크기 체크 — 동기 recognize는 인라인 content ~10MB 제한
     // base64 인코딩하면 33% 커지므로 원본 ~7.5MB가 한계
     const isLargeFile = audioBytes.length > 7 * 1024 * 1024;
+
+    // BIZ-001: 큰 파일 early-return 전 차감 시 환불 부담 → 큰 파일 분기 후로 차감 위치 이동
+    // 인증 → 차감 (게스트 skip). validation 모두 통과 후 STT 호출 직전에 차감.
+    const owner = await resolveImageOwner(request);
+    const userId = owner === 'guest' ? null : owner;
+    if (userId && !isLargeFile) {
+      const credit = await useCredit(userId);
+      if (!credit.success) {
+        return NextResponse.json(
+          { error: 'insufficient_credits', remaining: credit.remaining },
+          { status: 402 },
+        );
+      }
+      creditDeducted = true;
+      userIdForRefund = userId;
+    }
 
     // STT V2 공통 config
     const sttConfig: Record<string, unknown> = {
@@ -155,6 +187,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!sttRes.ok) {
+      await refundOnFail();
       const errBody = await sttRes.text();
       console.error('[generate-subtitles] STT 에러', sttRes.status, errBody);
       // GCP 에러 메시지 파싱해서 사용자에게 보여주기
@@ -227,6 +260,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(response);
 
   } catch (err) {
+    await refundOnFail();
     console.error('[generate-subtitles] 서버 에러', err);
     return NextResponse.json(
       { error: '자막 생성 중 서버 오류가 발생했습니다.' },
