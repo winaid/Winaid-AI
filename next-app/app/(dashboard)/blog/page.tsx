@@ -61,6 +61,9 @@ function BlogForm() {
   const [cssTheme, setCssTheme] = useState<CssTheme>('modern');
   const [imageStyle, setImageStyle] = useState<ImageStyle>('photo');
   const [imageCount, setImageCount] = useState(6);
+  // hybrid 모드 전용: 라이브러리에서 N장 + AI 로 M장 분리 입력. 다른 모드에서는 무시.
+  // hybrid 모드 총 이미지 수 = imageCount (라이브러리) + aiImageCount (AI 보완)
+  const [aiImageCount, setAiImageCount] = useState(0);
   // default 'ai' — 사용자 인지 못한 채 library 매칭 회귀 방지 (hotfix). 라이브러리 사용자는 명시 토글.
   const [imageSourceMode, setImageSourceMode] = useState<ImageSourceMode>('ai');
   const [imageAspectRatio, setImageAspectRatio] = useState<'4:3' | '16:9' | '1:1'>('4:3');
@@ -220,11 +223,11 @@ function BlogForm() {
   };
 
   const handleSaveSettings = useCallback(() => {
-    const s = { category, hospitalName, selectedHospitalAddress, homepageUrl, textLength, imageCount, imageAspectRatio, imageStyle, imageSourceMode, audienceMode, persona, tone, writingStyle, includeFaq, faqCount, includeHospitalIntro, learnedStyleId };
+    const s = { category, hospitalName, selectedHospitalAddress, homepageUrl, textLength, imageCount, aiImageCount, imageAspectRatio, imageStyle, imageSourceMode, audienceMode, persona, tone, writingStyle, includeFaq, faqCount, includeHospitalIntro, learnedStyleId };
     localStorage.setItem(getSettingsKey(), JSON.stringify(s));
     setSettingsToast('💾 설정 저장됨');
     setTimeout(() => setSettingsToast(''), 1500);
-  }, [category, hospitalName, selectedHospitalAddress, homepageUrl, textLength, imageCount, imageAspectRatio, imageStyle, imageSourceMode, audienceMode, persona, tone, writingStyle, includeFaq, faqCount, includeHospitalIntro, learnedStyleId, selectedTeam]);
+  }, [category, hospitalName, selectedHospitalAddress, homepageUrl, textLength, imageCount, aiImageCount, imageAspectRatio, imageStyle, imageSourceMode, audienceMode, persona, tone, writingStyle, includeFaq, faqCount, includeHospitalIntro, learnedStyleId, selectedTeam]);
 
   const applySettings = useCallback((raw: string) => {
     try {
@@ -239,6 +242,8 @@ function BlogForm() {
         imageCountManualRef.current = true;
         setImageCount(s.imageCount);
       }
+      // hybrid 모드 AI 보완 개수 — 기존 저장본은 undefined → 기본값 0 유지 (회귀 방지).
+      if (s.aiImageCount !== undefined) setAiImageCount(s.aiImageCount);
       if (s.imageAspectRatio !== undefined) setImageAspectRatio(s.imageAspectRatio);
       if (s.imageStyle !== undefined) setImageStyle(s.imageStyle);
       // imageSourceMode — useImageLibrary boolean 자동 마이그레이션 폐지 (hotfix).
@@ -917,6 +922,9 @@ JSON 형식으로 응답해주세요.`;
       console.info(`[STYLE] fallback — UI 학습/병원명 모두 없음 → 기본 의료 블로그 톤(fallback) 적용`);
     }
 
+    // hybrid 모드: 라이브러리(imageCount) + AI 보완(aiImageCount) 합이 총 마커 수.
+    // 그 외 모드: imageCount 가 그대로 총 마커 수 (기존 동작 유지).
+    const totalImageCount = imageSourceMode === 'hybrid' ? imageCount + aiImageCount : imageCount;
     const request: GenerationRequest = {
       category,
       topic: topic.trim(),
@@ -929,7 +937,8 @@ JSON 형식으로 응답해주세요.`;
       imageStyle,
       postType: 'blog',
       textLength,
-      imageCount,
+      // hybrid 는 합쳐진 총 마커 수를 서버에 전달 — 서버는 이 수만큼 [IMG_N] 마커 부여
+      imageCount: totalImageCount,
       cssTheme,
       writingStyle,
       learnedStyleId,
@@ -1128,7 +1137,7 @@ JSON 형식으로 응답해주세요.`;
       console.info(`[BLOG] [V4] Sonnet 초안 완료 — ${fullText.length}자, violations ${draftViolations.length}개 (model=${draftJson.model || '?'})`);
 
       const imagePrompts: string[] = [];
-      for (let i = 1; i <= imageCount; i++) {
+      for (let i = 1; i <= totalImageCount; i++) {
         const markerRx = new RegExp(`\\[IMG_${i}(?:\\s+alt="([^"]*)")?[^\\]]*\\]`);
         const m = fullText.match(markerRx);
         const alt = m?.[1]?.trim() || '';
@@ -1180,11 +1189,15 @@ JSON 형식으로 응답해주세요.`;
       // library 모드는 조기 AI 호출 skip — 라이브러리 매칭 단계(line 1456+) 에서 처리.
       // hybrid 모드는 매칭 실패 시 fallback AI 호출이 후속 로직 (line 1551+) 에서 발생 — 의도된 동작.
       // 시간 추정 분기(line 983) 와 일관 (`imageSourceMode !== 'library'`).
-      if (imagePrompts.length > 0 && imageCount > 0 && imageSourceMode !== 'library') {
+      // hybrid: 라이브러리 분(imageCount 슬롯) 은 조기 호출 skip → 라이브러리 매칭 후 부족분만 fallback 생성.
+      //         AI 분(imageCount+1..totalImageCount) 만 조기 시작.
+      const earlyAiStart = imageSourceMode === 'hybrid' ? imageCount : 0;
+      const earlyAiEnd = totalImageCount;
+      if (imagePrompts.length > 0 && totalImageCount > 0 && imageSourceMode !== 'library' && earlyAiEnd > earlyAiStart) {
         setDisplayStage(3);
         imageResultsPromise = Promise.all(
-          imagePrompts.slice(0, imageCount).map((p, i) => {
-            const index = i + 1;
+          imagePrompts.slice(earlyAiStart, earlyAiEnd).map((p, k) => {
+            const index = earlyAiStart + k + 1;
             return authFetch('/api/image', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -1218,6 +1231,8 @@ JSON 형식으로 응답해주세요.`;
         );
       } else if (imagePrompts.length > 0 && imageCount > 0 && imageSourceMode === 'library') {
         console.info('[BLOG] library 모드 — 조기 AI 이미지 생성 skip (라이브러리 매칭 단계에서 처리)');
+      } else if (imageSourceMode === 'hybrid' && earlyAiEnd === earlyAiStart) {
+        console.info(`[BLOG] hybrid 모드 — AI 보완분 0 (라이브러리 ${imageCount}장만), 조기 AI 호출 skip`);
       }
 
       // v4: 경쟁 분석 / 말투 로드 병렬 — 서버가 담당하므로 클라이언트 경로 삭제됨.
@@ -1450,8 +1465,11 @@ JSON 형식으로 응답해주세요.`;
       console.info(`[BLOG] strip 완료: ${beforeStrip}→${afterStrip} (target=${targetImageCount}, state=${imageCount})`);
 
       // 4-1) 라이브러리 이미지 alt 기반 자동 매칭 (library / hybrid 모드)
+      // hybrid: 첫 imageCount 개 마커만 라이브러리 후보, 그 이후(imageCount+1..total) 는 AI 전용.
+      const libraryMatchCap = imageSourceMode === 'hybrid' ? imageCount : Number.POSITIVE_INFINITY;
       if (imageSourceMode !== 'ai') {
-        const imgMarkers = [...blogText.matchAll(/\[IMG_(\d+)\s+alt="([^"]*)"\]/g)];
+        const imgMarkers = [...blogText.matchAll(/\[IMG_(\d+)\s+alt="([^"]*)"\]/g)]
+          .filter(m => parseInt(m[1], 10) <= libraryMatchCap);
         if (imgMarkers.length > 0) {
           try {
             // 병원 단위 풀 fetch — hospitalName + scope=hospital 을 보내면 서버가 user/team 필터를
@@ -1544,9 +1562,10 @@ JSON 형식으로 응답해주세요.`;
 
       // 남은 [IMG_N] 마커 — library: placeholder / ai+hybrid: AI 생성 대상
       const remainingMarkers = blogText.match(/\[IMG_\d+[^\]]*\]/g) || [];
-      const aiImageCount = imageSourceMode === 'library' ? 0 : remainingMarkers.length;
+      // 주의: 동명의 state `aiImageCount` (hybrid AI 슬라이더 값) shadow 회피 위해 local 명을 분리.
+      const aiPendingCount = imageSourceMode === 'library' ? 0 : remainingMarkers.length;
       if (imageSourceMode === 'hybrid' && remainingMarkers.length > 0) {
-        console.info(`[BLOG] 하이브리드: 라이브러리 매칭 후 ${remainingMarkers.length}장 AI 생성 폴백`);
+        console.info(`[BLOG] 하이브리드: 라이브러리 매칭 후 ${remainingMarkers.length}장 AI 생성 (보완분 슬라이더 ${aiImageCount}장)`);
       }
 
       // 5a) 목차 자동 생성 — 이미지 유무 무관하게 적용 (이전엔 aiImageCount === 0 분기 안에만 있어
@@ -1580,7 +1599,7 @@ JSON 형식으로 응답해주세요.`;
       }
 
       // 5b) 이미지 없으면 (library: 빈 자리 placeholder / ai+hybrid: 마커 strip)
-      if (aiImageCount === 0 || imagePrompts.length === 0) {
+      if (aiPendingCount === 0 || imagePrompts.length === 0) {
         if (imageSourceMode === 'library') {
           blogText = blogText.replace(/\[IMG_(\d+)[^\]]*\]/g, (_m, num) =>
             `<div class="content-image-wrapper"><div data-img-slot="${num}" style="cursor:pointer;text-align:center;padding:32px;border:2px dashed #cbd5e1;border-radius:12px;color:#64748b;font-size:13px;transition:all 0.2s;">📸 클릭해서 이미지 선택 (${num}번 자리)</div></div>`
@@ -1612,10 +1631,10 @@ JSON 형식으로 응답해주세요.`;
         setDisplayStage(3); // old displayStage 3: 이미지 만드는 중
         // 5) 마커가 있는 본문을 먼저 표시 (이미지 자리에 로딩 표시) — alt 보존
         let htmlWithPlaceholders = blogText;
-        for (let i = 1; i <= imageCount; i++) {
+        for (let i = 1; i <= totalImageCount; i++) {
           htmlWithPlaceholders = htmlWithPlaceholders.replace(
             new RegExp(`\\[IMG_${i}(?:\\s+alt="([^"]*)")?[^\\]]*\\]`, 'g'),
-            (_m: string, alt: string | undefined) => `<div class="content-image-wrapper" data-img-slot="${i}" data-img-alt="${alt || ''}" style="text-align:center;padding:24px 0;"><div style="display:inline-flex;align-items:center;gap:8px;padding:12px 20px;background:#f1f5f9;border-radius:12px;font-size:13px;color:#64748b;">🖼️ 이미지 ${i}/${imageCount} 생성 중...</div></div>`,
+            (_m: string, alt: string | undefined) => `<div class="content-image-wrapper" data-img-slot="${i}" data-img-alt="${alt || ''}" style="text-align:center;padding:24px 0;"><div style="display:inline-flex;align-items:center;gap:8px;padding:12px 20px;background:#f1f5f9;border-radius:12px;font-size:13px;color:#64748b;">🖼️ 이미지 ${i}/${totalImageCount} 생성 중...</div></div>`,
           );
         }
         // 혹시 남은 초과 마커 정리
@@ -1694,8 +1713,14 @@ JSON 형식으로 응답해주세요.`;
         };
 
         // 이미 스트리밍 중에 시작된 이미지가 있으면 그 결과 사용, 없으면 새로 생성
-        const prompts = imagePrompts.slice(0, imageCount);
-        const earlyResults = imageResultsPromise ? await imageResultsPromise : null;
+        const prompts = imagePrompts.slice(0, totalImageCount);
+        const earlyResultsArr = imageResultsPromise ? await imageResultsPromise : null;
+        // earlyResultsArr 는 각 항목 {index, url} — slot index 기준으로 lookup 맵 구성.
+        // (hybrid 에서는 일부 slot 만 조기 생성됐으므로 0-based 배열 인덱싱 부정확.)
+        const earlyResultsByIndex = new Map<number, { index: number; url: string | null }>();
+        if (earlyResultsArr) {
+          for (const r of earlyResultsArr) earlyResultsByIndex.set(r.index, r);
+        }
         // 동시성 캡 — gpt-image-2 가 2K PNG (5~10MB) 출력 + Vercel maxDuration / 메모리 peak
         // 위험. N=6+ 동시 호출 시 504 위험 → 3개씩 청크로 sequential.
         // 조기 결과(earlyResult.url) 가 있는 slot 은 즉시 resolve (네트워크 부하 0) 라
@@ -1703,7 +1728,7 @@ JSON 형식으로 응답해주세요.`;
         const IMAGE_CONCURRENCY = 3;
         const imageTasks = prompts.map((p, i) => {
           const index = i + 1;
-          const earlyResult = earlyResults?.[i];
+          const earlyResult = earlyResultsByIndex.get(index);
           return () => {
             const uploadOrGenerate = earlyResult?.url
               ? Promise.resolve(earlyResult)
@@ -2402,7 +2427,7 @@ Output ONLY the prompt. No explanation.`;
       <BlogFormPanel
         topic={topic} blogTitle={blogTitle} keywords={keywords} keywordDensity={keywordDensity} disease={disease} category={category}
         persona={persona} tone={tone} audienceMode={audienceMode}
-        imageStyle={imageStyle} imageCount={imageCount} imageAspectRatio={imageAspectRatio} textLength={textLength}
+        imageStyle={imageStyle} imageCount={imageCount} aiImageCount={aiImageCount} imageAspectRatio={imageAspectRatio} textLength={textLength}
         imageSourceMode={imageSourceMode} onChangeImageSourceMode={setImageSourceMode}
         hospitalName={hospitalName} selectedTeam={selectedTeam}
         showHospitalDropdown={showHospitalDropdown} selectedManager={selectedManager}
@@ -2428,7 +2453,7 @@ Output ONLY the prompt. No explanation.`;
         setTopic={setTopic} setBlogTitle={setBlogTitle} setKeywords={setKeywords} setKeywordDensity={setKeywordDensity} setDisease={setDisease}
         setCategory={setCategory} setPersona={setPersona} setTone={setTone}
         setAudienceMode={setAudienceMode} setImageStyle={setImageStyle}
-        setImageCount={handleImageCountChange} recommendedImageCount={recommendedImageCount}
+        setImageCount={handleImageCountChange} setAiImageCount={setAiImageCount} recommendedImageCount={recommendedImageCount}
         setImageAspectRatio={setImageAspectRatio} setTextLength={setTextLength}
         setHospitalName={setHospitalName} setSelectedTeam={setSelectedTeam}
         setShowHospitalDropdown={setShowHospitalDropdown}
