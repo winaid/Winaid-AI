@@ -172,17 +172,6 @@ export function classifyTopicType(topic: string, disease?: string): TopicType {
   return 'general';
 }
 
-export function buildHtmlTemplate(imageCount: number): string {
-  const parts: string[] = ['<p>도입 1</p>\n<p>도입 2</p>'];
-  if (imageCount >= 1) parts.push('[IMG_1 alt="설명"]');
-  for (let s = 1; s <= Math.min(imageCount >= 5 ? 5 : imageCount >= 4 ? 4 : 3, 6); s++) {
-    parts.push(`<h3>소제목 ${s}</h3>\n<p>문단 1</p>\n<p>문단 2</p>`);
-    if (s + 1 <= imageCount) parts.push(`[IMG_${s + 1} alt="설명"]`);
-  }
-  parts.push('<h3>마무리</h3>\n<p>핵심 메시지</p>\n<p>행동 안내</p>\n<p>#해시태그 10개</p>');
-  return parts.join('\n\n');
-}
-
 // ═══════════════════════════════════════════════════════════════════
 // Part C — 카테고리 가이드 · 보철 가이드 · 계절 컨텍스트
 // ═══════════════════════════════════════════════════════════════════
