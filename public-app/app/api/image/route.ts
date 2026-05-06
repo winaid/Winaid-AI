@@ -627,6 +627,7 @@ Pure visual illustration for a blog body image — never a poster, flyer, infogr
       const b64 = result.data?.[0]?.b64_json;
       if (!b64) {
         lastError = `${MODEL} key${ki}: 응답에 이미지 데이터 없음`;
+        console.error('[api/image] key %d/%d empty response: model=%s', ki + 1, keys.length, MODEL);
         continue;
       }
 
@@ -638,7 +639,10 @@ Pure visual illustration for a blog body image — never a poster, flyer, infogr
     } catch (err: unknown) {
       const e = err as { status?: number; message?: string; name?: string };
       const status = e.status ?? 0;
-      lastError = `${MODEL} key${ki}: ${status} ${(e.message || '').slice(0, 200)}`;
+      const msg = (e.message || '').slice(0, 200);
+      lastError = `${MODEL} key${ki}: ${status} ${msg}`;
+      // PII 회피: prompt 본문 미로깅, status/msg/model 메타데이터만 기록
+      console.error('[api/image] key %d/%d failed: status=%s model=%s msg=%s', ki + 1, keys.length, status, MODEL, msg);
       // 429 / 503 → 다음 키 (rate limit / 서비스 일시 불가)
       if (status === 429 || status === 503) {
         await new Promise(r => setTimeout(r, 1500));
@@ -659,6 +663,8 @@ Pure visual illustration for a blog body image — never a poster, flyer, infogr
     }
   }
 
+  // PII 회피: lastError 는 status/msg slice/model 만 포함 (prompt 본문 없음)
+  console.error('[api/image] all %d keys exhausted, lastError=%s', keys.length, lastError);
   return NextResponse.json(
     { error: `이미지 생성 실패 (모든 OpenAI 키 시도 실패)`, details: lastError },
     { status: 502 },

@@ -1076,7 +1076,12 @@ JSON 형식으로 응답해주세요.`;
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ prompt: p, aspectRatio: imageAspectRatio, mode: 'blog' as const }),
               signal: abortSignal, // BL-A-001: 페이지 이탈 시 이미지 fan-out 중단
-            }).then(r => r.ok ? r.json() : null)
+            }).then(async r => {
+                if (r.ok) return r.json();
+                const body = await r.json().catch(() => ({}));
+                console.error('[blog/image] generation failed:', { status: r.status, ...body });
+                return null;
+              })
               .then(d => ({ index, url: (d?.imageDataUrl as string | undefined) || null }))
               .catch(() => ({ index, url: null as string | null }));
           })
@@ -1299,7 +1304,11 @@ JSON 형식으로 응답해주세요.`;
                 body: JSON.stringify({ prompt, aspectRatio: imageAspectRatio, mode: 'blog' as const }),
                 signal: abortSignal, // BL-A-001: 페이지 이탈 시 fallback 이미지 재생성도 중단
               });
-              if (!imgRes.ok) { if (attempt === 0) { await new Promise(r => setTimeout(r, 2000)); continue; } break; }
+              if (!imgRes.ok) {
+                const errBody = await imgRes.json().catch(() => ({}));
+                console.error('[blog/image] generation failed:', { index, attempt, status: imgRes.status, ...errBody });
+                if (attempt === 0) { await new Promise(r => setTimeout(r, 2000)); continue; } break;
+              }
               const imgData = await imgRes.json() as { imageDataUrl?: string };
               const dataUrl = imgData.imageDataUrl;
               if (!dataUrl) { if (attempt === 0) { await new Promise(r => setTimeout(r, 2000)); continue; } break; }
@@ -1714,7 +1723,11 @@ Output ONLY the prompt. No explanation.`;
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: newPrompt, aspectRatio: imageAspectRatio, mode: 'blog', ...(referenceImage ? { referenceImage } : {}) }),
       });
-      if (!imgRes.ok) throw new Error('이미지 생성 실패');
+      if (!imgRes.ok) {
+        const errBody = await imgRes.json().catch(() => ({}));
+        console.error('[blog/image] generation failed:', { status: imgRes.status, ...errBody });
+        throw new Error(`이미지 생성 실패 (status=${imgRes.status})`);
+      }
 
       const imgData = await imgRes.json() as { imageDataUrl?: string };
       if (!imgData.imageDataUrl) throw new Error('이미지 데이터 없음');
@@ -1777,7 +1790,8 @@ Output ONLY the prompt. No explanation.`;
       console.info(`[BLOG] 이미지 ${imageIndex} 재생성 완료 (base64)`);
     } catch (err) {
       console.error(`[BLOG] 이미지 ${imageIndex} 재생성 실패:`, err);
-      alert('이미지 재생성에 실패했습니다.');
+      const devHint = process.env.NODE_ENV !== 'production' ? `\n(${(err as Error)?.message || err})` : '';
+      alert(`이미지 생성 실패: 외부 서비스 응답 오류. 잠시 후 재시도해주세요.${devHint}`);
     } finally {
       setRegeneratingImage(null);
     }
