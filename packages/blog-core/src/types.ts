@@ -48,7 +48,7 @@ export interface GenerationRequest {
   youtubeTranscript?: string;
   hospitalStrengths?: string;
   clinicalContext?: string;
-  medicalLawMode?: 'strict' | 'relaxed';
+  // BL-A-004: medicalLawMode 'relaxed' 토글은 builder 미참조 dead code 였다. 의료법 정책은 strict-only 일원화.
   patientPersona?: string; // 예: "30대 직장인 여성, 비용 걱정" / "60대 남성, 임플란트 두려움"
   includeFaq?: boolean;
   faqCount?: number;

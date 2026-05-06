@@ -92,12 +92,33 @@ export async function POST(request: NextRequest) {
     const result = await generate2Pass(req, hospitalStyleBlock, userId, request.signal);
     const detected = filterMedicalLawViolations(result.text);
 
+    // BL-A-005: 글 잘림(목표 글자수 50% 미만) 자동 환불 — v4 서버 차감 전환 후 환불 누락 회귀.
+    // 클라가 "크레딧 미차감" 거짓 메시지를 주던 경로의 실제 환불 책임을 서버에 일원화.
+    let refundedTruncated = false;
+    let truncatedRatio: number | null = null;
+    if (creditDeducted && userId && typeof req.textLength === 'number' && req.textLength > 0) {
+      const textOnly = result.text.replace(/<[^>]+>/g, '');
+      const charCountNoSpaces = textOnly.replace(/\s/g, '').length;
+      truncatedRatio = charCountNoSpaces / req.textLength;
+      if (charCountNoSpaces < req.textLength * 0.5) {
+        const refund = await refundCredit(userId).catch(() => null);
+        if (refund?.success) {
+          refundedTruncated = true;
+          console.warn(`[generate/blog] truncated 50% miss: target=${req.textLength}, actual=${charCountNoSpaces}, refunded 1 credit (remaining=${refund.remaining})`);
+        } else {
+          console.error(`[generate/blog] truncated but refund FAILED: target=${req.textLength}, actual=${charCountNoSpaces}, userId=${userId}`);
+        }
+      }
+    }
+
     return NextResponse.json({
       text: result.text,
       violations: detected.foundTerms,
       usage: result.usage,
       model: result.model,
       mode: result.mode,
+      refundedTruncated,
+      truncatedRatio,
     });
   } catch (err) {
     const message = (err as Error).message || 'unknown';
@@ -201,6 +222,10 @@ async function generate2Pass(
         outline,
         req,
         hospitalStyleBlock,
+        // BL-A-003: 사용자 keywordDensity 입력이 2-pass 정상 경로에서 silently 무시되던 회귀 수정.
+        // builder 가 'number' density 분기로 섹션별 분배 계산하도록 인자 복원.
+        density: req.keywordDensity,
+        totalSections: outline.sections.length,
       });
       return callLLM({
         task: 'blog_unified',
