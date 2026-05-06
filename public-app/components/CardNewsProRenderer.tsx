@@ -13,6 +13,13 @@ import { saveVideoToStorage, generateVideoFileName } from '../lib/videoStorage';
 import { savePost } from '../lib/postStorage';
 import { validateSlideMedicalAd } from '../lib/medicalAdValidation';
 import {
+  summarizeSlidesViolations,
+  computeSlidesContentHash,
+  requestOverrideToken,
+  type CardNewsViolationSummary,
+} from '../lib/medicalAdOverrideClient';
+import { MedicalAdOverrideModal, type DownloadPath } from './MedicalAdOverrideModal';
+import {
   saveFont as saveFontToDb,
   loadFont as loadFontFromDb,
   setActiveFontName,
@@ -110,6 +117,107 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
   const [downloading, setDownloading] = useState(false);
   const [showDownloadMenu, setShowDownloadMenu] = useState(false);
   const downloadMenuRef = useRef<HTMLDivElement | null>(null);
+
+  // ── 의료광고법 위반 override 모달 (ADR-2 Option B) ──
+  // 4 다운로드 경로 + Shorts 공통. 위반 발견 시 모달 → 동의 → 토큰 발급 → 실제 다운로드.
+  const [overrideModalOpen, setOverrideModalOpen] = useState(false);
+  const [overridePath, setOverridePath] = useState<DownloadPath>('png');
+  const [overrideSummary, setOverrideSummary] = useState<CardNewsViolationSummary | null>(null);
+  const [overrideBusy, setOverrideBusy] = useState(false);
+  const [overrideError, setOverrideError] = useState<string | null>(null);
+  // 동의 후 실행할 콜백 — 토큰을 받아 실제 다운로드 수행. Shorts 만 토큰 사용.
+  const overrideContinueRef = useRef<((token: string | null) => Promise<void> | void) | null>(null);
+
+  /**
+   * 다운로드 경로 공통 사전 가드.
+   * - 위반 0건: 즉시 continue 호출 (정상 흐름 보존)
+   * - 위반 1건+: 모달 표시 → 동의 시 토큰 발급 → continue(token) 호출
+   *
+   * 호출부 단순화: continue 콜백이 토큰(null = 게스트 또는 미발급)을 받아 처리.
+   */
+  const guardWithMedicalAdOverride = (
+    downloadPath: DownloadPath,
+    contentId: string | undefined,
+    continueDownload: (token: string | null) => Promise<void> | void,
+  ) => {
+    const summary = summarizeSlidesViolations(slides);
+    if (summary.totalCount === 0) {
+      // 정상 흐름 — 위반 없음, 모달 없이 즉시 진행 (기존 다운로드 흐름과 동일)
+      void continueDownload(null);
+      return;
+    }
+    // 위반 발견 → 모달 트리거. 토큰 발급은 사용자가 "동의" 클릭 후 onConfirm 에서 진행.
+    setOverridePath(downloadPath);
+    setOverrideSummary(summary);
+    setOverrideError(null);
+    overrideContinueRef.current = async (token) => {
+      await continueDownload(token);
+    };
+    setOverrideModalOpen(true);
+    // contentId 는 토큰 발급 시 server 에 전달 — onConfirm 클로저에서 사용
+    overrideContentIdRef.current = contentId;
+  };
+  const overrideContentIdRef = useRef<string | undefined>(undefined);
+
+  const handleOverrideConfirm = async () => {
+    if (!overrideSummary) return;
+    setOverrideBusy(true);
+    setOverrideError(null);
+    try {
+      const contentHash = await computeSlidesContentHash(slides);
+      const tokenRes = await requestOverrideToken({
+        downloadPath: overridePath,
+        summary: overrideSummary,
+        contentHash,
+        contentId: overrideContentIdRef.current,
+      });
+
+      let token: string | null = null;
+      if (tokenRes.ok) {
+        token = tokenRes.token;
+      } else if (tokenRes.reason === 'unauthenticated') {
+        // 게스트: Shorts 외 경로는 운영 로그 없이 진행, Shorts 는 server-side 가드라 실패할 것
+        if (overridePath === 'shorts') {
+          setOverrideError(
+            '쇼츠 변환은 로그인 후에만 위반 동의 다운로드가 가능합니다. 로그인 후 다시 시도해 주세요.',
+          );
+          setOverrideBusy(false);
+          return;
+        }
+        token = null;
+      } else {
+        // 토큰 발급 실패 — Shorts 는 차단, 그 외는 사용자 선택으로 진행 가능 (운영 로그만 누락)
+        if (overridePath === 'shorts') {
+          setOverrideError(
+            tokenRes.message
+              ? `토큰 발급 실패: ${tokenRes.message}`
+              : '토큰 발급에 실패했습니다. 잠시 후 다시 시도해 주세요.',
+          );
+          setOverrideBusy(false);
+          return;
+        }
+        token = null;
+      }
+
+      // 모달 닫고 실제 다운로드 진행
+      setOverrideModalOpen(false);
+      const cont = overrideContinueRef.current;
+      overrideContinueRef.current = null;
+      if (cont) await cont(token);
+    } catch (err) {
+      setOverrideError(err instanceof Error ? err.message : '다운로드 진행 중 오류');
+    } finally {
+      setOverrideBusy(false);
+    }
+  };
+
+  const handleOverrideCancel = () => {
+    if (overrideBusy) return;
+    setOverrideModalOpen(false);
+    overrideContinueRef.current = null;
+    setOverrideError(null);
+  };
+
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
   const [showAddSlide, setShowAddSlide] = useState(false);
 
@@ -722,36 +830,58 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
   const getOrderedKonvaStages = (): (Konva.Stage | null)[] =>
     slides.map(s => konvaStageRefs.current.get(s.id) ?? null);
 
+  /**
+   * PNG 단일 다운로드 — ADR-2 Option B 가드 적용.
+   * 위반 0 → 기존 흐름. 위반 1+ → 모달 → 동의 → 다운로드.
+   */
   const downloadCard = async (index: number) => {
-    setDownloading(true);
-    try {
-      const stage = konvaStageRefs.current.get(slides[index]?.id) ?? null;
-      downloadKonvaStageAsPng(stage, index);
-    } finally {
-      setDownloading(false);
-    }
+    guardWithMedicalAdOverride('png', undefined, async () => {
+      setDownloading(true);
+      try {
+        const stage = konvaStageRefs.current.get(slides[index]?.id) ?? null;
+        downloadKonvaStageAsPng(stage, index);
+      } finally {
+        setDownloading(false);
+      }
+    });
+  };
+
+  /** JPG 단일 다운로드 — 인라인 호출부에서 사용 (ADR-2 Option B 가드 적용) */
+  const downloadCardJpg = async (slideId: string, index: number) => {
+    guardWithMedicalAdOverride('jpg', undefined, async () => {
+      setDownloading(true);
+      try {
+        downloadKonvaStageAsJpg(konvaStageRefs.current.get(slideId) ?? null, index);
+      } finally {
+        setDownloading(false);
+      }
+    });
   };
 
   const downloadAll = async () => {
     setShowDownloadMenu(false);
-    setDownloading(true);
-    try {
-      await downloadKonvaStagesAsZip(getOrderedKonvaStages(), slides[0]?.title);
-    } finally {
-      setDownloading(false);
-    }
+    guardWithMedicalAdOverride('zip', undefined, async () => {
+      setDownloading(true);
+      try {
+        await downloadKonvaStagesAsZip(getOrderedKonvaStages(), slides[0]?.title);
+      } finally {
+        setDownloading(false);
+      }
+    });
   };
 
   const downloadAllPdf = async () => {
     setShowDownloadMenu(false);
-    setDownloading(true);
-    try {
-      await downloadKonvaStagesAsPdf(getOrderedKonvaStages(), cardWidth, cardHeight, slides[0]?.title);
-    } catch (err) {
-      console.warn('[CARD_NEWS_PRO] PDF 변환 실패', err);
-    } finally {
-      setDownloading(false);
-    }
+    guardWithMedicalAdOverride('pdf', undefined, async () => {
+      setDownloading(true);
+      try {
+        await downloadKonvaStagesAsPdf(getOrderedKonvaStages(), cardWidth, cardHeight, slides[0]?.title);
+      } catch (err) {
+        console.warn('[CARD_NEWS_PRO] PDF 변환 실패', err);
+      } finally {
+        setDownloading(false);
+      }
+    });
   };
 
   // 외부 클릭 시 다운로드 드롭다운 닫기
@@ -779,11 +909,20 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
     });
   };
 
+  /**
+   * 쇼츠 변환 진입점 — ADR-2 Option B 가드 적용.
+   * 위반 0 → 기존 흐름 (token=null). 위반 1+ → 모달 → 동의 → 토큰 발급 후 진행.
+   * server route 가 토큰 동봉 + 검증을 강제 — client-only 우회 차단.
+   */
   const handleConvertToShorts = async () => {
     if (slides.length === 0) {
       setShortsError('변환할 슬라이드가 없습니다.');
       return;
     }
+    guardWithMedicalAdOverride('shorts', undefined, (token) => convertToShortsWithToken(token));
+  };
+
+  const convertToShortsWithToken = async (overrideToken: string | null) => {
     // 이전 결과 정리
     if (shortsResultUrl) {
       URL.revokeObjectURL(shortsResultUrl);
@@ -831,11 +970,54 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
       formData.append('bgm_mood', shortsOpts.bgmMood);
       formData.append('bgm_volume', String(shortsOpts.bgmVolume));
       formData.append('aspect_ratio', '9:16');
+      // ADR-2 Option B — 위반 발견 시 server-side 검증을 통과한 override 토큰 동봉.
+      // 위반 0 이면 token 은 null → server 도 검증 skip (정상 흐름).
+      // slide_texts: server-side 가 같은 검증기 재실행 — client useMemo 우회 차단.
+      // validateSlideMedicalAd 와 정합되도록 평탄 + 중첩 텍스트 필드 모두 포함.
+      const slideTexts: string[] = [];
+      for (const s of slides) {
+        const flat: (string | undefined)[] = [
+          s.title, s.subtitle, s.body, s.visualKeyword, s.quoteText,
+          s.quoteAuthor, s.quoteRole, s.warningTitle, s.beforeLabel, s.afterLabel,
+          s.prosLabel, s.consLabel, s.badge,
+        ];
+        flat.forEach(t => { if (t && t.length > 0) slideTexts.push(t); });
+        s.checkItems?.forEach(t => t && slideTexts.push(t));
+        s.beforeItems?.forEach(t => t && slideTexts.push(t));
+        s.afterItems?.forEach(t => t && slideTexts.push(t));
+        s.pros?.forEach(t => t && slideTexts.push(t));
+        s.cons?.forEach(t => t && slideTexts.push(t));
+        s.warningItems?.forEach(t => t && slideTexts.push(t));
+        s.hashtags?.forEach(t => t && slideTexts.push(t));
+        s.columns?.forEach(c => {
+          if (c.header) slideTexts.push(c.header);
+          c.items?.forEach(t => t && slideTexts.push(t));
+        });
+        s.icons?.forEach(i => { if (i.title) slideTexts.push(i.title); if (i.desc) slideTexts.push(i.desc); });
+        s.steps?.forEach(st => { if (st.label) slideTexts.push(st.label); if (st.desc) slideTexts.push(st.desc); });
+        s.questions?.forEach(q => { if (q.q) slideTexts.push(q.q); if (q.a) slideTexts.push(q.a); });
+        s.timelineItems?.forEach(t => { if (t.title) slideTexts.push(t.title); if (t.desc) slideTexts.push(t.desc); });
+        s.numberedItems?.forEach(n => { if (n.num) slideTexts.push(n.num); if (n.title) slideTexts.push(n.title); if (n.desc) slideTexts.push(n.desc); });
+        s.priceItems?.forEach(p => { if (p.name) slideTexts.push(p.name); if (p.note) slideTexts.push(p.note); });
+      }
+      formData.append('slide_texts', JSON.stringify(slideTexts));
+      if (overrideToken) {
+        formData.append('medical_ad_override_token', overrideToken);
+      }
 
-      // 3) API 호출
-      const res = await fetch('/api/video/card-to-shorts', { method: 'POST', body: formData });
+      // 3) API 호출 — 토큰은 헤더로도 동봉 (multipart 누락 대비 + server 측 우선순위)
+      const headers: Record<string, string> = {};
+      if (overrideToken) headers['X-Medical-Ad-Override'] = overrideToken;
+      const res = await fetch('/api/video/card-to-shorts', { method: 'POST', body: formData, headers });
       if (!res.ok) {
         const d = await res.json().catch(() => ({ error: '서버 오류' }));
+        // ADR-2 Option B — server-side 검증 거부 시 사용자에게 명확한 안내
+        if (d.error === 'medical_law_violation') {
+          throw new Error('의료광고법 위반 가능성 — 동의 후 다시 시도해 주세요.');
+        }
+        if (d.error === 'invalid_override_token') {
+          throw new Error(d.message || '동의 토큰이 만료되었거나 유효하지 않습니다. 다시 동의해 주세요.');
+        }
         throw new Error(d.error || `변환 실패 (${res.status})`);
       }
 
@@ -904,6 +1086,16 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
     <div className="space-y-4 pb-24">
       {/* 토스트 알림 — AI 추천 실패 등 사용자 안내용 */}
       <ToastContainer />
+      {/* 의료광고법 위반 override 모달 (ADR-2 Option B) — 4 다운로드 경로 + Shorts 공통 */}
+      <MedicalAdOverrideModal
+        open={overrideModalOpen}
+        fieldViolations={overrideSummary?.fieldViolations || []}
+        downloadPath={overridePath}
+        onCancel={handleOverrideCancel}
+        onConfirm={handleOverrideConfirm}
+        busy={overrideBusy}
+        error={overrideError}
+      />
       {/* 히스토리/저장 툴바 — 우측 상단 고정 (편집 모달 열려 있을 땐 숨김: 모달 상단에 중복됨) */}
       {editingIdx === null && (
       <div className="fixed top-4 right-4 z-40 flex items-center gap-1 bg-white rounded-xl shadow-lg border border-slate-200 px-2 py-1.5">
@@ -1364,7 +1556,7 @@ JSON만 출력:
                     title="PNG 저장 (고화질, 투명도 지원)">
                     💾 PNG
                   </button>
-                  <button type="button" onClick={() => downloadKonvaStageAsJpg(konvaStageRefs.current.get(slide.id) ?? null, idx)}
+                  <button type="button" onClick={() => downloadCardJpg(slide.id, idx)}
                     className="px-2 py-1 bg-white/90 hover:bg-white rounded-lg text-[10px] font-bold text-slate-700 shadow-sm"
                     title="JPG 저장 (용량 작음 — 카톡/SNS 공유에 유리)">
                     📷 JPG
