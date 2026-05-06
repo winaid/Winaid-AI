@@ -1011,6 +1011,9 @@ JSON 형식으로 응답해주세요.`;
         violations?: string[];
         usage?: unknown;
         model?: string;
+        // BL-A-005: 서버가 글 잘림(50% 미만) 자동 환불 시 true. 클라 메시지 정정에 사용.
+        refundedTruncated?: boolean;
+        truncatedRatio?: number | null;
       };
       const fullText = draftJson.text || '';
       const draftViolations = draftJson.violations || [];
@@ -1194,8 +1197,16 @@ JSON 형식으로 응답해주세요.`;
         const deviation = charCountNoSpaces - textLength;
 
         if (charCountNoSpaces < targetMin * 0.5) {
-          console.error(`[BLOG] ⚠️ 글 잘림: 목표=${textLength}자, 실제=${charCountNoSpaces}자 (50% 미만) — 크레딧 미차감`);
-          setError(`글이 잘렸습니다 (${charCountNoSpaces}/${textLength}자). 크레딧이 차감되지 않았습니다. 다시 시도해주세요.`);
+          // BL-A-005: 과거 메시지 "크레딧이 차감되지 않았습니다" 는 v4 서버 차감 전환 후 거짓.
+          // 서버(/api/generate/blog) 가 글 잘림 시 자동 환불(refundedTruncated=true) 처리하므로
+          // 그 결과에 따라 정확한 안내 노출.
+          const serverRefunded = draftJson.refundedTruncated === true;
+          console.error(`[BLOG] ⚠️ 글 잘림: 목표=${textLength}자, 실제=${charCountNoSpaces}자 (50% 미만) — 서버 환불=${serverRefunded ? 'OK' : 'FAILED/SKIP'}`);
+          setError(
+            serverRefunded
+              ? `글이 잘렸습니다 (${charCountNoSpaces}/${textLength}자). 크레딧이 자동 환불되었습니다. 다시 시도해주세요.`
+              : `글이 잘렸습니다 (${charCountNoSpaces}/${textLength}자). 크레딧이 차감되었으나 자동 환불에 실패했습니다. 고객센터로 문의해주세요.`,
+          );
           setIsGenerating(false);
           setDisplayStage(0);
           return;
