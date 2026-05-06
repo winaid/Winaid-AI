@@ -29,6 +29,40 @@ import { useCreditContext } from '../layout';
 import { useCredit as blogUseCredit } from '../../../lib/creditService';
 import { consumeGuestCredit } from '../../../lib/guestCredits';
 
+/**
+ * data:image base64 URL → Supabase Storage upload → public URL.
+ * 본문에 9MB base64 이 인라인 저장되는 회귀(PR #145 진단) 차단용.
+ *
+ * @param dataUrl   `data:image/...;base64,...`
+ * @param fileName  storage path (e.g., `blog/12345_1.png`)
+ * @returns publicUrl on success, null on failure (호출부가 base64 fallback 또는 재시도 결정)
+ */
+async function uploadDataUrlToBlogImages(dataUrl: string, fileName: string): Promise<string | null> {
+  if (!supabase || !dataUrl.startsWith('data:')) return null;
+  try {
+    const commaIdx = dataUrl.indexOf(',');
+    if (commaIdx < 0) return null;
+    const base64Data = dataUrl.substring(commaIdx + 1);
+    const metaPart = dataUrl.substring(0, commaIdx);
+    const mimeMatch = metaPart.match(/data:(.*?);base64/);
+    const mimeType = mimeMatch?.[1] || 'image/png';
+    const byteChars = atob(base64Data);
+    const byteArray = new Uint8Array(byteChars.length);
+    for (let i = 0; i < byteChars.length; i++) byteArray[i] = byteChars.charCodeAt(i);
+    const blob = new Blob([byteArray], { type: mimeType });
+    const { error: uploadErr } = await supabase.storage.from('blog-images').upload(fileName, blob, { contentType: mimeType, upsert: false });
+    if (uploadErr) {
+      console.warn('[IMG_UPLOAD] storage upload failed:', uploadErr.message);
+      return null;
+    }
+    const { data: urlData } = supabase.storage.from('blog-images').getPublicUrl(fileName);
+    return urlData?.publicUrl || null;
+  } catch (err) {
+    console.warn('[IMG_UPLOAD] storage upload exception:', err);
+    return null;
+  }
+}
+
 function BlogForm() {
   const creditCtx = useCreditContext();
   const searchParams = useSearchParams();
@@ -1064,7 +1098,8 @@ JSON 형식으로 응답해주세요.`;
         warning: (err as Error).message,
       }));
 
-      // 이미지 즉시 병렬 생성 (review 와 동시에)
+      // 이미지 즉시 병렬 생성 (review 와 동시에) + Supabase Storage 즉시 업로드
+      // (base64 inline 으로 본문에 들어가면 generated_posts.content 가 9MB+ 로 폭증 — PR #145 진단)
       let imageResultsPromise: Promise<{ index: number; url: string | null }[]> | null = null;
       if (!useImageLibrary && imagePrompts.length > 0 && imageCount > 0) {
         setDisplayStage(3);
@@ -1082,7 +1117,14 @@ JSON 형식으로 응답해주세요.`;
                 console.error('[blog/image] generation failed:', { status: r.status, ...body });
                 return null;
               })
-              .then(d => ({ index, url: (d?.imageDataUrl as string | undefined) || null }))
+              .then(async d => {
+                const dataUrl = (d?.imageDataUrl as string | undefined) || null;
+                if (!dataUrl) return { index, url: null as string | null };
+                // Storage 업로드 시도 — 성공 시 public URL, 실패 시 null (이후 generateAndUpload 가 재시도)
+                const fileName = `blog/${Date.now()}_${index}.png`;
+                const publicUrl = await uploadDataUrlToBlogImages(dataUrl, fileName);
+                return { index, url: publicUrl };
+              })
               .catch(() => ({ index, url: null as string | null }));
           })
         );
@@ -1313,30 +1355,12 @@ JSON 형식으로 응답해주세요.`;
               const dataUrl = imgData.imageDataUrl;
               if (!dataUrl) { if (attempt === 0) { await new Promise(r => setTimeout(r, 2000)); continue; } break; }
 
-              // Supabase Storage 업로드
-              if (supabase) {
-                try {
-                  const commaIdx = dataUrl.indexOf(',');
-                  const base64Data = dataUrl.substring(commaIdx + 1);
-                  const metaPart = dataUrl.substring(0, commaIdx);
-                  const mimeMatch = metaPart.match(/data:(.*?);base64/);
-                  const mimeType = mimeMatch?.[1] || 'image/png';
-                  const ext = mimeType === 'image/jpeg' ? 'jpg' : 'png';
-                  const byteChars = atob(base64Data);
-                  const byteArray = new Uint8Array(byteChars.length);
-                  for (let j = 0; j < byteChars.length; j++) byteArray[j] = byteChars.charCodeAt(j);
-                  const blob = new Blob([byteArray], { type: mimeType });
-                  const fileName = `blog/${Date.now()}_${index}.${ext}`;
-                  const { error: uploadErr } = await supabase.storage.from('blog-images').upload(fileName, blob, { contentType: mimeType, upsert: false });
-                  if (!uploadErr) {
-                    const { data: urlData } = supabase.storage.from('blog-images').getPublicUrl(fileName);
-                    if (urlData?.publicUrl) return { index, url: urlData.publicUrl };
-                  }
-                  console.warn(`[IMG_UPLOAD] IMG_${index}: 업로드 실패, base64 fallback`, uploadErr?.message);
-                } catch (uploadErr) {
-                  console.warn(`[IMG_UPLOAD] IMG_${index}: 업로드 예외, base64 fallback`, uploadErr);
-                }
-              }
+              // Supabase Storage 업로드 (실패 시 base64 fallback — 9MB 본문 회귀 위험은 있으나
+              // 이미지 자체는 보존. 후속 PR 에서 fallback 정책 고도화 예정)
+              const fileName = `blog/${Date.now()}_${index}.png`;
+              const publicUrl = await uploadDataUrlToBlogImages(dataUrl, fileName);
+              if (publicUrl) return { index, url: publicUrl };
+              console.warn(`[IMG_UPLOAD] IMG_${index}: storage 업로드 실패, base64 fallback`);
               return { index, url: dataUrl };
             } catch {
               if (attempt === 0) { await new Promise(r => setTimeout(r, 2000)); continue; }
@@ -1759,43 +1783,25 @@ Output ONLY the prompt. No explanation.`;
       if (!imgData.imageDataUrl) throw new Error('이미지 데이터 없음');
 
       // Supabase Storage 업로드
-      if (supabase) {
-        try {
-          const dataUrl = imgData.imageDataUrl;
-          const commaIdx = dataUrl.indexOf(',');
-          const base64Data = dataUrl.substring(commaIdx + 1);
-          const metaPart = dataUrl.substring(0, commaIdx);
-          const mimeMatch = metaPart.match(/data:(.*?);base64/);
-          const mimeType = mimeMatch?.[1] || 'image/png';
-          const ext = mimeType === 'image/jpeg' ? 'jpg' : 'png';
-          const byteChars = atob(base64Data);
-          const byteArray = new Uint8Array(byteChars.length);
-          for (let i = 0; i < byteChars.length; i++) byteArray[i] = byteChars.charCodeAt(i);
-          const blob = new Blob([byteArray], { type: mimeType });
-          const fileName = `blog/${Date.now()}_regen_${imageIndex}.${ext}`;
-          const { error: uploadErr } = await supabase.storage.from('blog-images').upload(fileName, blob, { contentType: mimeType, upsert: false });
-          if (!uploadErr) {
-            const { data: urlData } = supabase.storage.from('blog-images').getPublicUrl(fileName);
-            if (urlData?.publicUrl) {
-              setImageHistory(prev => {
-                const arr = prev[imageIndex] || [];
-                const updated = [...arr, urlData.publicUrl].slice(-5);
-                return { ...prev, [imageIndex]: updated };
-              });
-              setGeneratedContent(prev => {
-                if (!prev) return prev;
-                const div = document.createElement('div');
-                div.innerHTML = prev;
-                const imgs = div.querySelectorAll(`img[data-image-index="${imageIndex}"]`);
-                imgs.forEach(img => img.setAttribute('src', urlData.publicUrl));
-                return div.innerHTML;
-              });
-              setSavedImagePrompts(prev => { const next = [...prev]; next[imageIndex - 1] = newPrompt; return next; });
-              console.info(`[BLOG] 이미지 ${imageIndex} 재생성 완료 (Storage)`);
-              return;
-            }
-          }
-        } catch { /* Storage 실패 → base64 fallback */ }
+      const fileName = `blog/${Date.now()}_regen_${imageIndex}.png`;
+      const publicUrl = await uploadDataUrlToBlogImages(imgData.imageDataUrl, fileName);
+      if (publicUrl) {
+        setImageHistory(prev => {
+          const arr = prev[imageIndex] || [];
+          const updated = [...arr, publicUrl].slice(-5);
+          return { ...prev, [imageIndex]: updated };
+        });
+        setGeneratedContent(prev => {
+          if (!prev) return prev;
+          const div = document.createElement('div');
+          div.innerHTML = prev;
+          const imgs = div.querySelectorAll(`img[data-image-index="${imageIndex}"]`);
+          imgs.forEach(img => img.setAttribute('src', publicUrl));
+          return div.innerHTML;
+        });
+        setSavedImagePrompts(prev => { const next = [...prev]; next[imageIndex - 1] = newPrompt; return next; });
+        console.info(`[BLOG] 이미지 ${imageIndex} 재생성 완료 (Storage)`);
+        return;
       }
 
       // base64 fallback
