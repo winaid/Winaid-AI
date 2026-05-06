@@ -1,6 +1,5 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { BLOG_STAGES, BLOG_MESSAGE_POOL } from './blogConstants';
 import { ErrorPanel, ResultPanel, type ScoreBarData } from '../../../components/GenerationResult';
 import ContentAnalysisPanel from '../../../components/ContentAnalysisPanel';
@@ -12,8 +11,10 @@ export interface BlogResultAreaProps {
   isGenerating: boolean;
   displayStage: number;
   rotationIdx: number;
-  generationStartTime: number;
-  estimatedTotalSeconds: number;
+  /** @deprecated 정직한 progress UI 도입 후 미사용. 시그니처 호환 위해 유지. */
+  generationStartTime?: number;
+  /** @deprecated 정직한 progress UI 도입 후 미사용. 시그니처 호환 위해 유지. */
+  estimatedTotalSeconds?: number;
   // 에러
   error: string | null;
   onDismissError: () => void;
@@ -49,7 +50,7 @@ export interface BlogResultAreaProps {
 
 /** 블로그 결과 영역 — 생성 중 / 에러 / 결과 / 빈 상태 4가지 렌더링 */
 export default function BlogResultArea({
-  isGenerating, displayStage, rotationIdx, generationStartTime, estimatedTotalSeconds,
+  isGenerating, displayStage, rotationIdx,
   error, onDismissError, isRetryable, onRetry,
   generatedContent, saveStatus, scores, cssTheme,
   blogSections, regeneratingSection, sectionProgress,
@@ -60,23 +61,14 @@ export default function BlogResultArea({
   chatInput = '', setChatInput, isChatRefining = false, onChatRefine,
 }: BlogResultAreaProps) {
 
-  // ── 카운트다운 타이머 (생성 중에만 동작) ──
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  useEffect(() => {
-    if (!isGenerating || !generationStartTime) { setElapsedSeconds(0); return; }
-    const timer = setInterval(() => {
-      setElapsedSeconds(Math.floor((Date.now() - generationStartTime) / 1000));
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [isGenerating, generationStartTime]);
-
   // ── (1) 생성 중 ──
+  // 정직한 progress UI: 가짜 ETA / 가짜 percentage 제거.
+  // 무한 스피너 + 현재 단계 라벨 + 로테이팅 메시지만 표시.
+  // (estimated < elapsed 시 "거의 완료..." 무한 표시되던 안티패턴 제거 — 2026-05)
   if (isGenerating) {
     const stage = BLOG_STAGES[displayStage] || BLOG_STAGES[1];
     const pool = BLOG_MESSAGE_POOL[displayStage] || BLOG_MESSAGE_POOL[1];
     const displayMsg = pool[rotationIdx % pool.length];
-    const remaining = Math.max(0, estimatedTotalSeconds - elapsedSeconds);
-    const progressPct = estimatedTotalSeconds > 0 ? Math.min(95, (elapsedSeconds / estimatedTotalSeconds) * 100) : 0;
 
     return (
       <div className="flex-1 min-w-0">
@@ -95,25 +87,16 @@ export default function BlogResultArea({
               </div>
             </div>
           </div>
-          {/* 프로그레스 바 */}
-          <div className="w-full max-w-xs mb-4">
-            <div className="h-1 bg-slate-100 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-blue-500 rounded-full transition-all duration-1000"
-                style={{ width: `${progressPct}%` }}
-              />
-            </div>
-          </div>
-          {/* 진행 메시지 */}
+          {/* 진행 메시지 (단계별 로테이션) */}
           <p className="text-sm font-medium text-slate-700 mb-2 min-h-[20px] transition-opacity duration-500">
             {displayMsg}
           </p>
-          {/* 카운트다운 */}
-          <p className={`text-xs text-blue-400 mb-1 ${remaining === 0 ? 'animate-pulse' : ''}`}>
-            {remaining > 0 ? `약 ${remaining}초 남음` : '거의 완료...'}
-          </p>
+          {/* 안내 문구 (정직 — 추정 시간 표시 안 함) */}
           <p className="text-xs text-slate-400 max-w-xs">
             {stage.hint}
+          </p>
+          <p className="text-[11px] text-slate-300 mt-3 max-w-xs">
+            완료될 때까지 잠시만 기다려주세요. 평소보다 시간이 걸릴 수 있습니다.
           </p>
         </div>
       </div>
