@@ -17,6 +17,7 @@ import { buildBlogReviewPrompt } from '@winaid/blog-core';
 import { applyContentFilters } from '@winaid/blog-core';
 import { callLLM } from '@winaid/blog-core';
 import { getHospitalStylePrompt } from '@winaid/blog-core';
+import { maskPII, unmaskPII, DEFAULT_PII_MASKING_LEVEL } from '@winaid/blog-core';
 
 export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
@@ -108,16 +109,39 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // 4) 프롬프트 조립
-  const { systemBlocks, userPrompt } = buildBlogReviewPrompt(draftHtml, {
+  // 4) PII 마스킹 (ADR-1 §5 B+C 결정 — blog cycle POC)
+  //
+  // 외부 LLM (Anthropic Opus 4.6) 으로 보내는 사용자 입력에서 환자명·전화·이메일·차트번호
+  // 등 식별 정보를 결정적 토큰으로 치환. 의료 용어 / 일반 명사는 denylist 로 보존.
+  // 응답을 unmask 해 사용자에게는 원본 식별 정보가 그대로 보이도록 한다 (마스킹 비노출 UX).
+  //
+  // hospitalStyleBlock 은 system 블록 내부 (DB 학습 자료 — PII 가능성 낮음) 라 마스킹 제외.
+  // 옵트인 UI 는 본 PR 범위 밖 — server 기본값 'standard' 적용.
+  const allReplacements = new Map<string, string>();
+  const maskField = <T extends string | undefined>(value: T): T => {
+    if (typeof value !== 'string' || value.length === 0) return value;
+    const { masked, replacements } = maskPII(value, DEFAULT_PII_MASKING_LEVEL);
+    for (const [token, original] of replacements) allReplacements.set(token, original);
+    return masked as T;
+  };
+
+  const maskedDraftHtml = maskField(draftHtml);
+  const maskedHospitalName = maskField(body.hospitalName);
+  const maskedStylePromptText = maskField(body.stylePromptText);
+  const maskedRuleFilterViolations = Array.isArray(body.ruleFilterViolations)
+    ? body.ruleFilterViolations.map((v) => (typeof v === 'string' ? maskField(v) : v))
+    : body.ruleFilterViolations;
+
+  // 5) 프롬프트 조립 — 마스킹된 입력 사용
+  const { systemBlocks, userPrompt } = buildBlogReviewPrompt(maskedDraftHtml, {
     category: body.category,
-    hospitalName: body.hospitalName,
-    ruleFilterViolations: body.ruleFilterViolations,
-    stylePromptText: body.stylePromptText,
+    hospitalName: maskedHospitalName,
+    ruleFilterViolations: maskedRuleFilterViolations,
+    stylePromptText: maskedStylePromptText,
     hospitalStyleBlock: hospitalStyleBlock ?? undefined,
   });
 
-  // 5) callLLM (Opus 4.6)
+  // 6) callLLM (Opus 4.6)
   let rawText = '';
   let usage: unknown = null;
   let model = '';
@@ -162,7 +186,13 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  // 6) JSON parse
+  // 7) PII unmask — LLM 응답의 토큰을 원문으로 복원.
+  // LLM 이 user prompt 의 토큰을 응답에 그대로 인용하면 원문 식별 정보가 복원되고,
+  // 토큰을 변형(예: `[name_1]` 소문자) 했다면 변형 토큰이 노출된다 (안전 방향).
+  // 사용자에게는 마스킹 사실 비노출 — 원본 식별 정보가 보이도록 unmask 적용.
+  rawText = unmaskPII(rawText, allReplacements);
+
+  // 8) JSON parse
   const parsed = tryParseJson(rawText);
   let verdict: 'pass' | 'minor_fix' | 'major_fix';
   let issues: ReviewIssue[];
@@ -198,13 +228,15 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // 7) regex 안전망 — revisedHtml 있으면 치환 적용
+  // 9) regex 안전망 — revisedHtml 있으면 치환 적용 (unmask 된 원문에 대해 적용)
   if (revisedHtml) {
     const filtered = applyContentFilters(revisedHtml);
     revisedHtml = filtered.filtered;
   }
 
-  // 8) verdict='pass' 인데 violations 감지된 경우 → 서버가 자체 치환 후 minor_fix 승격
+  // 10) verdict='pass' 인데 violations 감지된 경우 → 서버가 자체 치환 후 minor_fix 승격
+  // 원본 draftHtml 사용 (마스킹 전) — applyContentFilters 는 의료광고법 금지어 정규식이라
+  // 원문에 직접 적용하는 것이 의미적으로 맞다.
   const ruleViolations = body.ruleFilterViolations || [];
   if (verdict === 'pass' && ruleViolations.length > 0) {
     const filtered = applyContentFilters(draftHtml);
