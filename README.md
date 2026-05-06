@@ -12,7 +12,7 @@
 | 프론트엔드 | Next.js 16 + React 19 + TypeScript 5.8 + Tailwind 4 |
 | 인증·DB·Storage | Supabase (PostgreSQL) |
 | AI 텍스트·이미지 | Google Gemini API (멀티키 로테이션) |
-| 카드뉴스 에디터 | fabric.js 7 (캔버스 편집) · jspdf (PDF 내보내기) · html2canvas · jszip |
+| 카드뉴스 에디터 | konva 10 + react-konva 19 (캔버스 편집) · jspdf (PDF 내보내기) · jszip |
 | 영상 처리 | FFmpeg + auto-editor (Python) — Railway에 별도 서버 |
 | 자막 (STT) | Google Cloud Speech-to-Text v2 |
 | 크롤러 | Node.js + Express + Puppeteer — Railway |
@@ -62,7 +62,7 @@ Winaid-AI/
 ### 🧠 콘텐츠 생성
 - **블로그 생성** — 5단계 AI 파이프라인 (초안 → AI냄새 제거 → SEO → 의료법 검증 → 최종)
 - **보도자료 생성** — 병원 웹사이트 분석 + 3인칭 기사체
-- **카드뉴스 생성** — 멀티슬라이드 원고 + 16종 레이아웃 + 캔버스 에디터 (fabric.js)
+- **카드뉴스 생성** — 멀티슬라이드 원고 + 16종 레이아웃 + 캔버스 에디터 (react-konva)
   - 드래프트 자동저장 (48h idle timeout + userId 바인딩)
   - 슬라이드쇼 · PNG/JPG/ZIP/PDF 다운로드 · 카드뉴스 → 쇼츠 변환
   - 의료광고법 실시간 검증 (전 필드 스캔 + 원클릭 교체)

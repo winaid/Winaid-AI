@@ -8,7 +8,7 @@
 ## 주요 기능
 
 - **블로그 생성** — 5단계 AI 파이프라인 (초안 → AI냄새 제거 → SEO → 의료법 검증 → 최종)
-- **카드뉴스 생성** — 16종 레이아웃 + fabric.js 캔버스 에디터 + 드래프트 자동저장 + 슬라이드쇼 + PNG/JPG/ZIP/PDF 다운로드 + 쇼츠 변환
+- **카드뉴스 생성** — 16종 레이아웃 + react-konva 캔버스 에디터 + 드래프트 자동저장 + 슬라이드쇼 + PNG/JPG/ZIP/PDF 다운로드 + 쇼츠 변환
 - **보도자료 생성** — 병원 웹사이트 분석 + 3인칭 기사체
 - **AI 이미지 생성** — 8개 카테고리 (캘린더, 포스터, 배너 등)
 - **AI 보정 (Refine)** — 자동 보정 6종 + 채팅 모드
@@ -107,7 +107,7 @@ public-app/
 │   │   └── youtube/            # 유튜브 key-moments
 │   └── page.tsx                # 랜딩
 ├── components/
-│   ├── card-news/              # SlideEditor, SlideRenderers, InteractivePreview 등
+│   ├── card-news/              # SlideEditor, KonvaSlideEditor, SlideRenderers 등
 │   ├── video-edit/             # 9개 step 컴포넌트 + VideoPlayer/WaveformBar/SubtitleTimeline
 │   └── landing/                # LandingHero, LandingSections
 ├── lib/                        # 프롬프트·검증·저장·드래프트·비디오 클라이언트
