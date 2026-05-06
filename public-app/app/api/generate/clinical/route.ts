@@ -12,6 +12,7 @@ import { gateGuestRequest } from '../../../../lib/guestRateLimit';
 import { resolveImageOwner } from '../../../../lib/serverAuth';
 import { useCredit, refundCredit } from '../../../../lib/creditService';
 import { buildClinicalPrompt } from '../../../../lib/clinicalPrompt';
+import { maskPII, unmaskPII, DEFAULT_PII_MASKING_LEVEL } from '@winaid/blog-core';
 
 export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
@@ -91,16 +92,35 @@ export async function POST(request: NextRequest) {
   };
 
   try {
+    // ADR-1 (PII_MASKING_POLICY) — Option B+C 채택본 POC 적용.
+    // 사용자 자유 텍스트(topic / imageAnalysis / doctorName / hospitalName / keywords)에
+    // 환자명·전화·주민번호·차트번호·이메일 가능성이 가장 높음(BL-B-014 최고 risk 라우트).
+    // → LLM 호출 전 결정적 토큰으로 치환, 응답 받은 후 동일 토큰을 원본으로 복원.
+    // 강도: server default ('standard'). 옵트인 UI 는 후속 PR.
+    const maskLevel = DEFAULT_PII_MASKING_LEVEL;
+    const allReplacements = new Map<string, string>();
+    const maskField = (v: string | undefined): string | undefined => {
+      if (!v) return v;
+      const r = maskPII(v, maskLevel);
+      for (const [token, original] of r.replacements) allReplacements.set(token, original);
+      return r.masked;
+    };
+    const maskedTopic = maskField(body.topic) ?? '';
+    const maskedImageAnalysis = maskField(body.imageAnalysis) ?? '';
+    const maskedHospitalName = maskField(body.hospitalName);
+    const maskedDoctorName = maskField(body.doctorName);
+    const maskedKeywords = maskField(body.keywords);
+
     const { systemInstruction, prompt } = buildClinicalPrompt({
-      topic: body.topic,
+      topic: maskedTopic,
       category: body.category,
-      hospitalName: body.hospitalName,
-      doctorName: body.doctorName,
-      imageAnalysis: body.imageAnalysis,
+      hospitalName: maskedHospitalName,
+      doctorName: maskedDoctorName,
+      imageAnalysis: maskedImageAnalysis,
       imageCount: body.imageCount,
       articleType,
       textLength: body.textLength,
-      keywords: body.keywords,
+      keywords: maskedKeywords,
     });
 
     const cookieHeader = request.headers.get('cookie');
@@ -131,7 +151,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({ text: data.text, usage: data.usage, model: data.model });
+    // ADR-1 — 응답 본문에서 마스킹 토큰을 원본으로 복원해 사용자에게는
+    // 마스킹 사실이 보이지 않는다. LLM 이 토큰을 변형(`[name_1]`)했다면
+    // 복원되지 않으므로 그대로 노출 안 됨(안전 방향).
+    const finalText = unmaskPII(data.text as string, allReplacements);
+    return NextResponse.json({ text: finalText, usage: data.usage, model: data.model });
   } catch (err) {
     await refundOnFail();
     const message = (err as Error).message || 'unknown';
