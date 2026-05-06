@@ -24,6 +24,8 @@ export interface BlogFormPanelProps {
   audienceMode: AudienceMode;
   imageStyle: ImageStyle;
   imageCount: number;
+  /** hybrid 모드 전용 — AI 보완 이미지 개수 (총 이미지 = imageCount + aiImageCount) */
+  aiImageCount?: number;
   recommendedImageCount: number;
   imageAspectRatio: '4:3' | '16:9' | '1:1';
   textLength: number;
@@ -84,6 +86,7 @@ export interface BlogFormPanelProps {
   setAudienceMode: (v: AudienceMode) => void;
   setImageStyle: (v: ImageStyle) => void;
   setImageCount: (v: number) => void;
+  setAiImageCount?: (v: number) => void;
   setImageAspectRatio: (v: '4:3' | '16:9' | '1:1') => void;
   setTextLength: (v: number) => void;
   setHospitalName: (v: string) => void;
@@ -141,7 +144,7 @@ function SaturationBadge({ level }: { level?: SaturationLevel }) {
 export default function BlogFormPanel(props: BlogFormPanelProps) {
   const { teamData: TEAM_DATA } = useTeamData();
   const {
-    topic, blogTitle, keywords, keywordDensity, disease, category, persona, tone, audienceMode, imageStyle, imageCount, recommendedImageCount, imageAspectRatio, textLength,
+    topic, blogTitle, keywords, keywordDensity, disease, category, persona, tone, audienceMode, imageStyle, imageCount, aiImageCount = 0, recommendedImageCount, imageAspectRatio, textLength,
     hospitalName, selectedTeam, showHospitalDropdown, selectedManager, selectedHospitalAddress,
     homepageUrl, clinicContext, isCrawling, crawlProgress,
     includeFaq, faqCount, showCustomInput, customPrompt, customSubheadings,
@@ -153,7 +156,7 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
     isLoadingReference, referenceResult,
     imageSourceMode = 'hybrid', onChangeImageSourceMode,
     setTopic, setBlogTitle, setKeywords, setKeywordDensity, setDisease, setCategory, setPersona, setTone, setAudienceMode,
-    setImageStyle, setImageCount, setImageAspectRatio, setTextLength, setHospitalName, setSelectedTeam,
+    setImageStyle, setImageCount, setAiImageCount, setImageAspectRatio, setTextLength, setHospitalName, setSelectedTeam,
     setShowHospitalDropdown, setSelectedManager, setSelectedHospitalAddress,
     setHomepageUrl, setClinicContext, setCrawlProgress,
     setIncludeFaq, setFaqCount, setShowCustomInput, setCustomPrompt, setCustomSubheadings,
@@ -509,11 +512,33 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
               )}
 
               {/* 이미지 수 슬라이더 */}
-              {imageSourceMode !== 'ai' ? (
+              {imageSourceMode === 'hybrid' && setAiImageCount ? (
+                <div className="space-y-3">
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-xs font-semibold text-slate-500">📚 내 이미지 (라이브러리)</label>
+                      <span className="text-[10px] text-blue-500">병원 라이브러리에서 매칭</span>
+                    </div>
+                    <input type="range" min={0} max={15} step={1} value={imageCount} onChange={e => setImageCount(Number(e.target.value))} className="w-full accent-blue-500 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer" aria-label={`라이브러리 이미지 수: ${imageCount}장`} />
+                    <div className="flex justify-between mt-1 text-[10px] text-slate-400"><span>0장</span><span className="text-blue-600 font-semibold">{imageCount}장</span><span>15장</span></div>
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-xs font-semibold text-slate-500">🤖 AI 생성 보완</label>
+                      <span className="text-[10px] text-amber-600">AI 크레딧 소모</span>
+                    </div>
+                    <input type="range" min={0} max={15} step={1} value={aiImageCount} onChange={e => setAiImageCount(Number(e.target.value))} className="w-full accent-amber-500 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer" aria-label={`AI 이미지 수: ${aiImageCount}장`} />
+                    <div className="flex justify-between mt-1 text-[10px] text-slate-400"><span>0장</span><span className="text-amber-600 font-semibold">{aiImageCount}장</span><span>15장</span></div>
+                  </div>
+                  <div className="px-3 py-1.5 bg-blue-50 border border-blue-100 rounded-lg text-[11px] text-blue-700 font-semibold">
+                    총 {imageCount + aiImageCount}장 (라이브러리 {imageCount}장 + AI {aiImageCount}장)
+                  </div>
+                </div>
+              ) : imageSourceMode === 'library' ? (
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
                     <label className="text-xs font-semibold text-slate-500">이미지 수</label>
-                    <span className="text-[10px] text-blue-500">{imageSourceMode === 'hybrid' ? '라이브러리 매칭 + AI 보완' : '라이브러리 매칭 (부족 시 빈칸)'}</span>
+                    <span className="text-[10px] text-blue-500">라이브러리 매칭 (부족 시 빈칸)</span>
                   </div>
                   <input type="range" min={0} max={15} step={1} value={imageCount} onChange={e => setImageCount(Number(e.target.value))} className="w-full accent-blue-500 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer" />
                   <div className="flex justify-between mt-1 text-[10px] text-slate-400"><span>0장</span><span className="text-blue-600 font-semibold">{imageCount}장</span><span>15장</span></div>
@@ -542,8 +567,8 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
                 </details>
               </div>
               )}
-              {/* 이미지 비율 — AI 생성 모드에서만 */}
-              {imageSourceMode !== 'library' && imageCount > 0 && (
+              {/* 이미지 비율 — AI 생성 모드에서만 (hybrid 의 AI 보완분 포함) */}
+              {imageSourceMode !== 'library' && (imageSourceMode === 'hybrid' ? aiImageCount > 0 : imageCount > 0) && (
                 <div>
                   <p className="text-[11px] font-semibold text-slate-500 mb-1.5">이미지 비율</p>
                   <div className="grid grid-cols-3 gap-1.5">
