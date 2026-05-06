@@ -7,7 +7,7 @@
  *  - Secure: https 만
  *  - SameSite=Strict: cross-site 요청에 자동 첨부 안 됨 (CSRF 일부 방어)
  *  - HMAC + expiry timestamp: stateless 검증, rotation 시 즉시 무효화
- *  - 1 시간 유효
+ *  - 7일 유효 (HttpOnly+Secure+SameSite=Strict+HMAC 가드 하에서 운영 편의 우선)
  *
  * Cookie 값 포맷: `<exp>.<hmac>` (둘 다 hex, '.' 분리)
  *   exp  = expiresAt (Date.now() ms, base 16)
@@ -21,7 +21,7 @@ import { createHmac, timingSafeEqual } from 'crypto';
 import { NextRequest } from 'next/server';
 
 export const ADMIN_COOKIE_NAME = 'admin_session';
-export const ADMIN_COOKIE_MAX_AGE_SEC = 60 * 60; // 1시간
+export const ADMIN_COOKIE_MAX_AGE_SEC = 60 * 60 * 24 * 7; // 7일
 
 function getSecret(): string | null {
   const s = process.env.ADMIN_API_TOKEN || '';

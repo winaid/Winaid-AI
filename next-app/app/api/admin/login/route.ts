@@ -2,7 +2,7 @@
  * POST /api/admin/login
  *
  * 입력: { password: string }
- * 출력 (성공): 200 + Set-Cookie admin_session=...; HttpOnly; Secure(prod); SameSite=Strict; Max-Age=3600
+ * 출력 (성공): 200 + Set-Cookie admin_session=...; HttpOnly; Secure(prod); SameSite=Strict; Max-Age=604800 (7일)
  * 출력 (실패): 401 invalid_password
  * 출력 (미초기화): 503 admin_not_configured
  *
