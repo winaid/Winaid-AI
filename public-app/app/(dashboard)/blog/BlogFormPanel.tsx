@@ -595,6 +595,7 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
                   </div>
                   <input type="range" min={0} max={15} step={1} value={imageCount} onChange={e => setImageCount(Number(e.target.value))} className="w-full accent-blue-500 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer" />
                   <div className="flex justify-between mt-1 text-[10px] text-slate-400"><span>0장</span><span className="text-blue-600 font-semibold">{imageCount}장</span><span>15장</span></div>
+                  <p className="mt-1 text-[10px] text-slate-400">실제 본문 자리 수에 맞춰 약 3~6장이 자동 배치됩니다 (글 길이에 따라 다름).</p>
                 </div>
               ) : (
                 <div>
@@ -607,6 +608,7 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
                 </div>
                 <input type="range" min={0} max={15} step={1} value={imageCount} onChange={e => setImageCount(Number(e.target.value))} className="w-full accent-blue-500 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer" aria-label={`AI 이미지 수: ${imageCount}장`} />
                 <div className="flex justify-between mt-1 text-[10px] text-slate-400"><span>0장</span><span className={imageCount === 0 ? 'text-slate-400' : 'text-blue-600 font-semibold'}>{imageCount}장</span><span>15장</span></div>
+                <p className="mt-1 text-[10px] text-slate-400">본문 자리 수가 한정돼 글 길이에 따라 약 3~6장만 실제 삽입될 수 있습니다.</p>
                 {imageCount >= 6 && <p className="text-[10px] text-amber-600 mt-1">이미지가 많을수록 생성 시간이 길어집니다 (6장 이상: 약 3~5분)</p>}
                 <details className="mt-1.5 text-[11px] text-slate-500">
                   <summary className="cursor-pointer hover:text-slate-700">📸 이미지 유형 가이드</summary>
