@@ -45,7 +45,7 @@ Winaid-AI/
 │   │   └── video-edit/      # 영상편집 9개 step 컴포넌트
 │   ├── lib/                 # 프롬프트·검증·저장·드래프트·비디오 클라이언트
 │   ├── hooks/               # useAuthGuard, useBlobUrl
-│   ├── e2e/                 # Playwright 스모크 테스트 (11 파일, 38 tests)
+│   ├── e2e/                 # Playwright 스모크 테스트
 │   └── sql/                 # public-app 전용 Supabase 스키마
 ├── next-app/                # 내부 운영 도구 (admin · influencer · strengths · youtube 등)
 ├── crawler-server/          # 네이버 블로그 크롤러 (Express + Puppeteer, Railway)
@@ -205,13 +205,13 @@ cd public-app
 npm run dev           # 개발 서버 (http://localhost:3000)
 npm run build         # 프로덕션 빌드
 npm run lint          # tsc --noEmit (타입 체크)
-npm run test:e2e      # Playwright 스모크 테스트 (38 tests)
+npm run test:e2e      # Playwright 스모크 테스트
 npm run test:e2e:ui   # Playwright UI 모드 (디버깅용)
 ```
 
 ### E2E 테스트
 
-Playwright 스모크 테스트가 11개 파일에 걸쳐 38개 존재.
+Playwright 스모크 테스트.
 
 ```bash
 cd public-app
@@ -252,4 +252,4 @@ Private — 비공개 프로젝트
 
 ---
 
-마지막 업데이트: 2026-04-10 · [CHANGELOG.md](./CHANGELOG.md)
+[CHANGELOG.md](./CHANGELOG.md)

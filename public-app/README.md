@@ -122,7 +122,7 @@ public-app/
 ├── hooks/
 │   ├── useAuthGuard.ts
 │   └── useBlobUrl.ts           # Blob URL 자동 revoke 훅
-├── e2e/                        # Playwright 스모크 테스트 (11 파일, 38 tests)
+├── e2e/                        # Playwright 스모크 테스트
 │   ├── helpers/mocks.ts        # 공용 mock 유틸
 │   ├── landing.spec.ts
 │   ├── auth.spec.ts
@@ -144,7 +144,7 @@ public-app/
 npm run dev       # 개발 서버
 npm run build     # 프로덕션 빌드
 npm run lint      # tsc --noEmit (타입 체크)
-npm run test:e2e  # Playwright 스모크 (38 tests)
+npm run test:e2e  # Playwright 스모크
 npm run test:e2e:ui  # Playwright UI 모드 (디버깅)
 ```
 
