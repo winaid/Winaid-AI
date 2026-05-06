@@ -5,6 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { sanitizePromptInput } from '@winaid/blog-core';
 import { checkAuth } from '../../../lib/apiAuth';
 import { fetchMedicalReference } from '../../../lib/referenceFetcher';
 
@@ -24,8 +25,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'invalid json' }, { status: 400 });
   }
 
-  const topic = typeof body.topic === 'string' ? body.topic.trim() : '';
-  const category = typeof body.category === 'string' ? body.category.trim() : undefined;
+  // 프롬프트 인젝션 방어 — pressPrompt/clinicalPrompt/youtubePrompt 과 동일 정책.
+  // referenceFetcher 는 사용자 topic 을 LLM userPrompt 에 그대로 보간하므로
+  // 출처 fabrication / 화이트리스트 우회 인젝션 위험. (SEC-006 회귀 회복)
+  const rawTopic = typeof body.topic === 'string' ? body.topic.trim() : '';
+  if (!rawTopic) {
+    return NextResponse.json({ error: 'topic required' }, { status: 400 });
+  }
+  const topic = sanitizePromptInput(rawTopic, 500);
+  const rawCategory = typeof body.category === 'string' ? body.category.trim() : '';
+  const category = rawCategory ? sanitizePromptInput(rawCategory, 50) : undefined;
   if (!topic) {
     return NextResponse.json({ error: 'topic required' }, { status: 400 });
   }

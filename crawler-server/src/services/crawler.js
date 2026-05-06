@@ -1,10 +1,55 @@
 const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
+const { isAllowed: robotsIsAllowed } = require('../utils/robots');
+const { schedule: throttleSchedule } = require('../utils/throttle');
 
 // Stealth 플러그인 적용 — headless 브라우저 탐지 우회
 puppeteer.use(StealthPlugin());
 
+// robots.txt 매칭에 사용하는 UA 토큰. 본 크롤러는 위장 UA (Chrome/120) 로
+// fetch/navigate 하지만 robots.txt 매칭은 식별 가능한 토큰으로 — 위장 UA 로
+// robots.txt 평가 시 '*' group 만 매치되어 사이트 운영자가 본 크롤러를 식별/
+// 차단할 수단이 없음. (BL-C-005 보조 방어선)
+const ROBOTS_UA = 'WinaidCrawler';
+
+// 본 크롤러 동시성 정책 (BL-C-006):
+//  - per-host 최소 간격 500 ms (robots.txt Crawl-delay 가 더 크면 그 값 적용)
+//  - 직렬 처리 (concurrency 1) — 가장 보수적
+const DEFAULT_PER_HOST_INTERVAL_MS = 500;
+
+/**
+ * robots.txt 체크 + per-host throttle 을 거쳐 fetch/navigate 콜백 실행.
+ * 외부에서 직접 호출하는 fetch/page.goto 는 모두 본 함수 통과 권장.
+ * @param {string} url
+ * @param {() => Promise<T>} fn
+ * @returns {Promise<T>}
+ * @throws Error robots.txt Disallow 매칭 시 'robots_disallow'
+ */
+async function gatedFetch(url, fn) {
+  const verdict = await robotsIsAllowed(url, ROBOTS_UA);
+  if (!verdict.allowed) {
+    const err = new Error(`robots_disallow: ${url} (${verdict.reason})`);
+    err.code = 'ROBOTS_DISALLOW';
+    throw err;
+  }
+  const minInterval = Math.max(
+    DEFAULT_PER_HOST_INTERVAL_MS,
+    (verdict.crawlDelay || 0) * 1000,
+  );
+  return throttleSchedule(url, fn, { minIntervalMs: minInterval });
+}
+
+// Browser 싱글톤 — race condition 차단을 위해 launch promise 자체를 캐싱.
+//
+// 과거 (SVR-013 회귀): `if (browser && browser.isConnected()) return browser; ...
+// browser = await puppeteer.launch(...)`. 동시 요청 N 개가 첫 hit 면 모두 launch
+// 분기에 진입 → N 개 인스턴스 생성, 마지막 1개만 모듈 변수에 남고 N-1 leak.
+// Railway memory (~250MB × N) 폭증 → OOM kill.
+//
+// 수정: launchPromise 를 캐시해서 동시 호출은 같은 promise 를 await. 인스턴스가
+// disconnect 되면 promise 와 browser 둘 다 null 로 리셋.
 let browser = null;
+let launchPromise = null;
 
 // ────────────────────────────────────────────────
 // 유틸리티
@@ -89,17 +134,29 @@ function findChromiumPath() {
 }
 
 /**
- * 브라우저 인스턴스 가져오기 (싱글톤)
+ * 브라우저 인스턴스 가져오기 (싱글톤 + launch promise 캐싱).
+ *
+ * 동시 호출 race 차단: launchPromise 가 in-flight 면 같은 promise 를 await.
+ * 첫 호출자가 launch 완료하면 browser 변수에 저장 + launchPromise 는 null 리셋.
+ * launch 실패 시에도 launchPromise 를 null 로 풀어 다음 호출이 재시도 가능하게 함.
  */
 async function getBrowser() {
   if (browser && browser.isConnected()) {
     return browser;
   }
+  // disconnect 된 stale 인스턴스는 정리 — promise 캐시도 같이 무효화하지 않으면
+  // 이미 닫힌 browser 를 다시 await 해 반환할 위험.
+  if (browser && !browser.isConnected()) {
+    browser = null;
+  }
+  if (launchPromise) {
+    return launchPromise;
+  }
 
   const executablePath = findChromiumPath();
   console.log(`[Browser] Puppeteer+Stealth 시작 중... (${executablePath})`);
 
-  browser = await puppeteer.launch({
+  launchPromise = puppeteer.launch({
     executablePath,
     headless: 'new',
     args: [
@@ -114,10 +171,23 @@ async function getBrowser() {
       '--window-size=1920,1080',
     ],
     timeout: parseInt(process.env.BROWSER_TIMEOUT) || 30000
+  }).then((b) => {
+    browser = b;
+    console.log('[Browser] Puppeteer+Stealth 시작 완료');
+    // disconnect 시 캐시 무효화 — 다음 getBrowser 호출이 새 인스턴스 launch 함
+    b.on('disconnected', () => {
+      if (browser === b) browser = null;
+    });
+    return b;
+  }).catch((err) => {
+    // 실패 시 promise 캐시 풀어 재시도 허용. browser 는 그대로 null.
+    console.error('[Browser] launch 실패:', err.message);
+    throw err;
+  }).finally(() => {
+    launchPromise = null;
   });
 
-  console.log('[Browser] Puppeteer+Stealth 시작 완료');
-  return browser;
+  return launchPromise;
 }
 
 // ────────────────────────────────────────────────
@@ -151,7 +221,8 @@ async function crawlNaverBlogs(query, maxResults = 30) {
       const start = (pageNum - 1) * 10 + 1;
       const url = `https://search.naver.com/search.naver?where=blog&query=${encodeURIComponent(query)}&start=${start}&sm=tab_opt&nso=so:sim,p:from${fmt(oneYearAgo)}to${fmt(today)}`;
 
-      await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
+      // robots.txt + per-host throttle 게이트 (BL-C-005, BL-C-006)
+      await gatedFetch(url, () => page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 }));
 
       const pageResults = await page.evaluate(() => {
         const items = [];
@@ -212,7 +283,8 @@ async function crawlBlogContent(url) {
 
     console.log(`[Content] 크롤링: ${url} [${timer.elapsed()}]`);
 
-    await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
+    // robots.txt + per-host throttle 게이트 (BL-C-005, BL-C-006)
+    await gatedFetch(url, () => page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 }));
 
     // iframe 처리 (네이버 블로그는 iframe 사용)
     const frames = page.frames();
@@ -276,10 +348,12 @@ async function fetchPostData(blogId, logNo) {
 
   for (const url of urls) {
     try {
-      const res = await fetch(url, {
+      // robots.txt + per-host throttle (BL-C-005, BL-C-006).
+      // ROBOTS_DISALLOW 면 다음 URL 로 (mobile fallback) 시도.
+      const res = await gatedFetch(url, () => fetch(url, {
         headers: FETCH_HEADERS,
         signal: AbortSignal.timeout(8000),
-      });
+      }));
       if (!res.ok) continue;
 
       const html = await res.text();
@@ -416,7 +490,11 @@ async function fetchPostDataPuppeteer(browserInstance, blogId, logNo) {
 
     let navigated = false;
     for (const url of urls) {
-      const resp = await postPage.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 }).catch(() => null);
+      // robots.txt + per-host throttle (BL-C-005, BL-C-006). 실패/disallow → 다음 URL.
+      const resp = await gatedFetch(
+        url,
+        () => postPage.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 }),
+      ).catch(() => null);
       if (resp && resp.status() < 400) { navigated = true; break; }
     }
     if (!navigated) return null;
@@ -481,11 +559,14 @@ async function crawlHospitalBlogPosts(blogUrl, maxPosts = 10) {
     };
 
     // 1-A: RSS + PostTitleListAsync 동시 시도
+    // 둘 다 robots.txt + per-host throttle 게이트 통과.
     const [rssResult, apiResult] = await Promise.allSettled([
       // RSS (logNo + pubDate)
       (async () => {
         const rssUrl = `https://rss.blog.naver.com/${blogId}.xml`;
-        const res = await fetch(rssUrl, { headers: FETCH_HEADERS, signal: AbortSignal.timeout(5000) });
+        const res = await gatedFetch(rssUrl, () =>
+          fetch(rssUrl, { headers: FETCH_HEADERS, signal: AbortSignal.timeout(5000) })
+        );
         if (!res.ok) return [];
         const xml = await res.text();
         const items = extractRssItems(xml, blogId);
@@ -500,10 +581,10 @@ async function crawlHospitalBlogPosts(blogUrl, maxPosts = 10) {
         const logNos = [];
         for (let pg = 1; pg <= 2; pg++) {
           const apiUrl = `https://blog.naver.com/PostTitleListAsync.naver?blogId=${blogId}&viewdate=&currentPage=${pg}&categoryNo=0&parentCategoryNo=0&countPerPage=10`;
-          const res = await fetch(apiUrl, {
+          const res = await gatedFetch(apiUrl, () => fetch(apiUrl, {
             headers: { ...FETCH_HEADERS, 'Referer': `https://blog.naver.com/${blogId}`, 'X-Requested-With': 'XMLHttpRequest' },
             signal: AbortSignal.timeout(5000),
-          });
+          }));
           if (!res.ok) break;
           const text = await res.text();
           const matches = text.match(/"logNo"\s*:\s*"?(\d+)"?/g) || [];
@@ -527,7 +608,12 @@ async function crawlHospitalBlogPosts(blogUrl, maxPosts = 10) {
         await page.setUserAgent(FETCH_HEADERS['User-Agent']);
 
         const blogListUrl = `https://blog.naver.com/PostList.naver?blogId=${blogId}&categoryNo=0&currentPage=1&postListType=&blogType=B`;
-        const resp = await page.goto(blogListUrl, { waitUntil: 'domcontentloaded', timeout: 15000 }).catch(() => null);
+        // robots.txt + per-host throttle (BL-C-005, BL-C-006). disallow 면 null
+        // 으로 처리해 기존 fallback 흐름 그대로 동작.
+        const resp = await gatedFetch(
+          blogListUrl,
+          () => page.goto(blogListUrl, { waitUntil: 'domcontentloaded', timeout: 15000 }),
+        ).catch(() => null);
 
         if (resp && resp.status() < 400) {
           const pageLogNos = await page.evaluate((bid) => {

@@ -5,6 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { sanitizePromptInput } from '@winaid/blog-core';
 import { gateDiagnosticRequest } from '../../../lib/guestRateLimit';
 import { fetchMedicalReference } from '../../../lib/referenceFetcher';
 
@@ -26,9 +27,20 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'invalid json' }, { status: 400 });
   }
 
-  const topic = typeof body.topic === 'string' ? body.topic.trim() : '';
-  const category = typeof body.category === 'string' ? body.category.trim() : undefined;
+  // 프롬프트 인젝션 방어 — 같은 monorepo 의 다른 prompt builder
+  // (pressPrompt.ts / clinicalPrompt.ts / youtubePrompt.ts) 와 동일 정책으로
+  // sanitizePromptInput 적용. 과거 trim() 만 적용하여 회귀 (SEC-006).
+  // referenceFetcher 는 사용자 topic 을 LLM userPrompt 에 그대로 보간하므로
+  // 출처 fabrication / 화이트리스트 우회 인젝션 위험이 있어 sanitize 필수.
+  const rawTopic = typeof body.topic === 'string' ? body.topic.trim() : '';
+  if (!rawTopic) {
+    return NextResponse.json({ error: 'topic required' }, { status: 400 });
+  }
+  const topic = sanitizePromptInput(rawTopic, 500);
+  const rawCategory = typeof body.category === 'string' ? body.category.trim() : '';
+  const category = rawCategory ? sanitizePromptInput(rawCategory, 50) : undefined;
   if (!topic) {
+    // sanitize 결과가 빈 문자열 (인젝션 키워드 전부 제거된 케이스)
     return NextResponse.json({ error: 'topic required' }, { status: 400 });
   }
 

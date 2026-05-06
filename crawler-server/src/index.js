@@ -81,20 +81,42 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Health check — 정보 최소화 (보안)
+// Health check — 정보 최소화 (보안) + 부팅 시 1회 캐시 (DoS 방어)
 // 버전 문자열, uptime, cachedVideos, hasCookies, hasProxy 등 운영 메타데이터는
 // 노출하지 않는다. 버전이 유출되면 특정 취약 버전(yt-dlp CVE 등)을 공격자가
 // 타겟팅할 수 있음. 각 의존성은 boolean `checks`로만 응답.
+//
+// 과거 (SVR-003 회귀): 매 hit 마다 execSync('yt-dlp --version'), execSync('ffmpeg -version').
+// /health 는 인증 우회 + LB probe 라 외부 공격자가 초당 수십 hit 시 fork 폭발 +
+// 이벤트 루프 블로킹. timeout 3000 ms 만 추가되어 있었음.
+//
+// 수정: 부팅 시 1회 동기 검사 + 모듈 스코프 캐시. TTL 60초로 주기적 refresh —
+// 운영 중 yt-dlp / ffmpeg binary 가 사라지는 케이스도 1분 안에 감지.
+const HEALTH_TTL_MS = 60_000;
+let healthCache = { ts: 0, checks: { ytdlp: false, ffmpeg: false } };
+
+function refreshHealthChecks() {
+  const checks = { ytdlp: false, ffmpeg: false };
+  try { execSync('yt-dlp --version', { stdio: 'pipe', timeout: 3000 }); checks.ytdlp = true; } catch { /* false */ }
+  try { execSync('ffmpeg -version', { stdio: 'pipe', timeout: 3000 }); checks.ffmpeg = true; } catch { /* false */ }
+  healthCache = { ts: Date.now(), checks };
+}
+
+// 부팅 시 1회 즉시 실행 — 첫 /health hit 가 cold 가 되지 않도록.
+refreshHealthChecks();
+
 app.get('/health', (req, res) => {
-  const checks = {};
-  try { execSync('yt-dlp --version', { stdio: 'pipe', timeout: 3000 }); checks.ytdlp = true; } catch { checks.ytdlp = false; }
-  try { execSync('ffmpeg -version', { stdio: 'pipe', timeout: 3000 }); checks.ffmpeg = true; } catch { checks.ffmpeg = false; }
-  res.json({ status: 'ok', checks });
+  if (Date.now() - healthCache.ts > HEALTH_TTL_MS) {
+    refreshHealthChecks();
+  }
+  res.json({ status: 'ok', checks: healthCache.checks });
 });
 
 // API 라우트 — 모든 /api/* 는 Bearer 인증 통과 필수.
-// /health 만 인증 우회 (LB/uptime probe 용). 정보 최소화는 위 핸들러에서 처리.
-app.use('/api', bearerAuth());
+// /health 는 위에서 별도 마운트 — bearerAuth 명시적으로 skipPaths 에 포함시켜
+// 마운트 순서 의존성 제거 (SVR-002 권고). 향후 누군가 app.use('/health', ...)
+// 위치를 바꾸거나 /api/health 형태로 옮겨도 LB probe 동작 유지.
+app.use('/api', bearerAuth(['/health']));
 app.use('/api/naver', naverCrawlerRouter);
 app.use('/api/youtube', youtubeGifRouter);
 
