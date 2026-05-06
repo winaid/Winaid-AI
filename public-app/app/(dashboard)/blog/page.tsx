@@ -276,8 +276,8 @@ function BlogForm() {
   }, []);
   const [isChatRefining, setIsChatRefining] = useState(false);
   // 생성 시간 추정
-  const [generationStartTime, setGenerationStartTime] = useState<number>(0);
-  const [estimatedTotalSeconds, setEstimatedTotalSeconds] = useState<number>(0);
+  // 정직한 progress UI 도입 후 generationStartTime / estimatedTotalSeconds 제거 (2026-05).
+  // 가짜 ETA 가 elapsed > estimated 시 "거의 완료..." 무한 표시되던 안티패턴 제거.
 
   // ── 블로그 섹션 상태 (소제목 재생성 + export) ──
   const [blogSections, setBlogSections] = useState<BlogSection[]>([]);
@@ -959,13 +959,6 @@ JSON 형식으로 응답해주세요.`;
     setSeoReport(null);
     setIsSeoLoading(false);
     setSaveStatus(null);
-    // 예상 시간 계산
-    setGenerationStartTime(Date.now());
-    let estimated = 25; // 텍스트 생성 (~20초) + 경쟁분석 병렬 (~5초)
-    if (!useImageLibrary && request.imageCount && request.imageCount > 0) {
-      estimated += request.imageCount * 45;
-    }
-    setEstimatedTotalSeconds(estimated);
     setBlogSections([]);
     setRegeneratingSection(null);
     setSectionProgress('');
@@ -1943,8 +1936,6 @@ Output ONLY the prompt. No explanation.`;
         isGenerating={isGenerating}
         displayStage={displayStage}
         rotationIdx={rotationIdx}
-        generationStartTime={generationStartTime}
-        estimatedTotalSeconds={estimatedTotalSeconds}
         error={error}
         onDismissError={() => setError(null)}
         isRetryable={isRetryable}
