@@ -1492,12 +1492,17 @@ JSON 형식으로 응답해주세요.`;
 
           // defense-in-depth (2): revisedHtml 의 <img> 가 원본보다 적으면 (Opus 가 마커·태그 모두 drop)
           // 원본 유지 — 의료법 fix 손해보다 라이브러리 이미지 0개 회귀가 더 큼.
+          // 단, V3/Loop1 단계가 사용자 요청(imageCount)보다 더 많은 마커를 출력해 originalImgCount
+          // 자체가 over-count 인 경우, V4 가 imageCount 만큼 정확히 보존했다면 그것은 "손실" 아님
+          // (3장 요청 / V3 4개 출력 / V4 3개 → 폴백 진입 시 4개로 복구되어 1장 중복 발생).
+          // 따라서 진짜 손실 임계값은 min(originalImgCount, imageCount) 로 보수적으로 설정.
           // 명시적으로 setGeneratedContent(blogText) 를 호출해 placeholder swap 등 중간 상태 잔재로 인한
           // 이미지 중복/누락 가능성을 차단한다 (이전: state drift 의존, 함묵적 fallback).
           const originalImgCount = (blogText.match(/<img[^>]*data-image-index/g) || []).length;
           const revisedImgCount = (revisedWithImages.match(/<img[^>]*data-image-index/g) || []).length;
-          if (originalImgCount > 0 && revisedImgCount < originalImgCount) {
-            console.warn(`[BLOG] [V4] revisedHtml <img> 손실 (${revisedImgCount}/${originalImgCount}) — 원본 유지`);
+          const lossThreshold = Math.min(originalImgCount, imageCount);
+          if (lossThreshold > 0 && revisedImgCount < lossThreshold) {
+            console.warn(`[BLOG] [V4] revisedHtml <img> 손실 (${revisedImgCount}/${lossThreshold}, original=${originalImgCount}, requested=${imageCount}) — 원본 유지`);
             setGeneratedContent(blogText); // 명시적 reaffirm — 중간 setGeneratedContent 잔재 차단
           } else {
             setGeneratedContent(revisedWithImages);
