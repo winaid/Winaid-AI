@@ -537,10 +537,14 @@ export async function POST(request: NextRequest) {
 
   const BLOG_IMAGE_RULE = `[BLOG ILLUSTRATION]
 Pure visual illustration for a blog body image — never a poster, flyer, infographic, or card news layout.
+ONE single cohesive scene only. NEVER a collage, grid, mosaic, diptych, triptych, quadrant layout, split frame, picture-in-picture, before/after side-by-side, or any composition that combines multiple separate sub-images into one frame.
 
 [FORBIDDEN]
 - Any text, letters, words, labels, logos, watermarks, phone numbers, URLs in the image
 - Poster / infographic / card-news layout
+- Collage / photo grid / 2x2 or 3x3 layout / split panels / multiple framed sub-images / mosaic
+- Side-by-side comparison frames, before/after split, picture-in-picture insets
+- Visible internal borders, frames, dividers, gutters, or seams that segment the image
 
 [KOREAN MEDICAL CONTEXT]
 - Real Korean hospital or clinic interior: clean white walls, wood accents, modern minimalist
@@ -550,7 +554,8 @@ Pure visual illustration for a blog body image — never a poster, flyer, infogr
 [COMPOSITION]
 - Rule of thirds, breathing room around subjects, foreground/midground/background depth
 - Natural eye-level or slightly elevated angle, no dead-center placement
-- Directional natural lighting with soft shadows`;
+- Directional natural lighting with soft shadows
+- Single unified composition with one continuous background — never partition the canvas`;
 
   const fullPrompt = isCardNewsMode
     ? buildCardNewsPromptFull(body)
