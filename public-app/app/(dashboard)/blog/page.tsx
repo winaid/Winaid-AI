@@ -150,24 +150,19 @@ function BlogForm() {
   const [audienceMode, setAudienceMode] = useState<AudienceMode>('환자용(친절/공감)');
   const [writingStyle, setWritingStyle] = useState<WritingStyle>('empathy');
   const [cssTheme, setCssTheme] = useState<CssTheme>('modern');
-  const [imageStyle, setImageStyle] = useState<ImageStyle>('photo');
+  // UI 단순화 — imageStyle/textLength 는 고정 상수 (사용자 선택 UI 제거)
+  const imageStyle: ImageStyle = 'photo';
+  const textLength = 2000;
   const [imageCount, setImageCount] = useState(3);
   const [useImageLibrary, setUseImageLibrary] = useState(false);
   const [imageAspectRatio, setImageAspectRatio] = useState<'4:3' | '16:9' | '1:1'>('4:3');
-  const [textLength, setTextLength] = useState(2500);
 
-  // 이미지 수량 자동 추천
+  // 이미지 수량 자동 추천 (textLength 2000 고정 → 8장 권장)
   const imageCountManualRef = useRef(false);
   const generateAbortRef = useRef<AbortController | null>(null);
   // BL-A-001: 섹션 재생성 전용 AbortController — 페이지 이탈 시 백그라운드 fetch 정리
   const sectionAbortRef = useRef<AbortController | null>(null);
-  const recommendedImageCount = useMemo(() => {
-    if (textLength <= 1000) return 4;
-    if (textLength <= 1500) return 6;
-    if (textLength <= 2500) return 8;
-    if (textLength <= 3500) return 10;
-    return 15;
-  }, [textLength]);
+  const recommendedImageCount = 8;
 
   useEffect(() => {
     if (!imageCountManualRef.current) setImageCount(recommendedImageCount);
@@ -233,8 +228,6 @@ function BlogForm() {
   const [faqCount, setFaqCount] = useState(3);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [learnedStyleId, setLearnedStyleId] = useState<string | undefined>(undefined);
-  const [customPrompt, setCustomPrompt] = useState('');
-  const [showCustomInput, setShowCustomInput] = useState(false);
 
   // ── 키워드 분석 상태 (old InputForm 동일) ──
   const [keywordStats, setKeywordStats] = useState<KeywordStat[]>([]);
@@ -267,16 +260,8 @@ function BlogForm() {
   const [crawlProgress, setCrawlProgress] = useState('');
   const [includeHospitalIntro] = useState(true); // 항상 ON — UI 토글 제거
 
-  // localStorage에서 커스텀 프롬프트 복원 (old 동일)
-  useEffect(() => {
-    const saved = localStorage.getItem('hospital_custom_image_prompt');
-    if (saved) setCustomPrompt(saved);
-  }, []);
-
-  // ── AI 제목 추천 / 트렌드 상태 ──
-  const [isLoadingTitles, setIsLoadingTitles] = useState(false);
+  // ── AI 트렌드 주제 추천 상태 (제목 추천 UI 제거 — 자동 처리로 통합) ──
   const [isLoadingTrends, setIsLoadingTrends] = useState(false);
-  const [seoTitles, setSeoTitles] = useState<SeoTitleItem[]>([]);
   const [trendingItems, setTrendingItems] = useState<TrendingItem[]>([]);
 
   // ── 생성 상태 ──
@@ -312,11 +297,12 @@ function BlogForm() {
   );
 
   const handleSaveSettings = useCallback(() => {
-    const s = { category, hospitalName, selectedHospitalAddress, homepageUrl, textLength, imageCount, imageAspectRatio, imageStyle, audienceMode, persona, tone, writingStyle, includeFaq, faqCount, includeHospitalIntro, customSubheadings };
+    // textLength / imageStyle 은 UI 단순화 후 고정 상수 — 저장 대상 아님
+    const s = { category, hospitalName, selectedHospitalAddress, homepageUrl, imageCount, imageAspectRatio, audienceMode, persona, tone, writingStyle, includeFaq, faqCount, includeHospitalIntro, customSubheadings };
     localStorage.setItem(getSettingsKey(), JSON.stringify(s));
     setSettingsToast('💾 설정 저장됨');
     setTimeout(() => setSettingsToast(''), 1500);
-  }, [category, hospitalName, selectedHospitalAddress, homepageUrl, textLength, imageCount, imageAspectRatio, imageStyle, audienceMode, persona, tone, writingStyle, includeFaq, faqCount, includeHospitalIntro, customSubheadings, getSettingsKey]);
+  }, [category, hospitalName, selectedHospitalAddress, homepageUrl, imageCount, imageAspectRatio, audienceMode, persona, tone, writingStyle, includeFaq, faqCount, includeHospitalIntro, customSubheadings, getSettingsKey]);
 
   const applySettings = useCallback((raw: string) => {
     try {
@@ -325,10 +311,9 @@ function BlogForm() {
       if (s.hospitalName) setHospitalName(s.hospitalName);
       if (s.selectedHospitalAddress) setSelectedHospitalAddress(s.selectedHospitalAddress);
       if (s.homepageUrl) setHomepageUrl(s.homepageUrl);
-      if (s.textLength) setTextLength(s.textLength);
+      // s.textLength / s.imageStyle 은 무시 — 고정 상수로 전환됨
       if (s.imageCount !== undefined) setImageCount(s.imageCount);
       if (s.imageAspectRatio) setImageAspectRatio(s.imageAspectRatio);
-      if (s.imageStyle) setImageStyle(s.imageStyle);
       if (s.audienceMode) setAudienceMode(s.audienceMode);
       if (s.persona) setPersona(s.persona);
       if (s.tone) setTone(s.tone);
@@ -576,17 +561,14 @@ function BlogForm() {
     }
   };
 
-  // ── AI 제목 추천 (old handleRecommendTitles 동일) ──
-  const handleRecommendTitles = async () => {
-    const topicForSeo = topic || disease || keywords || '';
-    if (!topicForSeo) return;
-    console.info(`[TITLE] ========== 제목 추천 시작 ==========`);
-    console.info(`[TITLE] 주제="${topicForSeo}" 키워드="${keywords}" 질환="${disease}"`);
-    setIsLoadingTitles(true);
-    setSeoTitles([]);
-    setTrendingItems([]);
+  // ── AI 자동 제목 추천 (UI 단순화 후 handleSubmit 안에서 자동 호출) ──
+  // 제목 입력 UI 가 제거되어 사용자가 비워둔 상태로 생성을 시작 → 본문 생성 직전에 LLM 으로
+  // SEO 제목 5개 후보를 받아 점수 최고를 자동 선택. 실패 시 topic 으로 silent fallback.
+  const requestAutoTitle = async (signal?: AbortSignal): Promise<string | null> => {
+    const topicForSeo = (topic.trim() || disease.trim() || keywords.trim());
+    if (!topicForSeo) return null;
     try {
-      const keywordsForSeo = keywords || disease || topicForSeo;
+      const keywordsForSeo = keywords.trim() || disease.trim() || topicForSeo;
       const now = new Date();
       const koreaTime = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
       const currentMonth = koreaTime.getMonth() + 1;
@@ -672,22 +654,22 @@ SEO 점수 기준:
           temperature: 0.5,
           maxOutputTokens: 2000,
         }),
+        signal,
       });
 
       const data = await res.json() as { text?: string; error?: string };
-      if (!res.ok || !data.text) throw new Error(data.error || '제목 추천 실패');
+      if (!res.ok || !data.text) return null;
 
       const titles: SeoTitleItem[] = JSON.parse(data.text);
+      if (!Array.isArray(titles) || titles.length === 0) return null;
       const sorted = titles.sort((a, b) => b.score - a.score);
-      setSeoTitles(sorted);
-      console.info(`[TITLE] 결과: ${sorted.length}개 제목 생성`);
-      sorted.forEach((t, i) => console.info(`[TITLE]   ${i + 1}. [${t.score}점] "${t.title}"`));
-      console.info(`[TITLE] ========== 제목 추천 완료 ==========`);
+      const best = sorted[0]?.title?.trim();
+      if (!best) return null;
+      console.info(`[TITLE] 자동 추천: "${best}" (${sorted.length}개 후보 중 점수 최고)`);
+      return best;
     } catch (e) {
-      console.error('[TITLE] ❌ 제목 추천 실패:', e);
-      setError('제목 추천 실패');
-    } finally {
-      setIsLoadingTitles(false);
+      console.warn('[TITLE] 자동 제목 추천 실패 — topic 으로 fallback:', e);
+      return null;
     }
   };
 
@@ -695,7 +677,6 @@ SEO 점수 기준:
   const handleRecommendTrends = async () => {
     setIsLoadingTrends(true);
     setTrendingItems([]);
-    setSeoTitles([]);
     try {
       const userKeyword = (disease.trim() || topic.trim());
 
@@ -1005,10 +986,22 @@ JSON 형식으로 응답해주세요.`;
       console.info(`[STYLE] fallback — UI 학습/병원명 모두 없음 → 기본 의료 블로그 톤(fallback) 적용`);
     }
 
+    // ── UI 단순화: 제목 입력란 제거 → 본문 생성 직전에 LLM 자동 추천 ──
+    // 사용자가 비워둔 경우(title 입력 UI 자체가 없으므로 항상 빈 값)에만 호출.
+    // 실패해도 silent fallback (topic 사용) — 본 흐름 차단 안 됨.
+    let resolvedBlogTitle = blogTitle.trim();
+    if (!resolvedBlogTitle) {
+      const auto = await requestAutoTitle(abortSignal);
+      if (auto) {
+        resolvedBlogTitle = auto;
+        setBlogTitle(auto); // 결과 영역에서 표시 가능하도록 state 동기화
+      }
+    }
+
     const request: GenerationRequest = {
       category,
       topic: topic.trim(),
-      blogTitle: blogTitle.trim() || undefined,
+      blogTitle: resolvedBlogTitle || undefined,
       keywords: keywords.trim(),
       disease: disease.trim() || topic.trim() || undefined,
       tone,
@@ -1029,7 +1022,7 @@ JSON 형식으로 응답해주세요.`;
       includeFaq,
       faqCount: includeFaq ? faqCount : undefined,
       customSubheadings: customSubheadings.trim() || undefined,
-      customImagePrompt: imageStyle === 'custom' ? (customPrompt?.trim() || undefined) : undefined,
+      // UI 단순화 후 imageStyle='photo' 고정 → custom 분기 영구 false (customImagePrompt 미전송)
       hospitalName: hospitalName || undefined,
       hospitalStyleSource: hospitalName ? 'explicit_selected_hospital' : 'generic_default',
       includeHospitalIntro,
@@ -1989,17 +1982,17 @@ Output ONLY the prompt. No explanation.`;
   return (
     <div className="flex flex-col lg:flex-row gap-5 lg:items-start p-5">
       {/* ── 입력 폼 — BlogFormPanel 컴포넌트로 분리 ── */}
+      {/* UI 단순화: 제목/글자수/이미지스타일/커스텀프롬프트/SEO제목추천 props 제거 (자동 처리) */}
       <BlogFormPanel
-        topic={topic} blogTitle={blogTitle} keywords={keywords} keywordDensity={keywordDensity} disease={disease} category={category}
+        topic={topic} keywords={keywords} keywordDensity={keywordDensity} disease={disease} category={category}
         persona={persona} tone={tone} audienceMode={audienceMode}
-        imageStyle={imageStyle} imageCount={imageCount} imageAspectRatio={imageAspectRatio} textLength={textLength}
+        imageCount={imageCount} imageAspectRatio={imageAspectRatio}
         useImageLibrary={useImageLibrary} onToggleImageLibrary={setUseImageLibrary}
         hospitalName={hospitalName} hospitalNameFromProfile={hospitalNameFromProfile}
         selectedHospitalAddress={selectedHospitalAddress}
         homepageUrl={homepageUrl} clinicContext={clinicContext}
         isCrawling={isCrawling} crawlProgress={crawlProgress}
         includeFaq={includeFaq} faqCount={faqCount}
-        showCustomInput={showCustomInput} customPrompt={customPrompt}
         customSubheadings={customSubheadings} learnedStyleId={learnedStyleId}
         showAdvanced={showAdvanced} includeHospitalIntro={includeHospitalIntro}
         keywordStats={keywordStats} keywordAiRec={keywordAiRec}
@@ -2008,22 +2001,21 @@ Output ONLY the prompt. No explanation.`;
         keywordSearch={keywordSearch} keywordMinVolume={keywordMinVolume}
         isCheckingRanks={isCheckingRanks} rankResults={rankResults}
         hideRanked={hideRanked} isLoadingMoreKeywords={isLoadingMoreKeywords}
-        seoTitles={seoTitles} trendingItems={trendingItems}
-        isLoadingTitles={isLoadingTitles} isLoadingTrends={isLoadingTrends}
+        trendingItems={trendingItems}
+        isLoadingTrends={isLoadingTrends}
         isGenerating={isGenerating}
         isLoadingReference={isLoadingReference}
         referenceResult={referenceResult}
-        setTopic={setTopic} setBlogTitle={setBlogTitle} setKeywords={setKeywords} setKeywordDensity={setKeywordDensity} setDisease={setDisease}
+        setTopic={setTopic} setKeywords={setKeywords} setKeywordDensity={setKeywordDensity} setDisease={setDisease}
         setCategory={setCategory} setPersona={setPersona} setTone={setTone}
-        setAudienceMode={setAudienceMode} setImageStyle={setImageStyle}
+        setAudienceMode={setAudienceMode}
         setImageCount={handleImageCountChange} recommendedImageCount={recommendedImageCount}
-        setImageAspectRatio={setImageAspectRatio} setTextLength={setTextLength}
+        setImageAspectRatio={setImageAspectRatio}
         setHospitalName={setHospitalName}
         setSelectedHospitalAddress={setSelectedHospitalAddress}
         setHomepageUrl={setHomepageUrl} setClinicContext={setClinicContext}
         setCrawlProgress={setCrawlProgress}
         setIncludeFaq={setIncludeFaq} setFaqCount={setFaqCount}
-        setShowCustomInput={setShowCustomInput} setCustomPrompt={setCustomPrompt}
         setCustomSubheadings={setCustomSubheadings}
         setLearnedStyleId={setLearnedStyleId} setShowAdvanced={setShowAdvanced}
         /* setIncludeHospitalIntro 제거 — 항상 true */
@@ -2035,7 +2027,6 @@ Output ONLY the prompt. No explanation.`;
         onCrawlHomepage={handleCrawlHomepage}
         onLoadMoreKeywords={handleLoadMoreKeywords}
         onCheckRanks={handleCheckRanks}
-        onRecommendTitles={handleRecommendTitles}
         onRecommendTrends={handleRecommendTrends}
         onSaveSettings={handleSaveSettings}
         onLoadSettings={handleLoadSettings}

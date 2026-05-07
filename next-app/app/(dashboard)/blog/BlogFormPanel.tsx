@@ -2,19 +2,23 @@
 
 import { CATEGORIES, PERSONAS, TONES } from '../../../lib/constants';
 import { useTeamData } from '../../../lib/useTeamData';
-import type { ContentCategory, AudienceMode, ImageStyle, ImageSourceMode, CssTheme } from '@winaid/blog-core';
+import type { ContentCategory, AudienceMode, ImageSourceMode } from '@winaid/blog-core';
 import type { KeywordStat, KeywordRankResult, SaturationLevel } from '../../../lib/keywordAnalysisService';
-import type { HospitalImage } from '../../../lib/hospitalImageService';
 import ImageLibrary from '../../../components/blog/ImageLibrary';
 import type { ClinicContext } from '../../../lib/clinicContextService';
-import type { TrendingItem, SeoTitleItem } from '@winaid/blog-core';
+import type { TrendingItem } from '@winaid/blog-core';
 import WritingStyleLearner from '../../../components/WritingStyleLearner';
 import { MAX_KEYWORDS } from '../../../lib/keywordAnalysisService';
+
+// UI 단순화 (handoff §12.1):
+//   - 블로그 제목 입력 UI 제거 → 부모가 LLM 자동 추천
+//   - 글자수 UI 제거 → 부모가 2000 고정
+//   - 이미지 스타일 UI 제거 → 부모가 'photo' 고정 (커스텀 프롬프트도 제거)
+//   - 위 항목 관련 props 모두 제거 (blogTitle/textLength/imageStyle/customPrompt/showCustomInput/seoTitles/isLoadingTitles/onRecommendTitles)
 
 export interface BlogFormPanelProps {
   // ── 폼 상태 ──
   topic: string;
-  blogTitle: string;
   keywords: string;
   keywordDensity: number | 'auto';
   disease: string;
@@ -22,13 +26,11 @@ export interface BlogFormPanelProps {
   persona: string;
   tone: string;
   audienceMode: AudienceMode;
-  imageStyle: ImageStyle;
   imageCount: number;
   /** hybrid 모드 전용 — AI 보완 이미지 개수 (총 이미지 = imageCount + aiImageCount) */
   aiImageCount?: number;
   recommendedImageCount: number;
   imageAspectRatio: '4:3' | '16:9' | '1:1';
-  textLength: number;
   hospitalName: string;
   selectedTeam: number | null;
   showHospitalDropdown: boolean;
@@ -40,8 +42,6 @@ export interface BlogFormPanelProps {
   crawlProgress: string;
   includeFaq: boolean;
   faqCount: number;
-  showCustomInput: boolean;
-  customPrompt: string;
   customSubheadings: string;
   learnedStyleId: string | undefined;
   dbStyleLoaded?: boolean;
@@ -61,10 +61,8 @@ export interface BlogFormPanelProps {
   rankResults: Map<string, KeywordRankResult>;
   hideRanked: boolean;
   isLoadingMoreKeywords: boolean;
-  // ── SEO/트렌드 상태 ──
-  seoTitles: SeoTitleItem[];
+  // ── 트렌드 상태 ──
   trendingItems: TrendingItem[];
-  isLoadingTitles: boolean;
   isLoadingTrends: boolean;
   // ── 참고 자료 상태 ──
   isLoadingReference?: boolean;
@@ -76,7 +74,6 @@ export interface BlogFormPanelProps {
   isGenerating: boolean;
   // ── 폼 setter ──
   setTopic: (v: string) => void;
-  setBlogTitle: (v: string) => void;
   setKeywords: (v: string | ((prev: string) => string)) => void;
   setKeywordDensity: (v: number | 'auto') => void;
   setDisease: (v: string) => void;
@@ -84,11 +81,9 @@ export interface BlogFormPanelProps {
   setPersona: (v: string) => void;
   setTone: (v: string) => void;
   setAudienceMode: (v: AudienceMode) => void;
-  setImageStyle: (v: ImageStyle) => void;
   setImageCount: (v: number) => void;
   setAiImageCount?: (v: number) => void;
   setImageAspectRatio: (v: '4:3' | '16:9' | '1:1') => void;
-  setTextLength: (v: number) => void;
   setHospitalName: (v: string) => void;
   setSelectedTeam: (v: number | null) => void;
   setShowHospitalDropdown: (v: boolean) => void;
@@ -99,8 +94,6 @@ export interface BlogFormPanelProps {
   setCrawlProgress: (v: string) => void;
   setIncludeFaq: (v: boolean) => void;
   setFaqCount: (v: number) => void;
-  setShowCustomInput: (v: boolean) => void;
-  setCustomPrompt: (v: string) => void;
   setCustomSubheadings: (v: string) => void;
   setLearnedStyleId: (v: string | undefined) => void;
   setShowAdvanced: (v: boolean) => void;
@@ -118,7 +111,6 @@ export interface BlogFormPanelProps {
   onCrawlHomepage: () => void;
   onLoadMoreKeywords: () => void;
   onCheckRanks: () => void;
-  onRecommendTitles: () => void;
   onRecommendTrends: () => void;
   onSaveSettings?: () => void;
   onLoadSettings?: () => void;
@@ -144,22 +136,22 @@ function SaturationBadge({ level }: { level?: SaturationLevel }) {
 export default function BlogFormPanel(props: BlogFormPanelProps) {
   const { teamData: TEAM_DATA } = useTeamData();
   const {
-    topic, blogTitle, keywords, keywordDensity, disease, category, persona, tone, audienceMode, imageStyle, imageCount, aiImageCount = 0, recommendedImageCount, imageAspectRatio, textLength,
+    topic, keywords, keywordDensity, disease, category, persona, tone, audienceMode, imageCount, aiImageCount = 0, recommendedImageCount, imageAspectRatio,
     hospitalName, selectedTeam, showHospitalDropdown, selectedManager, selectedHospitalAddress,
     homepageUrl, clinicContext, isCrawling, crawlProgress,
-    includeFaq, faqCount, showCustomInput, customPrompt, customSubheadings,
+    includeFaq, faqCount, customSubheadings,
     learnedStyleId, dbStyleLoaded, dbStyleName, showAdvanced, includeHospitalIntro,
     keywordStats, keywordAiRec, keywordProgress, isAnalyzingKeywords, showKeywordPanel,
     keywordSortBy, keywordSearch, keywordMinVolume, isCheckingRanks, rankResults, hideRanked, isLoadingMoreKeywords,
-    seoTitles, trendingItems, isLoadingTitles, isLoadingTrends,
+    trendingItems, isLoadingTrends,
     isGenerating,
     isLoadingReference, referenceResult,
     imageSourceMode = 'hybrid', onChangeImageSourceMode,
-    setTopic, setBlogTitle, setKeywords, setKeywordDensity, setDisease, setCategory, setPersona, setTone, setAudienceMode,
-    setImageStyle, setImageCount, setAiImageCount, setImageAspectRatio, setTextLength, setHospitalName, setSelectedTeam,
+    setTopic, setKeywords, setKeywordDensity, setDisease, setCategory, setPersona, setTone, setAudienceMode,
+    setImageCount, setAiImageCount, setImageAspectRatio, setHospitalName, setSelectedTeam,
     setShowHospitalDropdown, setSelectedManager, setSelectedHospitalAddress,
     setHomepageUrl, setClinicContext, setCrawlProgress,
-    setIncludeFaq, setFaqCount, setShowCustomInput, setCustomPrompt, setCustomSubheadings,
+    setIncludeFaq, setFaqCount, setCustomSubheadings,
     setLearnedStyleId, setShowAdvanced,
     setKeywordStats, setShowKeywordPanel, setKeywordSortBy, setKeywordSearch, setKeywordMinVolume, setHideRanked, setTrendingItems,
     onSubmit: handleSubmit,
@@ -167,7 +159,6 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
     onCrawlHomepage: handleCrawlHomepage,
     onLoadMoreKeywords: handleLoadMoreKeywords,
     onCheckRanks: handleCheckRanks,
-    onRecommendTitles: handleRecommendTitles,
     onRecommendTrends: handleRecommendTrends,
     onSaveSettings, onLoadSettings, settingsToast,
   } = props;
@@ -297,15 +288,7 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
             ))}
           </select>
 
-          {/* 제목 */}
-          <div>
-            <label className={labelCls}>
-              제목
-              <span className="text-[10px] text-slate-400 ml-1.5 font-normal">비워두면 주제가 제목이 됩니다</span>
-            </label>
-            <input type="text" value={blogTitle} onChange={e => setBlogTitle(e.target.value)}
-              placeholder="예: 임플란트 수술 후 관리법, 미리 살펴볼 점" className={inputCls} />
-          </div>
+          {/* UI 단순화 (handoff §12.1): 제목 입력 UI 제거 — 부모가 본문 생성 직전 LLM 자동 추천 */}
 
           {/* 주제 */}
           <div>
@@ -381,11 +364,10 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
 
           {/* 세부 옵션 토글 */}
           {(() => {
+            // textLength / imageStyle 비교 제거 — 부모에서 고정 상수로 전환됨
             const advancedCount = [
               audienceMode !== '환자용(친절/공감)',
-              textLength !== 2500,
               imageCount !== 2,
-              imageStyle !== 'photo',
               customSubheadings.trim(),
               persona !== PERSONAS[0].value,
               tone !== TONES[0].value,
@@ -427,25 +409,7 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
                   ))}
                 </div>
               )}
-              {/* 글 길이 */}
-              <div>
-                <p className="text-xs font-semibold text-slate-500 mb-1.5">글 길이</p>
-                <div className="grid grid-cols-3 gap-1.5">
-                  {([
-                    { value: 1500, label: '짧은 글', desc: '1,000~2,000자' },
-                    { value: 2500, label: '중간 글', desc: '2,000~3,000자' },
-                    { value: 3500, label: '긴 글', desc: '3,000자~' },
-                  ]).map(opt => (
-                    <button key={opt.value} type="button"
-                      onClick={() => setTextLength(opt.value)}
-                      className={`py-2 rounded-lg border transition-all text-center ${textLength === opt.value ? 'border-blue-400 bg-blue-50 text-blue-700' : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'}`}
-                    >
-                      <span className="text-[11px] font-semibold block">{opt.label}</span>
-                      <span className={`text-[9px] ${textLength === opt.value ? 'text-blue-400' : 'text-slate-400'}`}>{opt.desc}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
+              {/* 글 길이 — UI 단순화 (handoff §12.1): 2000자 고정으로 UI 제거 */}
               {/* 이미지 소스 모드 — 3-way: ai / library / hybrid */}
               {onChangeImageSourceMode && (
                 <div className="mb-2">
@@ -548,7 +512,7 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
                 <div className="flex justify-between mb-1.5">
                   <label className="text-xs font-semibold text-slate-500">AI 이미지 수</label>
                   <span className="text-[10px] text-blue-500 font-normal">
-                    💡 {textLength}자 기준 권장: {recommendedImageCount}장
+                    💡 권장: {recommendedImageCount}장
                     {imageCount !== recommendedImageCount && ' (수동 변경됨)'}
                   </span>
                 </div>
@@ -586,42 +550,7 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
                   </div>
                 </div>
               )}
-              {/* 이미지 스타일 */}
-              <div>
-                <p className="text-[11px] font-semibold text-slate-500 mb-1.5">이미지 스타일</p>
-                <div className="grid grid-cols-4 gap-1.5">
-                  {([
-                    { id: 'photo' as ImageStyle, icon: '📸', label: '실사' },
-                    { id: 'illustration' as ImageStyle, icon: '🎨', label: '일러스트' },
-                    { id: 'medical' as ImageStyle, icon: '🫀', label: '의학 3D' },
-                    { id: 'custom' as ImageStyle, icon: '✏️', label: '커스텀' },
-                  ]).map(s => (
-                    <button key={s.id} type="button"
-                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); setImageStyle(s.id); setShowCustomInput(s.id === 'custom'); }}
-                      className={`py-2 rounded-lg border transition-all flex flex-col items-center gap-0.5 ${imageStyle === s.id ? 'border-blue-400 bg-blue-50 text-blue-700' : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'}`}
-                    >
-                      <span className="text-base">{s.icon}</span>
-                      <span className="text-[10px] font-semibold">{s.label}</span>
-                    </button>
-                  ))}
-                </div>
-                {showCustomInput && imageStyle === 'custom' && (
-                  <div className="mt-2 p-2.5 bg-white rounded-lg border border-slate-200">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-[11px] font-semibold text-slate-600">커스텀 프롬프트</span>
-                      {customPrompt && (
-                        <button type="button" onClick={() => localStorage.setItem('hospital_custom_image_prompt', customPrompt)}
-                          className="px-2 py-0.5 bg-slate-800 text-white text-[10px] font-medium rounded hover:bg-slate-900">저장</button>
-                      )}
-                    </div>
-                    <textarea value={customPrompt} onChange={(e) => setCustomPrompt(e.target.value)}
-                      onPaste={e => { e.preventDefault(); const text = e.clipboardData.getData('text/plain'); document.execCommand('insertText', false, text); }}
-                      placeholder="파스텔톤, 손그림 느낌의 일러스트, 부드러운 선..."
-                      className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs focus:border-blue-400 outline-none resize-none" rows={2}
-                    />
-                  </div>
-                )}
-              </div>
+              {/* 이미지 스타일 — UI 단순화 (handoff §12.1): 'photo' 고정으로 UI 제거 (커스텀 프롬프트도 제거) */}
               {/* 관리자 학습 말투 자동 적용 안내 */}
               {dbStyleLoaded && !learnedStyleId && (
                 <div className="px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-200 text-[12px] text-emerald-700 flex items-center gap-2">
