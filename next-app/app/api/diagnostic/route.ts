@@ -159,8 +159,11 @@ export async function POST(request: NextRequest) {
   }
 
   // 4) PSI
+  // wrapper budget = fetchPsi 의 설계상 최악 시나리오(35s × 2회 시도 = 70s) 와 정합.
+  // 과거 25_000 은 1회 시도(35s) 보다도 짧아 느린 사이트(Lighthouse Mobile 25-40s) 에서 항상 실패하고,
+  // 재시도 경로(psi.ts:42-43) 가 wrapper 가 이미 떠난 뒤에 실행되어 dead retry 가 되던 버그.
   const tPsi = Date.now();
-  const psi = await withTimeout(fetchPsi(crawl.finalUrl), 25_000, 'psi').catch(() => null);
+  const psi = await withTimeout(fetchPsi(crawl.finalUrl), 70_000, 'psi').catch(() => null);
   logDiagnostic({ traceId, step: 'psi', duration: Date.now() - tPsi, detail: psi ? `score=${psi.score}` : 'null' });
 
   // 5~7) 채점 + 종합
