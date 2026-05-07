@@ -549,15 +549,20 @@ ONE single cohesive scene only. NEVER a collage, grid, mosaic, diptych, triptych
 - Staged studio shoots, isolated subjects on white background, product-catalog look
 
 [SCENE NATURE]
-- Pick ONE natural location and ONE clear human action; show the moment as it would actually happen
-- Anchor the subject in a believable everyday environment (clinic operatory, consultation room, home bathroom mirror, kitchen, cafe, park) — never in a void
+- Pick ONE natural location and ONE clear human action; show the moment as it would actually happen in real life
 - One subject (or one small group sharing the same activity), behaving naturally — not posing for the camera
-- Environment matches the action: dental hygiene at a sink with a mirror, recovery meal at a dining table, treatment in a real clinic chair, consultation across a desk
+- The location MUST match where this action actually happens — never default to a clinic just because the topic is medical
 
-[KOREAN MEDICAL CONTEXT]
-- Real Korean hospital or clinic interior: clean white walls, wood accents, modern minimalist
-- Korean-style white coats (not American scrubs), modern equipment, warm accent lighting
-- Korean patients and staff, warm approachable atmosphere
+[LOCATION — pick ONE that fits the action]
+- Clinical procedure (examination, treatment, consultation, X-ray, surgery, scaling, dentist explaining a model): Korean clinic interior — clean white walls, wood accents, modern minimalist operatory or consultation room, Korean-style white coats, modern equipment
+- Daily oral/skin/health care at home (brushing teeth, flossing, interdental brush, mouthwash, applying skincare, taking medication, checking face in a mirror): Korean residential bathroom with sink and wall mirror, or warmly lit home interior — NOT inside a clinic
+- Eating, drinking, recovery meal, hydration: Korean home dining table or kitchen — NOT a clinic break room
+- Exercise, stretching, rehab movement: park path, living-room floor, or home gym — NOT on a treatment table
+- General wellbeing / lifestyle (walking, reading, working, smiling outdoors): Korean cafe, park, street, or home — civilian everyday setting
+
+[CULTURAL ANCHORING]
+- Korean subject (adult or older adult as fits the topic), natural Korean styling and grooming
+- Warm approachable atmosphere, soft directional lighting
 
 [COMPOSITION]
 - Rule of thirds, breathing room around subjects, foreground/midground/background depth
