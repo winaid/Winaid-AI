@@ -538,10 +538,21 @@ export async function POST(request: NextRequest) {
 
   const BLOG_IMAGE_RULE = `[BLOG ILLUSTRATION]
 Pure visual illustration for a blog body image — never a poster, flyer, infographic, or card news layout.
+ONE single cohesive scene only. NEVER a collage, grid, mosaic, diptych, triptych, quadrant layout, split frame, picture-in-picture, before/after side-by-side, or any composition that combines multiple separate sub-images into one frame.
 
 [FORBIDDEN]
 - Any text, letters, words, labels, logos, watermarks, phone numbers, URLs in the image
 - Poster / infographic / card-news layout
+- Collage / photo grid / 2x2 or 3x3 layout / split panels / multiple framed sub-images / mosaic
+- Side-by-side comparison frames, before/after split, picture-in-picture insets
+- Visible internal borders, frames, dividers, gutters, or seams that segment the image
+- Staged studio shoots, isolated subjects on white background, product-catalog look
+
+[SCENE NATURE]
+- Pick ONE natural location and ONE clear human action; show the moment as it would actually happen
+- Anchor the subject in a believable everyday environment (clinic operatory, consultation room, home bathroom mirror, kitchen, cafe, park) — never in a void
+- One subject (or one small group sharing the same activity), behaving naturally — not posing for the camera
+- Environment matches the action: dental hygiene at a sink with a mirror, recovery meal at a dining table, treatment in a real clinic chair, consultation across a desk
 
 [KOREAN MEDICAL CONTEXT]
 - Real Korean hospital or clinic interior: clean white walls, wood accents, modern minimalist
@@ -551,7 +562,8 @@ Pure visual illustration for a blog body image — never a poster, flyer, infogr
 [COMPOSITION]
 - Rule of thirds, breathing room around subjects, foreground/midground/background depth
 - Natural eye-level or slightly elevated angle, no dead-center placement
-- Directional natural lighting with soft shadows`;
+- Directional natural lighting with soft shadows
+- Single unified composition with one continuous background — never partition the canvas`;
 
   const fullPrompt = isCardNewsMode
     ? buildCardNewsPromptFull(body)
@@ -559,6 +571,7 @@ Pure visual illustration for a blog body image — never a poster, flyer, infogr
     ? [
         BLOG_IMAGE_RULE,
         body.prompt.trim(),
+        'Generate at high resolution. Sharp edges, no blur, no compression artifacts.',
       ].filter(Boolean).join('\n\n')
     : (() => {
       const imageCategory = detectImageCategory(body.prompt);
