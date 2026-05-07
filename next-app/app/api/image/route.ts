@@ -570,12 +570,25 @@ ONE single cohesive scene only. NEVER a collage, grid, mosaic, diptych, triptych
 - Directional natural lighting with soft shadows
 - Single unified composition with one continuous background — never partition the canvas`;
 
+  // body.prompt 는 buildImagePrompt(blog-core) 에서 "dental clinic setting, modern
+  // minimalist Korean dental office" 같은 categoryHint 가 prefix 로 붙어 들어옴.
+  // 모델은 더 구체·후순위 cue 를 우선시하므로 BLOG_IMAGE_RULE 의 LOCATION 규칙이
+  // 무력화되는 케이스 발생 (양치·식사가 진료의자에서 일어나는 부조리).
+  // body.prompt 뒤에 HARD OVERRIDE 를 두어 마지막 지시로 동작하게 함.
+  const BLOG_HARD_OVERRIDE = `[HARD OVERRIDE — applies last, wins all earlier conflicts]
+The location MUST be chosen from the action above, NOT from the medical topic.
+- If the action is eating, drinking, recovery meal: the setting is a Korean home dining table or kitchen with home tableware. NEVER a clinic, NEVER a treatment chair, NEVER medical instruments visible.
+- If the action is brushing teeth, flossing, using an interdental brush, mouthwash, skincare, or any daily self-care: the setting is a Korean home bathroom with a sink and wall mirror, or a warmly lit home interior. NEVER a clinic chair, NEVER a dental operatory.
+- Only when the action is an actual clinical procedure (treatment, examination, consultation, X-ray, scaling, dentist holding tools or a model) does a clinic interior apply.
+If any earlier line in this prompt suggested "clinic setting" or "dental office" but the action is non-clinical per the rule above, IGNORE that earlier line and use the home/civilian setting that matches the action. Do NOT show clinic equipment, dental chairs, monitors, instruments, or trays in non-clinical scenes.`;
+
   const fullPrompt = isCardNewsMode
     ? buildCardNewsPromptFull(body)
     : isBlogMode
     ? [
         BLOG_IMAGE_RULE,
         body.prompt.trim(),
+        BLOG_HARD_OVERRIDE,
         'Generate at high resolution. Sharp edges, no blur, no compression artifacts.',
       ].filter(Boolean).join('\n\n')
     : (() => {
