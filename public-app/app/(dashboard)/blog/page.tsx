@@ -70,6 +70,59 @@ async function uploadDataUrlToBlogImages(dataUrl: string, fileName: string): Pro
   throw lastErr instanceof Error ? lastErr : new Error('storage_upload_failed');
 }
 
+// Issues 기반 직접 패치 — Opus revisedHtml 의 비결정성으로 <img> 가 사라지는 문제를 회피.
+// review.issues[].originalQuote → suggestion 을 원본 HTML 에 대상 단어만 1:1 치환해 적용.
+// HTML 구조를 건드리지 않으므로 <img> 손실은 구조적으로 발생 불가.
+// 매치 실패는 silent skip — applyContentFilters 정규식 안전망이 후단에서 보강.
+function applyIssuesPatch(
+  html: string,
+  issues: Array<{ originalQuote?: string; suggestion?: string; category?: string; severity?: string }>,
+): {
+  html: string;
+  applied: number;
+  skipped: number;
+  noMatchQuotes: string[];
+} {
+  let result = html;
+  let applied = 0;
+  let skipped = 0;
+  const noMatchQuotes: string[] = [];
+
+  for (const issue of issues) {
+    const quote = (issue.originalQuote || '').trim();
+    const suggestion = (issue.suggestion || '').trim();
+    if (!quote || !suggestion || quote === suggestion) {
+      skipped++;
+      continue;
+    }
+    // 1차: 직접 substring 매치 (가장 보편)
+    const idx = result.indexOf(quote);
+    if (idx >= 0) {
+      result = result.slice(0, idx) + suggestion + result.slice(idx + quote.length);
+      applied++;
+      continue;
+    }
+    // 2차: 공백 시퀀스 정규화 매치 (HTML 들여쓰기·줄바꿈 차이 흡수)
+    try {
+      const pattern = quote
+        .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+        .replace(/\s+/g, '\\s+');
+      const re = new RegExp(pattern);
+      if (re.test(result)) {
+        result = result.replace(re, suggestion);
+        applied++;
+        continue;
+      }
+    } catch {
+      // regex 빌드 실패 — skip 처리
+    }
+    skipped++;
+    noMatchQuotes.push(quote.slice(0, 80));
+  }
+
+  return { html: result, applied, skipped, noMatchQuotes };
+}
+
 function BlogForm() {
   const creditCtx = useCreditContext();
   const searchParams = useSearchParams();
@@ -1463,7 +1516,10 @@ JSON 형식으로 응답해주세요.`;
         blogText = finalHtml;
       }
 
-      // ═══ Phase 2A v4: Opus 감수 결과 적용 ═══
+      // ═══ Phase 2A v4: Opus 감수 결과 적용 (Issues 기반 패치) ═══
+      // 변경 이력: revisedHtml 통째 적용 → issues[].originalQuote→suggestion 직접 치환.
+      // Opus 출력의 비결정성으로 revisedHtml 에서 <img> 가 사라지는 문제를 구조적으로 차단.
+      // revisedHtml 은 교차 검증(텔레메트리)용으로만 사용 — 실제 콘텐츠는 issues 패치 결과.
       let reviewQualityScores: { safety?: number; conversion?: number } | undefined;
       try {
         const review = await reviewPromise as {
@@ -1475,78 +1531,65 @@ JSON 형식으로 응답해주세요.`;
           warning?: string;
         };
         reviewQualityScores = review.qualityScores;
-        console.info(`[BLOG] [V4] Opus 검수 완료 — verdict=${review.verdict}, issues=${review.issues?.length || 0}, summary="${(review.summaryNote || '').slice(0, 80)}"`);
+        const issues = Array.isArray(review.issues) ? review.issues : [];
+        console.info(`[BLOG] [V4] Opus 검수 완료 — verdict=${review.verdict}, issues=${issues.length}, summary="${(review.summaryNote || '').slice(0, 80)}"`);
 
-        if (review.revisedHtml && typeof review.revisedHtml === 'string' && review.revisedHtml.length > 100) {
-          // revisedHtml 의 [IMG_N] 마커를 현재 finalHtml 에서 얻은 이미지 URL 로 재주입
-          let revisedWithImages = review.revisedHtml;
-          const imgResults = imageResultsPromise ? await imageResultsPromise : [];
-          for (const img of imgResults) {
-            const markerPattern = new RegExp(`\\[IMG_${img.index}(?:\\s+alt="([^"]*)")?[^\\]]*\\]`, 'gi');
-            if (img.url) {
-              revisedWithImages = revisedWithImages.replace(markerPattern, (_m, altText) => {
-                const alt = altText || `blog image ${img.index}`;
-                return `<div class="content-image-wrapper"><img src="${img.url}" alt="${alt}" data-image-index="${img.index}" style="max-width:100%;height:auto;border-radius:12px;" /></div>`;
-              });
-            } else {
-              revisedWithImages = revisedWithImages.replace(markerPattern, '');
-            }
-          }
+        if (review.verdict !== 'pass' && issues.length > 0) {
+          // ── Issues 기반 직접 패치 ──
+          const beforeImgCount = (blogText.match(/<img[^>]*data-image-index/g) || []).length;
+          const patch = applyIssuesPatch(blogText, issues);
+          // 안전망: 정규식 의료법 필터를 한 번 더 통과
+          const patched = applyContentFilters(patch.html).filtered;
+          const afterImgCount = (patched.match(/<img[^>]*data-image-index/g) || []).length;
 
-          // library 모드 보호: 원본 blogText 의 <img data-image-index="N"> 를 revisedHtml 의
-          // 남아있는 [IMG_N] 마커 위치로 복원 (Opus 가 [IMG_N] 보존하면 swap, 이미 <img> 있으면 no-op).
-          const originalImgs = [...blogText.matchAll(/<img[^>]*data-image-index="(\d+)"[^>]*>/g)];
-          for (const m of originalImgs) {
-            const num = m[1];
-            const imgTag = m[0];
-            const markerPattern = new RegExp(`\\[IMG_${num}(?:\\s+alt="[^"]*")?[^\\]]*\\]`, 'gi');
-            revisedWithImages = revisedWithImages.replace(
-              markerPattern,
-              `<div class="content-image-wrapper">${imgTag}</div>`,
-            );
-          }
-
-          revisedWithImages = revisedWithImages.replace(/\[IMG_\d+[^\]]*\]\n*/g, '');
-
-          // defense-in-depth (1): 같은 data-image-index 가 머지 결과에 2회 이상 등장하면
-          // 첫 occurrence 만 남기고 제거 (Loop 1·2 혹은 LLM 의 마커 중복으로 인한 dup 차단).
-          // wrapper <div class="content-image-wrapper"> 도 함께 제거해 빈 div 잔존 방지.
-          {
-            const seenIdx = new Set<string>();
-            revisedWithImages = revisedWithImages.replace(
-              /<div class="content-image-wrapper"[^>]*>\s*<img[^>]*data-image-index="(\d+)"[^>]*>\s*<\/div>/g,
-              (match, idx: string) => {
-                if (seenIdx.has(idx)) {
-                  console.warn(`[BLOG] [V4] dedupe: data-image-index="${idx}" 중복 occurrence 제거`);
-                  return '';
-                }
-                seenIdx.add(idx);
-                return match;
-              },
-            );
-          }
-
-          // defense-in-depth (2): revisedHtml 의 <img> 가 원본보다 적으면 (Opus 가 마커·태그 모두 drop)
-          // 원본 유지 — 의료법 fix 손해보다 라이브러리 이미지 0개 회귀가 더 큼.
-          // 단, V3/Loop1 단계가 사용자 요청(imageCount)보다 더 많은 마커를 출력해 originalImgCount
-          // 자체가 over-count 인 경우, V4 가 imageCount 만큼 정확히 보존했다면 그것은 "손실" 아님
-          // (3장 요청 / V3 4개 출력 / V4 3개 → 폴백 진입 시 4개로 복구되어 1장 중복 발생).
-          // 따라서 진짜 손실 임계값은 min(originalImgCount, imageCount) 로 보수적으로 설정.
-          // 명시적으로 setGeneratedContent(blogText) 를 호출해 placeholder swap 등 중간 상태 잔재로 인한
-          // 이미지 중복/누락 가능성을 차단한다 (이전: state drift 의존, 함묵적 fallback).
-          const originalImgCount = (blogText.match(/<img[^>]*data-image-index/g) || []).length;
-          const revisedImgCount = (revisedWithImages.match(/<img[^>]*data-image-index/g) || []).length;
-          const lossThreshold = Math.min(originalImgCount, imageCount);
-          if (lossThreshold > 0 && revisedImgCount < lossThreshold) {
-            console.warn(`[BLOG] [V4] revisedHtml <img> 손실 (${revisedImgCount}/${lossThreshold}, original=${originalImgCount}, requested=${imageCount}) — 원본 유지`);
-            setGeneratedContent(blogText); // 명시적 reaffirm — 중간 setGeneratedContent 잔재 차단
+          // issues 패치는 텍스트 1:1 치환이라 이미지 손실 불가능하지만 방어적 검사.
+          // suggestion 이 우연히 <img ...> 를 포함하는 quote 를 덮어쓰는 경우만 감소 가능.
+          if (beforeImgCount > 0 && afterImgCount < beforeImgCount) {
+            console.warn(`[BLOG] [V4] issues 패치 후 <img> 감소 감지 (${afterImgCount}/${beforeImgCount}) — 원본 유지`);
+            setGeneratedContent(blogText);
           } else {
-            setGeneratedContent(revisedWithImages);
-            blogText = revisedWithImages;
-            console.info(`[BLOG] [V4] revisedHtml 적용 완료`);
+            setGeneratedContent(patched);
+            blogText = patched;
+          }
+
+          // ── 교차 검증: 기존 revisedHtml 접근법이 같은 입력에서 이미지를 잃었을지 측정 ──
+          // 실제 적용은 안 함. 모니터링용. issues 가 의료법 보정을 충분히 커버하는지 추적하려면
+          // 이 텔레메트리를 일정 기간 수집한 뒤 'absent / ok / lost_imgs' 분포를 본다.
+          let revisedHtmlPath: 'absent' | 'ok' | 'lost_imgs' = 'absent';
+          if (review.revisedHtml && typeof review.revisedHtml === 'string' && review.revisedHtml.length > 100) {
+            let revisedWithImages = review.revisedHtml;
+            const imgResults = imageResultsPromise ? await imageResultsPromise : [];
+            for (const img of imgResults) {
+              const markerPattern = new RegExp(`\\[IMG_${img.index}(?:\\s+alt="([^"]*)")?[^\\]]*\\]`, 'gi');
+              if (img.url) {
+                revisedWithImages = revisedWithImages.replace(markerPattern, (_m, altText) => {
+                  const alt = altText || `blog image ${img.index}`;
+                  return `<div class="content-image-wrapper"><img src="${img.url}" alt="${alt}" data-image-index="${img.index}" style="max-width:100%;height:auto;border-radius:12px;" /></div>`;
+                });
+              } else {
+                revisedWithImages = revisedWithImages.replace(markerPattern, '');
+              }
+            }
+            const originalImgs = [...blogText.matchAll(/<img[^>]*data-image-index="(\d+)"[^>]*>/g)];
+            for (const m of originalImgs) {
+              const num = m[1];
+              const imgTag = m[0];
+              const markerPattern = new RegExp(`\\[IMG_${num}(?:\\s+alt="[^"]*")?[^\\]]*\\]`, 'gi');
+              revisedWithImages = revisedWithImages.replace(markerPattern, `<div class="content-image-wrapper">${imgTag}</div>`);
+            }
+            revisedWithImages = revisedWithImages.replace(/\[IMG_\d+[^\]]*\]\n*/g, '');
+            const revisedImgCount = (revisedWithImages.match(/<img[^>]*data-image-index/g) || []).length;
+            const lossThreshold = Math.min(beforeImgCount, imageCount);
+            revisedHtmlPath = lossThreshold > 0 && revisedImgCount < lossThreshold ? 'lost_imgs' : 'ok';
+          }
+
+          console.info(`[BLOG] [V4] issues 패치 적용 — applied=${patch.applied}, skipped=${patch.skipped}, img=${beforeImgCount}→${afterImgCount}, revisedHtml=${revisedHtmlPath}`);
+          if (patch.noMatchQuotes.length > 0) {
+            console.warn(`[BLOG] [V4] issues 매치 실패 ${patch.noMatchQuotes.length}건 (정규식 안전망에 위임). quote 샘플:`,
+              patch.noMatchQuotes.slice(0, 3));
           }
         } else {
-          console.info(`[BLOG] [V4] revisedHtml 없음 — 원본 유지`);
+          console.info(`[BLOG] [V4] verdict=pass — 보정 없음 (원본 유지)`);
         }
       } catch (revErr) {
         console.warn('[BLOG] [V4] review 처리 실패 — 원본 유지:', revErr);
