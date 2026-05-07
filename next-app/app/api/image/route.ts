@@ -484,7 +484,7 @@ const NON_CLINICAL_ACTION_PATTERNS: ReadonlyArray<RegExp> = [
   /mouthwash|가글|구강\s*세정/i,
   /\beating\b|식사|먹는|먹기|식단|음식\s*섭취|섭취/i,
   /\bdrinking\b|음용|마시는|마시기|hydration/i,
-  /skincare|스킨케어|세안|cleansing/i,
+  /skincare\s+routine|applying\s+skincare|스킨케어\s*루틴|세안|cleansing\s+routine/i,
   /\bwalking\b|산책/i,
   /\b(?:exercise|stretching|workout)\b|운동|스트레칭|재활\s*동작/i,
   /\bsleep(?:ing)?\b|수면|잠/i,
