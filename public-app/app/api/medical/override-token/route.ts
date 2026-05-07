@@ -38,7 +38,7 @@ interface RequestBody {
   download_path: 'png' | 'jpg' | 'zip' | 'pdf' | 'shorts';
   /** 클라이언트 검증 시점 위반 건수 */
   violations_count: number;
-  /** 콘텐츠 해시 (클라가 슬라이드 직렬화 SHA-256 16자 prefix) */
+  /** 콘텐츠 해시 (클라가 슬라이드 직렬화 SHA-256 32자 prefix = 128-bit) */
   content_hash: string;
   /** 위반 카테고리 (대표 1개). superlative/guarantee/.../testimonial */
   violation_type: string;

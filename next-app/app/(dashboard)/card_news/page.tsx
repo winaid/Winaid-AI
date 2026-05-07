@@ -1,6 +1,6 @@
 'use client';
 
-// 기존 코드는 page.tsx.bak에 보존 — 리뉴얼 완료 후 복구 예정
+// 카드뉴스 리뉴얼 진행 중. 복구·삭제 결정은 핸드오프 §5.1 / R3 (시니어 검토)
 
 export default function CardNewsPage() {
   return (

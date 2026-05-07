@@ -24,7 +24,7 @@ const TOKEN_TTL_SECONDS = 5 * 60; // 5분
 export interface OverrideTokenPayload {
   /** 사용자 id (auth.users.id) */
   user_id: string;
-  /** 콘텐츠 해시 — 슬라이드 내용 변조 감지 (SHA-256 기반 16자 prefix) */
+  /** 콘텐츠 해시 — 슬라이드 내용 변조 감지 (SHA-256 기반 32자 prefix = 128-bit) */
   content_hash: string;
   /** 만료 시각 (ms epoch) */
   expires_at: number;
@@ -38,11 +38,24 @@ export type OverrideTokenVerifyResult =
   | { ok: true; payload: OverrideTokenPayload }
   | { ok: false; reason: 'malformed' | 'invalid_signature' | 'expired' | 'no_secret' };
 
+// service_role 폴백 사용 시 모듈당 1회 warn — 토큰 시그니처에 service_role 키가
+// 사용되는 보안 표면을 운영자에게 가시화. 별도 시크릿 설정 권장 (audit §9.4).
+let _fallbackWarned = false;
+
 function getSecret(): string | null {
   const explicit = process.env.MEDICAL_AD_OVERRIDE_SECRET;
   if (explicit && explicit.length >= 16) return explicit;
   const fallback = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (fallback && fallback.length >= 16) return fallback;
+  if (fallback && fallback.length >= 16) {
+    if (!_fallbackWarned) {
+      _fallbackWarned = true;
+      console.warn(
+        '[medical-ad-override] MEDICAL_AD_OVERRIDE_SECRET 미설정 — SUPABASE_SERVICE_ROLE_KEY 폴백 사용. ' +
+        'service_role 키가 토큰 시그니처에 사용되는 것은 보안 표면 확대. 별도 시크릿 설정 권장.',
+      );
+    }
+    return fallback;
+  }
   return null;
 }
 

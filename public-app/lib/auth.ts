@@ -44,8 +44,11 @@ export const signUpWithEmail = async (
 
   if (data.user) {
     try {
-      // profiles upsert (트리거가 name만 저장하므로 full_name 보완)
+      // profiles upsert — 트리거(handle_new_user)가 name만 저장하므로 full_name 보완.
+      // upsert(onConflict: 'id') 단일 호출로 트리거 race 와 동시 가입 race 모두 안전 처리.
+      // created_at 은 DB default 또는 트리거가 책임 — payload 에서 제외해 update 시 덮어쓰기 방지.
       const profileData: Record<string, unknown> = {
+        id: data.user.id,
         email,
         full_name: displayName,
         name: displayName,
@@ -53,19 +56,7 @@ export const signUpWithEmail = async (
       if (homepageUrl) profileData.homepage_url = homepageUrl;
       if (address) profileData.address = address;
 
-      const { error: updateErr } = await supabase
-        .from('profiles')
-        .update(profileData)
-        .eq('id', data.user.id);
-
-      // UPDATE 실패 시 (row가 없는 경우) INSERT
-      if (updateErr) {
-        await supabase.from('profiles').insert({
-          id: data.user.id,
-          ...profileData,
-          created_at: new Date().toISOString(),
-        } as Record<string, unknown>);
-      }
+      await supabase.from('profiles').upsert(profileData, { onConflict: 'id' });
 
       // 크레딧 설정 — 화이트리스트 정확 매칭만 허용.
       // 과거의 `email.includes('winai')` substring 매칭은 권한 상승 취약점이라 제거됨.

@@ -50,29 +50,21 @@ export const signInWithTeam = async (
     }
   }
 
-  // 로그인 성공 시 profiles 항상 업데이트 (이름/팀 최신화)
+  // 로그인 성공 시 profiles 항상 업데이트 (이름/팀 최신화).
+  // 과거: UPDATE 후 실패 시 INSERT 폴백 패턴 — 동시 회원가입 시 race 로 중복 row 가능.
+  // 수정: upsert(onConflict: 'id') 단일 호출 — DB 가 race 안전하게 처리.
   if (data.user && !error) {
     try {
-      // upsert는 INSERT 정책이 없어 실패할 수 있으므로, UPDATE를 먼저 시도
-      const { error: updateErr } = await supabase
-        .from('profiles')
-        .update({
-          email: data.user.email || email,
-          full_name: displayName,
-          name: displayName,
-          team_id: teamId,
-        } as Record<string, unknown>)
-        .eq('id', data.user.id);
-      // UPDATE 실패 시 (row가 없는 경우) INSERT 시도
-      if (updateErr) {
-        await supabase.from('profiles').insert({
+      await supabase.from('profiles').upsert(
+        {
           id: data.user.id,
           email: data.user.email || email,
           full_name: displayName,
           name: displayName,
           team_id: teamId,
-        } as Record<string, unknown>);
-      }
+        } as Record<string, unknown>,
+        { onConflict: 'id' },
+      );
     } catch (e) {
       console.error('프로필 업데이트 실패 (무시):', e);
     }
@@ -100,27 +92,19 @@ export const signUpWithTeam = async (
 
   if (data.user) {
     try {
-      // 트리거(handle_new_user)가 name만 저장하므로, full_name/team_id를 UPDATE로 보완
-      const { error: updateErr } = await supabase
-        .from('profiles')
-        .update({
-          email,
-          full_name: displayName,
-          name: displayName,
-          team_id: teamId,
-        } as any)
-        .eq('id', data.user.id);
-      // 트리거가 아직 실행 안 됐을 수 있으므로, UPDATE 실패 시 INSERT
-      if (updateErr) {
-        await supabase.from('profiles').insert({
+      // 트리거(handle_new_user)가 name만 저장하므로 full_name/team_id 보완.
+      // upsert(onConflict: 'id') 로 트리거 race 와 동시 가입 race 모두 안전 처리.
+      // created_at 은 DB default 또는 트리거가 책임 — payload 에서 제외해 update 시 덮어쓰기 방지.
+      await supabase.from('profiles').upsert(
+        {
           id: data.user.id,
           email,
           full_name: displayName,
           name: displayName,
           team_id: teamId,
-          created_at: new Date().toISOString(),
-        } as any);
-      }
+        } as Record<string, unknown>,
+        { onConflict: 'id' },
+      );
 
       await supabase.from('subscriptions').upsert(
         {

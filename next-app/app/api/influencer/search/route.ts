@@ -224,12 +224,24 @@ JSON 배열:
 
   const { text } = await callGeminiDirect({ prompt, model: 'gemini-3.1-pro-preview', temperature: 0.3, maxOutputTokens: 4096, googleSearch: true });
   if (!text) return [];
+  // LLM hallucinated metadata 방어 — Gemini 가 만든 follower_count/engagement_rate 가
+  // 음수, NaN, 1e9+ 같은 비현실 값으로 들어오는 경우를 차단. (audit §9.11 — AI 할루시네이션)
+  const clampInt = (v: unknown, max: number): number => {
+    const n = Number(v);
+    if (!Number.isFinite(n) || n < 0) return 0;
+    return Math.min(Math.floor(n), max);
+  };
+  const clampPct = (v: unknown): number => {
+    const n = Number(v);
+    if (!Number.isFinite(n) || n < 0) return 0;
+    return Math.min(n, 100); // engagement_rate 는 0~100 (%)
+  };
   try {
     const parsed = JSON.parse(text.match(/\[[\s\S]*\]/)?.[0] || '[]');
     return parsed.map((item: Record<string, unknown>) => ({
       username: String(item.username || ''), full_name: String(item.full_name || ''), profile_pic_url: '',
-      follower_count: Number(item.follower_count) || 0, following_count: 0, post_count: 0,
-      engagement_rate: Number(item.engagement_rate) || 0,
+      follower_count: clampInt(item.follower_count, 1_000_000_000), following_count: 0, post_count: 0,
+      engagement_rate: clampPct(item.engagement_rate),
       estimated_location: String(item.estimated_location || body.location),
       location_confidence: (item.location_confidence || 'low') as 'high' | 'medium' | 'low',
       primary_category: String(item.primary_category || '일상'), recent_posts: item.recent_post_preview ? [{ text: String(item.recent_post_preview), likes: 0, comments: 0, hashtags: [], timestamp: new Date().toISOString() }] : [],

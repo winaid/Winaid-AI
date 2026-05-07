@@ -101,7 +101,7 @@ export async function computeSlidesContentHash(slides: SlideData[]): Promise<str
     const hex = Array.from(new Uint8Array(hashBuf))
       .map(b => b.toString(16).padStart(2, '0'))
       .join('');
-    return hex.slice(0, 16);
+    return hex.slice(0, 32); // 128-bit prefix — 64-bit 충돌 가능성 제거 (audit §9.5)
   }
   // SubtleCrypto 미지원 fallback — 길이만 반영 (서명에는 영향 없음, 변조 감지만 약화)
   return `len-${serialized.length.toString(16).slice(0, 12)}`;
