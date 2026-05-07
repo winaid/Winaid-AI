@@ -462,6 +462,43 @@ interface ImageRequestBody {
   quality?: 'fast' | 'premium';  // 기본 'fast' — 'premium'이면 2-Stage (card_news만 의미)
 }
 
+// ── 비임상 행동 감지 + 임상 구문 strip (옵션 A) ────────────────────────
+// 배경: blog-core/buildImagePrompt 가 categoryHints("dental clinic setting...")
+// 와 SCENE_VARIANTS("examination chair, modern clinic interior" 등) 를 prefix·
+// suffix 로 baked in 해서 body.prompt 가 도착함. 행동이 비임상(양치·식사 등)
+// 이어도 임상 묘사가 같이 들어와서 모델이 "진료의자에서 죽 먹는" 부조리 생성.
+// HARD OVERRIDE 만으로는 모델 해석 의존이라 case 누수.
+// 여기선 비임상 행동 키워드를 감지해 body.prompt 의 임상 segment 를 deterministic
+// 으로 strip. 모델 도달 전에 contradictions 자체를 제거.
+
+const NON_CLINICAL_ACTION_PATTERNS: ReadonlyArray<RegExp> = [
+  /brush(?:ing)?\s+teeth|toothbrush|양치|치솔질|칫솔질/i,
+  /\bfloss(?:ing)?\b|치실/i,
+  /interdental|치간\s*칫솔/i,
+  /mouthwash|가글|구강\s*세정/i,
+  /\beating\b|식사|먹는|먹기|식단|음식\s*섭취|섭취/i,
+  /\bdrinking\b|음용|마시는|마시기|hydration/i,
+  /skincare|스킨케어|세안|cleansing/i,
+  /\bwalking\b|산책/i,
+  /\b(?:exercise|stretching|workout)\b|운동|스트레칭|재활\s*동작/i,
+  /\bsleep(?:ing)?\b|수면|잠/i,
+  /medication|복용|약\s*(?:먹|복용)/i,
+];
+
+const CLINICAL_SEGMENT_PATTERN: RegExp = /\b(?:clinic|dental\s+(?:office|tools?|scan|procedure|chair)|examination\s+(?:chair|area|environment|setting|room)|operatory|consultation\s+(?:environment|setting|room)|treatment\s+(?:environment|chair|setting|room)|reception\s+desk|X-ray\s+imaging|dentist\s+(?:explaining|focused)|patient\s+(?:consultation|receiving\s+treatment|context)|medical\s+clinic\s+interior)\b/i;
+
+function isNonClinicalAction(prompt: string): boolean {
+  return NON_CLINICAL_ACTION_PATTERNS.some(p => p.test(prompt));
+}
+
+function stripClinicalSegments(prompt: string): string {
+  return prompt
+    .split(',')
+    .map(s => s.trim())
+    .filter(seg => seg.length > 0 && !CLINICAL_SEGMENT_PATTERN.test(seg))
+    .join(', ');
+}
+
 export async function POST(request: NextRequest) {
   // 게스트 허용: 로그인 쿠키 없으면 IP 기반 분당 5회 (gpt-image-2 비용 burst 차단, audit Q-1).
   const gate = gateGuestRequest(request, 5);
@@ -545,11 +582,23 @@ ONE single cohesive scene only. NEVER a collage, grid, mosaic, diptych, triptych
 - Collage / photo grid / 2x2 or 3x3 layout / split panels / multiple framed sub-images / mosaic
 - Side-by-side comparison frames, before/after split, picture-in-picture insets
 - Visible internal borders, frames, dividers, gutters, or seams that segment the image
+- Staged studio shoots, isolated subjects on white background, product-catalog look
 
-[KOREAN MEDICAL CONTEXT]
-- Real Korean hospital or clinic interior: clean white walls, wood accents, modern minimalist
-- Korean-style white coats (not American scrubs), modern equipment, warm accent lighting
-- Korean patients and staff, warm approachable atmosphere
+[SCENE NATURE]
+- Pick ONE natural location and ONE clear human action; show the moment as it would actually happen in real life
+- One subject (or one small group sharing the same activity), behaving naturally — not posing for the camera
+- The location MUST match where this action actually happens — never default to a clinic just because the topic is medical
+
+[LOCATION — pick ONE that fits the action]
+- Clinical procedure (examination, treatment, consultation, X-ray, surgery, scaling, dentist explaining a model): Korean clinic interior — clean white walls, wood accents, modern minimalist operatory or consultation room, Korean-style white coats, modern equipment
+- Daily oral/skin/health care at home (brushing teeth, flossing, interdental brush, mouthwash, applying skincare, taking medication, checking face in a mirror): Korean residential bathroom with sink and wall mirror, or warmly lit home interior — NOT inside a clinic
+- Eating, drinking, recovery meal, hydration: Korean home dining table or kitchen — NOT a clinic break room
+- Exercise, stretching, rehab movement: park path, living-room floor, or home gym — NOT on a treatment table
+- General wellbeing / lifestyle (walking, reading, working, smiling outdoors): Korean cafe, park, street, or home — civilian everyday setting
+
+[CULTURAL ANCHORING]
+- Korean subject (adult or older adult as fits the topic), natural Korean styling and grooming
+- Warm approachable atmosphere, soft directional lighting
 
 [COMPOSITION]
 - Rule of thirds, breathing room around subjects, foreground/midground/background depth
@@ -557,12 +606,37 @@ ONE single cohesive scene only. NEVER a collage, grid, mosaic, diptych, triptych
 - Directional natural lighting with soft shadows
 - Single unified composition with one continuous background — never partition the canvas`;
 
+  // body.prompt 는 buildImagePrompt(blog-core) 에서 "dental clinic setting, modern
+  // minimalist Korean dental office" 같은 categoryHint 가 prefix 로 붙어 들어옴.
+  // 비임상 행동(양치·식사 등) 인 경우 임상 segment 를 모델 도달 전에 deterministic
+  // 으로 제거. HARD OVERRIDE 는 보조적 보강.
+  let processedPrompt = body.prompt.trim();
+  if (isBlogMode && isNonClinicalAction(processedPrompt)) {
+    const before = processedPrompt;
+    processedPrompt = stripClinicalSegments(before);
+    if (!processedPrompt) {
+      // 모든 segment 가 임상으로 분류되어 빈 문자열이 되면 원본 유지(false-positive 방어)
+      processedPrompt = before;
+      console.warn('[BLOG_IMAGE] non-clinical strip 결과 빈 문자열 — 원본 유지');
+    } else if (processedPrompt !== before) {
+      console.info(`[BLOG_IMAGE] 비임상 행동 감지 → 임상 segment strip (${before.length}→${processedPrompt.length} chars)`);
+    }
+  }
+
+  const BLOG_HARD_OVERRIDE = `[HARD OVERRIDE — applies last, wins all earlier conflicts]
+The location MUST be chosen from the action above, NOT from the medical topic.
+- If the action is eating, drinking, recovery meal: the setting is a Korean home dining table or kitchen with home tableware. NEVER a clinic, NEVER a treatment chair, NEVER medical instruments visible.
+- If the action is brushing teeth, flossing, using an interdental brush, mouthwash, skincare, or any daily self-care: the setting is a Korean home bathroom with a sink and wall mirror, or a warmly lit home interior. NEVER a clinic chair, NEVER a dental operatory.
+- Only when the action is an actual clinical procedure (treatment, examination, consultation, X-ray, scaling, dentist holding tools or a model) does a clinic interior apply.
+If any earlier line in this prompt suggested "clinic setting" or "dental office" but the action is non-clinical per the rule above, IGNORE that earlier line and use the home/civilian setting that matches the action. Do NOT show clinic equipment, dental chairs, monitors, instruments, or trays in non-clinical scenes.`;
+
   const fullPrompt = isCardNewsMode
     ? buildCardNewsPromptFull(body)
     : isBlogMode
     ? [
         BLOG_IMAGE_RULE,
-        body.prompt.trim(),
+        processedPrompt,
+        BLOG_HARD_OVERRIDE,
         'Generate at high resolution. Sharp edges, no blur, no compression artifacts.',
       ].filter(Boolean).join('\n\n')
     : (() => {
