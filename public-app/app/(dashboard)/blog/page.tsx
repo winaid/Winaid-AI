@@ -987,6 +987,9 @@ JSON 형식으로 응답해주세요.`;
     e.preventDefault();
     if (!topic.trim() || isGenerating) return;
 
+    // 자동 스크롤 먼저 — setState 후엔 리렌더링이 layout 을 바꿔 smooth scroll 이 중단되는 케이스 방지.
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
     // 즉시 UI 인디케이터 ON — 자동 제목 LLM(1~3초) 동안 사용자가 idle 로 인지해
     // 다시 클릭하던 회귀 차단 + isGenerating 가드로 두 번 클릭 자체 막힘.
     setIsGenerating(true);
@@ -1002,8 +1005,6 @@ JSON 형식으로 응답해주세요.`;
     setBlogSections([]);
     setRegeneratingSection(null);
     setSectionProgress('');
-
-    window.scrollTo({ top: 0, behavior: 'smooth' });
 
     // 진행 중인 이전 생성 abort + 새 controller 발급
     if (generateAbortRef.current) generateAbortRef.current.abort();
