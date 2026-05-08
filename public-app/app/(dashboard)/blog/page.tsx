@@ -658,17 +658,49 @@ SEO 점수 기준:
       });
 
       const data = await res.json() as { text?: string; error?: string };
-      if (!res.ok || !data.text) return null;
+      if (!res.ok) {
+        console.warn(`[TITLE] LLM 호출 실패 status=${res.status} error=${data?.error || '(unknown)'}`);
+        return null;
+      }
+      if (!data.text) {
+        console.warn('[TITLE] LLM 응답에 text 필드 없음');
+        return null;
+      }
 
-      const titles: SeoTitleItem[] = JSON.parse(data.text);
-      if (!Array.isArray(titles) || titles.length === 0) return null;
+      // 일부 LLM 이 systemInstruction "마크다운 금지" 무시하고 코드펜스로 감싸 보내는 케이스 방어.
+      // ```json\n[...]\n``` / ```\n[...]\n``` / [...] 모두 정상 파싱.
+      const cleaned = data.text
+        .trim()
+        .replace(/^```(?:json)?\s*/i, '')
+        .replace(/\s*```\s*$/i, '')
+        .trim();
+
+      let titles: SeoTitleItem[];
+      try {
+        titles = JSON.parse(cleaned);
+      } catch (parseErr) {
+        console.warn('[TITLE] JSON parse 실패. raw text (앞 200자):', cleaned.slice(0, 200), parseErr);
+        return null;
+      }
+      if (!Array.isArray(titles) || titles.length === 0) {
+        console.warn('[TITLE] LLM 응답 배열 비어있음. titles=', titles);
+        return null;
+      }
       const sorted = titles.sort((a, b) => b.score - a.score);
       const best = sorted[0]?.title?.trim();
-      if (!best) return null;
+      if (!best) {
+        console.warn('[TITLE] sorted[0].title 비어있음. sorted=', sorted);
+        return null;
+      }
       console.info(`[TITLE] 자동 추천: "${best}" (${sorted.length}개 후보 중 점수 최고)`);
       return best;
     } catch (e) {
-      console.warn('[TITLE] 자동 제목 추천 실패 — topic 으로 fallback:', e);
+      // AbortError 는 사용자 액션이라 warn 대신 info.
+      if (e instanceof Error && (e.name === 'AbortError' || e.message?.includes('aborted'))) {
+        console.info('[TITLE] 자동 제목 추천 중단 (사용자 액션)');
+      } else {
+        console.warn('[TITLE] 자동 제목 추천 실패 — topic 으로 fallback:', e);
+      }
       return null;
     }
   };
