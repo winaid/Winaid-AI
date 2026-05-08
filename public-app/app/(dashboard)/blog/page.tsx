@@ -1293,9 +1293,11 @@ JSON 형식으로 응답해주세요.`;
       // 3.6) 메인 제목 주입 (old resultAssembler.ts 동일: <h2 class="main-title">)
       const hasMainTitle = blogText.includes('class="main-title"') || blogText.includes("class='main-title'");
       if (!hasMainTitle) {
-        const finalTitle = blogTitle.trim() || topic.trim();
+        // resolvedBlogTitle 사용 — handleSubmit 시작에서 setBlogTitle(auto) 호출했지만
+        // React state 는 같은 turn 내 비동기라 blogTitle 직접 참조하면 stale "" 을 봄.
+        const finalTitle = resolvedBlogTitle || topic.trim();
         blogText = `<h2 class="main-title">${finalTitle}</h2>\n${blogText}`;
-        console.info(`[BLOG] 메인 제목 주입: "${topic.trim()}"`);
+        console.info(`[BLOG] 메인 제목 주입: "${finalTitle}"`);
       }
       if (parsed) {
         console.info(`[BLOG] 자가평가 점수 — SEO: ${parsed.seoScore ?? '?'}, 의료법: ${parsed.safetyScore ?? '?'}, 전환: ${parsed.conversionScore ?? '?'}`);
