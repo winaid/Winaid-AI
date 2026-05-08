@@ -30,7 +30,9 @@ export async function GET(request: NextRequest) {
   if (legacyUserId && legacyUserId !== owner) {
     console.warn(`[hospital-images/GET] userId param ignored (param=${legacyUserId} owner=${owner})`);
   }
-  const limit = Math.min(Math.max(parseInt(params.get('limit') || '50', 10) || 50, 1), 100);
+  // limit cap: 1000 (Supabase 단일 쿼리 안전 한도). 1000 초과 보유 사용자는
+  // TODO: offset 기반 페이지네이션 또는 무한 스크롤 도입 필요.
+  const limit = Math.min(Math.max(parseInt(params.get('limit') || '50', 10) || 50, 1), 1000);
   const offset = Math.max(parseInt(params.get('offset') || '0', 10) || 0, 0);
 
   let query = supabase

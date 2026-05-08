@@ -22,7 +22,9 @@ export async function GET(request: NextRequest) {
   // mine=1 → 본인 이미지만. 그 외 → 본인 OR 같은 팀(team_id 일치).
   // 팀 미배정(team_id NULL) 사용자는 mine 값과 무관하게 본인 것만 조회됨.
   const mineOnly = params.get('mine') === '1';
-  const limit = Math.min(Math.max(parseInt(params.get('limit') || '50', 10) || 50, 1), 100);
+  // limit cap: 1000 (Supabase 단일 쿼리 안전 한도). 1000 초과 보유 사용자는
+  // TODO: offset 기반 페이지네이션 또는 무한 스크롤 도입 필요.
+  const limit = Math.min(Math.max(parseInt(params.get('limit') || '50', 10) || 50, 1), 1000);
   const offset = Math.max(parseInt(params.get('offset') || '0', 10) || 0, 0);
 
   // owner 의 team_id 조회 (게스트 또는 팀 미배정이면 null).

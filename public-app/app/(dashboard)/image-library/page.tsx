@@ -36,7 +36,9 @@ export default function ImageLibraryPage() {
       if (filterTag) params.set('tags', filterTag);
       if (selectedHospital) params.set('hospitalName', selectedHospital);
       if (viewMode === 'mine') params.set('mine', '1');
-      params.set('limit', '100');
+      // 100장 cap 으로 인한 잘림 보고 → 1000 으로 상향 (서버 cap 동기화).
+      // 추후 1000 초과 사용자 발생 시 페이지네이션/무한 스크롤 도입 필요.
+      params.set('limit', '1000');
       const res = await authFetch(`/api/hospital-images?${params.toString()}`);
       if (!res.ok) return;
       const data = await res.json();
