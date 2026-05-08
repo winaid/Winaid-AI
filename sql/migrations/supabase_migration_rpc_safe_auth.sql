@@ -1,3 +1,8 @@
+-- HISTORICAL: this migration has already been applied. The 'winaid' literal fallbacks
+-- (both Form A: DECLARE init, Form B: EXCEPTION fallback) were stripped on 2026-05-08
+-- for hygiene only. DO NOT re-run.
+-- Current admin auth model: see 2026-05-08_drop_admin_password_check.sql
+
 -- ============================================
 -- RPC 인증 실패 안전 수정
 -- RAISE EXCEPTION → 빈 결과 반환 방식으로 변경
@@ -26,7 +31,7 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 AS $fn$
 DECLARE
-  valid_password TEXT := 'winaid';
+  valid_password TEXT := NULL;
 BEGIN
   -- 비밀번호 불일치 시 빈 결과 반환 (예외 대신)
   IF admin_password IS NULL OR admin_password != valid_password THEN
@@ -82,7 +87,7 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 AS $fn$
 DECLARE
-  valid_password TEXT := 'winaid';
+  valid_password TEXT := NULL;
 BEGIN
   IF admin_password IS NULL OR admin_password != valid_password THEN
     RETURN;
@@ -130,7 +135,7 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 AS $fn$
 DECLARE
-  valid_password TEXT := 'winaid';
+  valid_password TEXT := NULL;
 BEGIN
   IF admin_password IS NULL OR admin_password != valid_password THEN
     RETURN FALSE;

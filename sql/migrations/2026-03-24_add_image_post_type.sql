@@ -1,3 +1,8 @@
+-- HISTORICAL: this migration has already been applied. The 'winaid' literal fallbacks
+-- (both Form A: DECLARE init, Form B: EXCEPTION fallback) were stripped on 2026-05-08
+-- for hygiene only. DO NOT re-run.
+-- Current admin auth model: see 2026-05-08_drop_admin_password_check.sql
+
 -- ============================================
 -- generated_posts에 'image' post_type 추가
 -- Supabase 대시보드 > SQL Editor에서 실행
@@ -35,7 +40,7 @@ BEGIN
   BEGIN
     valid_password := current_setting('app.admin_password');
   EXCEPTION WHEN OTHERS THEN
-    valid_password := 'winaid';
+    RAISE EXCEPTION 'admin_password_deprecated';
   END;
 
   IF admin_password != valid_password THEN

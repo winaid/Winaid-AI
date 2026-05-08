@@ -195,6 +195,11 @@ sql/migrations/*.sql (날짜 순서)
 
 > Day 3 이후의 마이그레이션: `2026-04-10_rebalance_team_hospitals.sql` (팀/병원 재배치)
 
+> Admin 인증 모델 (2026-05-08~) — Supabase 호스팅이 `app.*` GUC 설정을 SQL Editor 에서
+> 허용하지 않아 GUC 기반 admin password 패턴은 영구 폐기. 새 모델: PostgREST REVOKE +
+> RPC 본문 `auth.role()='service_role'` 가드 + next-app `/api/admin/rpc` dispatcher 가
+> admin cookie 검증 후 service_role 키로 호출. 자세한 설명: `sql/migrations/README.md`.
+
 ---
 
 ## 개발 명령어

@@ -6,7 +6,7 @@
 --   1. generated_posts 테이블
 --   2. subscriptions 테이블
 --   3. api_usage_logs 테이블
---   4. Admin RPC 함수 (비밀번호: winaid)
+--   4. Admin RPC 함수 (auth.role()='service_role' 가드 — 새 인증 모델)
 --   5. anon RLS 정책 (관리자 페이지용)
 --   6. hospital_style_profiles / hospital_crawled_posts
 -- ============================================
@@ -248,8 +248,12 @@ CREATE INDEX IF NOT EXISTS idx_crawled_posts_hospital_source ON public.hospital_
 
 
 -- ============================================
--- 6. Admin RPC 함수 (비밀번호: winaid)
---    ★ 이게 없으면 Admin 로그인 안 됨!
+-- 6. Admin RPC 함수 (S1 PR-2 / 2026-05-08 기준 인증 모델)
+--
+-- 인증은 3계층:
+--   1) PostgREST: REVOKE EXECUTE FROM anon/authenticated/public (본 파일 끝)
+--   2) DB: 각 RPC 본문의 auth.role() = 'service_role' 가드
+--   3) App: next-app /api/admin/rpc dispatcher (admin cookie + service_role)
 -- ============================================
 
 -- 6-1. get_admin_stats: 통계 조회
@@ -267,12 +271,13 @@ RETURNS TABLE (
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $fn$
-DECLARE
-  valid_password TEXT := 'winaid';
 BEGIN
-  IF admin_password IS NULL OR admin_password != valid_password THEN
-    RETURN;  -- 빈 결과 반환 (예외 대신)
+  -- DEPRECATED: admin_password is ignored. See header comment for auth model.
+  PERFORM admin_password;
+  IF coalesce(auth.role(), '') NOT IN ('service_role') THEN
+    RAISE EXCEPTION 'unauthorized: admin RPC requires service_role';
   END IF;
 
   RETURN QUERY
@@ -322,12 +327,12 @@ RETURNS TABLE (
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $fn$
-DECLARE
-  valid_password TEXT := 'winaid';
 BEGIN
-  IF admin_password IS NULL OR admin_password != valid_password THEN
-    RETURN;
+  PERFORM admin_password;
+  IF coalesce(auth.role(), '') NOT IN ('service_role') THEN
+    RAISE EXCEPTION 'unauthorized: admin RPC requires service_role';
   END IF;
 
   RETURN QUERY
@@ -355,12 +360,12 @@ CREATE OR REPLACE FUNCTION delete_generated_post(
 RETURNS BOOLEAN
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $fn$
-DECLARE
-  valid_password TEXT := 'winaid';
 BEGIN
-  IF admin_password IS NULL OR admin_password != valid_password THEN
-    RETURN FALSE;
+  PERFORM admin_password;
+  IF coalesce(auth.role(), '') NOT IN ('service_role') THEN
+    RAISE EXCEPTION 'unauthorized: admin RPC requires service_role';
   END IF;
 
   DELETE FROM public.generated_posts WHERE id = post_id;
@@ -375,13 +380,14 @@ CREATE OR REPLACE FUNCTION delete_all_generated_posts(
 RETURNS BIGINT
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $fn$
 DECLARE
-  valid_password TEXT := 'winaid';
   deleted_count BIGINT;
 BEGIN
-  IF admin_password IS NULL OR admin_password != valid_password THEN
-    RETURN -1;  -- 인증 실패
+  PERFORM admin_password;
+  IF coalesce(auth.role(), '') NOT IN ('service_role') THEN
+    RAISE EXCEPTION 'unauthorized: admin RPC requires service_role';
   END IF;
 
   DELETE FROM public.generated_posts;
@@ -389,6 +395,31 @@ BEGIN
   RETURN deleted_count;
 END;
 $fn$;
+
+-- 6-3c. REVOKE EXECUTE — admin RPC 들을 anon/authenticated/public 으로부터 차단.
+DO $$
+DECLARE
+  fn record;
+BEGIN
+  FOR fn IN
+    SELECT p.oid, p.proname, pg_get_function_identity_arguments(p.oid) AS args
+    FROM pg_proc p
+    JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public'
+      AND p.proname IN (
+        'get_admin_stats',
+        'get_all_generated_posts',
+        'delete_generated_post',
+        'delete_all_generated_posts',
+        'get_admin_stats_v2'
+      )
+  LOOP
+    EXECUTE format(
+      'REVOKE EXECUTE ON FUNCTION public.%I(%s) FROM anon, authenticated, public',
+      fn.proname, fn.args
+    );
+  END LOOP;
+END $$;
 
 -- 6-4. 크레딧 차감 함수
 CREATE OR REPLACE FUNCTION public.deduct_credits(
@@ -453,6 +484,7 @@ END $$;
 -- ============================================
 -- 완료!
 -- ============================================
--- 이 SQL 실행 후 Admin 로그인 (비밀번호: winaid) 가능
+-- 이 SQL 실행 후 Admin 진입은 next-app /api/admin/login 경유 (ADMIN_API_TOKEN env).
+-- DB 측은 service_role 키로 호출되는 next-app /api/admin/rpc dispatcher 만 허용.
 -- 말투 학습, 크롤링, 콘텐츠 관리 모두 작동
 -- ============================================

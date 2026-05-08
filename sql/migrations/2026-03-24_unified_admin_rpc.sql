@@ -1,3 +1,8 @@
+-- HISTORICAL: this migration has already been applied. The 'winaid' literal fallbacks
+-- (both Form A: DECLARE init, Form B: EXCEPTION fallback) were stripped on 2026-05-08
+-- for hygiene only. DO NOT re-run.
+-- Current admin auth model: see 2026-05-08_drop_admin_password_check.sql
+
 -- ============================================
 -- 2026-03-24: Admin RPC 함수 통합 정합성 복구
 -- ============================================
@@ -78,7 +83,7 @@ BEGIN
   BEGIN
     valid_password := current_setting('app.admin_password');
   EXCEPTION WHEN OTHERS THEN
-    valid_password := 'winaid';
+    RAISE EXCEPTION 'admin_password_deprecated';
   END;
 
   IF admin_password IS NULL OR admin_password != valid_password THEN
@@ -122,7 +127,7 @@ BEGIN
   BEGIN
     valid_password := current_setting('app.admin_password');
   EXCEPTION WHEN OTHERS THEN
-    valid_password := 'winaid';
+    RAISE EXCEPTION 'admin_password_deprecated';
   END;
 
   IF admin_password IS NULL OR admin_password != valid_password THEN
@@ -157,7 +162,7 @@ BEGIN
   BEGIN
     valid_password := current_setting('app.admin_password');
   EXCEPTION WHEN OTHERS THEN
-    valid_password := 'winaid';
+    RAISE EXCEPTION 'admin_password_deprecated';
   END;
 
   IF admin_password IS NULL OR admin_password != valid_password THEN
@@ -187,7 +192,7 @@ BEGIN
   BEGIN
     valid_password := current_setting('app.admin_password');
   EXCEPTION WHEN OTHERS THEN
-    valid_password := 'winaid';
+    RAISE EXCEPTION 'admin_password_deprecated';
   END;
 
   IF admin_password IS NULL OR admin_password != valid_password THEN

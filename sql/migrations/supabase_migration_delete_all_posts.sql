@@ -1,3 +1,8 @@
+-- HISTORICAL: this migration has already been applied. The 'winaid' literal fallbacks
+-- (both Form A: DECLARE init, Form B: EXCEPTION fallback) were stripped on 2026-05-08
+-- for hygiene only. DO NOT re-run.
+-- Current admin auth model: see 2026-05-08_drop_admin_password_check.sql
+
 -- delete_all_generated_posts: admin 전체 콘텐츠 삭제 RPC
 -- generated_posts 테이블만 대상. 사용자/결제/설정 등 다른 테이블은 건드리지 않음.
 -- 인증 실패 시 -1 반환, 성공 시 삭제 건수 반환.
@@ -10,7 +15,7 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 AS $fn$
 DECLARE
-  valid_password TEXT := 'winaid';
+  valid_password TEXT := NULL;
   deleted_count BIGINT;
 BEGIN
   IF admin_password IS NULL OR admin_password != valid_password THEN

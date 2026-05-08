@@ -1,3 +1,7 @@
+\echo 'ERROR: archived legacy schema, do not apply'
+\q
+DO $$ BEGIN RAISE EXCEPTION 'archived legacy schema — do not apply'; END $$;
+
 -- ============================================
 -- Chunk A: bootstrap (sections 0,1-6,9,10) + extra storage buckets
 -- SKIPPED: section 7 (usage_logs DEAD) + section 8 (blog_history DEAD)
