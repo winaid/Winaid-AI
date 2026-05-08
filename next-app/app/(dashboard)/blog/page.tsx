@@ -2000,6 +2000,16 @@ JSON 형식으로 응답해주세요.`;
         }
       }, 100);
     } catch (err: unknown) {
+      // AbortError 는 사용자 액션(취소/페이지 이탈/재생성) 으로 인한 정상 흐름.
+      // 에러 토스트 띄우지 말고 silent return (크레딧 롤백은 그대로 진행).
+      if (err instanceof Error && (err.name === 'AbortError' || err.message?.includes('aborted'))) {
+        if (prevCredits) {
+          creditCtx.setCreditInfo(prevCredits);
+          console.warn('[BLOG] generation aborted — credits rolled back');
+        }
+        console.info('[BLOG] 생성 중단 (사용자 액션 또는 새 생성으로 교체)');
+        return;
+      }
       if (prevCredits) {
         creditCtx.setCreditInfo(prevCredits);
         console.warn('[BLOG] generation failed — credits rolled back');
