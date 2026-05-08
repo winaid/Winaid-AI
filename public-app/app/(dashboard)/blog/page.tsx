@@ -986,6 +986,23 @@ JSON 형식으로 응답해주세요.`;
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!topic.trim() || isGenerating) return;
+
+    // 즉시 UI 인디케이터 ON — 자동 제목 LLM(1~3초) 동안 사용자가 idle 로 인지해
+    // 다시 클릭하던 회귀 차단 + isGenerating 가드로 두 번 클릭 자체 막힘.
+    setIsGenerating(true);
+    setDisplayStage(1);
+    setRotationIdx(0);
+    setError(null);
+    setIsRetryable(false);
+    setGeneratedContent(null);
+    setScores(undefined);
+    setSeoReport(null);
+    setIsSeoLoading(false);
+    setSaveStatus(null);
+    setBlogSections([]);
+    setRegeneratingSection(null);
+    setSectionProgress('');
+
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
     // 진행 중인 이전 생성 abort + 새 controller 발급
@@ -999,6 +1016,9 @@ JSON 형식으로 응답해주세요.`;
         setError(creditCtx.userId
           ? '크레딧이 모두 소진되었습니다.'
           : '무료 체험 크레딧이 모두 소진되었습니다. 로그인하면 더 많은 크레딧을 사용할 수 있어요.');
+        // 위에서 켠 인디케이터 롤백
+        setIsGenerating(false);
+        setDisplayStage(0);
         return;
       }
     }
@@ -1068,19 +1088,7 @@ JSON 형식으로 응답해주세요.`;
       // libraryImages 는 생성 후 클라이언트에서 alt 기반 자동 매칭 (request body엔 불포함)
     };
 
-    setIsGenerating(true);
-    setDisplayStage(1);
-    setRotationIdx(0);
-    setError(null);
-    setIsRetryable(false);
-    setGeneratedContent(null);
-    setScores(undefined);
-    setSeoReport(null);
-    setIsSeoLoading(false);
-    setSaveStatus(null);
-    setBlogSections([]);
-    setRegeneratingSection(null);
-    setSectionProgress('');
+    // (UI 인디케이터·state reset 은 handleSubmit 시작부에서 이미 처리됨 — 중복 제거)
 
     // ── 로그: 요청 시작 ──
     console.info(`[BLOG] ========== 블로그 생성 시작 ==========`);

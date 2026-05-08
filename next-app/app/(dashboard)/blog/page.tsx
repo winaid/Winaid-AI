@@ -960,11 +960,28 @@ JSON 형식으로 응답해주세요.`;
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!topic.trim() || isGenerating) return;
+
+    // 즉시 UI 인디케이터 ON — 자동 제목 LLM(1~3초) 동안 사용자가 idle 로 인지해
+    // 다시 클릭하던 회귀 차단 + isGenerating 가드로 두 번 클릭 자체 막힘.
+    setIsGenerating(true);
+    setDisplayStage(0);  // 0: 글 설계 중 (outline 단계)
+    setStageInfo(null);
+    setRotationIdx(0);
+    setError(null);
+    setIsRetryable(false);
+    setGeneratedContent(null);
+    setScores(undefined);
+    setSeoReport(null);
+    setIsSeoLoading(false);
+    setSaveStatus(null);
+
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
     // 크레딧 체크 (차감은 생성 성공 후에)
     if (creditCtx.userId && creditCtx.creditInfo && creditCtx.creditInfo.credits <= 0) {
       setError('크레딧이 모두 소진되었습니다.');
+      // 위에서 켠 인디케이터 롤백
+      setIsGenerating(false);
       return;
     }
 
@@ -1048,17 +1065,7 @@ JSON 형식으로 응답해주세요.`;
       // libraryImages 는 생성 후 클라이언트에서 alt 기반 자동 매칭
     };
 
-    setIsGenerating(true);
-    setDisplayStage(0);  // 0: 글 설계 중 (outline 단계)
-    setStageInfo(null);
-    setRotationIdx(0);
-    setError(null);
-    setIsRetryable(false);
-    setGeneratedContent(null);
-    setScores(undefined);
-    setSeoReport(null);
-    setIsSeoLoading(false);
-    setSaveStatus(null);
+    // (UI 인디케이터·state reset 은 handleSubmit 시작부에서 이미 처리됨 — 중복 제거)
     // 예상 시간 계산
     setGenerationStartTime(Date.now());
     // 텍스트(outline ~15초 + sections 병렬 ~40초) + Opus 검수(~15초) = 60~70초 기본
