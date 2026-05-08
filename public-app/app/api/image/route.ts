@@ -628,7 +628,15 @@ The location MUST be chosen from the action above, NOT from the medical topic.
 - If the action is eating, drinking, recovery meal: the setting is a Korean home dining table or kitchen with home tableware. NEVER a clinic, NEVER a treatment chair, NEVER medical instruments visible.
 - If the action is brushing teeth, flossing, using an interdental brush, mouthwash, skincare, or any daily self-care: the setting is a Korean home bathroom with a sink and wall mirror, or a warmly lit home interior. NEVER a clinic chair, NEVER a dental operatory.
 - Only when the action is an actual clinical procedure (treatment, examination, consultation, X-ray, scaling, dentist holding tools or a model) does a clinic interior apply.
-If any earlier line in this prompt suggested "clinic setting" or "dental office" but the action is non-clinical per the rule above, IGNORE that earlier line and use the home/civilian setting that matches the action. Do NOT show clinic equipment, dental chairs, monitors, instruments, or trays in non-clinical scenes.`;
+If any earlier line in this prompt suggested "clinic setting" or "dental office" but the action is non-clinical per the rule above, IGNORE that earlier line and use the home/civilian setting that matches the action. Do NOT show clinic equipment, dental chairs, monitors, instruments, or trays in non-clinical scenes.
+
+[GAZE COHERENCE — when two or more people are in frame]
+All people in the scene must have coherent, natural gazes. NO unfocused or empty stares into space.
+- Doctor + patient consultation: BOTH look at the same focal object (the X-ray monitor, the dental model, the chart, the treatment area), OR they make direct eye contact during conversation. NEVER one person pointing at the screen while the other stares blankly off to the side.
+- If a doctor is explaining or pointing at a screen/model, the patient is actively looking at the same screen/model with an attentive, slightly leaned-in posture.
+- If a doctor and patient are in dialogue, both faces angle toward each other with eye contact.
+- Avoid the specific failure mode of "doctor points at monitor, patient looks past the camera into empty space" — this looks unnatural and disengaged.
+- A single person alone may look at the camera, an object, or thoughtfully aside — that is fine. The coherence rule applies only when 2+ people share the frame.`;
 
   const fullPrompt = isCardNewsMode
     ? buildCardNewsPromptFull(body)
