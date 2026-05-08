@@ -232,21 +232,17 @@ export default function AdminPage() {
     }
   }, [rankCheckKeyword]);
 
-  // 세션 복원 — HttpOnly admin_session cookie 유효성만 확인.
-  // password 는 reload 후 복원 X (state 만 사용 — XSS 표면 축소).
-  // RPC 호출에 password 가 필요한 한 reload 시 재로그인 필요 (PR 2 의 SQL
-  // 마이그레이션이 admin_password 인자를 제거하면 password 자체 불필요).
+  // 세션 복원 — HttpOnly admin_session cookie 유효성 확인 후 자동 인증.
+  // RPC 호출은 이제 server-side `/api/admin/rpc` 가 cookie 로 인증하므로 password
+  // state 가 없어도 동작한다. cookie 만 유효하면 reload 후 재로그인 불필요.
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
         const r = await fetch('/api/admin/whoami', { credentials: 'include' });
         if (!mounted) return;
-        // cookie 만 살아있어도 password 가 비어있으면 RPC 호출이 막혀 무의미.
-        // 명시적으로 재로그인 강제 — cookie 자체는 logout 으로 명확히 종료.
         if (r.ok) {
-          // cookie 살아있지만 password state 없음 — login form 그대로 표시 (UX)
-          // 사용자가 password 입력 시 /api/admin/login 이 cookie 갱신 + state 채움
+          setAuthenticated(true);
         }
       } catch {
         // ignore
@@ -295,19 +291,17 @@ export default function AdminPage() {
     }
   }, [tab, authenticated]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // password 는 React state 만 사용 (localStorage/sessionStorage 평문 저장 폐기 — XSS 차단).
-  // 본 토큰은 PR 2 SQL 마이그레이션 후 RPC admin_password 인자 제거 시 더 이상 필요 X.
-  const getToken = useCallback(() => password, [password]);
-
+  // 인증은 admin_session HttpOnly cookie (credentials: 'include' 자동 첨부).
+  // 어떤 storage 에도 admin token 평문 저장 안 함.
   const loadStats = useCallback(async () => {
-    const s = await getAdminStats(getToken());
+    const s = await getAdminStats();
     if (s) setStats(s);
-  }, [getToken]);
+  }, []);
 
   const loadPosts = useCallback(async (appendOffset?: number) => {
     setPostsLoading(true);
     const offset = appendOffset ?? 0;
-    const p = await getAllPosts(getToken(), typeFilter, hospitalFilter, offset);
+    const p = await getAllPosts(undefined, typeFilter, hospitalFilter, offset);
     if (appendOffset !== undefined && appendOffset > 0) {
       setPosts(prev => [...prev, ...p]);
     } else {
@@ -316,7 +310,7 @@ export default function AdminPage() {
     }
     setHasMorePosts(p.length >= 100);
     setPostsLoading(false);
-  }, [getToken, typeFilter, hospitalFilter]);
+  }, [typeFilter, hospitalFilter]);
 
   const loadUsers = useCallback(async () => {
     setUsersLoading(true);
@@ -563,12 +557,12 @@ export default function AdminPage() {
         return;
       }
 
-      // cookie 발급 완료 — RPC 호출은 cookie 만으로는 불가하므로 password 는 state 에 유지
-      // (PR 2 SQL 마이그레이션 후 admin_password RPC 인자 제거되면 본 state 도 폐기)
+      // cookie 발급 완료. 이후 RPC 호출은 cookie 로 인증 — password state 즉시 클리어
+      // (XSS 표면 최소화: state 잔존 시간을 로그인 핸들러 본문 내로 한정).
       try { localStorage.setItem('winaid_admin', 'true'); } catch { /* ignore */ }
       setAuthenticated(true);
-      // password state 유지 (legacy RPC 호출용) — 단, 어떤 storage 에도 영속화 X
-      const s = await getAdminStats(password.trim());
+      setPassword('');
+      const s = await getAdminStats();
       if (s) setStats(s);
     } catch (err) {
       console.error('[admin/login] 에러:', err);
@@ -605,7 +599,7 @@ export default function AdminPage() {
 
   const handleDelete = async (postId: string) => {
     if (!confirm('이 콘텐츠를 삭제하시겠습니까?')) return;
-    const ok = await deletePost(getToken(), postId);
+    const ok = await deletePost(undefined, postId);
     if (ok) {
       setPosts(prev => prev.filter(p => p.id !== postId));
       if (selectedPost?.id === postId) setSelectedPost(null);
@@ -622,7 +616,7 @@ export default function AdminPage() {
     setDeleteAllLoading(true);
     setDeleteAllError('');
     try {
-      const result = await deleteAllGeneratedPosts(getToken());
+      const result = await deleteAllGeneratedPosts();
       if (result.success) {
         setPosts([]);
         setShowDeleteAllModal(false);

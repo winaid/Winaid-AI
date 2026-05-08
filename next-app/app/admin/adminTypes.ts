@@ -1,8 +1,40 @@
 /**
  * 관리자 페이지 타입/상수/RPC 헬퍼
- * page.tsx에서 분리
+ * page.tsx에서 분리.
+ *
+ * RPC 호출은 server-side `/api/admin/rpc` dispatcher 를 통해 수행한다.
+ * client 에서 anon supabase 로 admin RPC 를 직접 부르던 legacy 패턴은 폐기.
+ * 인증은 admin_session HttpOnly cookie (credentials: 'include' 자동 첨부).
  */
 import { supabase } from '@winaid/blog-core';
+
+const ADMIN_RPC_ENDPOINT = '/api/admin/rpc';
+
+async function callAdminRpc<T = unknown>(
+  op: 'stats' | 'posts' | 'delete-post' | 'delete-all',
+  args?: Record<string, unknown>,
+): Promise<{ data: T | null; error: string | null }> {
+  try {
+    const res = await fetch(ADMIN_RPC_ENDPOINT, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ op, args: args ?? {} }),
+    });
+    if (!res.ok) {
+      let detail = `http_${res.status}`;
+      try {
+        const body = (await res.json()) as { error?: string; detail?: string };
+        detail = body.detail || body.error || detail;
+      } catch { /* ignore — non-JSON body */ }
+      return { data: null, error: detail };
+    }
+    const body = (await res.json()) as { data: T };
+    return { data: body.data ?? null, error: null };
+  } catch (err) {
+    return { data: null, error: (err as Error).message || 'network_error' };
+  }
+}
 
 // ── 타입 ──
 
@@ -59,11 +91,14 @@ export const POST_TYPE_COLORS: Record<string, string> = {
 
 // ── RPC 호출 헬퍼 ──
 
-export async function getAdminStats(token: string): Promise<AdminStats | null> {
-  if (!supabase) return null;
-  const { data, error } = await supabase.rpc('get_admin_stats', { admin_password: token });
-  if (error || !data || (Array.isArray(data) && data.length === 0)) return null;
-  const row = Array.isArray(data) ? data[0] : data;
+// `token` 파라미터는 admin_session 쿠키 도입 후 의미 없음 (서버측 가드가 인증).
+// 시그니처는 호출자 호환을 위해 유지. 본문에서는 무시.
+export async function getAdminStats(_token?: string): Promise<AdminStats | null> {
+  void _token;
+  const { data, error } = await callAdminRpc<unknown>('stats');
+  if (error || data == null) return null;
+  const row = (Array.isArray(data) ? data[0] : data) as Record<string, number | undefined> | null;
+  if (!row) return null;
   return {
     totalPosts: row.total_posts ?? 0,
     blogCount: row.blog_count ?? 0,
@@ -79,24 +114,26 @@ export async function getAdminStats(token: string): Promise<AdminStats | null> {
 }
 
 export async function getAllPosts(
-  token: string,
+  _token: string | undefined,
   filterType?: string,
   filterHospital?: string,
   offset = 0,
 ): Promise<GeneratedPost[]> {
-  if (!supabase) return [];
-
-  // RPC 시도
-  const { data, error } = await supabase.rpc('get_all_generated_posts', {
-    admin_password: token,
+  void _token;
+  // RPC 시도 (server-side dispatcher)
+  const { data, error } = await callAdminRpc<GeneratedPost[]>('posts', {
     filter_post_type: filterType && filterType !== 'all' ? filterType : null,
     filter_hospital: filterHospital || null,
     limit_count: 100,
     offset_count: offset,
   });
-  if (!error && data && data.length > 0) return data as GeneratedPost[];
+  if (!error && data && data.length > 0) return data;
 
-  // RPC 실패/빈 결과 → content 제외 직접 쿼리 fallback (이미지 base64가 너무 커서 RPC 응답 초과 방지)
+  // RPC 실패/빈 결과 → content 제외 직접 쿼리 fallback (이미지 base64가 너무 커서 RPC 응답 초과 방지).
+  // NOTE: 본 fallback 은 anon supabase 의 generated_posts SELECT RLS 에 의존한다.
+  // PR-2 SQL 마이그레이션 또는 Sprint 1 후속(RLS lockdown) 진행 시 본 분기도 server route 로
+  // 이전 필요. 현재는 호환성 유지를 위해 보존 (PR-1 scope-out).
+  if (!supabase) return [];
   try {
     let query = supabase
       .from('generated_posts')
@@ -138,12 +175,9 @@ export async function getPostContent(postId: string): Promise<string | null> {
   }
 }
 
-export async function deletePost(token: string, postId: string): Promise<boolean> {
-  if (!supabase) return false;
-  const { data, error } = await supabase.rpc('delete_generated_post', {
-    admin_password: token,
-    post_id: postId,
-  });
+export async function deletePost(_token: string | undefined, postId: string): Promise<boolean> {
+  void _token;
+  const { data, error } = await callAdminRpc<boolean>('delete-post', { post_id: postId });
   if (error) return false;
   return !!data;
 }
