@@ -1,63 +1,28 @@
 /**
- * /check/[token] — 외부 공유 진단 결과 페이지 (Server Component)
+ * /check/[token] — Backward-compatibility redirect.
  *
- * 로그인 없이 접근 가능. 스냅샷은 DB 에서 직접 조회 (API 우회).
- * revalidate = 300 (5분 캐시).
+ * A1a (2026-05-08): 외부 공유 진단 결과 페이지는 public-app 으로 이전됐다
+ * ("외부용 먼저" 정책). 본 라우트는 옛 next-app 도메인의 토큰 URL 을 받아
+ * public-app 도메인으로 영구 redirect 한다.
+ *
+ * 도메인은 환경변수 `NEXT_PUBLIC_PUBLIC_APP_URL` 로 주입 (Vercel 의 next-app
+ * preview / production 양쪽에 설정 필요). 미설정 시 `https://winai.kr` fallback.
+ *
+ * 본 redirect 는 3개월 후(2026-08) 제거 예정 — 그 시점에 옛 토큰 URL 이
+ * 외부에 거의 남지 않을 것으로 가정. 발급된 토큰이 많은 환경에서는 redirect
+ * 보존 기간을 연장하는 별도 결정.
  */
 
-import { notFound } from 'next/navigation';
-import type { Metadata } from 'next';
-import { getSupabaseClient } from '@winaid/blog-core';
-import PublicDiagnosticResult from '../../../components/diagnostic/PublicDiagnosticResult';
-import type { PublicDiagnosticView } from '../../../lib/diagnostic/publicShare';
-
-export const revalidate = 300;
+import { redirect } from 'next/navigation';
 
 interface Props {
   params: Promise<{ token: string }>;
 }
 
-async function fetchShareSnapshot(token: string): Promise<PublicDiagnosticView | null> {
-  if (!/^[A-Za-z0-9_-]{1,32}$/.test(token)) return null;
-  let db;
-  try {
-    db = getSupabaseClient();
-  } catch {
-    return null;
-  }
-  const { data, error } = await db
-    .from('diagnostic_public_shares')
-    .select('snapshot, expires_at, is_revoked')
-    .eq('token', token)
-    .single();
-  if (error || !data || data.is_revoked) return null;
-  if (data.expires_at && new Date(data.expires_at) < new Date()) return null;
-  return data.snapshot as PublicDiagnosticView;
-}
+const FALLBACK_PUBLIC_APP_URL = 'https://winai.kr';
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export default async function CheckRedirectPage({ params }: Props) {
   const { token } = await params;
-  const view = await fetchShareSnapshot(token);
-  if (!view) {
-    return { title: '진단 결과를 찾을 수 없습니다 | Winaid' };
-  }
-  const desc = view.heroSummary
-    ? view.heroSummary.slice(0, 155)
-    : `${view.siteName}의 AI 검색 노출 종합 점수: ${view.overallScore}점`;
-  return {
-    title: `${view.siteName} AI 노출 진단 결과 | Winaid`,
-    description: desc,
-    openGraph: {
-      title: `${view.siteName} — AI 노출 진단 점수 ${view.overallScore}점`,
-      description: desc,
-      type: 'website',
-    },
-  };
-}
-
-export default async function CheckTokenPage({ params }: Props) {
-  const { token } = await params;
-  const view = await fetchShareSnapshot(token);
-  if (!view) notFound();
-  return <PublicDiagnosticResult view={view} />;
+  const base = process.env.NEXT_PUBLIC_PUBLIC_APP_URL || FALLBACK_PUBLIC_APP_URL;
+  redirect(`${base}/check/${token}`);
 }

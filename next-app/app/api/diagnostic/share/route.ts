@@ -1,27 +1,38 @@
 /**
- * POST /api/diagnostic/share
+ * POST /api/diagnostic/share — Internal proxy to public-app.
  *
- * 현재 진단 결과를 공유 가능한 토큰으로 발급.
- * body: { result: DiagnosticResponse }
- * 응답: { token: string; publicUrl: string }
+ * A1a P4-a (2026-05-08): share 발급 endpoint 본체는 public-app 으로 이전됐다
+ * (외부용 먼저 정책). 본 라우트는 next-app 사내 매니저가 진단 후 영업용 공유
+ * 링크 발급을 계속 가능하게 하는 server-to-server proxy.
  *
- * - 인증 불필요(게스트 포함 발급 가능). user_id 는 세션 있을 때만 저장.
- * - 만료: 90일 (expires_at = now + 90d)
- * - 중복 방지: token 은 PRIMARY KEY, 충돌 시 재생성 (최대 3회)
+ * 흐름:
+ *   사내 매니저 (next-app DiagnosticResult)
+ *     → POST /api/diagnostic/share (본 라우트, next-app origin)
+ *     → server-side fetch ${NEXT_PUBLIC_PUBLIC_APP_URL}/api/diagnostic/share
+ *       + X-Internal-Secret 헤더 (INTERNAL_SHARE_PROXY_SECRET 값)
+ *     → public-app 이 헤더 검증 후 service_role 로 DB INSERT
+ *     → 응답 그대로 forward
+ *     → DiagnosticResult 가 publicUrl 을 toast 로 표시
+ *
+ * 데이터 정합성: 발급된 토큰은 public-seoul DB 에 저장된다. winai.kr/check/<token>
+ * 조회 시 동일 DB 에서 읽으므로 데이터 분리 문제 없음.
+ *
+ * Rate limit: next-app 측에서 처리 (IP 기반, 분당 5건). public-app 측은 본
+ * proxy 호출 시 rate limit skip (X-Internal-Secret 통과 = Vercel server IP라
+ * 클라이언트 IP 추적 불가).
+ *
+ * 본 proxy 는 A1a 분리 합의로 3개월 후(2026-08) 재검토 — 사내 매니저가 발급
+ * 사용 빈도 낮으면 cross-origin (P1) 또는 폐기 (P3) 로 단순화.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { generateShareToken, buildPublicView } from '../../../../lib/diagnostic/publicShare';
-import { getSessionSafe } from '@winaid/blog-core';
-import { getSupabaseClient, supabaseAdmin } from '@winaid/blog-core';
 import { checkRateLimit, getClientIp } from '../../../../lib/rateLimit';
-import type { DiagnosticResponse } from '../../../../lib/diagnostic/types';
 
 export const dynamic = 'force-dynamic';
 
-const EXPIRES_DAYS = 90;
 const MINUTE_LIMIT = 5;
 const HOUR_LIMIT = 20;
+const FALLBACK_PUBLIC_APP_URL = 'https://winai.kr';
 
 function err(message: string, status: number, headers?: Record<string, string>) {
   return NextResponse.json(
@@ -31,7 +42,7 @@ function err(message: string, status: number, headers?: Record<string, string>) 
 }
 
 export async function POST(request: NextRequest) {
-  // Rate limit — IP 기반 분당 5건 + 시간당 20건. DB 장애 시 fail-open (요청 통과).
+  // 1) next-app 측 rate limit (사내 매니저 발급 spam 방지)
   const ip = getClientIp(request);
   try {
     const minute = await checkRateLimit(`share:m:${ip}`, MINUTE_LIMIT, 60);
@@ -52,59 +63,60 @@ export async function POST(request: NextRequest) {
       );
     }
   } catch (e) {
-    // DB 장애 — fail-open. 정상 사용자 차단보다 spam 일부 허용이 안전.
-    console.warn('[share] rate limit check 실패 (fail-open):', (e as Error).message?.slice(0, 100));
+    // DB 장애 — fail-open
+    console.warn('[share-proxy] rate limit check 실패 (fail-open):', (e as Error).message?.slice(0, 100));
   }
 
-  let body: { result?: DiagnosticResponse };
+  // 2) proxy secret 확인 (서버측 설정 누락 시 명확한 503)
+  const proxySecret = process.env.INTERNAL_SHARE_PROXY_SECRET;
+  if (!proxySecret) {
+    console.warn('[share-proxy] INTERNAL_SHARE_PROXY_SECRET 미설정 — proxy 동작 불가');
+    return err(
+      '서버 설정 오류: 공유 링크 발급 proxy 가 구성되지 않았습니다 (운영자에게 문의).',
+      503,
+    );
+  }
+
+  // 3) body 그대로 forward (검증은 public-app 측에서)
+  let rawBody: string;
   try {
-    body = (await request.json()) as { result?: DiagnosticResponse };
+    rawBody = await request.text();
   } catch {
     return err('요청 본문을 읽을 수 없습니다.', 400);
   }
 
-  const result = body.result;
-  if (!result || typeof result !== 'object' || !result.url || !result.overallScore) {
-    return err('result 필드가 올바르지 않습니다.', 400);
-  }
+  const target = `${process.env.NEXT_PUBLIC_PUBLIC_APP_URL || FALLBACK_PUBLIC_APP_URL}/api/diagnostic/share`;
 
-  // diagnostic_public_shares INSERT 정책이 'authenticated' 만 허용. 게스트 발급은
-  // 본 라우트가 user_id 검증 후 service_role 로 처리.
-  const db = supabaseAdmin ?? getSupabaseClient();
-
-  const session = await getSessionSafe();
-  const userId = session?.userId ?? null;
-
-  const expiresAt = new Date(Date.now() + EXPIRES_DAYS * 24 * 60 * 60 * 1000).toISOString();
-
-  // 토큰 충돌 시 최대 3회 재시도
-  for (let attempt = 0; attempt < 3; attempt++) {
-    const token = generateShareToken();
-    const snapshot = buildPublicView(result, token);
-
-    const { error } = await db.from('diagnostic_public_shares').insert({
-      token,
-      user_id: userId,
-      history_url: result.url,
-      history_analyzed_at: result.analyzedAt,
-      snapshot,
-      expires_at: expiresAt,
-      is_revoked: false,
+  // 4) server-to-server fetch
+  let upstream: Response;
+  try {
+    upstream = await fetch(target, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Internal-Secret': proxySecret,
+      },
+      body: rawBody,
+      // 30 초 타임아웃 (Vercel function 기본보다 짧게)
+      signal: AbortSignal.timeout(30_000),
     });
-
-    if (!error) {
-      const host = request.headers.get('host') ?? 'localhost:3000';
-      const proto = request.headers.get('x-forwarded-proto') ?? 'https';
-      const publicUrl = `${proto}://${host}/check/${token}`;
-      return NextResponse.json({ success: true, token, publicUrl });
-    }
-
-    // 23505 = unique_violation (토큰 충돌)
-    if (error.code !== '23505') {
-      console.warn('[share] DB insert error:', error.message);
-      return err('공유 링크 생성 중 오류가 발생했습니다.', 500);
-    }
+  } catch (e) {
+    const msg = (e as Error).message || 'unknown';
+    console.warn('[share-proxy] upstream fetch 실패:', msg.slice(0, 200));
+    return err(`공유 링크 발급 서버에 연결할 수 없습니다 (${msg.slice(0, 80)}).`, 502);
   }
 
-  return err('공유 토큰 생성에 실패했습니다. 다시 시도해 주세요.', 500);
+  // 5) 응답 그대로 forward (status + JSON body)
+  const upstreamText = await upstream.text();
+  let upstreamJson: unknown = null;
+  try {
+    upstreamJson = JSON.parse(upstreamText);
+  } catch {
+    // public-app 이 비정상 응답 (HTML 에러 페이지 등) — 그대로 전달
+    return new NextResponse(upstreamText, {
+      status: upstream.status,
+      headers: { 'Content-Type': upstream.headers.get('content-type') || 'text/plain' },
+    });
+  }
+  return NextResponse.json(upstreamJson, { status: upstream.status });
 }

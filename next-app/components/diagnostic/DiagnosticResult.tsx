@@ -40,7 +40,7 @@ function scoreHeadline(score: number): string {
   return '개선 여지가 큽니다. 기술 기반과 콘텐츠 구조부터 순차 보강이 필요합니다.';
 }
 
-// ── PSI 해석 (규칙 기반) ───────────────────────────────────
+// ── PSI 해석 (규칙 기반) ─────────────────────────────
 type Band = 'good' | 'warn' | 'bad';
 function bandPsi(score: number | null): Band | 'unknown' {
   if (score === null) return 'unknown';
@@ -115,15 +115,22 @@ export default function DiagnosticResult({ result, onResultUpdate }: DiagnosticR
     if (shareUrl) { await navigator.clipboard.writeText(shareUrl).catch(() => {}); return; }
     setGenerating(true);
     try {
+      // A1a P4-a (2026-05-08): /api/diagnostic/share 는 next-app proxy 라우트.
+      // server-side 에서 ${NEXT_PUBLIC_PUBLIC_APP_URL}/api/diagnostic/share 로
+      // X-Internal-Secret 첨부해 forward. 토큰은 public-seoul DB 저장.
       const res = await authFetch('/api/diagnostic/share', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ result }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (await res.json()) as { publicUrl: string };
-      setShareUrl(data.publicUrl);
-      await navigator.clipboard.writeText(data.publicUrl).catch(() => {});
+      const data = (await res.json()) as { token: string; publicUrl: string };
+      // 표시 URL 은 winai.kr 도메인 (public-app) 기준으로 구성.
+      // env 미설정 시 server 가 반환한 publicUrl 을 fallback 으로 사용.
+      const base = process.env.NEXT_PUBLIC_PUBLIC_APP_URL;
+      const displayUrl = base && data.token ? `${base}/check/${data.token}` : data.publicUrl;
+      setShareUrl(displayUrl);
+      await navigator.clipboard.writeText(displayUrl).catch(() => {});
     } catch (e) {
       console.warn('[share]', e);
     } finally {

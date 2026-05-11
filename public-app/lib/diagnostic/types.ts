@@ -93,6 +93,35 @@ export interface CrawlResult {
     srcsetCount: number;
     totalImages: number;
   };
+
+  // ── Phase 1 확장 필드 ────────────────────────────────────
+  /** HTTP 응답 상태 코드 (메인 페이지 최종 응답) */
+  httpStatus?: number;
+  /** HTTP 보안 헤더 — 메인 페이지 응답에서 추출 */
+  securityHeaders?: {
+    csp: string | null;
+    hsts: string | null;
+    xFrame: string | null;
+    xContentType: string | null;
+    referrer: string | null;
+  };
+  /** 파비콘 URL (<link rel="icon"> 등) */
+  favicon?: string;
+  /** Twitter Card 메타 태그 (meta name="twitter:*") */
+  twitterTags?: Record<string, string>;
+
+  // ── Phase 4 확장 필드 ────────────────────────────────────
+  /** 원본 HTML byte 길이 (string.length 기준) */
+  htmlSize?: number;
+  /** <!DOCTYPE html> 시작 여부 */
+  hasDoctype?: boolean;
+  /** P 태그별 텍스트 길이 (글자 수). 빈 P 제외. */
+  paragraphLengths?: number[];
+  /** H3~H6 태그 개수 (h1/h2 는 기존 h1/h2 배열 길이로 카운트) */
+  h3Count?: number;
+  h4Count?: number;
+  h5Count?: number;
+  h6Count?: number;
 }
 
 // ── PSI 결과 ────────────────────────────────────────────────
@@ -190,6 +219,10 @@ export interface DiagnosticResponse {
   detectedRegion?: string;
   /** 업종 (기본: "치과", 향후 확장 여지) */
   detectedCategory?: string;
+
+  // ── Phase 3: AEO 다중 쿼리 (UI 드롭다운에서 선택) ──
+  /** 추천형/시술별/가격/야간진료 등 4가지 패턴 (지역 없으면 3개) */
+  availableQueries?: { id: string; label: string; query: string }[];
 }
 
 // ── 단계 5-A: LLM 추출·생성 중간 타입 ───────────────────────────
@@ -240,6 +273,8 @@ export interface MeasurementData {
   answerText: string;
   /** Tier 3-B: 실측 답변에서 추출된 경쟁사 URL 목록 (GAP 분석 자동 채움용, 최대 5) */
   topResultUrls?: string[];
+  /** Phase 3: 자동 경쟁사 추천 카드용 — title/domain/rank 포함 풀 정보 */
+  topResults?: { url: string; title: string; domain: string; rank: number }[];
 }
 
 /** POST /api/diagnostic/refresh-narrative 응답 — 갱신된 필드만. */

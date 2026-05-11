@@ -64,6 +64,31 @@ export const LABELS = {
   llms_txt: 'llms.txt 파일',
   review_schema: 'Review/평점 스키마',
   howto_schema: 'HowTo 스키마',
+  // Phase 1 — security_tech 추가 항목
+  canonical: 'Canonical URL 선언',
+  // Phase 1 — content_quality 추가 항목
+  favicon: '파비콘(사이트 아이콘)',
+  // Phase 3 — content_quality 의료광고법
+  medical_law_compliance: '의료광고법 준수',
+  // Phase 4 — content_quality 추가 (NXT 동등 수준)
+  title_length: '제목(Title) 길이',
+  keyword_density: '본문 키워드 밀도',
+  heading_hierarchy: '헤딩 계층 구조 (H1~H6)',
+  paragraph_structure: '단락 구조 (P 태그 길이)',
+  // Phase 4 — security_tech 추가
+  html_size: 'HTML 페이지 사이즈',
+  doctype: 'HTML5 Doctype 선언',
+  // Phase 1 — external_channels 추가 항목
+  og_bundle: 'OG 소셜 미리보기 (og:title·description·image)',
+  twitter_card: 'Twitter Card 메타태그',
+  charset_utf8: '문자 인코딩 (UTF-8)',
+  // Phase 1 — security_headers 카테고리 (신규)
+  response_status: 'HTTP 응답 상태 (200)',
+  csp_header: 'Content-Security-Policy 헤더',
+  hsts_header: 'Strict-Transport-Security 헤더',
+  x_frame_header: 'X-Frame-Options 헤더',
+  x_content_type_header: 'X-Content-Type-Options 헤더',
+  referrer_policy_header: 'Referrer-Policy 헤더',
 } as const;
 
 export type LabelKey = keyof typeof LABELS;
