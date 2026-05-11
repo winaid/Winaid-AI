@@ -33,130 +33,286 @@ interface TopicInputProps {
   onSubmit: (topic: string, slideCount: AllowedSlideCount, theme: ThemeId) => void;
 }
 
-// ── C2-fix-1b: theme 별 미니 cover-slide 미리보기 spec ─────────────────────
-// 사용자가 "이 theme 선택 시 어떤 카드뉴스가 나올지" 한눈에 인지하도록
-// palette 색상 + sample 텍스트 + 액센트 도형 으로 stylized mini cover 렌더.
-// 이미지 자산 0, 코드만으로 구성. cover layout 의 축소판 (SlidePreview.CoverLayout
-// 미러).
+// ── C2-fix-1d: theme 별 미니 카드뉴스 템플릿 미리보기 spec ──────────────────
+// C2-fix-1b 의 단순 gradient + 작은 텍스트 + 액센트 도형 → 진짜 카드뉴스 템플릿
+// mockup 으로 재설계.
+//
+// 구조 (모든 theme 공통):
+//   - 단색 단단한 배경 (theme 정체성 색상)
+//   - SVG pattern overlay (subtle, theme 별 다름: dots/triangles/leaves/diagonals)
+//   - 상단 ~88%: bold title + divider line + subtitle + info card placeholder 2개
+//   - 하단 ~12%: footer logo strip (실제 사용 시 로고가 들어갈 자리 시각화)
+//
+// 더착한치과의원 류 hospital card-news 톤을 4가지 theme 색·패턴 으로 분기.
 
 interface ThemeSample {
   title: string;
   subtitle: string;
-  textColor: string;        // sample text 색상 — palette gradient 대비 보장
-  accentShape: 'blob' | 'bar' | 'curve' | 'triangle';
-  accentColor: string;      // 액센트 도형 색상 (palette 중 contrast 좋은 1개)
+  /** 단색 배경 hex. gradient 폐기 (C2-fix-1d 패러다임 전환). */
+  bg: string;
+  titleColor: string;
+  subtitleColor: string;
+  /** title 아래 짧은 divider bar 색. */
+  dividerColor: string;
+  /** SVG pattern 종류 — theme 정체성 시그널. */
+  pattern: 'dots' | 'triangles' | 'leaves' | 'diagonals';
+  patternColor: string;
+  patternOpacity: number;
+  /** 본문 하단의 info card placeholder 박스 spec. */
+  iconBox: {
+    bg: string;             // 'transparent' 또는 hex
+    borderColor: string;
+    glyph: string;          // 안에 들어갈 sample (emoji 또는 단순 ●/+ 등)
+    glyphColor: string;
+    rounded: 'full' | 'lg' | 'sm' | 'none';
+  };
+  /** 하단 logo strip spec. */
+  footer: {
+    bg: string;
+    text: string;
+    textColor: string;
+  };
 }
 
 const THEME_SAMPLES: Record<ThemeId, ThemeSample> = {
-  // pastel pink → cream gradient. 어두운 텍스트가 가독성.
+  // pastel pink 단색 + cream dots overlay + soft footer.
   friendly_illust: {
     title: '임플란트 후 주의사항',
     subtitle: '5분 안에 알아보는 핵심',
-    textColor: '#1F2937',                   // slate-800
-    accentShape: 'blob',
-    accentColor: '#C8E6C9',                 // palette[2] sage
+    bg: '#FFD6E1',
+    titleColor: '#1F2937',
+    subtitleColor: '#374151',
+    dividerColor: '#C8E6C9',
+    pattern: 'dots',
+    patternColor: '#FFE8C9',
+    patternOpacity: 0.55,
+    iconBox: {
+      bg: '#FFFFFF',
+      borderColor: '#FFE8C9',
+      glyph: '💡',
+      glyphColor: '#1F2937',
+      rounded: 'full',
+    },
+    footer: {
+      bg: '#FFE8C9',
+      text: '─ LOGO ─',
+      textColor: '#1F2937',
+    },
   },
-  // deep blue → slate gradient. 흰 텍스트 가독성.
+  // deep navy 단색 + white triangles overlay + darker navy footer.
   professional_medical: {
     title: '치과 정밀 진단 시스템',
     subtitle: '환자 맞춤 진료 안내',
-    textColor: '#FFFFFF',
-    accentShape: 'bar',
-    accentColor: '#E2E8F0',                 // palette[2] light gray
+    bg: '#2C5282',
+    titleColor: '#FFFFFF',
+    subtitleColor: '#CBD5E0',
+    dividerColor: '#E2E8F0',
+    pattern: 'triangles',
+    patternColor: '#FFFFFF',
+    patternOpacity: 0.1,
+    iconBox: {
+      bg: 'transparent',
+      borderColor: '#FFFFFF',
+      glyph: '+',
+      glyphColor: '#FFFFFF',
+      rounded: 'sm',
+    },
+    footer: {
+      bg: '#1A365D',
+      text: '─ LOGO ─',
+      textColor: '#FFFFFF',
+    },
   },
-  // beige → coral gradient. 어두운 텍스트.
+  // warm beige 단색 + sage leaves overlay + lighter beige footer.
   warm_care: {
     title: '임산부 영양제 가이드',
     subtitle: '엄마와 아기 모두를 위한',
-    textColor: '#3F2C1F',                   // 따뜻한 dark brown
-    accentShape: 'curve',
-    accentColor: '#B5C99A',                 // palette[2] sage
+    bg: '#F4E4D6',
+    titleColor: '#3F2C1F',
+    subtitleColor: '#5C4533',
+    dividerColor: '#FFB4A2',
+    pattern: 'leaves',
+    patternColor: '#B5C99A',
+    patternOpacity: 0.3,
+    iconBox: {
+      bg: '#FFFFFF',
+      borderColor: '#FFB4A2',
+      glyph: '●',
+      glyphColor: '#FFB4A2',
+      rounded: 'lg',
+    },
+    footer: {
+      bg: '#EDD9C7',
+      text: '─ LOGO ─',
+      textColor: '#3F2C1F',
+    },
   },
-  // navy → coral gradient. 흰 텍스트.
+  // monotone navy 단색 + sharp diagonals overlay + darker footer + coral dot.
   modern_minimal: {
     title: '치아 미백 비용 비교',
     subtitle: '한눈에 보는 5가지 옵션',
-    textColor: '#FFFFFF',
-    accentShape: 'triangle',
-    accentColor: '#FFFFFF',                 // palette[2] white
+    bg: '#1A1A2E',
+    titleColor: '#FFFFFF',
+    subtitleColor: '#B0B0C0',
+    dividerColor: '#E94560',
+    pattern: 'diagonals',
+    patternColor: '#FFFFFF',
+    patternOpacity: 0.08,
+    iconBox: {
+      bg: 'transparent',
+      borderColor: '#FFFFFF',
+      glyph: '●',
+      glyphColor: '#E94560',
+      rounded: 'none',
+    },
+    footer: {
+      bg: '#0F0F1F',
+      text: '─ LOGO ─',
+      textColor: '#FFFFFF',
+    },
   },
 };
 
-/** preset 카드 안에 들어가는 미니 cover-slide 미리보기. */
-function ThemePreviewMini({ theme }: { theme: ThemePreset }) {
-  const sample = THEME_SAMPLES[theme.id];
-  // SlidePreview.CoverLayout 와 동일 그라데이션 방향 (135deg, palette[0]→[1]).
-  const gradientStyle = {
-    background: `linear-gradient(135deg, ${theme.palette[0]}, ${theme.palette[1]})`,
-  };
+/**
+ * SVG pattern overlay — theme 정체성 시그널.
+ * theme.id 를 pattern <defs> id 에 suffix 로 박아 multi-instance unique 보장
+ * (4 preset 카드가 동시 렌더되면 SVG ID 충돌 방지).
+ */
+function PatternOverlay({
+  kind,
+  color,
+  opacity,
+  themeId,
+}: {
+  kind: ThemeSample['pattern'];
+  color: string;
+  opacity: number;
+  themeId: string;
+}) {
+  const patternId = `pat-${kind}-${themeId}`;
+  const def = (() => {
+    switch (kind) {
+      case 'dots':
+        return (
+          <pattern id={patternId} width="12" height="12" patternUnits="userSpaceOnUse">
+            <circle cx="6" cy="6" r="1.3" fill={color} />
+          </pattern>
+        );
+      case 'triangles':
+        return (
+          <pattern id={patternId} width="22" height="22" patternUnits="userSpaceOnUse">
+            <polygon points="11,4 18,16 4,16" fill="none" stroke={color} strokeWidth="0.6" />
+          </pattern>
+        );
+      case 'leaves':
+        return (
+          <pattern id={patternId} width="24" height="24" patternUnits="userSpaceOnUse">
+            <path d="M 12 6 Q 18 12, 12 18 Q 6 12, 12 6 Z" fill={color} />
+          </pattern>
+        );
+      case 'diagonals':
+        return (
+          <pattern id={patternId} width="8" height="8" patternUnits="userSpaceOnUse">
+            <line x1="0" y1="8" x2="8" y2="0" stroke={color} strokeWidth="0.7" />
+          </pattern>
+        );
+    }
+  })();
   return (
-    <div
-      className="w-full aspect-[16/10] rounded-lg overflow-hidden relative flex flex-col justify-center items-center px-3"
-      style={gradientStyle}
+    <svg
+      className="absolute inset-0 w-full h-full pointer-events-none"
+      style={{ opacity }}
       aria-hidden="true"
     >
-      {/* 액센트 도형 — theme 정체성 표시. text 아래 z-index. */}
-      <AccentShape shape={sample.accentShape} color={sample.accentColor} />
+      <defs>{def}</defs>
+      <rect width="100%" height="100%" fill={`url(#${patternId})`} />
+    </svg>
+  );
+}
 
-      {/* sample 텍스트 (cover 의 title + subtitle 미러) */}
-      <div className="relative z-10 text-center px-1">
-        <p
-          className="text-[10px] font-bold leading-tight tracking-tight"
-          style={{ color: sample.textColor }}
+/** 본문 하단 info card placeholder 박스 — theme 별 디자인. 2개 row. */
+function InfoBoxRow({ spec }: { spec: ThemeSample['iconBox'] }) {
+  const roundedCls =
+    spec.rounded === 'full'
+      ? 'rounded-full'
+      : spec.rounded === 'lg'
+        ? 'rounded-md'
+        : spec.rounded === 'sm'
+          ? 'rounded-sm'
+          : 'rounded-none';
+  return (
+    <div className="flex gap-1.5">
+      {[0, 1].map((i) => (
+        <div
+          key={i}
+          className={`w-6 h-6 flex items-center justify-center text-[10px] font-bold ${roundedCls}`}
+          style={{
+            backgroundColor: spec.bg,
+            border: `1px solid ${spec.borderColor}`,
+            color: spec.glyphColor,
+          }}
         >
-          {sample.title}
-        </p>
-        <p
-          className="text-[8px] mt-0.5 leading-tight opacity-90"
-          style={{ color: sample.textColor }}
-        >
-          {sample.subtitle}
-        </p>
-      </div>
+          {spec.glyph}
+        </div>
+      ))}
     </div>
   );
 }
 
-/** theme 별 액센트 도형 — SVG 또는 CSS shape. position absolute 로 우상단 corner. */
-function AccentShape({ shape, color }: { shape: ThemeSample['accentShape']; color: string }) {
-  switch (shape) {
-    case 'blob':
-      // 둥근 큰 원 (top-right corner 부드럽게 잘림) — friendly_illust 의 따뜻함.
-      return (
-        <span
-          className="absolute -top-3 -right-3 w-10 h-10 rounded-full opacity-50"
-          style={{ backgroundColor: color }}
+/** preset 카드 안에 들어가는 미니 카드뉴스 템플릿 미리보기. */
+function ThemePreviewMini({ theme }: { theme: ThemePreset }) {
+  const s = THEME_SAMPLES[theme.id];
+  return (
+    <div
+      className="w-full aspect-[16/10] rounded-lg overflow-hidden relative"
+      style={{ backgroundColor: s.bg }}
+      aria-hidden="true"
+    >
+      {/* SVG pattern overlay */}
+      <PatternOverlay
+        kind={s.pattern}
+        color={s.patternColor}
+        opacity={s.patternOpacity}
+        themeId={theme.id}
+      />
+
+      {/* 본문 영역 (상단 ~88%) — title + divider + subtitle + info boxes */}
+      <div className="relative h-[88%] flex flex-col px-2.5 pt-2 pb-1.5">
+        <p
+          className="text-[12px] font-extrabold tracking-tight leading-tight"
+          style={{ color: s.titleColor }}
+        >
+          {s.title}
+        </p>
+        <div
+          className="mt-1 h-[1.5px] w-6 rounded-full"
+          style={{ backgroundColor: s.dividerColor }}
         />
-      );
-    case 'bar':
-      // 좌측 vertical bar — professional_medical 의 격식.
-      return (
+        <p
+          className="text-[9px] font-medium mt-1 leading-tight"
+          style={{ color: s.subtitleColor }}
+        >
+          {s.subtitle}
+        </p>
+        <div className="mt-auto">
+          <InfoBoxRow spec={s.iconBox} />
+        </div>
+      </div>
+
+      {/* footer logo strip (하단 ~12%) — 실제 사용 시 로고가 들어갈 자리 시각화 */}
+      <div
+        className="absolute bottom-0 left-0 right-0 h-[12%] flex items-center justify-center"
+        style={{ backgroundColor: s.footer.bg }}
+      >
         <span
-          className="absolute left-0 top-0 bottom-0 w-1"
-          style={{ backgroundColor: color }}
-        />
-      );
-    case 'curve':
-      // 부드러운 큰 곡선 (왼쪽 아래 corner, 둥글게) — warm_care 의 다정함.
-      return (
-        <span
-          className="absolute -bottom-4 -left-4 w-12 h-12 rounded-full opacity-40"
-          style={{ backgroundColor: color }}
-        />
-      );
-    case 'triangle':
-      // sharp 삼각형 (top-right) — modern_minimal 의 정확함.
-      return (
-        <span
-          className="absolute top-0 right-0 w-0 h-0"
-          style={{
-            borderTop: `12px solid ${color}`,
-            borderLeft: '12px solid transparent',
-            opacity: 0.7,
-          }}
-        />
-      );
-  }
+          className="text-[8px] font-semibold tracking-wider opacity-70"
+          style={{ color: s.footer.textColor }}
+        >
+          {s.footer.text}
+        </span>
+      </div>
+    </div>
+  );
 }
 
 export default function TopicInput({
