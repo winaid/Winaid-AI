@@ -12,7 +12,7 @@
 | 프론트엔드 | Next.js 16 + React 19 + TypeScript 5.8 + Tailwind 4 |
 | 인증·DB·Storage | Supabase (PostgreSQL) |
 | AI 텍스트·이미지 | Google Gemini API (멀티키 로테이션) |
-| 카드뉴스 에디터 | konva 10 + react-konva 19 (캔버스 편집) · jspdf (PDF 내보내기) · jszip |
+| 카드뉴스 에디터 | _재구축 중 (C0 / 2026-05) — AI-first 자동 생성 흐름으로 재오픈 예정_ |
 | 영상 처리 | FFmpeg + auto-editor (Python) — Railway에 별도 서버 |
 | 자막 (STT) | Google Cloud Speech-to-Text v2 |
 | 크롤러 | Node.js + Express + Puppeteer — Railway |
@@ -32,7 +32,7 @@ Winaid-AI/
 │   │   ├── (dashboard)/     # 인증 가드 (게스트 ?guest=1 지원)
 │   │   │   ├── app/         # 대시보드 홈
 │   │   │   ├── blog/        # 블로그 생성 (5단계 AI 파이프라인)
-│   │   │   ├── card_news/   # 카드뉴스 (캔버스 에디터 + 드래프트 + 슬라이드쇼 + PDF)
+│   │   │   ├── card_news/   # 카드뉴스 진입 placeholder — 재구축 중 (C0 / 2026-05)
 │   │   │   ├── press/       # 보도자료
 │   │   │   ├── refine/      # AI 보정
 │   │   │   ├── image/       # 이미지 생성 (8 카테고리)
@@ -41,7 +41,7 @@ Winaid-AI/
 │   │   │   └── history/     # → /mypage 로 리다이렉트
 │   │   └── api/             # Gemini/Pexels/Pixabay/Naver/Video 프록시
 │   ├── components/
-│   │   ├── card-news/       # 카드뉴스 전용 UI
+│   │   # (card-news/ 디렉토리는 C0 / 2026-05 에 삭제됨 — C2 재구축 시 재생성)
 │   │   └── video-edit/      # 영상편집 9개 step 컴포넌트
 │   ├── lib/                 # 프롬프트·검증·저장·드래프트·비디오 클라이언트
 │   ├── hooks/               # useAuthGuard, useBlobUrl
@@ -62,11 +62,7 @@ Winaid-AI/
 ### 🧠 콘텐츠 생성
 - **블로그 생성** — 5단계 AI 파이프라인 (초안 → AI냄새 제거 → SEO → 의료법 검증 → 최종)
 - **보도자료 생성** — 병원 웹사이트 분석 + 3인칭 기사체
-- **카드뉴스 생성** — 멀티슬라이드 원고 + 16종 레이아웃 + 캔버스 에디터 (react-konva)
-  - 드래프트 자동저장 (48h idle timeout + userId 바인딩)
-  - 슬라이드쇼 · PNG/JPG/ZIP/PDF 다운로드 · 카드뉴스 → 쇼츠 변환
-  - 의료광고법 실시간 검증 (전 필드 스캔 + 원클릭 교체)
-  - 전역 AI 채팅 (전체 슬라이드 맥락 공유)
+- **카드뉴스 생성** — _재구축 중 (C0 / 2026-05~)_. AI-first 자동 생성 (주제 한 줄 → 슬라이드 + 이미지) 흐름으로 곧 재오픈. 진입 라우트(`/card_news`)는 살아있고 placeholder 페이지가 안내 중.
 - **AI 이미지 생성** — 캘린더·포스터·배너 등 8개 카테고리
 - **AI 보정 (Refine)** — 자동 보정 6종 + 채팅 모드
 - **글쓰기 스타일 학습** — 병원 블로그 크롤링 → Gemini 분석 → 문체 프로파일
@@ -230,7 +226,7 @@ npx playwright install chromium
 npm run test:e2e
 
 # 특정 파일만
-npx playwright test e2e/card-news.spec.ts
+# card-news 관련 spec 은 C0 (2026-05) 시점에 제거됨 — C2 재구축 후 재추가 예정
 
 # 배포된 prod에 대해 실행
 BASE_URL=https://winai.kr npx playwright test

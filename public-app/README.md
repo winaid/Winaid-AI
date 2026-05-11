@@ -8,7 +8,7 @@
 ## 주요 기능
 
 - **블로그 생성** — 5단계 AI 파이프라인 (초안 → AI냄새 제거 → SEO → 의료법 검증 → 최종)
-- **카드뉴스 생성** — 16종 레이아웃 + react-konva 캔버스 에디터 + 드래프트 자동저장 + 슬라이드쇼 + PNG/JPG/ZIP/PDF 다운로드 + 쇼츠 변환
+- **카드뉴스 생성** — _재구축 중 (C0 / 2026-05~)_. AI-first 자동 생성 (주제 한 줄 → 슬라이드 + 이미지) 흐름으로 곧 재오픈. `/card_news` 진입 시 placeholder 안내.
 - **보도자료 생성** — 병원 웹사이트 분석 + 3인칭 기사체
 - **AI 이미지 생성** — 8개 카테고리 (캘린더, 포스터, 배너 등)
 - **AI 보정 (Refine)** — 자동 보정 6종 + 채팅 모드
@@ -23,7 +23,7 @@
 - **스타일링**: Tailwind CSS 4
 - **DB/인증**: Supabase (PostgreSQL + Auth + Storage)
 - **AI**: Google Gemini API (멀티키 로테이션)
-- **카드뉴스 에디터**: react-konva 19 + konva 10 (네이티브 캔버스) · jspdf · jszip
+- **카드뉴스 에디터**: _재구축 중 (C0 / 2026-05) — C2 단계에서 재선정 예정_
 - **영상 처리**: video-processor (별도 Railway 서버, FFmpeg + auto-editor)
 - **E2E 테스트**: Playwright 1.58
 - **배포**: Vercel
@@ -85,7 +85,7 @@ public-app/
 │   ├── (dashboard)/            # 인증 가드 그룹
 │   │   ├── app/                # 대시보드 홈
 │   │   ├── blog/               # 블로그 생성 (5단계)
-│   │   ├── card_news/          # 카드뉴스
+│   │   ├── card_news/          # 카드뉴스 진입 placeholder — 재구축 중 (C0 / 2026-05)
 │   │   ├── press/              # 보도자료
 │   │   ├── refine/             # AI 보정
 │   │   ├── image/              # 이미지 생성
@@ -103,11 +103,11 @@ public-app/
 │   │   ├── remove-bg/          # 배경 제거 (remove.bg)
 │   │   ├── video/              # 영상 처리 API (video-processor 프록시)
 │   │   │   ├── crop-vertical, silence-remove, generate-subtitles, ...
-│   │   │   └── card-to-shorts  # 카드뉴스 → 쇼츠 변환
+│   │   #   (card-to-shorts 라우트는 C0 / 2026-05 에 카드뉴스 안쪽 기능과 함께 삭제됨)
 │   │   └── youtube/            # 유튜브 key-moments
 │   └── page.tsx                # 랜딩
 ├── components/
-│   ├── card-news/              # SlideEditor, KonvaSlideEditor, SlideRenderers 등
+│   #  (card-news/ 디렉토리는 C0 / 2026-05 에 삭제됨 — C2 재구축 시 재생성)
 │   ├── video-edit/             # 9개 step 컴포넌트 + VideoPlayer/WaveformBar/SubtitleTimeline
 │   └── landing/                # LandingHero, LandingSections
 ├── lib/                        # 프롬프트·검증·저장·드래프트·비디오 클라이언트
@@ -127,8 +127,7 @@ public-app/
 │   ├── landing.spec.ts
 │   ├── auth.spec.ts
 │   ├── blog.spec.ts
-│   ├── card-news.spec.ts
-│   ├── card-news-dnd.spec.ts   # 캔버스 드래그앤드롭 통합
+│   #  (card-news.spec.ts, card-news-dnd.spec.ts, moveable-editor.spec.ts 는 C0 / 2026-05 삭제)
 │   ├── video-edit.spec.ts
 │   ├── history.spec.ts
 │   ├── refine.spec.ts
@@ -158,7 +157,7 @@ npx playwright install chromium
 npm run test:e2e
 
 # 특정 파일만
-npx playwright test e2e/card-news.spec.ts
+# card-news.spec.ts 는 C0 (2026-05) 시점에 제거됨 — C2 재구축 후 재추가 예정
 
 # 프로덕션 URL 대상
 BASE_URL=https://winai.kr npx playwright test
@@ -169,7 +168,7 @@ RUN_INTEGRATION=1 npm run test:e2e
 
 - **모든 스모크 테스트는 mock 기반**. `helpers/mocks.ts`에서 Gemini/Supabase/Pexels/Pixabay/Naver 전부 차단.
 - 게스트 모드 접근: `?guest=1` 쿼리 사용.
-- 드래프트 주입 테스트: `injectCardNewsDraft()` helper로 localStorage 조작.
+- 드래프트 주입 테스트: `injectCardNewsDraft()` helper 는 C0 (2026-05) 에 제거됨 — C2 재구축 시 새 helper 도입 예정.
 
 ## 배포 (Vercel)
 
@@ -193,7 +192,7 @@ RUN_INTEGRATION=1 npm run test:e2e
 - `/` → 랜딩 로드
 - `/api/gemini` (GET) → `{"status":"ok","keys":N}` (N ≥ 1)
 - `/auth` → 로그인 폼 (Supabase 연결 OK)
-- `/card_news` → 주제 입력창 표시
+- `/card_news` → placeholder 페이지 (C0 / 2026-05~ 재구축 안내). C2 재구축 후 주제 입력창 복귀 예정.
 - `/video_edit` → 업로드 영역 + 자동/단계별 모드 토글 + **AI 쇼츠 모드 없음 확인**
 
 ### 주의사항

@@ -141,39 +141,9 @@ export async function setupCommonMocks(page: Page): Promise<void> {
   }));
 }
 
-// ── 카드뉴스 드래프트 주입 ──
-
-/**
- * page.goto 이후에 호출해야 한다(localStorage는 origin scope).
- * userId=null이면 게스트 드래프트로 인식.
- */
-export async function injectCardNewsDraft(page: Page, opts: {
-  topic?: string;
-  userId?: string | null;
-  slideCount?: number;
-} = {}): Promise<void> {
-  const { topic = 'E2E 테스트 드래프트', userId = null, slideCount = 2 } = opts;
-  const slides = Array.from({ length: slideCount }, (_, i) => ({
-    id: `test-slide-${i}`,
-    index: i + 1,
-    layout: i === 0 ? 'cover' : 'info',
-    title: `슬라이드 ${i + 1}`,
-    subtitle: 'E2E',
-    body: i === 0 ? undefined : '본문',
-  }));
-  await page.evaluate(({ topic, userId, slides }) => {
-    localStorage.setItem('winai-cardnews-draft', JSON.stringify({
-      userId,
-      topic,
-      hospitalName: 'E2E치과',
-      proSlides: slides,
-      proTheme: {},
-      proCardRatio: '1:1',
-      savedAt: Date.now(),
-      lastAccessedAt: Date.now(),
-    }));
-  }, { topic, userId, slides });
-}
+// ── (C0, 2026-05-08) 카드뉴스 드래프트 주입 helper 제거 ──
+// 카드뉴스 안쪽 기능 일괄 삭제 + e2e card-news / moveable-editor spec 도 함께 삭제됐다.
+// C2 재구축 시 새 드래프트 모델에 맞춰 helper 재작성 예정.
 
 /** guest=1 쿼리로 페이지 접근 (useAuthGuard 우회) */
 export function guestUrl(path: string): string {
