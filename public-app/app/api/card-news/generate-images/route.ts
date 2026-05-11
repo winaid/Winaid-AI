@@ -31,6 +31,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import { gateGuestRequest } from '../../../../lib/guestRateLimit';
 import { resolveImageOwner } from '../../../../lib/serverAuth';
 import { getCredits } from '../../../../lib/creditService';
@@ -39,9 +41,13 @@ import {
   V1_LAYOUTS,
   isValidThemeId,
   getTheme,
+  isValidRatio,
+  getRatio,
   DEFAULT_THEME,
+  DEFAULT_RATIO,
   type V1Layout,
   type ThemeId,
+  type AspectRatio,
 } from '../../../../lib/cardNewsPrompt';
 
 export const maxDuration = 300;
@@ -52,6 +58,8 @@ interface Body {
   imageStyle?: unknown;
   /** C2-fix-1: 톤·색상 일관성. 알 수 없는 값은 default. */
   theme?: unknown;
+  /** C2-fix-1e: aspect ratio ('1:1' | '4:5'). 알 수 없는 값은 default. */
+  ratio?: unknown;
 }
 
 function err(message: string, status: number, extra?: Record<string, unknown>) {
@@ -93,6 +101,35 @@ function buildImagePromptWithTheme(slide: SlideData, themeId: ThemeId): string {
   return `${theme.imageStyleEn}. Visual concept (no text in image): ${subject}.`;
 }
 
+/**
+ * C2-fix-1e: theme.referencePath → public/ 에서 fs.readFile → data URL.
+ * 실패 시 null (호출자가 fallback — /api/image 는 referenceImage 없어도 정상 동작).
+ *
+ * NOTE: server-side fs 접근. public-app 의 Next.js process.cwd() 가 public-app
+ * 디렉토리이므로 public/{cleanPath} 로 접근.
+ */
+async function readReferenceAsDataUrl(referencePath: string): Promise<string | null> {
+  try {
+    const cleanPath = referencePath.replace(/^\//, '');
+    // 경로 escape 방지 — '..' 또는 절대경로 거절
+    if (cleanPath.includes('..') || path.isAbsolute(cleanPath)) {
+      console.warn(`[generate-images] reference path 거절 (escape suspect): ${referencePath}`);
+      return null;
+    }
+    const filepath = path.join(process.cwd(), 'public', cleanPath);
+    const buf = await fs.readFile(filepath);
+    const ext = path.extname(filepath).slice(1).toLowerCase() || 'png';
+    const mime = ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : `image/${ext}`;
+    return `data:${mime};base64,${buf.toString('base64')}`;
+  } catch (e) {
+    console.warn(
+      `[generate-images] reference 읽기 실패 ${referencePath}:`,
+      (e as Error).message?.slice(0, 200),
+    );
+    return null;
+  }
+}
+
 interface ImageResult {
   imageDataUrl: string | null;
   errorDetails?: string;
@@ -104,6 +141,8 @@ async function callImageRoute(
   authHeader: string | null,
   promptText: string,
   imageStyle: 'illustration' | 'photo' | 'medical',
+  aspectRatio: AspectRatio,
+  referenceImage: string | null,
 ): Promise<ImageResult> {
   try {
     const res = await fetch(`${origin}/api/image`, {
@@ -117,6 +156,8 @@ async function callImageRoute(
         mode: 'card_news',
         imageStyle,
         quality: 'fast',
+        aspectRatio,
+        ...(referenceImage ? { referenceImage } : {}),
       }),
     });
     if (!res.ok) {
@@ -159,6 +200,9 @@ export async function POST(request: NextRequest) {
       : 'illustration';
   // C2-fix-1: theme 화이트리스트 검증. 알 수 없는 값은 silent fallback.
   const theme: ThemeId = isValidThemeId(body.theme) ? body.theme : DEFAULT_THEME;
+  // C2-fix-1e: aspect ratio 화이트리스트 검증.
+  const ratio: AspectRatio = isValidRatio(body.ratio) ? body.ratio : DEFAULT_RATIO;
+  const ratioPreset = getRatio(ratio);
 
   // ── 3) 인증 (게스트 401) ──────────────────────────────────────────────
   const owner = await resolveImageOwner(request);
@@ -191,9 +235,26 @@ export async function POST(request: NextRequest) {
   const origin = request.nextUrl.origin;
   const authHeader = request.headers.get('authorization');
 
+  // C2-fix-1e: reference 이미지 1회 읽고 5장 모두에 동일 base64 전달.
+  // fs.readFile 은 한 번만 — 5번 동일 파일 읽지 않음.
+  const themeObj = getTheme(theme);
+  const referenceDataUrl = await readReferenceAsDataUrl(themeObj.referencePath);
+  if (!referenceDataUrl) {
+    console.warn(
+      `[generate-images] theme=${theme} reference 사용 불가 — prompt-only 로 진행`,
+    );
+  }
+
   const results = await Promise.all(
     inputSlides.map((s) =>
-      callImageRoute(origin, authHeader, buildImagePromptWithTheme(s, theme), imageStyle),
+      callImageRoute(
+        origin,
+        authHeader,
+        buildImagePromptWithTheme(s, theme),
+        imageStyle,
+        ratio,
+        referenceDataUrl,
+      ),
     ),
   );
 

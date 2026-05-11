@@ -62,6 +62,14 @@ export interface ThemePreset {
   textToneKo: string;
   /** SlidePreview 단색 배경 (info/checklist/comparison). 보통 흰색에 가깝게. */
   previewBg: string;
+  /**
+   * C2-fix-1e: 운영자가 업로드한 theme reference 이미지 경로 (public/ 기준).
+   * GPT Image 2.0 의 images.edit 호출에 base64 변환 후 전달 — 5장 이미지가
+   * 본 reference 의 디자인·색감을 모방하도록 강제. OPENAI_IMAGE_EDIT_ENABLED=0
+   * 또는 edit API 실패 시 prompt-text-hint 로 fallback.
+   * 확장자는 실제 업로드 파일에 맞춰 mixed (jpg / png).
+   */
+  referencePath: string;
 }
 
 export const THEME_PRESETS: readonly ThemePreset[] = [
@@ -75,6 +83,7 @@ export const THEME_PRESETS: readonly ThemePreset[] = [
     textToneKo:
       '친근하고 다정한 톤. 환자에게 말하듯 쉬운 표현. "~예요/~어요" 어미 권장. 의학 전문 용어는 풀어서 설명. 격식보다 따뜻함 우선.',
     previewBg: '#FFFBF7',
+    referencePath: '/theme-references/friendly_illust.jpg',
   },
   {
     id: 'professional_medical',
@@ -86,6 +95,7 @@ export const THEME_PRESETS: readonly ThemePreset[] = [
     textToneKo:
       '신뢰감 있고 차분한 톤. "~합니다/~입니다" 격식체. 의학 용어 사용 가능하되 1회는 풀어서 설명. 정확한 수치·근거 위주. 감정 표현 절제.',
     previewBg: '#F7FAFC',
+    referencePath: '/theme-references/professional_medical.png',
   },
   {
     id: 'warm_care',
@@ -97,6 +107,7 @@ export const THEME_PRESETS: readonly ThemePreset[] = [
     textToneKo:
       '부드럽고 가족적인 톤. "~예요/~어요" 친근체. 가족·돌봄·안심 같은 단어 자연스럽게. 환자뿐 아니라 보호자도 함께 안내한다는 느낌.',
     previewBg: '#FDF8F3',
+    referencePath: '/theme-references/warm_care.png',
   },
   {
     id: 'modern_minimal',
@@ -108,8 +119,57 @@ export const THEME_PRESETS: readonly ThemePreset[] = [
     textToneKo:
       '정확하고 깔끔한 톤. "~합니다" 또는 명사체. 군더더기 없이 핵심만. 숫자·비율·단계 같은 데이터 강조. 형용사는 최소.',
     previewBg: '#FFFFFF',
+    referencePath: '/theme-references/modern_minimal.jpg',
   },
 ] as const;
+
+// ── Aspect ratio (C2-fix-1e) ────────────────────────────────────────────────
+// v1 에선 2종만 노출 (정사각 / 세로). /api/image 의 AspectRatio 타입(8종)
+// 의 narrow subset — string union 호환 (좁은 → 넓은 자동 캐스트).
+// gpt-image-2 의 size 매핑은 /api/image 의 aspectRatioToSize 가 담당하므로
+// 본 모듈은 UI/저장용 narrow 타입만 노출.
+
+export type AspectRatio = '1:1' | '4:5';
+
+export interface AspectRatioPreset {
+  id: AspectRatio;
+  label: string;
+  /** UI 표시용 — 실제 export 픽셀. */
+  size: string;
+  /** SlidePreview 'export' 모드의 절대 픽셀. html2canvas / jspdf 모두 사용. */
+  dims: { w: number; h: number };
+  /** /api/image body.aspectRatio 로 그대로 forward — aspectRatioToSize 가 변환. */
+  openaiAspectRatio: '1:1' | '4:5';
+}
+
+export const ASPECT_RATIOS: readonly AspectRatioPreset[] = [
+  {
+    id: '1:1',
+    label: '정사각형',
+    size: '1080×1080',
+    dims: { w: 1080, h: 1080 },
+    openaiAspectRatio: '1:1',
+  },
+  {
+    id: '4:5',
+    label: '세로형',
+    size: '1080×1350',
+    dims: { w: 1080, h: 1350 },
+    openaiAspectRatio: '4:5',
+  },
+] as const;
+
+export const DEFAULT_RATIO: AspectRatio = '1:1';
+
+export function getRatio(id: AspectRatio | string | undefined | null): AspectRatioPreset {
+  if (!id) return ASPECT_RATIOS[0];
+  const found = ASPECT_RATIOS.find((r) => r.id === id);
+  return found || ASPECT_RATIOS[0];
+}
+
+export function isValidRatio(v: unknown): v is AspectRatio {
+  return v === '1:1' || v === '4:5';
+}
 
 export const DEFAULT_THEME: ThemeId = 'friendly_illust';
 

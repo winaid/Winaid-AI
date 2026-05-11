@@ -21,7 +21,7 @@ import { useState } from 'react';
 import type { SlideData } from '@winaid/blog-core';
 import type { SlideFieldViolation } from '../../lib/medicalAdValidation';
 import { CATEGORY_LABELS } from '../../lib/medicalAdValidation';
-import type { ThemeId } from '../../lib/cardNewsPrompt';
+import type { ThemeId, AspectRatio } from '../../lib/cardNewsPrompt';
 import SlidePreview from './SlidePreview';
 
 interface SlideTextEditorProps {
@@ -31,6 +31,8 @@ interface SlideTextEditorProps {
   hospitalName?: string;
   /** C2-fix-1: theme preset id. SlidePreview thumb 에 그대로 전달. */
   theme?: ThemeId;
+  /** C2-fix-1e: aspect ratio. SlidePreview thumb 에 전달. */
+  ratio?: AspectRatio;
   isLoading?: boolean;
   error?: string | null;
   onSlidesChange: (next: SlideData[]) => void;
@@ -44,6 +46,7 @@ export default function SlideTextEditor({
   replacedCount,
   hospitalName,
   theme,
+  ratio,
   isLoading,
   error,
   onSlidesChange,
@@ -134,7 +137,7 @@ export default function SlideTextEditor({
             >
               <span className="text-xs font-bold text-slate-400 w-6 text-center">{i + 1}</span>
               <div className="w-16 h-16 flex-shrink-0">
-                <SlidePreview slide={s} size="preview" hospitalName={hospitalName} theme={theme} />
+                <SlidePreview slide={s} size="preview" hospitalName={hospitalName} theme={theme} ratio={ratio} />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-semibold text-slate-800 truncate">{s.title}</div>

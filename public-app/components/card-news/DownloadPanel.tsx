@@ -16,7 +16,7 @@
 
 import { useRef, useState } from 'react';
 import type { SlideData } from '@winaid/blog-core';
-import type { ThemeId } from '../../lib/cardNewsPrompt';
+import type { ThemeId, AspectRatio } from '../../lib/cardNewsPrompt';
 import SlidePreview from './SlidePreview';
 import {
   downloadCardNews,
@@ -30,6 +30,8 @@ interface DownloadPanelProps {
   hospitalName?: string;
   /** C2-fix-1: theme preset id. SlidePreview (preview + export) 양쪽에 전달. */
   theme?: ThemeId;
+  /** C2-fix-1e: aspect ratio. SlidePreview export + PDF page size 양쪽에 영향. */
+  ratio?: AspectRatio;
   onRestart: () => void;
 }
 
@@ -52,6 +54,7 @@ export default function DownloadPanel({
   topic,
   hospitalName,
   theme,
+  ratio,
   onRestart,
 }: DownloadPanelProps) {
   const [downloading, setDownloading] = useState<DownloadFormat | null>(null);
@@ -74,6 +77,7 @@ export default function DownloadPanel({
         slideElements: elements,
         filenamePrefix,
         onProgress: (done, total) => setProgress({ done, total }),
+        ratio,
       });
     } catch (e) {
       console.warn('[card-news/download]', e);
@@ -98,7 +102,7 @@ export default function DownloadPanel({
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {slides.map((s) => (
           <div key={s.id} className="aspect-square">
-            <SlidePreview slide={s} size="preview" hospitalName={hospitalName} theme={theme} />
+            <SlidePreview slide={s} size="preview" hospitalName={hospitalName} theme={theme} ratio={ratio} />
           </div>
         ))}
       </div>
@@ -181,7 +185,7 @@ export default function DownloadPanel({
               exportRefs.current[i] = el;
             }}
           >
-            <SlidePreview slide={s} size="export" hospitalName={hospitalName} theme={theme} />
+            <SlidePreview slide={s} size="export" hospitalName={hospitalName} theme={theme} ratio={ratio} />
           </div>
         ))}
       </div>

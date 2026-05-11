@@ -19,7 +19,7 @@
 
 import { useRef, useState } from 'react';
 import type { SlideData } from '@winaid/blog-core';
-import type { ThemeId } from '../../lib/cardNewsPrompt';
+import type { ThemeId, AspectRatio } from '../../lib/cardNewsPrompt';
 import SlidePreview from './SlidePreview';
 
 interface ImageGenerationPanelProps {
@@ -32,6 +32,8 @@ interface ImageGenerationPanelProps {
   hospitalName?: string;
   /** C2-fix-1: theme preset id. SlidePreview thumb 에 전달. */
   theme?: ThemeId;
+  /** C2-fix-1e: aspect ratio. SlidePreview thumb 에 전달. */
+  ratio?: AspectRatio;
   error?: string | null;
   onSlidesChange: (next: SlideData[]) => void;
   onRegenerateSlide: (slideIndex: number) => Promise<void>;
@@ -48,6 +50,7 @@ export default function ImageGenerationPanel({
   loadingProgress,
   hospitalName,
   theme,
+  ratio,
   error,
   onSlidesChange,
   onRegenerateSlide,
@@ -138,7 +141,7 @@ export default function ImageGenerationPanel({
               ].join(' ')}
             >
               <div className="aspect-square relative">
-                <SlidePreview slide={s} size="preview" hospitalName={hospitalName} theme={theme} />
+                <SlidePreview slide={s} size="preview" hospitalName={hospitalName} theme={theme} ratio={ratio} />
                 {isRegen && (
                   <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
                     <span className="text-xs font-bold text-indigo-600">재생성 중...</span>

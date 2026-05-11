@@ -25,8 +25,9 @@
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import JSZip from 'jszip';
+import { getRatio, type AspectRatio } from './cardNewsPrompt';
 
-/** html2canvas 옵션 — 외부 이미지(CORS) + scale = 1 (이미 1080px 정사이즈). */
+/** html2canvas 옵션 — 외부 이미지(CORS) + scale = 1 (DOM 이 이미 절대 픽셀). */
 const H2C_OPTIONS = {
   useCORS: true as const,
   backgroundColor: '#ffffff',
@@ -43,6 +44,8 @@ export interface DownloadOptions {
   filenamePrefix: string;
   /** 진행률 콜백 — 1장 캡처 완료 시마다 호출 */
   onProgress?: (slideIndex: number, total: number) => void;
+  /** C2-fix-1e: aspect ratio. PDF 페이지 크기 분기. 미지정 시 '1:1'. */
+  ratio?: AspectRatio;
 }
 
 /** 단일 slide DOM → canvas → blob. 내부 헬퍼. */
@@ -115,22 +118,22 @@ export async function downloadAsZIP(opts: DownloadOptions): Promise<void> {
   triggerDownload(zipBlob, `${filenamePrefix}.zip`);
 }
 
-/** PDF — 슬라이드별 한 페이지 (1:1 정사각, 단위 px). */
+/** PDF — 슬라이드별 한 페이지 (ratio 에 맞춰 1:1 또는 4:5, 단위 px). */
 export async function downloadAsPDF(opts: DownloadOptions): Promise<void> {
-  const { slideElements, filenamePrefix, onProgress } = opts;
-  // jsPDF 단위 'px', 1:1 정사각. EXPORT_SIZE_PX 와 정합.
-  const SIDE = 1080;
+  const { slideElements, filenamePrefix, onProgress, ratio } = opts;
+  // C2-fix-1e: ratio 에 따라 PDF 페이지 크기 분기. dims 는 SlidePreview export 와 정합.
+  const { w, h } = getRatio(ratio).dims;
   const pdf = new jsPDF({
     orientation: 'portrait',
     unit: 'px',
-    format: [SIDE, SIDE],
+    format: [w, h],
     hotfixes: ['px_scaling'],
   });
   for (let i = 0; i < slideElements.length; i++) {
     const canvas = await captureCanvas(slideElements[i]);
     const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
-    if (i > 0) pdf.addPage([SIDE, SIDE], 'portrait');
-    pdf.addImage(dataUrl, 'JPEG', 0, 0, SIDE, SIDE);
+    if (i > 0) pdf.addPage([w, h], 'portrait');
+    pdf.addImage(dataUrl, 'JPEG', 0, 0, w, h);
     onProgress?.(i + 1, slideElements.length);
   }
   pdf.save(`${filenamePrefix}.pdf`);

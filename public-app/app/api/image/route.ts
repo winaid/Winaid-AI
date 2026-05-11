@@ -10,6 +10,8 @@
  * OPENAI_IMAGE_EDIT_ENABLED=1 로 활성화 가능 (TODO 분기 마련됨).
  */
 import { NextRequest, NextResponse } from 'next/server';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import OpenAI from 'openai';
 import { gateGuestRequest } from '../../../lib/guestRateLimit';
 import { resolveImageOwner } from '../../../lib/serverAuth';
@@ -458,7 +460,13 @@ interface ImageRequestBody {
   brandColors?: string;
   logoBase64?: string;
   calendarImage?: string;
-  referenceImage?: string;   // card_news: 참고 이미지 base64
+  referenceImage?: string;   // card_news: 참고 이미지 base64 dataURL
+  /**
+   * C2-fix-1e: 서버측 fs.readFile 로 변환할 reference 경로 (public/ 기준).
+   * client 가 dataURL 직접 보내는 비용 회피용. referenceImage 와 둘 다 오면
+   * referenceImage 우선.
+   */
+  referenceImagePath?: string;
   quality?: 'fast' | 'premium';  // 기본 'fast' — 'premium'이면 2-Stage (card_news만 의미)
 }
 
@@ -684,6 +692,31 @@ All people in the scene must have coherent, natural gazes. NO unfocused or empty
   // (참고: isCardNewsMode/buildCardNewsIllustrationPrompt/buildCardNewsTextOverlayPrompt 함수는
   //  edit 활성화 시 2-Stage 복원용으로 보존.)
   const editEnabled = process.env.OPENAI_IMAGE_EDIT_ENABLED === '1';
+
+  // C2-fix-1e: referenceImagePath 가 있고 referenceImage 가 없으면 서버측 변환.
+  // public/ 하위만 허용 (escape '..', 절대경로 거절). 실패 시 referenceImage 비워둠.
+  if (
+    typeof body.referenceImagePath === 'string' &&
+    body.referenceImagePath.startsWith('/') &&
+    !body.referenceImage
+  ) {
+    const rp = body.referenceImagePath;
+    try {
+      const cleanPath = rp.replace(/^\//, '');
+      if (!cleanPath.includes('..') && !path.isAbsolute(cleanPath)) {
+        const fp = path.join(process.cwd(), 'public', cleanPath);
+        const buf = await fs.readFile(fp);
+        const ext = path.extname(fp).slice(1).toLowerCase() || 'png';
+        const mime = ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : `image/${ext}`;
+        body.referenceImage = `data:${mime};base64,${buf.toString('base64')}`;
+      } else {
+        console.warn('[/api/image] referenceImagePath escape 거절:', rp);
+      }
+    } catch (e) {
+      console.warn('[/api/image] referenceImagePath 읽기 실패:', (e as Error).message?.slice(0, 200));
+    }
+  }
+
   const hasAttachment = !!body.referenceImage || !!body.logoBase64 || !!body.calendarImage;
   let promptForGenerate = fullPrompt;
   if (hasAttachment && !editEnabled) {
@@ -695,6 +728,44 @@ All people in the scene must have coherent, natural gazes. NO unfocused or empty
   }
   // (isCardNewsMode + premium quality 는 quality='high' 로 자동 매핑 — 기존 2-Stage 우회.)
 
+  // ── C2-fix-1e: images.edit 분기 가능 여부 ──
+  // referenceImage 가 있고 OPENAI_IMAGE_EDIT_ENABLED=1 이면 edit endpoint 1회 시도.
+  // 실패하면 (#1844 model validation 등) generate fallback 으로 그대로 떨어짐.
+  const canTryEdit =
+    editEnabled &&
+    typeof body.referenceImage === 'string' &&
+    body.referenceImage.startsWith('data:');
+
+  /** images.edit 시도 → 성공 시 b64 또는 null, 실패 시 null (호출자가 generate fallback). */
+  async function tryEdit(openai: OpenAI): Promise<string | null> {
+    if (!canTryEdit) return null;
+    try {
+      const dataUrl = body.referenceImage as string;
+      const [meta, b64] = dataUrl.split(',');
+      if (!b64) return null;
+      const mimeMatch = meta.match(/data:(.*?);base64/);
+      const mime = mimeMatch?.[1] || 'image/png';
+      const ext = mime === 'image/jpeg' ? 'jpg' : mime.split('/')[1] || 'png';
+      const buf = Buffer.from(b64, 'base64');
+      // openai-node v6+ accepts File for images.edit. Node 18+ has global File.
+      const file = new File([buf], `reference.${ext}`, { type: mime });
+      const result = await openai.images.edit({
+        model: MODEL,
+        image: file,
+        prompt: promptForGenerate,
+        size: sizeStr as 'auto',
+        n: 1,
+      });
+      return result.data?.[0]?.b64_json ?? null;
+    } catch (e) {
+      console.warn(
+        '[api/image] images.edit 실패 (fallback to generate):',
+        ((e as Error).message || 'unknown').slice(0, 200),
+      );
+      return null;
+    }
+  }
+
   // ── OpenAI 호출 + 멀티키 로테이션 ──
   let lastError = '';
   for (let ki = 0; ki < keys.length; ki++) {
@@ -702,19 +773,30 @@ All people in the scene must have coherent, natural gazes. NO unfocused or empty
     const openai = new OpenAI({ apiKey: keys[keyIdx], timeout: 120_000 });
 
     try {
-      const result = await openai.images.generate({
-        model: MODEL,
-        prompt: promptForGenerate,
-        size: sizeStr as 'auto',
-        quality: qualityStr,
-        n: 1,
-      });
+      // C2-fix-1e: edit 분기 우선 시도, 실패 시 generate. generate fallback 시 prompt
+      // 는 이미 promptForGenerate (text-hint 변환본) — referenceImage 정보가 텍스트
+      // 힌트로 들어가 있어 generate 도 어느 정도 reference 정보 활용.
+      let b64: string | null = null;
+      let usedEndpoint: 'edit' | 'generate' = 'generate';
+      if (canTryEdit) {
+        b64 = await tryEdit(openai);
+        if (b64) usedEndpoint = 'edit';
+      }
+      if (!b64) {
+        const result = await openai.images.generate({
+          model: MODEL,
+          prompt: promptForGenerate,
+          size: sizeStr as 'auto',
+          quality: qualityStr,
+          n: 1,
+        });
+        b64 = result.data?.[0]?.b64_json ?? null;
+      }
 
       keyIndex = (keyIdx + 1) % keys.length;
-      const b64 = result.data?.[0]?.b64_json;
       if (!b64) {
-        lastError = `${MODEL} key${ki}: 응답에 이미지 데이터 없음`;
-        console.error('[api/image] key %d/%d empty response: model=%s', ki + 1, keys.length, MODEL);
+        lastError = `${MODEL} key${ki}: 응답에 이미지 데이터 없음 (${usedEndpoint})`;
+        console.error('[api/image] key %d/%d empty response: model=%s endpoint=%s', ki + 1, keys.length, MODEL, usedEndpoint);
         continue;
       }
 
@@ -722,6 +804,7 @@ All people in the scene must have coherent, natural gazes. NO unfocused or empty
         imageDataUrl: `data:image/png;base64,${b64}`,
         mimeType: 'image/png',
         model: MODEL,
+        endpoint: usedEndpoint,
       });
     } catch (err: unknown) {
       const e = err as { status?: number; message?: string; name?: string };

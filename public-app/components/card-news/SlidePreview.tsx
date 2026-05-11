@@ -15,7 +15,13 @@
  */
 
 import type { SlideData } from '@winaid/blog-core';
-import { getTheme, type ThemeId, type ThemePreset } from '../../lib/cardNewsPrompt';
+import {
+  getTheme,
+  getRatio,
+  type ThemeId,
+  type ThemePreset,
+  type AspectRatio,
+} from '../../lib/cardNewsPrompt';
 
 interface SlidePreviewProps {
   slide: SlideData;
@@ -23,29 +29,33 @@ interface SlidePreviewProps {
   hospitalName?: string;
   /** C2-fix-1: theme preset id. 미지정 시 default. */
   theme?: ThemeId;
+  /** C2-fix-1e: aspect ratio ('1:1' | '4:5'). 미지정 시 default '1:1'. */
+  ratio?: AspectRatio;
 }
-
-const EXPORT_SIZE_PX = 1080; // 1:1 비율, html2canvas 캡처 기준
 
 export default function SlidePreview({
   slide,
   size = 'preview',
   hospitalName,
   theme: themeId,
+  ratio: ratioId,
 }: SlidePreviewProps) {
   const isExport = size === 'export';
   const theme = getTheme(themeId);
+  const ratio = getRatio(ratioId);
 
-  // export 모드는 절대 픽셀, preview 는 반응형. 둘 다 1:1 aspect.
-  // C2-fix-1: 기본 배경에도 theme.previewBg 적용 (cover/closing 은 그라데이션으로 override).
+  // export 모드는 절대 픽셀, preview 는 반응형. ratio 에 따라 분기.
+  // C2-fix-1: 기본 배경에 theme.previewBg 적용 (cover/closing 은 그라데이션으로 override).
+  // C2-fix-1e: ratio.dims 로 export 픽셀, preview 는 aspect-* 클래스 분기.
   const wrapperStyle = {
     backgroundColor: theme.previewBg,
-    ...(isExport ? { width: `${EXPORT_SIZE_PX}px`, height: `${EXPORT_SIZE_PX}px` } : {}),
+    ...(isExport ? { width: `${ratio.dims.w}px`, height: `${ratio.dims.h}px` } : {}),
   };
 
+  const aspectCls = ratio.id === '4:5' ? 'aspect-[4/5]' : 'aspect-square';
   const wrapperCls = [
     'relative overflow-hidden text-slate-800 font-sans',
-    isExport ? '' : 'w-full aspect-square rounded-xl shadow-sm border border-slate-200',
+    isExport ? '' : `w-full ${aspectCls} rounded-xl shadow-sm border border-slate-200`,
   ].join(' ');
 
   // 모든 layout 공용 wrapper. 안쪽 분기는 switch.

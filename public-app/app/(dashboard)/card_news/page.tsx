@@ -26,10 +26,12 @@ import { useRouter } from 'next/navigation';
 import type { SlideData } from '@winaid/blog-core';
 import {
   DEFAULT_THEME,
+  DEFAULT_RATIO,
   getTheme,
   type SlideOutline,
   type AllowedSlideCount,
   type ThemeId,
+  type AspectRatio,
 } from '../../../lib/cardNewsPrompt';
 import type { SlideFieldViolation } from '../../../lib/medicalAdValidation';
 import { authFetch } from '../../../lib/authFetch';
@@ -55,6 +57,8 @@ export default function CardNewsPage() {
   const [slideCount, setSlideCount] = useState<AllowedSlideCount>(5);
   // C2-fix-1: 디자인 테마 (텍스트 톤 + 이미지 스타일 + preview 배경 일관).
   const [theme, setTheme] = useState<ThemeId>(DEFAULT_THEME);
+  // C2-fix-1e: aspect ratio (1:1 default / 4:5).
+  const [ratio, setRatio] = useState<AspectRatio>(DEFAULT_RATIO);
   const [outline, setOutline] = useState<SlideOutline[]>([]);
   const [slides, setSlides] = useState<SlideData[]>([]);
   const [violations, setViolations] = useState<SlideFieldViolation[]>([]);
@@ -72,12 +76,18 @@ export default function CardNewsPage() {
 
   // ── Step 1 → 2: generate-outline ─────────────────────────────────────
   const handleTopicSubmit = useCallback(
-    async (t: string, n: AllowedSlideCount, selectedTheme: ThemeId) => {
+    async (
+      t: string,
+      n: AllowedSlideCount,
+      selectedTheme: ThemeId,
+      selectedRatio: AspectRatio,
+    ) => {
       setError(null);
       setIsLoading(true);
       setTopic(t);
       setSlideCount(n);
       setTheme(selectedTheme);
+      setRatio(selectedRatio);
 
       // 병원명 프로필 자동 로드 (v1 단순화: 한 번만, fail-silent)
       try {
@@ -180,7 +190,7 @@ export default function CardNewsPage() {
       const res = await authFetch('/api/card-news/generate-images', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slides, imageStyle: 'illustration', theme }),
+        body: JSON.stringify({ slides, imageStyle: 'illustration', theme, ratio }),
       });
       const data = (await res.json()) as {
         slides?: SlideData[];
@@ -231,7 +241,7 @@ export default function CardNewsPage() {
       setIsLoading(false);
       setImageProgress(null);
     }
-  }, [slides, theme, creditCtx]);
+  }, [slides, theme, ratio, creditCtx]);
 
   // ── Step 4 단일 슬라이드 재생성 ──────────────────────────────────────
   const handleRegenerateSlide = useCallback(
@@ -244,6 +254,7 @@ export default function CardNewsPage() {
         // C2-fix-1: theme.imageStyleEn prefix 를 직접 prepend (서버 통하지 않고 client 합성).
         // 5장 batch 와 동일 패턴 — generate-images route 의 buildImagePromptWithTheme 와 등가.
         // C2-fix-1b §2: "Visual concept (no text in image)" 라벨 — 이미지 위 직접 텍스트 렌더 차단.
+        // C2-fix-1e: aspectRatio + referenceImagePath (서버가 fs.readFile → base64 변환).
         const subject =
           target.visualKeyword?.trim() || target.title || `슬라이드 ${slideIndex + 1}`;
         const themePreset = getTheme(theme);
@@ -256,6 +267,8 @@ export default function CardNewsPage() {
             mode: 'card_news',
             imageStyle: 'illustration',
             quality: 'fast',
+            aspectRatio: ratio,
+            referenceImagePath: themePreset.referencePath,
           }),
         });
         const data = (await res.json()) as { imageDataUrl?: string; error?: string };
@@ -279,7 +292,7 @@ export default function CardNewsPage() {
         setError((e as Error).message || '네트워크 오류');
       }
     },
-    [slides, theme, creditCtx],
+    [slides, theme, ratio, creditCtx],
   );
 
   // ── Step 4 → 5: done (savePost + 진입) ───────────────────────────────
@@ -293,7 +306,8 @@ export default function CardNewsPage() {
         postType: 'card_news',
         title: topic.slice(0, 100) || '카드뉴스',
         // C2-fix-1: v3 envelope 에 theme 추가 (backward-compat — theme 없는 v3 는 default 적용).
-        content: JSON.stringify({ version: 3, slides, topic, slideCount, theme }),
+        // C2-fix-1e: ratio 도 envelope 에 포함 (backward-compat — 미설정 시 '1:1').
+        content: JSON.stringify({ version: 3, slides, topic, slideCount, theme, ratio }),
         topic,
         hospitalName,
         keywords: [],
@@ -301,7 +315,7 @@ export default function CardNewsPage() {
     } catch {
       /* 저장 실패는 무시 — 다운로드는 진행 */
     }
-  }, [topic, slides, slideCount, hospitalName, theme]);
+  }, [topic, slides, slideCount, hospitalName, theme, ratio]);
 
   // ── Back handlers (간단 confirm, 이전 결과 폐기) ──────────────────────
   const handleBackToTopic = () => {
@@ -343,6 +357,7 @@ export default function CardNewsPage() {
     setTopic('');
     setSlideCount(5);
     setTheme(DEFAULT_THEME);
+    setRatio(DEFAULT_RATIO);
     setOutline([]);
     setSlides([]);
     setViolations([]);
@@ -361,6 +376,7 @@ export default function CardNewsPage() {
         initialTopic={topic}
         initialSlideCount={slideCount}
         initialTheme={theme}
+        initialRatio={ratio}
         isLoading={isLoading}
         error={error}
         onSubmit={handleTopicSubmit}
@@ -387,6 +403,7 @@ export default function CardNewsPage() {
         replacedCount={replacedCount}
         hospitalName={hospitalName}
         theme={theme}
+        ratio={ratio}
         isLoading={isLoading}
         error={error}
         onSlidesChange={setSlides}
@@ -406,6 +423,7 @@ export default function CardNewsPage() {
         loadingProgress={imageProgress ?? undefined}
         hospitalName={hospitalName}
         theme={theme}
+        ratio={ratio}
         error={error}
         onSlidesChange={setSlides}
         onRegenerateSlide={handleRegenerateSlide}
@@ -420,6 +438,7 @@ export default function CardNewsPage() {
       topic={topic}
       hospitalName={hospitalName}
       theme={theme}
+      ratio={ratio}
       onRestart={handleRestart}
     />
   );
