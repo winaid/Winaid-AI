@@ -104,3 +104,36 @@ ALTER TABLE public.foo
 2. `bootstrap_new_supabase.sql` paste & run (base schema)
 3. `migrations/*.sql` 을 파일명 알파벳 순으로 paste & run
 4. 검증: `SELECT count(*) FROM information_schema.tables WHERE table_schema='public';`
+
+## Admin 인증 모델 (2026-05-08~)
+
+과거의 GUC 기반 admin password 패턴 (`current_setting('app.admin_password')`
++ 평문 'winaid' fallback) 은 **영구 폐기**. Supabase 호스팅이 `app.*` GUC 설정을
+SQL Editor 에서 허용하지 않아 동작 불능.
+
+새 인증 모델은 3계층 (defense-in-depth):
+
+1. **PostgREST 레이어**: 4 admin RPC (`get_admin_stats`, `get_all_generated_posts`,
+   `delete_generated_post`, `delete_all_generated_posts`) 에 대한 EXECUTE 권한이
+   anon / authenticated / public 으로부터 REVOKE 됨. 부트스트랩과 마이그레이션
+   파일 끝의 `DO $$ ... REVOKE LOOP $$;` 블록이 자동 적용.
+2. **DB defense-in-depth**: 각 RPC 본문에 `auth.role() = 'service_role'` 가드.
+   service_role 외에는 `unauthorized` 예외.
+3. **App 레이어**: `next-app/app/api/admin/rpc/route.ts` 가 admin_session
+   HttpOnly 쿠키 (`lib/adminCookie.ts` `verifyAdminCookie`) 를 검증한 뒤
+   `supabaseAdmin` (service_role) 클라이언트로 RPC 호출.
+
+`admin_password TEXT` 인자 시그니처는 PR-1 호환을 위해 유지하되 본문에서 무시.
+
+### quick_recovery 마이그레이션
+
+`2026-05-04_admin_rpc_quick_recovery.sql` 은 emergency-only — fallback 평문이
+포함된 옛 패턴이라 **프로덕션 적용 금지**. 2026-05-08 이후 본문은 hygiene 처리됨
+(평문 제거 + HISTORICAL 헤더). 정상 흐름은 `2026-05-08_drop_admin_password_check.sql`
+적용으로 충분.
+
+### 새 환경 부트스트랩
+
+신환경에서 본 README §"설치/적용 가이드" 의 1~3 단계 따르면 마지막에
+`2026-05-08_drop_admin_password_check.sql` 이 적용되어 위 3계층 인증이 완성된다.
+별도 GUC 설정 단계 불필요.

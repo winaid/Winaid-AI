@@ -453,7 +453,15 @@ $$;
 
 
 -- ============================================
--- 9. Admin RPC 함수 (비밀번호: winaid)
+-- 9. Admin RPC 함수 (S1 PR-2 / 2026-05-08 기준 인증 모델)
+--
+-- 인증은 3계층:
+--   1) PostgREST: REVOKE EXECUTE FROM anon/authenticated/public (본 파일 끝)
+--   2) DB: 각 RPC 본문의 auth.role() = 'service_role' 가드
+--   3) App: next-app /api/admin/rpc dispatcher (admin cookie + service_role)
+--
+-- 과거의 GUC (`app.admin_password`) + 평문 'winaid' fallback 패턴은 영구 폐기.
+-- Supabase 호스팅이 app.* GUC 설정을 SQL Editor 로 허용하지 않기 때문.
 -- ============================================
 
 -- 9-1. get_admin_stats
@@ -471,18 +479,13 @@ RETURNS TABLE (
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $fn$
-DECLARE
-  valid_password TEXT;
 BEGIN
-  BEGIN
-    valid_password := current_setting('app.admin_password');
-  EXCEPTION WHEN OTHERS THEN
-    valid_password := 'winaid';
-  END;
-
-  IF admin_password IS NULL OR admin_password != valid_password THEN
-    RETURN;
+  -- DEPRECATED: admin_password is ignored. See header comment for auth model.
+  PERFORM admin_password;
+  IF coalesce(auth.role(), '') NOT IN ('service_role') THEN
+    RAISE EXCEPTION 'unauthorized: admin RPC requires service_role';
   END IF;
 
   RETURN QUERY
@@ -533,18 +536,12 @@ RETURNS TABLE (
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $fn$
-DECLARE
-  valid_password TEXT;
 BEGIN
-  BEGIN
-    valid_password := current_setting('app.admin_password');
-  EXCEPTION WHEN OTHERS THEN
-    valid_password := 'winaid';
-  END;
-
-  IF admin_password IS NULL OR admin_password != valid_password THEN
-    RETURN;
+  PERFORM admin_password;
+  IF coalesce(auth.role(), '') NOT IN ('service_role') THEN
+    RAISE EXCEPTION 'unauthorized: admin RPC requires service_role';
   END IF;
 
   RETURN QUERY
@@ -572,18 +569,12 @@ CREATE OR REPLACE FUNCTION delete_generated_post(
 RETURNS BOOLEAN
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $fn$
-DECLARE
-  valid_password TEXT;
 BEGIN
-  BEGIN
-    valid_password := current_setting('app.admin_password');
-  EXCEPTION WHEN OTHERS THEN
-    valid_password := 'winaid';
-  END;
-
-  IF admin_password IS NULL OR admin_password != valid_password THEN
-    RETURN FALSE;
+  PERFORM admin_password;
+  IF coalesce(auth.role(), '') NOT IN ('service_role') THEN
+    RAISE EXCEPTION 'unauthorized: admin RPC requires service_role';
   END IF;
 
   DELETE FROM public.generated_posts WHERE id = target_post_id;
@@ -598,19 +589,14 @@ CREATE OR REPLACE FUNCTION delete_all_generated_posts(
 RETURNS BIGINT
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $fn$
 DECLARE
-  valid_password TEXT;
   deleted_count BIGINT;
 BEGIN
-  BEGIN
-    valid_password := current_setting('app.admin_password');
-  EXCEPTION WHEN OTHERS THEN
-    valid_password := 'winaid';
-  END;
-
-  IF admin_password IS NULL OR admin_password != valid_password THEN
-    RETURN -1;
+  PERFORM admin_password;
+  IF coalesce(auth.role(), '') NOT IN ('service_role') THEN
+    RAISE EXCEPTION 'unauthorized: admin RPC requires service_role';
   END IF;
 
   DELETE FROM public.generated_posts;
@@ -618,6 +604,32 @@ BEGIN
   RETURN deleted_count;
 END;
 $fn$;
+
+-- 9-x. REVOKE EXECUTE — admin RPC 들을 anon/authenticated/public 으로부터 차단.
+-- 본 가드는 신환경 부트스트랩 후 자동 적용. service_role 키로만 RPC 호출 가능.
+DO $$
+DECLARE
+  fn record;
+BEGIN
+  FOR fn IN
+    SELECT p.oid, p.proname, pg_get_function_identity_arguments(p.oid) AS args
+    FROM pg_proc p
+    JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public'
+      AND p.proname IN (
+        'get_admin_stats',
+        'get_all_generated_posts',
+        'delete_generated_post',
+        'delete_all_generated_posts',
+        'get_admin_stats_v2'
+      )
+  LOOP
+    EXECUTE format(
+      'REVOKE EXECUTE ON FUNCTION public.%I(%s) FROM anon, authenticated, public',
+      fn.proname, fn.args
+    );
+  END LOOP;
+END $$;
 
 -- 9-5. deduct_credits
 CREATE OR REPLACE FUNCTION public.deduct_credits(

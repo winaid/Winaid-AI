@@ -1,3 +1,7 @@
+\echo 'ERROR: archived legacy schema, do not apply'
+\q
+DO $$ BEGIN RAISE EXCEPTION 'archived legacy schema — do not apply'; END $$;
+
 -- ============================================
 -- File: sql/migrations/2026-03-20_fix_delete_all_generated_posts.sql
 -- Idempotency injections: 1 fn DROPs

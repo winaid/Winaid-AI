@@ -1,3 +1,7 @@
+\echo 'ERROR: archived legacy schema, do not apply'
+\q
+DO $$ BEGIN RAISE EXCEPTION 'archived legacy schema — do not apply'; END $$;
+
 -- ============================================
 -- File: sql/migrations/2026-04-10_rebalance_team_hospitals.sql
 -- ============================================

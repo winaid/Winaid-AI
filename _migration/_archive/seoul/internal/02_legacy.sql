@@ -1,3 +1,7 @@
+\echo 'ERROR: archived legacy schema, do not apply'
+\q
+DO $$ BEGIN RAISE EXCEPTION 'archived legacy schema — do not apply'; END $$;
+
 -- ============================================
 -- File: sql/migrations/add_naver_rank_columns.sql
 -- ============================================

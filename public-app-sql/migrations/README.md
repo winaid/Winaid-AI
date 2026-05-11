@@ -104,3 +104,12 @@ ALTER TABLE public.foo
 2. `bootstrap_new_supabase.sql` paste & run (base schema)
 3. `migrations/*.sql` 을 파일명 알파벳 순으로 paste & run
 4. 검증: `SELECT count(*) FROM information_schema.tables WHERE table_schema='public';`
+
+## Admin 인증 모델 (2026-05-08~)
+
+`sql/migrations/README.md` 의 "Admin 인증 모델" 섹션 참조 — 양 DB 동일 모델.
+
+차이점: public-app DB 는 admin UI 호출자가 없으므로 4 admin RPC 가 형식상으로만
+존재 (next-app dispatcher 와 동일 시그니처 유지). `2026-05-08_drop_admin_password_check.sql`
+의 헤더에 IF EXISTS 가드가 있어, 본 DB 에 4 RPC 중 하나라도 누락되면 적용
+abort 한다.
