@@ -29,8 +29,9 @@ import {
 export const V1_LAYOUTS = ['cover', 'info', 'checklist', 'comparison', 'closing'] as const;
 export type V1Layout = (typeof V1_LAYOUTS)[number];
 
-/** 허용 슬라이드 수. UI selector + API validation 양쪽에서 사용. */
-export const ALLOWED_SLIDE_COUNTS = [3, 5, 7, 10] as const;
+/** 허용 슬라이드 수. UI selector + API validation 양쪽에서 사용.
+ *  C2-fix-1f: 3장 케이스가 outline 생성에서 500 에러 발생 → 임시로 옵션 제거. */
+export const ALLOWED_SLIDE_COUNTS = [5, 7, 10] as const;
 export type AllowedSlideCount = (typeof ALLOWED_SLIDE_COUNTS)[number];
 
 // ── Theme preset (C2-fix-1, 2026-05-08) ────────────────────────────────────
