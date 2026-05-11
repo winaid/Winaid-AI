@@ -16,6 +16,7 @@
 
 import { useRef, useState } from 'react';
 import type { SlideData } from '@winaid/blog-core';
+import type { ThemeId } from '../../lib/cardNewsPrompt';
 import SlidePreview from './SlidePreview';
 import {
   downloadCardNews,
@@ -27,6 +28,8 @@ interface DownloadPanelProps {
   slides: SlideData[];
   topic: string;
   hospitalName?: string;
+  /** C2-fix-1: theme preset id. SlidePreview (preview + export) 양쪽에 전달. */
+  theme?: ThemeId;
   onRestart: () => void;
 }
 
@@ -48,6 +51,7 @@ export default function DownloadPanel({
   slides,
   topic,
   hospitalName,
+  theme,
   onRestart,
 }: DownloadPanelProps) {
   const [downloading, setDownloading] = useState<DownloadFormat | null>(null);
@@ -94,7 +98,7 @@ export default function DownloadPanel({
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {slides.map((s) => (
           <div key={s.id} className="aspect-square">
-            <SlidePreview slide={s} size="preview" hospitalName={hospitalName} />
+            <SlidePreview slide={s} size="preview" hospitalName={hospitalName} theme={theme} />
           </div>
         ))}
       </div>
@@ -177,7 +181,7 @@ export default function DownloadPanel({
               exportRefs.current[i] = el;
             }}
           >
-            <SlidePreview slide={s} size="export" hospitalName={hospitalName} />
+            <SlidePreview slide={s} size="export" hospitalName={hospitalName} theme={theme} />
           </div>
         ))}
       </div>

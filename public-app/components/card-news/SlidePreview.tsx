@@ -15,48 +15,59 @@
  */
 
 import type { SlideData } from '@winaid/blog-core';
+import { getTheme, type ThemeId, type ThemePreset } from '../../lib/cardNewsPrompt';
 
 interface SlidePreviewProps {
   slide: SlideData;
   size?: 'preview' | 'export';
   hospitalName?: string;
+  /** C2-fix-1: theme preset id. 미지정 시 default. */
+  theme?: ThemeId;
 }
 
 const EXPORT_SIZE_PX = 1080; // 1:1 비율, html2canvas 캡처 기준
 
-export default function SlidePreview({ slide, size = 'preview', hospitalName }: SlidePreviewProps) {
+export default function SlidePreview({
+  slide,
+  size = 'preview',
+  hospitalName,
+  theme: themeId,
+}: SlidePreviewProps) {
   const isExport = size === 'export';
+  const theme = getTheme(themeId);
 
   // export 모드는 절대 픽셀, preview 는 반응형. 둘 다 1:1 aspect.
-  const wrapperStyle = isExport
-    ? { width: `${EXPORT_SIZE_PX}px`, height: `${EXPORT_SIZE_PX}px` }
-    : undefined;
+  // C2-fix-1: 기본 배경에도 theme.previewBg 적용 (cover/closing 은 그라데이션으로 override).
+  const wrapperStyle = {
+    backgroundColor: theme.previewBg,
+    ...(isExport ? { width: `${EXPORT_SIZE_PX}px`, height: `${EXPORT_SIZE_PX}px` } : {}),
+  };
 
   const wrapperCls = [
-    'relative overflow-hidden bg-white text-slate-800 font-sans',
+    'relative overflow-hidden text-slate-800 font-sans',
     isExport ? '' : 'w-full aspect-square rounded-xl shadow-sm border border-slate-200',
   ].join(' ');
 
   // 모든 layout 공용 wrapper. 안쪽 분기는 switch.
   return (
     <div className={wrapperCls} style={wrapperStyle}>
-      {renderLayout(slide, isExport, hospitalName)}
+      {renderLayout(slide, isExport, theme, hospitalName)}
     </div>
   );
 }
 
-function renderLayout(slide: SlideData, isExport: boolean, hospitalName?: string) {
+function renderLayout(slide: SlideData, isExport: boolean, theme: ThemePreset, hospitalName?: string) {
   switch (slide.layout) {
     case 'cover':
-      return <CoverLayout slide={slide} isExport={isExport} hospitalName={hospitalName} />;
+      return <CoverLayout slide={slide} isExport={isExport} theme={theme} hospitalName={hospitalName} />;
     case 'info':
       return <InfoLayout slide={slide} isExport={isExport} />;
     case 'checklist':
-      return <ChecklistLayout slide={slide} isExport={isExport} />;
+      return <ChecklistLayout slide={slide} isExport={isExport} theme={theme} />;
     case 'comparison':
-      return <ComparisonLayout slide={slide} isExport={isExport} />;
+      return <ComparisonLayout slide={slide} isExport={isExport} theme={theme} />;
     case 'closing':
-      return <ClosingLayout slide={slide} isExport={isExport} hospitalName={hospitalName} />;
+      return <ClosingLayout slide={slide} isExport={isExport} theme={theme} hospitalName={hospitalName} />;
     default:
       // v1 미지원 layout — 디버그용 fallback (운영에선 도달 안 함, layout 화이트리스트로 보장).
       return (
@@ -71,17 +82,26 @@ function renderLayout(slide: SlideData, isExport: boolean, hospitalName?: string
 function CoverLayout({
   slide,
   isExport,
+  theme,
   hospitalName,
 }: {
   slide: SlideData;
   isExport: boolean;
+  theme: ThemePreset;
   hospitalName?: string;
 }) {
   const titleCls = isExport ? 'text-7xl' : 'text-2xl';
   const subtitleCls = isExport ? 'text-3xl' : 'text-base';
+  // C2-fix-1: 그라데이션을 theme palette 의 [0]→[1] 으로 동적 적용.
+  const gradientStyle = {
+    background: `linear-gradient(135deg, ${theme.palette[0]}, ${theme.palette[1]})`,
+  };
 
   return (
-    <div className="h-full flex flex-col justify-center items-center text-center px-10 bg-gradient-to-br from-slate-50 to-indigo-50">
+    <div
+      className="h-full flex flex-col justify-center items-center text-center px-10"
+      style={gradientStyle}
+    >
       {hospitalName && (
         <div className={`absolute top-6 right-6 text-slate-500 font-medium ${isExport ? 'text-xl' : 'text-xs'}`}>
           {hospitalName}
@@ -131,11 +151,21 @@ function InfoLayout({ slide, isExport }: { slide: SlideData; isExport: boolean }
 }
 
 // ── Layout 3: checklist ─────────────────────────────────────────────────
-function ChecklistLayout({ slide, isExport }: { slide: SlideData; isExport: boolean }) {
+function ChecklistLayout({
+  slide,
+  isExport,
+  theme,
+}: {
+  slide: SlideData;
+  isExport: boolean;
+  theme: ThemePreset;
+}) {
   const titleCls = isExport ? 'text-5xl' : 'text-xl';
   const itemCls = isExport ? 'text-2xl' : 'text-sm';
   const iconCls = isExport ? 'w-10 h-10 text-3xl' : 'w-6 h-6 text-base';
   const items = Array.isArray(slide.checkItems) ? slide.checkItems.slice(0, 6) : [];
+  // C2-fix-1: 체크 아이콘 배경은 theme palette[1] (mid color) — 가시성 유지.
+  const iconStyle = { backgroundColor: theme.palette[1], color: theme.palette[0] };
 
   return (
     <div className="h-full flex flex-col px-10 py-10">
@@ -144,7 +174,8 @@ function ChecklistLayout({ slide, isExport }: { slide: SlideData; isExport: bool
         {items.map((item, i) => (
           <li key={i} className="flex items-start gap-3">
             <span
-              className={`${iconCls} flex-shrink-0 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold`}
+              className={`${iconCls} flex-shrink-0 rounded-full flex items-center justify-center font-bold`}
+              style={iconStyle}
             >
               ✓
             </span>
@@ -157,11 +188,22 @@ function ChecklistLayout({ slide, isExport }: { slide: SlideData; isExport: bool
 }
 
 // ── Layout 4: comparison ────────────────────────────────────────────────
-function ComparisonLayout({ slide, isExport }: { slide: SlideData; isExport: boolean }) {
+function ComparisonLayout({
+  slide,
+  isExport,
+  theme,
+}: {
+  slide: SlideData;
+  isExport: boolean;
+  theme: ThemePreset;
+}) {
   const titleCls = isExport ? 'text-4xl' : 'text-lg';
   const headerCls = isExport ? 'text-2xl' : 'text-sm';
   const itemCls = isExport ? 'text-xl' : 'text-xs';
   const columns = Array.isArray(slide.columns) ? slide.columns.slice(0, 2) : [];
+  // C2-fix-1: 좌측 = neutral (palette[2]), 우측 = accent (palette[0]).
+  const leftStyle = { backgroundColor: `${theme.palette[2]}40`, borderColor: theme.palette[2] };
+  const rightStyle = { backgroundColor: `${theme.palette[0]}40`, borderColor: theme.palette[0] };
 
   return (
     <div className="h-full flex flex-col px-10 py-10">
@@ -172,11 +214,10 @@ function ComparisonLayout({ slide, isExport }: { slide: SlideData; isExport: boo
         {columns.map((col, i) => (
           <div
             key={i}
-            className={`rounded-2xl p-${isExport ? '6' : '3'} ${
-              i === 0 ? 'bg-slate-50 border border-slate-200' : 'bg-indigo-50 border border-indigo-200'
-            }`}
+            className={`rounded-2xl p-${isExport ? '6' : '3'} border`}
+            style={i === 0 ? leftStyle : rightStyle}
           >
-            <h3 className={`${headerCls} font-bold mb-3 ${i === 0 ? 'text-slate-700' : 'text-indigo-700'}`}>
+            <h3 className={`${headerCls} font-bold mb-3 text-slate-800`}>
               {col.header}
             </h3>
             <ul className={`space-y-${isExport ? '3' : '1.5'}`}>
@@ -198,19 +239,29 @@ function ComparisonLayout({ slide, isExport }: { slide: SlideData; isExport: boo
 function ClosingLayout({
   slide,
   isExport,
+  theme,
   hospitalName,
 }: {
   slide: SlideData;
   isExport: boolean;
+  theme: ThemePreset;
   hospitalName?: string;
 }) {
   const titleCls = isExport ? 'text-5xl' : 'text-xl';
   const bodyCls = isExport ? 'text-2xl' : 'text-sm';
   const tagCls = isExport ? 'text-xl px-4 py-2' : 'text-xs px-2 py-1';
   const hashtags = Array.isArray(slide.hashtags) ? slide.hashtags.slice(0, 5) : [];
+  // C2-fix-1: 그라데이션을 palette [1]→[2] 로 (cover 와 다르게 끝쪽 색상 사용).
+  const gradientStyle = {
+    background: `linear-gradient(135deg, ${theme.palette[1]}, ${theme.palette[2]})`,
+  };
+  const tagStyle = { borderColor: theme.palette[0], color: theme.palette[0] };
 
   return (
-    <div className="h-full flex flex-col justify-center items-center text-center px-10 bg-gradient-to-br from-indigo-50 to-rose-50">
+    <div
+      className="h-full flex flex-col justify-center items-center text-center px-10"
+      style={gradientStyle}
+    >
       <div className={`space-y-${isExport ? '6' : '3'} max-w-3xl`}>
         <h2 className={`${titleCls} font-bold text-slate-900 leading-tight`}>{slide.title}</h2>
         {slide.body && (
@@ -221,7 +272,8 @@ function ClosingLayout({
             {hashtags.map((t, i) => (
               <span
                 key={i}
-                className={`${tagCls} rounded-full bg-white border border-indigo-200 text-indigo-700 font-medium`}
+                className={`${tagCls} rounded-full bg-white border font-medium`}
+                style={tagStyle}
               >
                 {t.startsWith('#') ? t : `#${t}`}
               </span>
@@ -229,7 +281,7 @@ function ClosingLayout({
           </div>
         )}
         {hospitalName && (
-          <div className={`pt-${isExport ? '8' : '4'} ${isExport ? 'text-2xl' : 'text-xs'} text-slate-500 font-semibold`}>
+          <div className={`pt-${isExport ? '8' : '4'} ${isExport ? 'text-2xl' : 'text-xs'} text-slate-600 font-semibold`}>
             {hospitalName}
           </div>
         )}

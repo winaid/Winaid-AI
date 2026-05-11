@@ -35,7 +35,14 @@ import { gateGuestRequest } from '../../../../lib/guestRateLimit';
 import { resolveImageOwner } from '../../../../lib/serverAuth';
 import { getCredits } from '../../../../lib/creditService';
 import { ensureSlideIds, type SlideData } from '@winaid/blog-core';
-import { V1_LAYOUTS, type V1Layout } from '../../../../lib/cardNewsPrompt';
+import {
+  V1_LAYOUTS,
+  isValidThemeId,
+  getTheme,
+  DEFAULT_THEME,
+  type V1Layout,
+  type ThemeId,
+} from '../../../../lib/cardNewsPrompt';
 
 export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
@@ -43,6 +50,8 @@ export const dynamic = 'force-dynamic';
 interface Body {
   slides?: unknown;
   imageStyle?: unknown;
+  /** C2-fix-1: 톤·색상 일관성. 알 수 없는 값은 default. */
+  theme?: unknown;
 }
 
 function err(message: string, status: number, extra?: Record<string, unknown>) {
@@ -69,6 +78,17 @@ function slidePromptText(slide: SlideData): string {
   if (slide.visualKeyword && slide.visualKeyword.trim()) return slide.visualKeyword.trim();
   if (slide.body && slide.body.trim()) return `${slide.title} — ${slide.body}`.slice(0, 200);
   return slide.title;
+}
+
+/**
+ * C2-fix-1: theme prefix + 슬라이드 prompt 결합.
+ * GPT Image 2.0 친화 영문 prefix 가 앞에, subject 한·영 혼용 hint 가 뒤에.
+ * 결과는 /api/image 의 prompt 필드로 그대로 전달됨 (서버 변경 0).
+ */
+function buildImagePromptWithTheme(slide: SlideData, themeId: ThemeId): string {
+  const theme = getTheme(themeId);
+  const subject = slidePromptText(slide);
+  return `${theme.imageStyleEn}. Subject: ${subject}.`;
 }
 
 interface ImageResult {
@@ -135,6 +155,8 @@ export async function POST(request: NextRequest) {
     typeof body.imageStyle === 'string' && allowedStyles.has(body.imageStyle)
       ? (body.imageStyle as 'illustration' | 'photo' | 'medical')
       : 'illustration';
+  // C2-fix-1: theme 화이트리스트 검증. 알 수 없는 값은 silent fallback.
+  const theme: ThemeId = isValidThemeId(body.theme) ? body.theme : DEFAULT_THEME;
 
   // ── 3) 인증 (게스트 401) ──────────────────────────────────────────────
   const owner = await resolveImageOwner(request);
@@ -168,7 +190,9 @@ export async function POST(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
 
   const results = await Promise.all(
-    inputSlides.map((s) => callImageRoute(origin, authHeader, slidePromptText(s), imageStyle)),
+    inputSlides.map((s) =>
+      callImageRoute(origin, authHeader, buildImagePromptWithTheme(s, theme), imageStyle),
+    ),
   );
 
   // ── 6) 결과 정리 ──────────────────────────────────────────────────────

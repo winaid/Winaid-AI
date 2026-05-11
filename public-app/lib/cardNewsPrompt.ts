@@ -33,6 +33,98 @@ export type V1Layout = (typeof V1_LAYOUTS)[number];
 export const ALLOWED_SLIDE_COUNTS = [3, 5, 7, 10] as const;
 export type AllowedSlideCount = (typeof ALLOWED_SLIDE_COUNTS)[number];
 
+// ── Theme preset (C2-fix-1, 2026-05-08) ────────────────────────────────────
+//
+// 5장 카드뉴스의 이미지·텍스트 톤 일관성을 강제하기 위한 4 preset.
+// 사용자 결정 사항 잠금:
+//   - 4종 (5번째 추가 금지)
+//   - default = 'friendly_illust' (가장 범용)
+//   - palette = 3 hex (이미지 prompt 안에 직접 inject)
+//   - imageStyleEn = GPT Image 2.0 친화 영문 prefix
+//   - textToneKo  = Gemini 텍스트 톤 가이드 (한글)
+//   - previewBg   = SlidePreview 배경 (단색 또는 그라데이션 base)
+
+export type ThemeId =
+  | 'friendly_illust'
+  | 'professional_medical'
+  | 'warm_care'
+  | 'modern_minimal';
+
+export interface ThemePreset {
+  id: ThemeId;
+  label: string;
+  description: string;
+  /** 3색 팔레트. cover/closing 그라데이션은 [0], [1] 사용. */
+  palette: [string, string, string];
+  /** GPT Image 2.0 prompt prefix (영문). visualKeyword 앞에 prepend. */
+  imageStyleEn: string;
+  /** Gemini 텍스트 톤 가이드 (한글). systemInstruction + prompt 양쪽에 inject. */
+  textToneKo: string;
+  /** SlidePreview 단색 배경 (info/checklist/comparison). 보통 흰색에 가깝게. */
+  previewBg: string;
+}
+
+export const THEME_PRESETS: readonly ThemePreset[] = [
+  {
+    id: 'friendly_illust',
+    label: '친근 일러스트',
+    description: '다정하고 안심되는 톤. 환자에게 친절히 설명할 때.',
+    palette: ['#FFD6E1', '#FFE8C9', '#C8E6C9'],
+    imageStyleEn:
+      'watercolor illustration with pastel pink (#FFD6E1), cream (#FFE8C9), sage green (#C8E6C9), soft hand-drawn style, rounded characters, friendly atmosphere, warm and approachable',
+    textToneKo:
+      '친근하고 다정한 톤. 환자에게 말하듯 쉬운 표현. "~예요/~어요" 어미 권장. 의학 전문 용어는 풀어서 설명. 격식보다 따뜻함 우선.',
+    previewBg: '#FFFBF7',
+  },
+  {
+    id: 'professional_medical',
+    label: '전문 의료',
+    description: '신뢰감과 차분함. 병원 소개·전문 시술 안내.',
+    palette: ['#2C5282', '#4A5568', '#E2E8F0'],
+    imageStyleEn:
+      'clean vector illustration with deep blue (#2C5282), slate gray (#4A5568), light gray (#E2E8F0), professional medical aesthetic, minimal geometric shapes, clear and precise, hospital-grade visual',
+    textToneKo:
+      '신뢰감 있고 차분한 톤. "~합니다/~입니다" 격식체. 의학 용어 사용 가능하되 1회는 풀어서 설명. 정확한 수치·근거 위주. 감정 표현 절제.',
+    previewBg: '#F7FAFC',
+  },
+  {
+    id: 'warm_care',
+    label: '따뜻한 케어',
+    description: '부드럽고 가족적인 톤. 산부인과·소아·가정의학.',
+    palette: ['#F4E4D6', '#FFB4A2', '#B5C99A'],
+    imageStyleEn:
+      'gentle illustration with warm beige (#F4E4D6), soft coral (#FFB4A2), muted sage (#B5C99A), hand-drawn family-friendly style, soft lighting, nurturing atmosphere, motherly care',
+    textToneKo:
+      '부드럽고 가족적인 톤. "~예요/~어요" 친근체. 가족·돌봄·안심 같은 단어 자연스럽게. 환자뿐 아니라 보호자도 함께 안내한다는 느낌.',
+    previewBg: '#FDF8F3',
+  },
+  {
+    id: 'modern_minimal',
+    label: '모던 미니멀',
+    description: '정확하고 깔끔. 데이터·통계·체크리스트.',
+    palette: ['#1A1A2E', '#E94560', '#FFFFFF'],
+    imageStyleEn:
+      'flat infographic style with deep navy (#1A1A2E), coral red accent (#E94560), pure white background (#FFFFFF), bold geometric shapes, clean typography emphasis, modern minimal design, sharp edges',
+    textToneKo:
+      '정확하고 깔끔한 톤. "~합니다" 또는 명사체. 군더더기 없이 핵심만. 숫자·비율·단계 같은 데이터 강조. 형용사는 최소.',
+    previewBg: '#FFFFFF',
+  },
+] as const;
+
+export const DEFAULT_THEME: ThemeId = 'friendly_illust';
+
+/** ThemeId → ThemePreset. 알 수 없는 ID 또는 undefined 면 default 반환. */
+export function getTheme(id: ThemeId | string | undefined | null): ThemePreset {
+  if (!id) return THEME_PRESETS[0];
+  const found = THEME_PRESETS.find((t) => t.id === id);
+  return found || THEME_PRESETS[0];
+}
+
+/** ThemeId 화이트리스트 검증 — API body 입력 sanitize. */
+export function isValidThemeId(v: unknown): v is ThemeId {
+  return typeof v === 'string' && THEME_PRESETS.some((t) => t.id === v);
+}
+
 // ── Outline 단계 (1차 LLM) ─────────────────────────────────────────────────
 
 /** 구성 안 한 슬라이드의 골격 — 텍스트 단계의 입력이 된다. */
@@ -134,6 +226,8 @@ export interface TextRequest {
   outline: SlideOutline[];
   hospitalName?: string;
   category?: string;
+  /** 톤 가이드 inject 용. 미지정 시 default theme. */
+  theme?: ThemeId;
 }
 
 export function buildTextPrompt(req: TextRequest): {
@@ -143,6 +237,7 @@ export function buildTextPrompt(req: TextRequest): {
   const safeTopic = sanitizePromptInput(req.topic, 200);
   const safeHospital = req.hospitalName ? sanitizePromptInput(req.hospitalName, 50) : null;
   const safeCategory = req.category ? sanitizePromptInput(req.category, 30) : null;
+  const theme = getTheme(req.theme);
 
   const systemInstruction = [
     '당신은 한국 병원 마케팅 카드뉴스 본문 작성자다.',
@@ -151,6 +246,8 @@ export function buildTextPrompt(req: TextRequest): {
     '환자 후기·체험담 단정적 인용 금지. 시술 효과를 단정하지 않고 "도움이 될 수 있다" 류 완곡 표현.',
     `병원명이 주어지면 정확히 그 병원명만 사용. 다른 병원명 지어내기 절대 금지.`,
     '응답은 유효한 JSON 배열만 출력. 코드펜스·설명·markdown 금지.',
+    // C2-fix-1: 톤 가이드 (모든 슬라이드 일관 적용)
+    `[톤 가이드 — "${theme.label}"] ${theme.textToneKo}`,
   ].join('\n');
 
   const outlineLines = req.outline
@@ -177,6 +274,9 @@ export function buildTextPrompt(req: TextRequest): {
     '- visualKeyword 는 이미지 생성 hint (한·영 혼용 가능, 30자 이내).',
     '- 모든 필드는 한국어. 영어 단어 섞기 최소화.',
     '- index 필드는 outline 의 index 와 동일하게 1, 2, 3 ... 으로.',
+    '',
+    `[톤 가이드 — 모든 슬라이드에 일관 적용 · "${theme.label}"]`,
+    theme.textToneKo,
     '',
     `응답: ${req.outline.length}개 객체로 구성된 JSON 배열. 다른 텍스트 금지.`,
   ]

@@ -33,9 +33,12 @@ import {
   buildTextPrompt,
   parseSlidesJson,
   V1_LAYOUTS,
+  isValidThemeId,
+  DEFAULT_THEME,
   type SlideOutline,
   type V1Layout,
   type TextRequest,
+  type ThemeId,
 } from '../../../../lib/cardNewsPrompt';
 import {
   validateSlideMedicalAd,
@@ -50,6 +53,8 @@ interface Body {
   outline?: unknown;
   hospitalName?: unknown;
   category?: unknown;
+  /** C2-fix-1: 톤 가이드 — undefined 시 default theme. */
+  theme?: unknown;
 }
 
 function err(message: string, status: number, extra?: Record<string, unknown>) {
@@ -106,6 +111,8 @@ export async function POST(request: NextRequest) {
     typeof body.category === 'string' && body.category.trim().length <= 30
       ? body.category.trim() || undefined
       : undefined;
+  // C2-fix-1: theme 화이트리스트 검증. 알 수 없는 값은 default 로 silent fallback.
+  const theme: ThemeId = isValidThemeId(body.theme) ? body.theme : DEFAULT_THEME;
 
   // ── 4) 인증 + 크레딧 차감 (인증 사용자만) ─────────────────────────────
   const owner = await resolveImageOwner(request);
@@ -131,7 +138,7 @@ export async function POST(request: NextRequest) {
   };
 
   // ── 6) 프롬프트 빌드 + LLM 호출 ───────────────────────────────────────
-  const tReq: TextRequest = { topic, outline, hospitalName, category };
+  const tReq: TextRequest = { topic, outline, hospitalName, category, theme };
   const { systemInstruction, prompt } = buildTextPrompt(tReq);
 
   let llmText: string;
