@@ -9,7 +9,7 @@
  * "다음 (구성 안 생성)" 버튼 → onSubmit(topic, slideCount, theme).
  *
  * UI 톤: 다른 dashboard 페이지(blog/image) 슬레이트 + 인디고 accent 일관.
- * preset 카드: theme palette swatch 3개 + label + 1줄 설명.
+ * preset 카드: theme 미니 cover-slide 미리보기 (C2-fix-1b) + label + 1줄 설명.
  */
 
 'use client';
@@ -21,6 +21,7 @@ import {
   DEFAULT_THEME,
   type AllowedSlideCount,
   type ThemeId,
+  type ThemePreset,
 } from '../../lib/cardNewsPrompt';
 
 interface TopicInputProps {
@@ -30,6 +31,132 @@ interface TopicInputProps {
   isLoading?: boolean;
   error?: string | null;
   onSubmit: (topic: string, slideCount: AllowedSlideCount, theme: ThemeId) => void;
+}
+
+// ── C2-fix-1b: theme 별 미니 cover-slide 미리보기 spec ─────────────────────
+// 사용자가 "이 theme 선택 시 어떤 카드뉴스가 나올지" 한눈에 인지하도록
+// palette 색상 + sample 텍스트 + 액센트 도형 으로 stylized mini cover 렌더.
+// 이미지 자산 0, 코드만으로 구성. cover layout 의 축소판 (SlidePreview.CoverLayout
+// 미러).
+
+interface ThemeSample {
+  title: string;
+  subtitle: string;
+  textColor: string;        // sample text 색상 — palette gradient 대비 보장
+  accentShape: 'blob' | 'bar' | 'curve' | 'triangle';
+  accentColor: string;      // 액센트 도형 색상 (palette 중 contrast 좋은 1개)
+}
+
+const THEME_SAMPLES: Record<ThemeId, ThemeSample> = {
+  // pastel pink → cream gradient. 어두운 텍스트가 가독성.
+  friendly_illust: {
+    title: '임플란트 후 주의사항',
+    subtitle: '5분 안에 알아보는 핵심',
+    textColor: '#1F2937',                   // slate-800
+    accentShape: 'blob',
+    accentColor: '#C8E6C9',                 // palette[2] sage
+  },
+  // deep blue → slate gradient. 흰 텍스트 가독성.
+  professional_medical: {
+    title: '치과 정밀 진단 시스템',
+    subtitle: '환자 맞춤 진료 안내',
+    textColor: '#FFFFFF',
+    accentShape: 'bar',
+    accentColor: '#E2E8F0',                 // palette[2] light gray
+  },
+  // beige → coral gradient. 어두운 텍스트.
+  warm_care: {
+    title: '임산부 영양제 가이드',
+    subtitle: '엄마와 아기 모두를 위한',
+    textColor: '#3F2C1F',                   // 따뜻한 dark brown
+    accentShape: 'curve',
+    accentColor: '#B5C99A',                 // palette[2] sage
+  },
+  // navy → coral gradient. 흰 텍스트.
+  modern_minimal: {
+    title: '치아 미백 비용 비교',
+    subtitle: '한눈에 보는 5가지 옵션',
+    textColor: '#FFFFFF',
+    accentShape: 'triangle',
+    accentColor: '#FFFFFF',                 // palette[2] white
+  },
+};
+
+/** preset 카드 안에 들어가는 미니 cover-slide 미리보기. */
+function ThemePreviewMini({ theme }: { theme: ThemePreset }) {
+  const sample = THEME_SAMPLES[theme.id];
+  // SlidePreview.CoverLayout 와 동일 그라데이션 방향 (135deg, palette[0]→[1]).
+  const gradientStyle = {
+    background: `linear-gradient(135deg, ${theme.palette[0]}, ${theme.palette[1]})`,
+  };
+  return (
+    <div
+      className="w-full aspect-[16/10] rounded-lg overflow-hidden relative flex flex-col justify-center items-center px-3"
+      style={gradientStyle}
+      aria-hidden="true"
+    >
+      {/* 액센트 도형 — theme 정체성 표시. text 아래 z-index. */}
+      <AccentShape shape={sample.accentShape} color={sample.accentColor} />
+
+      {/* sample 텍스트 (cover 의 title + subtitle 미러) */}
+      <div className="relative z-10 text-center px-1">
+        <p
+          className="text-[10px] font-bold leading-tight tracking-tight"
+          style={{ color: sample.textColor }}
+        >
+          {sample.title}
+        </p>
+        <p
+          className="text-[8px] mt-0.5 leading-tight opacity-90"
+          style={{ color: sample.textColor }}
+        >
+          {sample.subtitle}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/** theme 별 액센트 도형 — SVG 또는 CSS shape. position absolute 로 우상단 corner. */
+function AccentShape({ shape, color }: { shape: ThemeSample['accentShape']; color: string }) {
+  switch (shape) {
+    case 'blob':
+      // 둥근 큰 원 (top-right corner 부드럽게 잘림) — friendly_illust 의 따뜻함.
+      return (
+        <span
+          className="absolute -top-3 -right-3 w-10 h-10 rounded-full opacity-50"
+          style={{ backgroundColor: color }}
+        />
+      );
+    case 'bar':
+      // 좌측 vertical bar — professional_medical 의 격식.
+      return (
+        <span
+          className="absolute left-0 top-0 bottom-0 w-1"
+          style={{ backgroundColor: color }}
+        />
+      );
+    case 'curve':
+      // 부드러운 큰 곡선 (왼쪽 아래 corner, 둥글게) — warm_care 의 다정함.
+      return (
+        <span
+          className="absolute -bottom-4 -left-4 w-12 h-12 rounded-full opacity-40"
+          style={{ backgroundColor: color }}
+        />
+      );
+    case 'triangle':
+      // sharp 삼각형 (top-right) — modern_minimal 의 정확함.
+      return (
+        <span
+          className="absolute top-0 right-0 w-0 h-0"
+          style={{
+            borderTop: `12px solid ${color}`,
+            borderLeft: '12px solid transparent',
+            opacity: 0.7,
+          }}
+        />
+      );
+  }
 }
 
 export default function TopicInput({
@@ -117,29 +244,21 @@ export default function TopicInput({
                   onClick={() => setSelectedTheme(t.id)}
                   disabled={isLoading}
                   className={[
-                    'text-left rounded-xl p-3 border-2 transition-all',
+                    'text-left rounded-xl p-2 border-2 transition-all space-y-2',
                     isSelected
                       ? 'border-indigo-500 bg-indigo-50/30 shadow-sm'
                       : 'border-slate-200 bg-white hover:border-indigo-200',
                     isLoading ? 'opacity-50 cursor-not-allowed' : '',
                   ].join(' ')}
                 >
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <div className="flex gap-1">
-                      {t.palette.map((hex) => (
-                        <span
-                          key={hex}
-                          className="w-4 h-4 rounded-full border border-slate-200"
-                          style={{ backgroundColor: hex }}
-                          aria-hidden="true"
-                        />
-                      ))}
-                    </div>
-                    <span className={`text-sm font-bold ${isSelected ? 'text-indigo-700' : 'text-slate-800'}`}>
+                  {/* C2-fix-1b: 미니 cover-slide 미리보기 */}
+                  <ThemePreviewMini theme={t} />
+                  <div className="px-1 pb-0.5">
+                    <span className={`block text-sm font-bold ${isSelected ? 'text-indigo-700' : 'text-slate-800'}`}>
                       {t.label}
                     </span>
+                    <p className="text-[11px] text-slate-500 leading-snug mt-0.5">{t.description}</p>
                   </div>
-                  <p className="text-[11px] text-slate-500 leading-snug">{t.description}</p>
                 </button>
               );
             })}
