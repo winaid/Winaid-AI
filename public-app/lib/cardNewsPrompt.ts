@@ -71,7 +71,7 @@ export const THEME_PRESETS: readonly ThemePreset[] = [
     description: '다정하고 안심되는 톤. 환자에게 친절히 설명할 때.',
     palette: ['#FFD6E1', '#FFE8C9', '#C8E6C9'],
     imageStyleEn:
-      'watercolor illustration with pastel pink (#FFD6E1), cream (#FFE8C9), sage green (#C8E6C9), soft hand-drawn style, rounded characters, friendly atmosphere, warm and approachable. NO TEXT, NO LETTERS, NO TYPOGRAPHY in image. Pure visual design only. Leave clean negative space for text overlay (top or center area free of busy elements).',
+      'soft pastel card news template design with pastel pink (#FFD6E1), cream (#FFE8C9), sage green (#C8E6C9), subtle dotted pattern background overlay, rounded info graphic elements, gentle watercolor accents at corners (flowers or hearts), centered title zone reserved blank, structured info card slots, premium graphic design, friendly atmosphere. NO TEXT, NO LETTERS, NO TYPOGRAPHY in image. Pure visual template design — title and body text will be overlaid by code. Leave centered title area blank, leave bottom 12% strip blank for footer logo.',
     textToneKo:
       '친근하고 다정한 톤. 환자에게 말하듯 쉬운 표현. "~예요/~어요" 어미 권장. 의학 전문 용어는 풀어서 설명. 격식보다 따뜻함 우선.',
     previewBg: '#FFFBF7',
@@ -82,7 +82,7 @@ export const THEME_PRESETS: readonly ThemePreset[] = [
     description: '신뢰감과 차분함. 병원 소개·전문 시술 안내.',
     palette: ['#2C5282', '#4A5568', '#E2E8F0'],
     imageStyleEn:
-      'clean vector illustration with deep blue (#2C5282), slate gray (#4A5568), light gray (#E2E8F0), professional medical aesthetic, minimal geometric shapes, clear and precise, hospital-grade visual. NO TEXT, NO LETTERS, NO TYPOGRAPHY in image. Pure visual design only. Leave clean negative space for text overlay (top or center area free of busy elements).',
+      'professional infographic card news template, deep navy (#2C5282) solid background with subtle geometric triangular pattern overlay, slate gray (#4A5568) secondary tone, light gray (#E2E8F0) accent details, white outlined medical icons (stethoscope/cross/clipboard placeholder shapes) in dedicated graphic boxes, clinical premium quality, structured info graphic zones with thin border frames, bold title area reserved blank at top, footer logo strip reserved blank at bottom. NO TEXT, NO LETTERS, NO TYPOGRAPHY in image. Pure visual template design — title and body text will be overlaid by code. Leave centered title area blank, leave bottom 12% strip blank for footer logo.',
     textToneKo:
       '신뢰감 있고 차분한 톤. "~합니다/~입니다" 격식체. 의학 용어 사용 가능하되 1회는 풀어서 설명. 정확한 수치·근거 위주. 감정 표현 절제.',
     previewBg: '#F7FAFC',
@@ -93,7 +93,7 @@ export const THEME_PRESETS: readonly ThemePreset[] = [
     description: '부드럽고 가족적인 톤. 산부인과·소아·가정의학.',
     palette: ['#F4E4D6', '#FFB4A2', '#B5C99A'],
     imageStyleEn:
-      'gentle illustration with warm beige (#F4E4D6), soft coral (#FFB4A2), muted sage (#B5C99A), hand-drawn family-friendly style, soft lighting, nurturing atmosphere, motherly care. NO TEXT, NO LETTERS, NO TYPOGRAPHY in image. Pure visual design only. Leave clean negative space for text overlay (top or center area free of busy elements).',
+      'warm care card news template design, warm beige (#F4E4D6) solid background with soft coral (#FFB4A2) accent zones, muted sage (#B5C99A) decorative elements, gentle botanical decoration at corners (leaves/small flowers), family-friendly atmosphere, structured info card slots with rounded frames, soft lighting and nurturing visual tone, centered title area reserved blank, footer logo strip reserved blank. NO TEXT, NO LETTERS, NO TYPOGRAPHY in image. Pure visual template design — title and body text will be overlaid by code. Leave centered title area blank, leave bottom 12% strip blank for footer logo.',
     textToneKo:
       '부드럽고 가족적인 톤. "~예요/~어요" 친근체. 가족·돌봄·안심 같은 단어 자연스럽게. 환자뿐 아니라 보호자도 함께 안내한다는 느낌.',
     previewBg: '#FDF8F3',
@@ -104,7 +104,7 @@ export const THEME_PRESETS: readonly ThemePreset[] = [
     description: '정확하고 깔끔. 데이터·통계·체크리스트.',
     palette: ['#1A1A2E', '#E94560', '#FFFFFF'],
     imageStyleEn:
-      'flat infographic style with deep navy (#1A1A2E), coral red accent (#E94560), pure white background (#FFFFFF), bold geometric shapes, modern minimal design, sharp edges. NO TEXT, NO LETTERS, NO TYPOGRAPHY in image. Pure visual design only. Leave clean negative space for text overlay (top or center area free of busy elements).',
+      'modern minimal infographic card news template, monotone deep navy (#1A1A2E) solid background with sharp geometric pattern overlay (subtle white triangles or thin diagonal lines), single coral red accent (#E94560) used sparingly for emphasis dots and icon highlights, flat icon placeholder zones (square or circle frames), info chart placeholder squares with thin outlines, data-focused premium graphic design, clean structured layout, bold title zone reserved blank at top, footer logo strip reserved blank at bottom. NO TEXT, NO LETTERS, NO TYPOGRAPHY in image. Pure visual template design — title and body text will be overlaid by code. Leave centered title area blank, leave bottom 12% strip blank for footer logo.',
     textToneKo:
       '정확하고 깔끔한 톤. "~합니다" 또는 명사체. 군더더기 없이 핵심만. 숫자·비율·단계 같은 데이터 강조. 형용사는 최소.',
     previewBg: '#FFFFFF',
