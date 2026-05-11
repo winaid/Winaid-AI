@@ -243,10 +243,11 @@ export default function CardNewsPage() {
         // /api/image 직접 호출 (단일 슬라이드 재생성, 1 크레딧).
         // C2-fix-1: theme.imageStyleEn prefix 를 직접 prepend (서버 통하지 않고 client 합성).
         // 5장 batch 와 동일 패턴 — generate-images route 의 buildImagePromptWithTheme 와 등가.
+        // C2-fix-1b §2: "Visual concept (no text in image)" 라벨 — 이미지 위 직접 텍스트 렌더 차단.
         const subject =
           target.visualKeyword?.trim() || target.title || `슬라이드 ${slideIndex + 1}`;
         const themePreset = getTheme(theme);
-        const promptText = `${themePreset.imageStyleEn}. Subject: ${subject}.`;
+        const promptText = `${themePreset.imageStyleEn}. Visual concept (no text in image): ${subject}.`;
         const res = await authFetch('/api/image', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

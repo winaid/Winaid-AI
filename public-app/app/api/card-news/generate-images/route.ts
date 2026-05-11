@@ -83,12 +83,14 @@ function slidePromptText(slide: SlideData): string {
 /**
  * C2-fix-1: theme prefix + 슬라이드 prompt 결합.
  * GPT Image 2.0 친화 영문 prefix 가 앞에, subject 한·영 혼용 hint 가 뒤에.
+ * C2-fix-1b §2: "Visual concept (no text in image):" 라벨로 SLIDE 위 직접 텍스트
+ * 렌더를 막는다 (테마 prefix 의 NO TEXT directive 와 이중 안전망).
  * 결과는 /api/image 의 prompt 필드로 그대로 전달됨 (서버 변경 0).
  */
 function buildImagePromptWithTheme(slide: SlideData, themeId: ThemeId): string {
   const theme = getTheme(themeId);
   const subject = slidePromptText(slide);
-  return `${theme.imageStyleEn}. Subject: ${subject}.`;
+  return `${theme.imageStyleEn}. Visual concept (no text in image): ${subject}.`;
 }
 
 interface ImageResult {
