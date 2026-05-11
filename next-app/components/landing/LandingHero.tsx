@@ -41,7 +41,7 @@ function LandingHero() {
     if (chatCount >= MAX_CHAT_COUNT) {
       setChatMessages(prev => [...prev,
         { role: 'user', content: question },
-        { role: 'assistant', content: '무료 대화 횟수를 모두 사용했어요. 더 많은 기능을 사용하려면 로그인하세요! 👉 윈에이드에서 블로그, 카드뉴스, 보도자료까지 무제한으로 만들 수 있어요.' },
+        { role: 'assistant', content: '무료 대화 횟수를 모두 사용했어요. 더 많은 기능을 사용하려면 로그인하세요! 👉 윈에이드에서 블로그, 보도자료, AI 이미지까지 무제한으로 만들 수 있어요.' },
       ]);
       setSearchText('');
       return;
