@@ -31,8 +31,23 @@ export async function DELETE(request: NextRequest, ctx: Ctx) {
     return NextResponse.json({ error: 'forbidden' }, { status: 403 });
   }
 
-  await db.storage.from(STORAGE_BUCKET).remove([row.storage_path]);
-  await db.from('hospital_images').delete().eq('id', id).eq('user_id', owner);
+  // 순서: DB 먼저 → storage. DB 실패 시 storage 는 남되 row 가 정상이라 재시도 가능.
+  // 반대 순서일 경우 storage 만 사라지고 row 가 남아 UI 깨짐 (썸네일 404).
+  const { error: dbErr } = await db
+    .from('hospital_images')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', owner);
+  if (dbErr) {
+    console.error('[hospital-images/DELETE] db error:', dbErr.message, 'id:', id);
+    return NextResponse.json({ error: 'db_error' }, { status: 500 });
+  }
+  // storage remove 실패는 swallow — DB 가 사라졌으므로 사용자에 dangling 안 보임.
+  // 정기 cleanup 으로 orphan storage 제거 검토.
+  const { error: rmErr } = await db.storage.from(STORAGE_BUCKET).remove([row.storage_path]);
+  if (rmErr) {
+    console.warn('[hospital-images/DELETE] storage orphan:', rmErr.message, 'path:', row.storage_path);
+  }
 
   return NextResponse.json({ success: true });
 }

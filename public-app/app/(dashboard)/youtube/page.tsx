@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { YOUTUBE_WRITING_STYLES } from '../../../lib/youtubePrompt';
+import { authFetch } from '../../../lib/authFetch';
 import { supabase } from '@winaid/blog-core';
 import { CATEGORIES } from '../../../lib/constants';
 import { sanitizeHtml } from '../../../lib/sanitize';
@@ -78,7 +79,7 @@ export default function YoutubePage() {
 
     try {
       // ── 1단계: 영상 전체 시간순 분석 ──
-      const summaryRes = await fetch('/api/gemini', {
+      const summaryRes = await authFetch('/api/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -152,7 +153,7 @@ YouTube URL: ${youtubeUrl.trim()}
 
       // ── 2단계: 주제 추천 ──
       try {
-        const topicsRes = await fetch('/api/gemini', {
+        const topicsRes = await authFetch('/api/gemini', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -213,7 +214,7 @@ ${summaryText.slice(0, 2000)}
     try {
       // dedicated route: server-side buildYoutubePrompt + 1 credit deduct + refund
       // (audit Q-2d — client-side useCredit revenue leak 차단, prompt injection surface 차단)
-      const res = await fetch('/api/generate/youtube', {
+      const res = await authFetch('/api/generate/youtube', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

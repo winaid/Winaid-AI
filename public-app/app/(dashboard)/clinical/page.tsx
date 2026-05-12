@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { ARTICLE_TYPES } from '../../../lib/clinicalPrompt';
+import { authFetch } from '../../../lib/authFetch';
 import { getSessionSafe, supabase } from '@winaid/blog-core';
 import { useCreditContext } from '../layout';
 import { consumeGuestCredit } from '../../../lib/guestCredits';
@@ -152,7 +153,7 @@ export default function ClinicalPage() {
         return { base64, mimeType };
       });
 
-      const res = await fetch('/api/gemini', {
+      const res = await authFetch('/api/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -230,7 +231,7 @@ JSON만 출력: { "analysis": "...", "topics": [{ "topic": "...", "title": "..."
     try {
       // dedicated route: server-side buildClinicalPrompt + 1 credit deduct + refund
       // (audit Q-2b — client-side useCredit revenue leak 차단)
-      const res = await fetch('/api/generate/clinical', {
+      const res = await authFetch('/api/generate/clinical', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
