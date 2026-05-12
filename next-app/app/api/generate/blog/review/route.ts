@@ -8,7 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { checkAuth } from '../../../../../lib/apiAuth';
 import { resolveImageOwner } from '../../../../../lib/serverAuth';
 import { buildBlogReviewPrompt } from '@winaid/blog-core';
-import { applyContentFilters } from '@winaid/blog-core';
+import { applyContentFilters, sanitizeLeakInHtml } from '@winaid/blog-core';
 import { callLLM } from '@winaid/blog-core';
 import { getHospitalStylePrompt } from '@winaid/blog-core';
 
@@ -173,7 +173,12 @@ export async function POST(request: NextRequest) {
 
   if (revisedHtml) {
     const filtered = applyContentFilters(revisedHtml);
-    revisedHtml = filtered.filtered;
+    // 누수 필터 — 감수 응답의 revisedHtml 도 leak 가능. PR #156 패턴 server-side 안전망.
+    const cleaned = sanitizeLeakInHtml(filtered.filtered);
+    if (cleaned.headingsStripped + cleaned.paragraphsStripped > 0) {
+      console.warn(`[generate/blog/review] leak stripped — h:${cleaned.headingsStripped} p:${cleaned.paragraphsStripped}`);
+    }
+    revisedHtml = cleaned.html;
   }
 
   const ruleViolations = body.ruleFilterViolations || [];
