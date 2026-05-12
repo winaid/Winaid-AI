@@ -16,7 +16,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { gateDiagnosticRequest } from '../../../lib/guestRateLimit';
 import { crawlSite, detectCategory } from '../../../lib/diagnostic/crawler';
-import { fetchPsi } from '../../../lib/diagnostic/psi';
+import { fetchPsiCached } from '../../../lib/diagnostic/psiCache';
 import { scoreCategories, computeOverallScore } from '../../../lib/diagnostic/scoring';
 import { predictAIVisibility } from '../../../lib/diagnostic/aiVisibility';
 import { buildActionPlan } from '../../../lib/diagnostic/actionPlan';
@@ -150,38 +150,31 @@ export async function POST(request: NextRequest) {
     return err(code, message, status, normalizedUrl);
   }
 
-  // 4) PSI
-  // wrapper budget = fetchPsi 의 설계상 최악 시나리오(35s × 2회 시도 = 70s) 와 정합.
-  // 과거 25_000 은 1회 시도(35s) 보다도 짧아 느린 사이트(Lighthouse Mobile 25-40s) 에서 항상 실패하고,
-  // 재시도 경로(psi.ts:42-43) 가 wrapper 가 이미 떠난 뒤에 실행되어 dead retry 가 되던 버그.
-  const tPsi = Date.now();
-  const psi = await withTimeout(fetchPsi(crawl.finalUrl), 100_000, 'psi').catch(() => null);
-  logDiagnostic({ traceId, step: 'psi', duration: Date.now() - tPsi, detail: psi ? `score=${psi.score}` : 'null' });
-
-  // 5~7) 채점 + 종합
-  const categories = scoreCategories({
+  // 4~11) PSI || enrich 병렬 실행 — 사용자 보고 "느려" (89s) 회귀 차단.
+  //   - 과거: PSI 33s (sequential) → enrich 54s (sequential) = 89s
+  //   - 신규: max(PSI 33s, enrich 54s) ≈ 55s (-37%)
+  //   - 트레이드오프: enrich 가 PSI 모르고 narrative 생성 (preliminary categories with psi=null).
+  //     PSI 결과는 final response 의 score / performance 필드에 정확히 반영.
+  //   - PSI 캐시 (24h) 적용으로 같은 URL 반복 진단 시 PSI ≈ 0s.
+  const prelimCategories = scoreCategories({
     crawl,
-    psi,
+    psi: null,
     hasRobotsTxt: crawl.hasRobotsTxt,
     hasSitemap: crawl.hasSitemap,
   });
-  const overallScore = computeOverallScore(categories);
-
-  // 8~9) AI 노출 + 우선 조치
-  const aiVisibility = predictAIVisibility(categories);
-  const priorityActions = buildActionPlan(categories);
-
-  // 10) 응답 조립 (base)
-  const base: DiagnosticResponse = {
+  const prelimOverall = computeOverallScore(prelimCategories);
+  const prelimAiVisibility = predictAIVisibility(prelimCategories);
+  const prelimPriorityActions = buildActionPlan(prelimCategories);
+  const prelimBase: DiagnosticResponse = {
     success: true,
     url: normalizedUrl,
     analyzedAt: new Date().toISOString(),
     siteName: deriveSiteName(crawl.title, crawl.finalUrl),
-    overallScore,
-    categories,
-    performance: psi,
-    aiVisibility,
-    priorityActions,
+    overallScore: prelimOverall,
+    categories: prelimCategories,
+    performance: null,
+    aiVisibility: prelimAiVisibility,
+    priorityActions: prelimPriorityActions,
     crawlMeta: {
       pagesAnalyzed: 1 + (crawl.subpagesReached?.length ?? 0),
       totalLinks: crawl.internalLinks.length + crawl.externalLinks.length,
@@ -191,13 +184,33 @@ export async function POST(request: NextRequest) {
     },
   };
 
-  // 11) enrich
+  const tPsi = Date.now();
   const tEnrich = Date.now();
-  const enriched = await withTimeout(enrichDiagnostic(base, crawl), 90_000, 'enrich').catch((e) => {
-    logDiagnostic({ traceId, step: 'enrich_error', duration: Date.now() - tEnrich, error: (e as Error)?.message?.slice(0, 200) });
-    return base;
-  });
+  const [psi, enriched] = await Promise.all([
+    withTimeout(fetchPsiCached(crawl.finalUrl), 100_000, 'psi').catch(() => null),
+    withTimeout(enrichDiagnostic(prelimBase, crawl), 90_000, 'enrich').catch((e) => {
+      logDiagnostic({ traceId, step: 'enrich_error', duration: Date.now() - tEnrich, error: (e as Error)?.message?.slice(0, 200) });
+      return prelimBase;
+    }),
+  ]);
+  logDiagnostic({ traceId, step: 'psi', duration: Date.now() - tPsi, detail: psi ? `score=${psi.score}` : 'null' });
   logDiagnostic({ traceId, step: 'enrich', duration: Date.now() - tEnrich });
+
+  // 12) PSI 결과를 actual_categories 로 재계산 — score/performance 정확성 복구.
+  const actualCategories = scoreCategories({
+    crawl,
+    psi,
+    hasRobotsTxt: crawl.hasRobotsTxt,
+    hasSitemap: crawl.hasSitemap,
+  });
+  const actualOverall = computeOverallScore(actualCategories);
+  const enrichedById = new Map(enriched.categories.map(c => [c.id, c]));
+  const mergedCategories = actualCategories.map(c => {
+    const e = enrichedById.get(c.id);
+    return e?.recommendations && e.recommendations.length > 0
+      ? { ...c, recommendations: e.recommendations }
+      : c;
+  });
 
   const detectedRegion = customQuery ? undefined : (extractRegion(crawl) ?? undefined);
   // 카테고리 결정 — '치과' 하드코딩 제거 (audit hotfix). client body.category (화이트리스트) 우선.
@@ -206,6 +219,9 @@ export async function POST(request: NextRequest) {
 
   const final: DiagnosticResponse = {
     ...enriched,
+    overallScore: actualOverall,
+    categories: mergedCategories,
+    performance: psi,
     detectedCategory,
     ...(detectedRegion ? { detectedRegion } : {}),
   };
