@@ -644,7 +644,20 @@ All people in the scene must have coherent, natural gazes. NO unfocused or empty
 - If a doctor is explaining or pointing at a screen/model, the patient is actively looking at the same screen/model with an attentive, slightly leaned-in posture.
 - If a doctor and patient are in dialogue, both faces angle toward each other with eye contact.
 - Avoid the specific failure mode of "doctor points at monitor, patient looks past the camera into empty space" — this looks unnatural and disengaged.
-- A single person alone may look at the camera, an object, or thoughtfully aside — that is fine. The coherence rule applies only when 2+ people share the frame.`;
+- A single person alone may look at the camera, an object, or thoughtfully aside — that is fine. The coherence rule applies only when 2+ people share the frame.
+
+[Mirror & reflection scenes — dental/medical contexts]
+Mirror scenes are natural for dental hygiene (toothbrushing, flossing, post-procedure check). Allow them but ENFORCE mirror physics:
+Rules:
+- The reflection MUST be the exact left-right reversed image of the real person.
+- If the real person holds the brush/floss/instrument in the RIGHT hand, the reflection shows the same item on the viewer's RIGHT side of the reflected face (mirror flips left-right relative to the real subject's body).
+- Asymmetric features (hair parting, glasses, accessories, hand position) must be left-right flipped between real and reflected versions.
+Stability tricks (prefer when possible):
+- Single-hand visible scenes — one hand holds the brush, the other hand is at the side or behind. Eliminates dual-hand coordination.
+- Or: show only the reflection (front-facing close-up in the mirror), real person not visible.
+- Or: show only the real person (no mirror in frame), close-up at eye level.
+Forbidden:
+- Scenes where both the real person AND the reflection use the SAME-side hand (physically impossible — signals a generation error).`;
 
   const fullPrompt = isCardNewsMode
     ? buildCardNewsPromptFull(body)
