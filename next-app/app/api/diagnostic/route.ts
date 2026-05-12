@@ -27,8 +27,10 @@ import { supabase, supabaseAdmin } from '@winaid/blog-core';
 import type { DiagnosticResponse, DiagnosticErrorResponse } from '../../../lib/diagnostic/types';
 
 // 실측(discovery) 은 /api/diagnostic/stream 별도 엔드포인트로 분리 (단계 S-A, 플랫폼별 SSE).
-// 기본 진단은 crawl + PSI + scoring + enrich 만 — maxDuration 240→120 으로 감축.
-export const maxDuration = 120;
+// 기본 진단은 crawl + PSI + scoring + enrich. timeout 합산 헤드룸:
+//   crawl ≤ 40s + PSI ≤ 100s (50s × 2 retry) + enrich ≤ 90s = 230s 최악
+//   maxDuration 240 으로 안전 헤드룸 확보 (사용자 보고: enrich 40s timeout 실패).
+export const maxDuration = 240;
 export const dynamic = 'force-dynamic';
 
 interface Body { url?: string; customQuery?: string; category?: string }
@@ -163,7 +165,7 @@ export async function POST(request: NextRequest) {
   // 과거 25_000 은 1회 시도(35s) 보다도 짧아 느린 사이트(Lighthouse Mobile 25-40s) 에서 항상 실패하고,
   // 재시도 경로(psi.ts:42-43) 가 wrapper 가 이미 떠난 뒤에 실행되어 dead retry 가 되던 버그.
   const tPsi = Date.now();
-  const psi = await withTimeout(fetchPsi(crawl.finalUrl), 70_000, 'psi').catch(() => null);
+  const psi = await withTimeout(fetchPsi(crawl.finalUrl), 100_000, 'psi').catch(() => null);
   logDiagnostic({ traceId, step: 'psi', duration: Date.now() - tPsi, detail: psi ? `score=${psi.score}` : 'null' });
 
   // 5~7) 채점 + 종합
@@ -201,7 +203,7 @@ export async function POST(request: NextRequest) {
 
   // 11) enrich
   const tEnrich = Date.now();
-  const enriched = await withTimeout(enrichDiagnostic(base, crawl), 40_000, 'enrich').catch((e) => {
+  const enriched = await withTimeout(enrichDiagnostic(base, crawl), 90_000, 'enrich').catch((e) => {
     logDiagnostic({ traceId, step: 'enrich_error', duration: Date.now() - tEnrich, error: (e as Error)?.message?.slice(0, 200) });
     return base;
   });
