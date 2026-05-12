@@ -16,6 +16,7 @@ import { checkAuth } from '../../../../lib/apiAuth';
 import { resolveImageOwner } from '../../../../lib/serverAuth';
 import { useCredit, refundCredit } from '../../../../lib/creditService';
 import { buildClinicalPrompt } from '../../../../lib/clinicalPrompt';
+import { sanitizeLeakInHtml } from '@winaid/blog-core';
 
 export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
@@ -138,7 +139,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({ text: data.text, usage: data.usage, model: data.model });
+    // 출력 누수 후처리 (PR #161 / POST_MERGE_FOLLOWUPS #5) — system prompt 의 메타
+    // 지시문이 본문/헤딩으로 echo 된 경우 차단. PR #158 의 영문화가 1차 방어, 본
+    // 후처리가 2차 방어.
+    const sanitized = sanitizeLeakInHtml(data.text);
+    if (sanitized.paragraphsStripped + sanitized.headingsStripped > 0) {
+      console.warn(
+        `[clinical] leak stripped — paragraphs=${sanitized.paragraphsStripped}, headings=${sanitized.headingsStripped}`,
+      );
+    }
+    return NextResponse.json({ text: sanitized.html, usage: data.usage, model: data.model });
   } catch (err) {
     await refundOnFail();
     const message = (err as Error).message || 'unknown';

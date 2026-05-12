@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "tsc --noEmit",
-    "test": "for f in __tests__/*.test.ts; do echo \"\\n>>> $f\"; tsx \"$f\" || exit 1; done"
+    "test": "for f in __tests__/*.test.ts ../packages/blog-core/src/__tests__/*.test.ts; do echo \"\\n>>> $f\"; tsx \"$f\" || exit 1; done"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.93.0",
