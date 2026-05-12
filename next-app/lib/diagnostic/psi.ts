@@ -12,7 +12,7 @@
 
 import type { PsiResult } from './types';
 
-const PSI_TIMEOUT_MS = 35_000;
+const PSI_TIMEOUT_MS = 50_000;
 
 interface PsiAudit {
   numericValue?: number;
