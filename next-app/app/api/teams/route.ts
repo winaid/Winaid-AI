@@ -28,23 +28,48 @@ export async function GET() {
   }
 
   try {
-    const { data: hospitals, error } = await supabaseAdmin
-      .from('hospitals')
-      .select('id, team_id, name, manager, address, naver_blog_urls, is_active')
-      .eq('is_active', true)
-      .order('created_at', { ascending: true });
+    // 팀 + 병원 병렬 fetch — service_role 이라 RLS 우회
+    const [teamsRes, hospitalsRes] = await Promise.all([
+      supabaseAdmin
+        .from('teams')
+        .select('id, label, sort_order')
+        .order('sort_order', { ascending: true }),
+      supabaseAdmin
+        .from('hospitals')
+        .select('id, team_id, name, manager, address, naver_blog_urls, is_active')
+        .eq('is_active', true)
+        .order('created_at', { ascending: true }),
+    ]);
 
-    if (error || !hospitals) {
-      console.warn('[api/teams] hospitals fetch failed:', error?.message);
-      return NextResponse.json(TEAM_DATA, {
+    const teams = teamsRes.data;
+    const hospitals = hospitalsRes.data;
+
+    if (teamsRes.error || !teams || teams.length === 0) {
+      // DB teams 조회 실패/빈 → TEAM_DATA fallback 라벨 사용. hospitals 는 있으면 enrich.
+      console.warn('[api/teams] teams fetch empty — TEAM_DATA fallback:', teamsRes.error?.message);
+      const merged: TeamData[] = TEAM_DATA.map(t => ({
+        id: t.id,
+        label: t.label,
+        hospitals: (hospitals || [])
+          .filter(h => h.team_id === t.id)
+          .map(h => ({
+            name: h.name as string,
+            manager: (h.manager as string) || '',
+            address: (h.address as string) || undefined,
+            naverBlogUrls: (h.naver_blog_urls as string[])?.filter(Boolean) || undefined,
+          })),
+      }));
+      return NextResponse.json(merged, {
         headers: { 'Cache-Control': 'public, max-age=60, s-maxage=300' },
       });
     }
 
-    const merged: TeamData[] = TEAM_DATA.map(t => ({
-      id: t.id,
-      label: t.label,
-      hospitals: hospitals
+    // DB teams 가 권위 — DB labels + DB hospitals 결합.
+    // 사용자 보고: "팀들이 다 없어졌잖아" — 운영 팀 이름이 TEAM_DATA 5개로 덮였던 회귀 복구.
+    const merged: TeamData[] = teams.map(t => ({
+      id: t.id as number,
+      label: t.label as string,
+      hospitals: (hospitals || [])
         .filter(h => h.team_id === t.id)
         .map(h => ({
           name: h.name as string,
