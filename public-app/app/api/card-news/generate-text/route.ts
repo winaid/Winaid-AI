@@ -28,7 +28,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { gateGuestRequest } from '../../../../lib/guestRateLimit';
 import { resolveImageOwner } from '../../../../lib/serverAuth';
 import { useCredit, refundCredit } from '../../../../lib/creditService';
-import { callLLM, applyContentFilters, ensureSlideIds, type SlideData } from '@winaid/blog-core';
+import { callLLM, applyContentFilters, ensureSlideIds, sanitizeLeakInSlides, type SlideData } from '@winaid/blog-core';
 import {
   buildTextPrompt,
   parseSlidesJson,
@@ -206,6 +206,15 @@ export async function POST(request: NextRequest) {
   });
   if (totalReplaced > 0) {
     console.info(`[card-news/text] 의료법 자동 대체 ${totalReplaced}건`);
+  }
+
+  // ── 8-b) 출력 누수 후처리 (PR #161 / POST_MERGE_FOLLOWUPS #5) ────────
+  // PR #158 영문화가 1차 방어. 모델이 영문 메타 라벨을 echo 한 경우 차단.
+  // 의료법 필터(8) 다음에 적용 — 둘 다 string-in/string-out, 순서 무관.
+  const leakResult = sanitizeLeakInSlides(slides);
+  slides = leakResult.slides;
+  if (leakResult.stripped > 0) {
+    console.warn(`[card-news/text] leak stripped — count=${leakResult.stripped}`);
   }
 
   // ── 9) ensureSlideIds (id 누락 가드) + layout enum guard ─────────────

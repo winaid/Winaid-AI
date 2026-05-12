@@ -20,7 +20,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { gateGuestRequest } from '../../../../lib/guestRateLimit';
-import { callLLM } from '@winaid/blog-core';
+import { callLLM, sanitizeLeakInSlideOutline } from '@winaid/blog-core';
 import {
   buildOutlinePrompt,
   parseOutlineJson,
@@ -129,9 +129,17 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  // ── 7) 정상 응답 ──────────────────────────────────────────────────────
+  // ── 7) 출력 누수 후처리 (PR #161 / POST_MERGE_FOLLOWUPS #5) ──────────
+  // PR #158 영문화가 1차. 모델이 영문 메타를 한국어로 paraphrase 해 outline 의
+  // role/titleHint/contentHint 로 echo 한 경우 차단. layout/index 는 enum/number 라 미대상.
+  const sanitized = sanitizeLeakInSlideOutline(outline);
+  if (sanitized.stripped > 0) {
+    console.warn(`[card-news/outline] leak stripped — count=${sanitized.stripped}`);
+  }
+
+  // ── 8) 정상 응답 ──────────────────────────────────────────────────────
   return NextResponse.json({
-    outline,
+    outline: sanitized.outline,
     creditsUsed: 0,
   });
 }

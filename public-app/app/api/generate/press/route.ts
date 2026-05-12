@@ -13,7 +13,7 @@ import { gateGuestRequest } from '../../../../lib/guestRateLimit';
 import { resolveImageOwner } from '../../../../lib/serverAuth';
 import { useCredit, refundCredit } from '../../../../lib/creditService';
 import { buildPressPrompt, type PressType } from '../../../../lib/pressPrompt';
-import { getHospitalStylePrompt } from '@winaid/blog-core';
+import { getHospitalStylePrompt, sanitizeLeakInHtml } from '@winaid/blog-core';
 
 export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
@@ -142,7 +142,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({ text: data.text });
+    // 출력 누수 후처리 (PR #161 / POST_MERGE_FOLLOWUPS #5)
+    const sanitized = sanitizeLeakInHtml(data.text);
+    if (sanitized.paragraphsStripped + sanitized.headingsStripped > 0) {
+      console.warn(
+        `[press] leak stripped — paragraphs=${sanitized.paragraphsStripped}, headings=${sanitized.headingsStripped}`,
+      );
+    }
+    return NextResponse.json({ text: sanitized.html });
   } catch (err) {
     await refundOnFail();
     const message = (err as Error).message || 'unknown';

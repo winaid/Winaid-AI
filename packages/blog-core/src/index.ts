@@ -9,6 +9,8 @@ export * from './cardNewsLayouts';
 export * from './brandPreset';
 export * from './styleService';
 export * from './blogPrompt';
+export * from './normalize/leakFilter';
+export * from './normalize/leakFilterJson';
 
 // safeFetch 는 server-only (Node 'dns' / 'net' 의존). barrel 에서 제외 —
 // caller 가 deep import 로만 사용:
