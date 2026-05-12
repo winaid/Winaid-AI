@@ -113,6 +113,45 @@ export function normalizeBlogStructure(
   //    <p></p> 와 <p>&nbsp;</p> 모두 처리. 연속 2개 이상만 1개로 축소 (nbsp 형태로 통일).
   out = out.replace(/(?:<p>(?:&nbsp;|\s)*<\/p>\s*){2,}/g, '<p>&nbsp;</p>\n');
 
+  // 6b) 프롬프트 지시문 누수 필터 (defense in depth)
+  //     Gemini 한국어 모드가 system prompt 의 "사용 가능 태그", "<h3> 사용",
+  //     "SEO·가독성", "[IMG_N alt=...]" 같은 메타 지시문을 본문 <p> 로 베껴 적는
+  //     케이스 방어. 명백한 메타-문구만 차단해 정상 본문 오탐 risk 최소화.
+  //
+  //     매칭 기준: <p> 안 텍스트가 다음 중 하나라도 포함하면 그 <p> 통째로 제거.
+  //       a) 명시적 placeholder: [태그명], [tag_name]
+  //       b) 메타 어휘 + 태그 명: ("사용 가능|허용|사용할 수 있는|금지된?")\s*태그
+  //       c) HTML 태그 이름이 본문에 노출: <h[1-6]>, <p>, <ul>, <li>, <strong>, <em>
+  //          (단, 단독 단어가 아닌 메타 문맥에서만 — "감싸|사용|출력|포함" 동반 시)
+  //       d) 메타 SEO 어휘: "SEO·가독성", "SEO 가독성"
+  //       e) IMG 마커 메타: "[IMG_N", "IMG 마커"
+  //       f) 메타 형식 어휘: "마크다운/JSON", "코드펜스 금지"
+  //
+  //     보존: 단순 어휘(예: "h3 검색", "SEO 최적화") 만 있는 경우 통과.
+  const leakPatterns: RegExp[] = [
+    /\[태그명\]|\[tag_name\]/i,
+    /(사용\s*가능|허용|사용할\s*수\s*있는|금지된?)\s*태그/,
+    /(<h[1-6]>|<p>|<ul>|<li>|<strong>|<em>)(?=[\s\S]*(감싸|사용|출력|포함|마커|표시))/,
+    /SEO\s*[·•]\s*가독성|SEO\s+가독성/,
+    /\[IMG_[NX0-9]|IMG\s*마커|이미지\s*마커/,
+    /마크다운\s*\/\s*JSON|코드펜스\s*금지|JSON\s*형식\s*포함/,
+    /h3\s*태그로\s*감싸|소제목을?\s*<?h[23]>?\s*태그/,
+  ];
+  let leakStripped = 0;
+  out = out.replace(/<p[^>]*>([\s\S]*?)<\/p>/gi, (full, inner: string) => {
+    const text = inner.replace(/<[^>]*>/g, '');
+    for (const re of leakPatterns) {
+      if (re.test(text)) {
+        leakStripped++;
+        return '';
+      }
+    }
+    return full;
+  });
+  if (leakStripped > 0) {
+    log.push(`[LEAK] 프롬프트 지시문 누수 <p> ${leakStripped}개 제거`);
+  }
+
   // 7) h3 개수 확인 — 최소 5개 보장
   const h3Matches = out.match(/<h3[^>]*>[\s\S]*?<\/h3>/gi) || [];
   const h3Count = h3Matches.length;
