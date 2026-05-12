@@ -10,12 +10,22 @@ import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 import { checkAuth } from '../../../../lib/apiAuth';
 import { resolveImageOwner } from '../../../../lib/serverAuth';
+import { verifyAdminCookie } from '../../../../lib/adminCookie';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   const auth = await checkAuth(request);
   if (auth) return auth;
+
+  // 🛑 INVARIANT §3 — admin (admin_session cookie) 은 Bearer 없으니 usage 추적 skip.
+  //   usage 카운트는 analytics 용도라 admin 액션은 트래킹 안 해도 무방.
+  //   과거 (회귀): admin 이 본 라우트 호출 시 owner='guest' OR accessToken 없음 → 401
+  //   → 라이브러리 매칭 후 client 가 401 받아 콘솔 에러.
+  const isAdmin = verifyAdminCookie(request).valid;
+  if (isAdmin) {
+    return NextResponse.json({ ok: true, incremented: 0, admin: true });
+  }
 
   const owner = await resolveImageOwner(request);
   if (!owner || owner === 'guest') {
