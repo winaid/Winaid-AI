@@ -13,15 +13,18 @@
  */
 
 import { NextResponse } from 'next/server';
-import { supabaseAdmin } from '@winaid/blog-core';
+import { supabase, supabaseAdmin } from '@winaid/blog-core';
 import { TEAM_DATA, type TeamData } from '../../../lib/teamData';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 export async function GET() {
-  // supabaseAdmin 미설정 (SUPABASE_SERVICE_ROLE_KEY 누락) → TEAM_DATA fallback only
-  if (!supabaseAdmin) {
+  // service_role 우선, 없으면 anon supabase. teams/hospitals 둘 다 anon SELECT 정책
+  // 허용 (`Anon can read hospitals` USING(true)) 이므로 anon 으로도 동작.
+  // 둘 다 없으면 TEAM_DATA fallback.
+  const db = supabaseAdmin ?? supabase;
+  if (!db) {
     return NextResponse.json(TEAM_DATA, {
       headers: { 'Cache-Control': 'public, max-age=60, s-maxage=300' },
     });
@@ -30,11 +33,11 @@ export async function GET() {
   try {
     // 팀 + 병원 병렬 fetch — service_role 이라 RLS 우회
     const [teamsRes, hospitalsRes] = await Promise.all([
-      supabaseAdmin
+      db
         .from('teams')
         .select('id, label, sort_order')
         .order('sort_order', { ascending: true }),
-      supabaseAdmin
+      db
         .from('hospitals')
         .select('id, team_id, name, manager, address, naver_blog_urls, is_active')
         .eq('is_active', true)
