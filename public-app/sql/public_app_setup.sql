@@ -195,9 +195,13 @@ DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='user_credits' AND policyname='Users can read own credits') THEN
     CREATE POLICY "Users can read own credits" ON public.user_credits FOR SELECT USING (auth.uid() = user_id);
   END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='user_credits' AND policyname='Users can update own credits') THEN
-    CREATE POLICY "Users can update own credits" ON public.user_credits FOR UPDATE USING (auth.uid() = user_id);
+  -- 신규 회원 가입 시 row 생성용 — auth.uid() 일치 필수.
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='user_credits' AND policyname='Users can insert own credits') THEN
+    CREATE POLICY "Users can insert own credits" ON public.user_credits FOR INSERT WITH CHECK (auth.uid() = user_id);
   END IF;
+  -- 주의: 과거 "Users can update own credits" 정책은 사용자가 credits 컬럼 직접 갱신 가능
+  -- (결제 RPC 우회) — 2026-05-12 마이그레이션으로 제거. 신규 배포에는 처음부터 미생성.
+  -- 변경 경로는 use_credit / refund_credit RPC (SECURITY DEFINER) 만 허용.
 END $$;
 
 -- 크레딧 차감 RPC (원자적)

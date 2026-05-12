@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { PRESS_TYPES, DOCTOR_TITLES, CATEGORIES, PRESS_CSS, type PressType } from '../../../lib/pressPrompt';
+import { authFetch } from '../../../lib/authFetch';
 import { savePost } from '../../../lib/postStorage';
 import { getSessionSafe, getSupabaseClient, isSupabaseConfigured } from '@winaid/blog-core';
 import { ErrorPanel } from '../../../components/GenerationResult';
@@ -60,7 +61,7 @@ export default function PressPage() {
       // (audit Q-2c — client-side useCredit revenue leak 차단, prompt injection surface 차단)
       setProgress('🗞️ 보도자료 작성 중...');
 
-      const res = await fetch('/api/generate/press', {
+      const res = await authFetch('/api/generate/press', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

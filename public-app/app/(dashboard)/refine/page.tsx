@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { buildRefinePrompt, buildChatRefinePrompt, REFINE_OPTIONS, type RefineMode } from '../../../lib/refinePrompt';
+import { authFetch } from '../../../lib/authFetch';
 import { savePost } from '../../../lib/postStorage';
 import { getSessionSafe } from '@winaid/blog-core';
 import { ErrorPanel } from '../../../components/GenerationResult';
@@ -89,7 +90,7 @@ export default function RefinePage() {
     try {
       const { systemInstruction, prompt } = buildRefinePrompt({ originalText: originalText.trim(), mode: selectedMode });
       const needsSearch = selectedMode === 'seo' || selectedMode === 'professional' || selectedMode === 'longer';
-      const res = await fetch('/api/gemini', {
+      const res = await authFetch('/api/gemini', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt, systemInstruction, model: 'gemini-3.1-pro-preview', temperature: 0.6, maxOutputTokens: 32768, googleSearch: needsSearch }),
       });
@@ -130,7 +131,7 @@ export default function RefinePage() {
         for (const url of urls) {
           const fullUrl = url.startsWith('www.') ? `https://${url}` : url;
           try {
-            const r = await fetch('/api/naver/crawl-hospital-blog', {
+            const r = await authFetch('/api/naver/crawl-hospital-blog', {
               method: 'POST', headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ blogUrl: fullUrl, maxPosts: 1 }),
             });
@@ -145,7 +146,7 @@ export default function RefinePage() {
       const { systemInstruction, prompt } = buildChatRefinePrompt({
         workingContent: getWorkingContent(), userMessage: msg, crawledContent: crawledContent || undefined,
       });
-      const res = await fetch('/api/gemini', {
+      const res = await authFetch('/api/gemini', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt, systemInstruction, model: 'gemini-3.1-pro-preview', temperature: 0.6, maxOutputTokens: 32768, googleSearch: true }),
       });

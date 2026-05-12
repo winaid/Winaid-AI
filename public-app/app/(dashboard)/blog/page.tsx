@@ -209,7 +209,7 @@ function BlogForm() {
     const timer = setTimeout(async () => {
       setIsLoadingReference(true);
       try {
-        const res = await fetch('/api/reference', {
+        const res = await authFetch('/api/reference', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ topic: topic.trim(), category }),
@@ -782,7 +782,7 @@ SEO 점수 기준:
 6. 네이버 블로그 SEO에 유리한 롱테일 키워드 포함`;
       }
 
-      const res = await fetch('/api/gemini', {
+      const res = await authFetch('/api/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -820,7 +820,7 @@ SEO 점수 기준:
       try {
         const verifyCtrl = new AbortController();
         const verifyTimer = setTimeout(() => verifyCtrl.abort(), 5_000);
-        const kwRes = await fetch('/api/naver/keyword-stats', {
+        const kwRes = await authFetch('/api/naver/keyword-stats', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ keywords: rawItems.map((it) => it.topic) }),
@@ -1130,7 +1130,7 @@ JSON 형식으로 응답해주세요.`;
     try {
       // ═══ v4: Sonnet 4.6 통합 초안 (서버에서 프롬프트 조립 + callLLM) ═══
       console.info(`[BLOG] [V4] Sonnet 4.6 통합 초안 요청`);
-      const draftRes = await fetch('/api/generate/blog', {
+      const draftRes = await authFetch('/api/generate/blog', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1461,7 +1461,7 @@ JSON 형식으로 응답해주세요.`;
         const generateAndUpload = async (prompt: string, index: number): Promise<{ index: number; url: string | null }> => {
           for (let attempt = 0; attempt < 2; attempt++) {
             try {
-              const imgRes = await fetch('/api/image', {
+              const imgRes = await authFetch('/api/image', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ prompt, aspectRatio: imageAspectRatio, mode: 'blog' as const }),
@@ -1890,7 +1890,7 @@ Output ONLY the prompt. No explanation.`;
     console.info(`[BLOG] 이미지 ${imageIndex} 재생성 시작 — 프롬프트: "${newPrompt.substring(0, 60)}..."${referenceImage ? ' (참고 이미지 포함)' : ''}`);
 
     try {
-      const imgRes = await fetch('/api/image', {
+      const imgRes = await authFetch('/api/image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: newPrompt, aspectRatio: imageAspectRatio, mode: 'blog', ...(referenceImage ? { referenceImage } : {}) }),
@@ -1985,7 +1985,7 @@ Output ONLY the prompt. No explanation.`;
       const sectionTitle = section.type === 'intro' ? '도입부' : section.title;
 
       // v4: /api/generate/blog/section (Sonnet + server-side regex 필터) 로 교체
-      const res = await fetch('/api/generate/blog/section', {
+      const res = await authFetch('/api/generate/blog/section', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

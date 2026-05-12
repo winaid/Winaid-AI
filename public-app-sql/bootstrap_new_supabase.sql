@@ -125,11 +125,10 @@ CREATE POLICY "Users can insert own subscription" ON public.subscriptions
   FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Users can update own subscription" ON public.subscriptions
   FOR UPDATE USING (auth.uid() = user_id);
--- anon: auth.ts에서 upsert 시 필요
-CREATE POLICY "Anon can insert subscription" ON public.subscriptions
-  FOR INSERT WITH CHECK (true);
-CREATE POLICY "Anon can update subscription" ON public.subscriptions
-  FOR UPDATE USING (true);
+-- 주의: 과거 "Anon can insert/update subscription USING(true)" 정책은
+-- 임의 user_id 변조 (premium 자가-승격) 허용 결함 — 2026-05-12 마이그레이션으로 제거.
+-- 신규 배포에는 처음부터 미생성. auth.ts 의 upsert 는 가입 직후 session 토큰으로
+-- `Users can insert/update own subscription` 정책을 통과.
 
 CREATE INDEX IF NOT EXISTS idx_subscriptions_user_id ON public.subscriptions(user_id);
 

@@ -16,6 +16,11 @@ export async function GET(request: NextRequest) {
   if (!gate.ok) return NextResponse.json({ error: gate.error }, { status: gate.status });
 
   const owner = await resolveImageOwner(request);
+  // 게스트는 hospital_images.user_id 가 UUID 라 'guest' 캐스트 시도 시 22P02 500 회수.
+  // 라이브러리는 로그인 사용자 전용 — 빈 배열로 단락.
+  if (owner === 'guest') {
+    return NextResponse.json({ images: [], total: 0 });
+  }
   const params = request.nextUrl.searchParams;
   const hospitalName = params.get('hospitalName');
   const tagsParam = params.get('tags');

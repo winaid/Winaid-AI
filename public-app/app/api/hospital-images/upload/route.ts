@@ -20,6 +20,10 @@ export async function POST(request: NextRequest) {
     if (!gate.ok) return NextResponse.json({ error: gate.error }, { status: gate.status });
 
     const owner = await resolveImageOwner(request);
+    // 게스트는 hospital_images.user_id 컬럼이 UUID 라 'guest' 문자열 캐스트 실패 → 401 차단.
+    if (owner === 'guest') {
+      return NextResponse.json({ error: 'auth_required' }, { status: 401 });
+    }
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
 
@@ -56,15 +60,13 @@ export async function POST(request: NextRequest) {
     const hospitalName = (formData.get('hospitalName') as string || '').trim() || null;
 
     // owner 의 team_id 를 INSERT 에 명시 첨부. DB 트리거가 backup 으로도 채움.
-    let ownerTeamId: number | null = null;
-    if (owner !== 'guest') {
-      const { data: prof } = await db
-        .from('profiles')
-        .select('team_id')
-        .eq('id', owner)
-        .maybeSingle();
-      ownerTeamId = (prof?.team_id ?? null) as number | null;
-    }
+    // 게스트는 위 line 22 가드로 이미 401 — 여기 도달 시 owner 는 UUID 보장.
+    const { data: prof } = await db
+      .from('profiles')
+      .select('team_id')
+      .eq('id', owner)
+      .maybeSingle();
+    const ownerTeamId: number | null = (prof?.team_id ?? null) as number | null;
 
     const { data: row, error: dbErr } = await db
       .from('hospital_images')
@@ -84,6 +86,14 @@ export async function POST(request: NextRequest) {
 
     if (dbErr) {
       console.error('[upload] db error:', dbErr);
+      // DB INSERT 실패 시 storage 만 남는 orphan 차단 — 보상 삭제 시도.
+      // remove 실패는 swallow (이미 DB 실패 응답 반환 중이라 best-effort).
+      const { error: rmErr } = await db.storage.from(STORAGE_BUCKET).remove([storagePath]);
+      if (rmErr) {
+        console.error('[upload] storage rollback failed:', rmErr.message, 'path:', storagePath);
+      } else {
+        devLog('[upload] storage rolled back (orphan prevented)');
+      }
       return NextResponse.json({ error: 'db_error' }, { status: 500 });
     }
     devLog('[upload] db ok, id:', row.id);

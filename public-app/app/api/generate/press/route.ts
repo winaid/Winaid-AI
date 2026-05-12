@@ -86,8 +86,12 @@ export async function POST(request: NextRequest) {
   };
 
   const cookieHeader = request.headers.get('cookie');
+  const authHeader = request.headers.get('authorization');
   const fwHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
   if (cookieHeader) fwHeaders['Cookie'] = cookieHeader;
+  // /api/gemini 가 게스트로 clamp 되지 않도록 원 요청의 Bearer 토큰 그대로 forward.
+  // 누락 시 PRO→flash-lite 다운그레이드 + systemInstruction strip + googleSearch off 회귀.
+  if (authHeader) fwHeaders['Authorization'] = authHeader;
 
   try {
     // 1) 학습 말투 로드 (server-side, free)
