@@ -131,7 +131,7 @@ export function normalizeBlogStructure(
     /(사용\s*가능|허용|사용할\s*수\s*있는|금지된?)\s*태그/,
     /(<h[1-6]>|<p>|<ul>|<li>|<strong>|<em>)(?=[\s\S]*(감싸|사용|출력|포함|마커|표시))/,
     /SEO\s*[·•]\s*가독성|SEO\s+가독성/,
-    /\[IMG_[NX0-9]|IMG\s*마커|이미지\s*마커/,
+    /\[IMG_[NXnx]\b|IMG\s*마커|이미지\s*마커/,
     /마크다운\s*\/\s*JSON|코드펜스\s*금지|JSON\s*형식\s*포함/,
     /h3\s*태그로\s*감싸|소제목을?\s*<?h[23]>?\s*태그/,
     // 헤딩 전용 추가 패턴
@@ -180,7 +180,7 @@ export function normalizeBlogStructure(
     /(사용\s*가능|허용|사용할\s*수\s*있는|금지된?)\s*태그/,
     /(<h[1-6]>|<p>|<ul>|<li>|<strong>|<em>)(?=[\s\S]*(감싸|사용|출력|포함|마커|표시))/,
     /SEO\s*[·•]\s*가독성|SEO\s+가독성/,
-    /\[IMG_[NX0-9]|IMG\s*마커|이미지\s*마커/,
+    /\[IMG_[NXnx]\b|IMG\s*마커|이미지\s*마커/,
     /마크다운\s*\/\s*JSON|코드펜스\s*금지|JSON\s*형식\s*포함/,
     /h3\s*태그로\s*감싸|소제목을?\s*<?h[23]>?\s*태그/,
   ];
