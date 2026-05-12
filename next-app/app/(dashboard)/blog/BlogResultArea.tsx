@@ -50,6 +50,14 @@ export interface BlogResultAreaProps {
   onContentChange?: (html: string) => void;
   // 단락 hover [+] 버튼 / placeholder 클릭 → 이미지 삽입 모달
   onRequestImageInsert?: (target: HTMLElement, mode: 'after' | 'replace') => void;
+  /**
+   * 결과 영역 루트 div 의 onClick 핸들러.
+   * library/hybrid 모드에서 본문 안 <img data-image-index> 또는 [data-img-slot]
+   * 클릭 시 ImageReplaceModal 트리거용. parent 가 wrapper 에 onClick 을 걸어도
+   * 작동하지만 (display:contents wrapper), 환경에 따라 회귀가 보고된 적이 있어
+   * 본 prop 으로 root 에 직접 wiring (belt-and-suspenders).
+   */
+  onResultClick?: (e: React.MouseEvent<HTMLDivElement>) => void;
 }
 
 /** 블로그 결과 영역 — 생성 중 / 에러 / 결과 / 빈 상태 4가지 렌더링 */
@@ -66,6 +74,7 @@ export default function BlogResultArea({
   chatInput = '', setChatInput, isChatRefining = false, onChatRefine,
   onContentChange,
   onRequestImageInsert,
+  onResultClick,
 }: BlogResultAreaProps) {
 
   // ── 카운트다운 타이머 (생성 중에만 동작) ──
@@ -127,7 +136,7 @@ export default function BlogResultArea({
     const stage = BLOG_STAGES[stageForLabel] || BLOG_STAGES[1];
 
     return (
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0" onClick={onResultClick}>
         <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-12 flex flex-col items-center justify-center text-center min-h-[480px]">
           {/* 상단: 현재 단계 배지 (stageForLabel 기준 — 메시지와 항상 일치) */}
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold mb-6 bg-blue-50 text-blue-600 border border-blue-100">
@@ -196,7 +205,7 @@ export default function BlogResultArea({
   // ── (2) 에러 ──
   if (error) {
     return (
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0" onClick={onResultClick}>
         <ErrorPanel error={error} onDismiss={onDismissError} onRetry={isRetryable ? onRetry : undefined} />
       </div>
     );
@@ -205,7 +214,7 @@ export default function BlogResultArea({
   // ── (3) 결과 표시 ──
   if (generatedContent) {
     return (
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0" onClick={onResultClick}>
         <ContentAnalysisPanel html={generatedContent} keyword={topic?.split(',')[0]?.trim()} />
         {seoReport ? (
           <SeoDetailPanel report={seoReport} />
@@ -275,7 +284,7 @@ export default function BlogResultArea({
 
   // ── (4) 빈 상태 (empty) ──
   return (
-    <div className="flex-1 min-w-0">
+    <div className="flex-1 min-w-0" onClick={onResultClick}>
       <div className="rounded-2xl border border-slate-200 bg-white shadow-[0_2px_16px_rgba(0,0,0,0.06)] flex-1 min-h-[520px] overflow-hidden flex flex-col">
         <div className="flex items-center gap-1 px-4 py-2.5 border-b border-slate-100 bg-slate-50/80">
           {['B', 'I', 'U'].map(t => (
