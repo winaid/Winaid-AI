@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase, supabaseAdmin } from '@winaid/blog-core';
 import { checkAuth } from '../../../../lib/apiAuth';
 import { resolveImageOwner } from '../../../../lib/serverAuth';
+import { verifyAdminCookie } from '../../../../lib/adminCookie';
 import { STORAGE_BUCKET } from '../../../../lib/hospitalImageService';
 import type { HospitalImage } from '../../../../lib/hospitalImageService';
 
@@ -16,19 +17,20 @@ export async function DELETE(request: NextRequest, ctx: Ctx) {
   if (auth) return auth;
 
   const owner = await resolveImageOwner(request);
+  const isAdmin = verifyAdminCookie(request).valid;
   const { id } = await ctx.params;
   // checkAuth 통과 + .eq('user_id', owner) 로 소유권 강제. RLS 우회.
+  // 🛑 INVARIANT §3 — admin 은 모든 이미지 삭제 가능 (user_id 필터 skip).
   const db = supabaseAdmin ?? supabase;
 
-  // soft delete: is_deleted=true 로 표시만. 파일 물리 삭제는 관리자 전용 cleanup 작업
-  // (별도). 기존 블로그의 <img src> 는 Storage 파일 유지되므로 계속 유효.
-  const { data: updated, error } = await db
+  // soft delete: is_deleted=true 로 표시만. 파일 물리 삭제는 관리자 전용 cleanup 작업.
+  let query = db
     .from('hospital_images')
     .update({ is_deleted: true, updated_at: new Date().toISOString() })
     .eq('id', id)
-    .eq('user_id', owner)
-    .eq('is_deleted', false)
-    .select();
+    .eq('is_deleted', false);
+  if (!isAdmin) query = query.eq('user_id', owner);
+  const { data: updated, error } = await query.select();
 
   if (error) {
     console.error(`[hospital-images/DELETE] update failed: ${error.message}`);
@@ -49,22 +51,19 @@ export async function PATCH(request: NextRequest, ctx: Ctx) {
   if (auth) return auth;
 
   const owner = await resolveImageOwner(request);
+  const isAdmin = verifyAdminCookie(request).valid;
   const { id } = await ctx.params;
   const body = (await request.json()) as { tags?: string[]; altText?: string };
-  // checkAuth 통과 + .eq('user_id', owner) 로 소유권 강제. RLS 우회.
+  // 🛑 INVARIANT §3 — admin 은 모든 이미지 수정 가능 (user_id 필터 skip).
   const db = supabaseAdmin ?? supabase;
 
   const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
   if (Array.isArray(body.tags)) updates.tags = body.tags;
   if (typeof body.altText === 'string') updates.alt_text = body.altText;
 
-  const { data: row, error } = await db
-    .from('hospital_images')
-    .update(updates)
-    .eq('id', id)
-    .eq('user_id', owner)
-    .select()
-    .single();
+  let query = db.from('hospital_images').update(updates).eq('id', id);
+  if (!isAdmin) query = query.eq('user_id', owner);
+  const { data: row, error } = await query.select().single();
 
   if (error) return NextResponse.json({ error: '수정 실패' }, { status: 500 });
   if (!row) {

@@ -3,7 +3,13 @@ import { devLog } from '../../../../lib/devLog';
 import { supabase, supabaseAdmin } from '@winaid/blog-core';
 import { checkAuth } from '../../../../lib/apiAuth';
 import { resolveImageOwner } from '../../../../lib/serverAuth';
+import { verifyAdminCookie } from '../../../../lib/adminCookie';
 import { ALLOWED_MIME_TYPES, MAX_FILE_SIZE, STORAGE_BUCKET, mimeToExt } from '../../../../lib/hospitalImageService';
+
+// 🛑 INVARIANT §3 — admin (admin_session cookie) 은 Bearer 없으니 owner='guest' 반환.
+//   hospital_images.user_id 컬럼은 UUID — admin 액션을 NIL UUID 로 저장해 내부 풀에 합류.
+//   내부 직원 풀 공유 정책이므로 모든 로그인 사용자가 조회 가능.
+const ADMIN_NIL_UUID = '00000000-0000-0000-0000-000000000000';
 
 export const maxDuration = 30;
 export const dynamic = 'force-dynamic';
@@ -20,14 +26,14 @@ export async function POST(request: NextRequest) {
     const auth = await checkAuth(request);
     if (auth) return auth;
 
-    // userId 는 Bearer 토큰에서 도출 (audit CR-1). client formData.userId 신뢰 차단 —
-    // 다른 user 로 위장해 storage path / DB row.user_id 점유하던 surface 차단.
-    // public-app mirror 는 이미 resolveImageOwner 사용 중 (PR #93).
+    // userId 는 Bearer 토큰에서 도출. admin (admin_session cookie) 은 Bearer 없음
+    // 이라 NIL UUID 로 대체 — INVARIANTS §3 (admin 모든 기능 사용 가능).
     const owner = await resolveImageOwner(request);
-    if (owner === 'guest') {
+    const isAdmin = verifyAdminCookie(request).valid;
+    if (owner === 'guest' && !isAdmin) {
       return NextResponse.json({ error: 'auth_required' }, { status: 401 });
     }
-    const userId = owner;
+    const userId = owner === 'guest' ? ADMIN_NIL_UUID : owner;
 
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
