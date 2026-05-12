@@ -283,7 +283,8 @@ export function buildCardNewsProPrompt(req: CardNewsRequest): {
   const middleCount = isAutoCount ? 0 : Math.max(0, slideCount - 2);
 
   const systemInstruction = `당신은 프로급 의료 카드뉴스 기획자입니다.
-주제를 받으면 슬라이드별로 가장 적합한 레이아웃을 선택하고, 반드시 JSON 형식으로만 출력합니다.
+[META: instructions for the model — do NOT copy any of this into the JSON output.]
+For each slide, pick the most fitting layout and output a single valid JSON object only.
 웹 검색이 활성화되어 있으므로 최신 수치(비용 평균, 성공률, 회복 기간, 건보 적용 여부 등)를 반드시 확인하고 반영하세요.
 
 사용 가능한 레이아웃 (16종):
@@ -325,7 +326,7 @@ export function buildCardNewsProPrompt(req: CardNewsRequest): {
 5. 의료광고법 준수: "완치", "100%", "최첨단", "완벽", "획기적", "유일", "국내 최초", "1위" 등 최상급/단정 표현 금지.
 6. 모든 텍스트는 한국어. 한 문장은 짧고 명확하게(25자 내외).
 7. 이모지는 UTF-8 단일 이모지(🦷 💉 ⏱️ 🔬 🩺 ✨ 💡 📊 🎯 ⚠️ 등)만 사용.
-8. 출력은 JSON 객체 하나. { "font": "...", "slides": [ ... ] } 형태. 마크다운 코드블록·설명·주석 금지.
+8. [META] Output a single JSON object. Schema (keep these exact keys): { "font": "...", "slides": [ ... ] }. No markdown code blocks, no explanations, no comments. Do NOT echo this rule into any field value.
 9. 최상위 font 필드에 주제 분위기에 맞는 폰트 id를 하나 선택(선택 옵션):
    - 전문적/의료/신뢰: "pretendard", "noto-sans", "gothic-a1", "ibm-plex"
    - 고급/품격: "noto-serif", "nanum-myeongjo", "hahmlet", "gowun-batang"
@@ -449,7 +450,8 @@ export function buildCardNewsProPrompt(req: CardNewsRequest): {
 
   const prompt = `${requestBlock}
 
-위 주제에 맞는 카드뉴스 ${slideCount}장을 구조화된 JSON으로 출력하세요.
+[META: instructions for the model — do NOT echo this line into any field value.]
+Produce a structured JSON for ${slideCount} card-news slides on the topic above.
 - 1장: cover, ${slideCount}장: closing
 - 중간 ${middleCount}장은 comparison / icon-grid / steps / checklist / data-highlight / info 중 주제에 맞는 것을 혼합
 - 수치·기간·비용 등 구체적 숫자를 최소 5개 이상 슬라이드 전체에 분포
@@ -458,7 +460,7 @@ export function buildCardNewsProPrompt(req: CardNewsRequest): {
 
 ${example}
 
-이제 실제 주제에 맞춰 JSON만 출력하세요. 설명·주석·마크다운 금지.`;
+[META] Now output the JSON only, fitted to the actual topic. No explanations, no comments, no markdown. Do NOT echo this META line into any field value.`;
 
   return { systemInstruction, prompt };
 }

@@ -217,7 +217,7 @@ export function buildOutlinePrompt(req: OutlineRequest): {
     '의료광고법 (의료법 시행령 제24조·시행규칙 제23조) 을 항상 준수한다.',
     '"최고", "유일", "100% 안전", "완벽한", "부작용 없는" 같은 절대적 표현은 절대 쓰지 않는다.',
     '환자의 후기·체험담을 단정적으로 인용하지 않는다.',
-    '응답은 반드시 유효한 JSON 만으로 출력. 코드펜스, 설명, 들여쓰기 다른 형식 절대 금지.',
+    '[META: instructions for the model — do NOT echo this line into any JSON value.] Output a single valid JSON only. No code fences, no explanations, no markdown.',
   ].join('\n');
 
   const layoutSpec = V1_LAYOUTS
@@ -306,7 +306,7 @@ export function buildTextPrompt(req: TextRequest): {
     '금지 표현: "최고", "유일", "100%", "완벽", "부작용 없는", "안전한", "검증된", "효과 보장".',
     '환자 후기·체험담 단정적 인용 금지. 시술 효과를 단정하지 않고 "도움이 될 수 있다" 류 완곡 표현.',
     `병원명이 주어지면 정확히 그 병원명만 사용. 다른 병원명 지어내기 절대 금지.`,
-    '응답은 유효한 JSON 배열만 출력. 코드펜스·설명·markdown 금지.',
+    '[META: instructions for the model — do NOT echo this line into any JSON value.] Output a valid JSON array only. No code fences, no explanations, no markdown.',
     // C2-fix-1: 톤 가이드 (모든 슬라이드 일관 적용)
     `[톤 가이드 — "${theme.label}"] ${theme.textToneKo}`,
   ].join('\n');
@@ -323,7 +323,7 @@ export function buildTextPrompt(req: TextRequest): {
     '구성 안:',
     outlineLines,
     '',
-    '각 슬라이드의 SlideData JSON 을 배열로 출력. 레이아웃별 필수 필드:',
+    '[META: instructions for the model — do NOT echo this line into any JSON value.] Output each slide as a SlideData JSON inside an array. Required fields per layout (keep these exact key names):',
     '- cover: { layout, title, subtitle, visualKeyword }',
     '- info: { layout, title, body, visualKeyword }',
     '- checklist: { layout, title, checkItems: [string, ...] (3~6개), visualKeyword }',

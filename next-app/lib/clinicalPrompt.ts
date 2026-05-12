@@ -181,9 +181,10 @@ ${doctorRef}이 직접 쓰는 1인칭 시점.
 
 ${getMedicalLawPromptBlock(true)}
 
-[출력 형식]
-순수 HTML(<h3>, <p>, <ul>, <li>, <table>, <strong>)로 출력.
-<h1>, <h2> 금지. <h3>만 사용. 마크다운 금지.`;
+[META: instructions for the model — do NOT copy any of this into the generated content.]
+Output: HTML only. Allowed tags: <h3>, <p>, <ul>, <li>, <table>, <strong>.
+**Use <h3> for all subheadings. <h1>, <h2> are forbidden. No markdown.**
+Do NOT echo this block into the output body. The article body itself must be written in Korean.`;
 
   const promptParts: string[] = [];
 
@@ -253,13 +254,14 @@ ${getMedicalLawPromptBlock(true)}
   // 출력 형식
   promptParts.push(
     '',
-    '[출력]',
-    '1. HTML 본문 작성',
+    '[META: instructions for the model — do NOT echo any of the bullets below into the body.]',
+    '[Output checklist]',
+    '1. Write the HTML body (in Korean).',
     req.imageCount > 0
-      ? `   [CLINICAL_IMG_1]~[CLINICAL_IMG_${req.imageCount}] 마커 배치 (앞뒤 연결 문장 필수)`
+      ? `   Place [CLINICAL_IMG_1]~[CLINICAL_IMG_${req.imageCount}] markers (each surrounded by connector sentences).`
       : '',
-    '2. 출처 블록 마지막에 포함',
-    '3. 자가평가 점수:',
+    '2. Append the source block at the end.',
+    '3. Self-evaluation scores:',
     '',
     '---SCORES---',
     '{"accuracy": [0~100], "depth": [0~100], "readability": [0~100]}',
