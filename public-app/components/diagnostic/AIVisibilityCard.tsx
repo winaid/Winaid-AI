@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { AIVisibility, AIPlatform, MeasurementData } from '../../lib/diagnostic/types';
+import { authFetch } from '../../lib/authFetch';
 
 // ── 출처·본문 파싱 유틸 ────────────────────────────────────
 // 서버는 프롬프트 최소화로 원본 그대로를 돌려주니 클라이언트에서 마크다운을 정리한다.
@@ -354,6 +355,8 @@ interface AIVisibilityCardProps {
   selfUrl: string;
   /** C+B 강화안: 실측 완료 시 부모에게 결과 전달 (해설 갱신 버튼 활성화용) */
   onMeasurementDone?: (platform: AIPlatform, data: MeasurementData) => void;
+  /** Phase 3: 4가지 패턴 쿼리 — 진단 응답의 availableQueries. 없으면 단일 입력 모드 */
+  availableQueries?: { id: string; label: string; query: string }[];
 }
 
 type StreamState =
@@ -388,6 +391,28 @@ const PLATFORM_META: Record<AIVisibility['platform'], { emoji: string; buttonCls
 
 const MAX_QUERY_LEN = 100;
 
+// ── 전역 throttle (Phase 3 다중 쿼리 worst-case 차단, #144 후속) ──────────────
+// 동일 페이지 내 여러 AIVisibilityCard 인스턴스가 동시 클릭되면
+// 카드별 max_tokens 3000 × N 으로 6000 TPM 한도 초과 → 429.
+// PR #144 의 backoff 만으론 reservation 폭주를 막지 못해, 클라이언트에서
+// "동시 1개 stream" 정책으로 단순 차단. 다중 탭 / reload 케이스는 backoff 의존.
+let globalInFlight = 0;
+const inFlightSubscribers = new Set<() => void>();
+function notifyInFlight() {
+  inFlightSubscribers.forEach((fn) => fn());
+}
+function useGlobalInFlight(): number {
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const cb = () => setTick((n) => n + 1);
+    inFlightSubscribers.add(cb);
+    return () => {
+      inFlightSubscribers.delete(cb);
+    };
+  }, []);
+  return globalInFlight;
+}
+
 function formatTimestamp(iso: string): string {
   try {
     const d = new Date(iso);
@@ -401,12 +426,19 @@ function formatTimestamp(iso: string): string {
   }
 }
 
-export default function AIVisibilityCard({ visibility, siteName, selfUrl, onMeasurementDone }: AIVisibilityCardProps) {
+export default function AIVisibilityCard({ visibility, siteName, selfUrl, onMeasurementDone, availableQueries }: AIVisibilityCardProps) {
   const meta = LIKELIHOOD_META[visibility.likelihood];
   const pm = PLATFORM_META[visibility.platform];
 
   const [state, setState] = useState<StreamState>({ phase: 'idle' });
   const [customQueryInput, setCustomQueryInput] = useState('');
+  const inFlight = useGlobalInFlight();
+  /** 본 카드가 현재 보유한 throttle slot — 해제 누락 방지용 ref. */
+  const ownedSlotRef = useRef(false);
+  // Phase 3: 다중 쿼리 선택 (드롭다운). 기본값 'recommend'. customQuery 입력하면 무시.
+  const [selectedQueryId, setSelectedQueryId] = useState<string>(
+    availableQueries?.[0]?.id ?? 'recommend',
+  );
   const [sourcesExpanded, setSourcesExpanded] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   /** 네트워크 drop 자동 재시도 횟수 — 1회만 허용. reset 시 0 으로 초기화. */
@@ -422,8 +454,21 @@ export default function AIVisibilityCard({ visibility, siteName, selfUrl, onMeas
         clearTimeout(autoRetryTimerRef.current);
         autoRetryTimerRef.current = null;
       }
+      // 보유 중인 throttle slot 해제 (unmount 누수 방지)
+      if (ownedSlotRef.current) {
+        ownedSlotRef.current = false;
+        globalInFlight = Math.max(0, globalInFlight - 1);
+        notifyInFlight();
+      }
     };
   }, []);
+
+  function releaseSlot() {
+    if (!ownedSlotRef.current) return;
+    ownedSlotRef.current = false;
+    globalInFlight = Math.max(0, globalInFlight - 1);
+    notifyInFlight();
+  }
 
   const friendlyFailureText =
     visibility.platform === 'ChatGPT'
@@ -431,6 +476,10 @@ export default function AIVisibilityCard({ visibility, siteName, selfUrl, onMeas
       : '이번엔 실측 답변을 받지 못했습니다. 잠시 후 다시 시도해 주세요.';
 
   async function startStream() {
+    // 전역 throttle: 다른 카드가 stream 중이면 무시 (worst case 12000 reservation 차단).
+    // 본 카드가 자동 재시도 등으로 이미 slot 보유 중이면 통과.
+    if (!ownedSlotRef.current && globalInFlight > 0) return;
+
     const trimmed = customQueryInput.trim().slice(0, MAX_QUERY_LEN);
 
     // 이전 in-flight 가 있으면 중단
@@ -438,16 +487,27 @@ export default function AIVisibilityCard({ visibility, siteName, selfUrl, onMeas
     const controller = new AbortController();
     abortRef.current = controller;
 
-    setState({ phase: 'streaming', query: trimmed || '…', answerText: '' });
+    // throttle slot 획득 (이미 보유 중이면 idempotent)
+    if (!ownedSlotRef.current) {
+      ownedSlotRef.current = true;
+      globalInFlight += 1;
+      notifyInFlight();
+    }
+
+    // Phase 3: customQuery 가 있으면 그것 사용, 없으면 selectedQueryId 의 쿼리 텍스트 표시
+    const selectedQuery = availableQueries?.find((q) => q.id === selectedQueryId)?.query;
+    const displayQuery = trimmed || selectedQuery || '…';
+    setState({ phase: 'streaming', query: displayQuery, answerText: '' });
 
     try {
-      const res = await fetch('/api/diagnostic/stream', {
+      const res = await authFetch('/api/diagnostic/stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           url: selfUrl,
           customQuery: trimmed || undefined,
           platform: visibility.platform,
+          ...(trimmed ? {} : { queryId: selectedQueryId }),
         }),
         signal: controller.signal,
       });
@@ -543,22 +603,35 @@ export default function AIVisibilityCard({ visibility, siteName, selfUrl, onMeas
             }));
             // C+B 강화안: 부모에게 실측 결과 전달 (해설 갱신 버튼 활성화용)
             // Tier 3-B: topResultUrls 추출 (경쟁사 GAP 자동 채움용)
-            const topUrls = (Array.isArray(payload.topResults) ? payload.topResults : [])
-              .filter((r: { url?: string }) => typeof r?.url === 'string')
-              .map((r: { url: string }) => r.url)
+            // Phase 3: title/domain/rank 포함 full topResults 도 함께 전달 (자동 경쟁사 카드용)
+            const rawResults = Array.isArray(payload.topResults) ? payload.topResults : [];
+            const fullResults = rawResults
+              .filter((r: { url?: string; title?: string; domain?: string; rank?: number }) =>
+                typeof r?.url === 'string' && typeof r?.domain === 'string',
+              )
+              .map((r: { url: string; title?: string; domain: string; rank?: number }, i: number) => ({
+                url: r.url,
+                title: typeof r.title === 'string' ? r.title : r.domain,
+                domain: r.domain,
+                rank: typeof r.rank === 'number' ? r.rank : i + 1,
+              }))
               .slice(0, 5);
+            const topUrls = fullResults.map((r: { url: string }) => r.url);
             onMeasurementDone?.(visibility.platform as AIPlatform, {
               selfIncluded: !!payload.selfIncluded,
               selfRank: typeof payload.selfRank === 'number' ? payload.selfRank : null,
               queryUsed: trimmed || '(자동)',
               answerText: typeof payload.answerText === 'string' ? payload.answerText : '',
               topResultUrls: topUrls.length > 0 ? topUrls : undefined,
+              topResults: fullResults.length > 0 ? fullResults : undefined,
             });
+            releaseSlot();
           } else if (payload.type === 'error') {
             setState({
               phase: 'error',
               message: typeof payload.message === 'string' ? payload.message : 'unknown',
             });
+            releaseSlot();
           }
         }
       }
@@ -594,10 +667,13 @@ export default function AIVisibilityCard({ visibility, siteName, selfUrl, onMeas
         }
         return prev;
       });
+      // 안전망 종료 후 slot 해제 (이중 호출 idempotent)
+      releaseSlot();
     } catch (e) {
       if ((e as Error).name === 'AbortError') {
         // 사용자가 중단 — idle 로 복귀 (검색어 입력은 유지)
         setState({ phase: 'idle' });
+        releaseSlot();
       } else {
         const msg = (e as Error)?.message?.slice(0, 200) || '실측 중 오류가 발생했습니다.';
         // 네트워크 drop 등 비-Abort 예외 → 1회만 자동 재시도 (600ms 후)
@@ -607,10 +683,12 @@ export default function AIVisibilityCard({ visibility, siteName, selfUrl, onMeas
           if (autoRetryTimerRef.current) clearTimeout(autoRetryTimerRef.current);
           autoRetryTimerRef.current = setTimeout(() => {
             autoRetryTimerRef.current = null;
+            // 자동 재시도는 기존 slot 유지 (ownedSlotRef.current === true)
             startStream();
           }, 600);
         } else {
           setState({ phase: 'error', message: msg });
+          releaseSlot();
         }
       }
     }
@@ -618,6 +696,9 @@ export default function AIVisibilityCard({ visibility, siteName, selfUrl, onMeas
 
   function cancel() {
     abortRef.current?.abort();
+    // abort 후 catch 의 AbortError 분기에서도 release 하지만,
+    // 사용자 인지된 즉시 해제로 다른 카드 재활성 시점 단축.
+    releaseSlot();
   }
 
   function reset() {
@@ -629,6 +710,7 @@ export default function AIVisibilityCard({ visibility, siteName, selfUrl, onMeas
     retryCountRef.current = 0;
     setSourcesExpanded(false);
     setState({ phase: 'idle' });
+    releaseSlot();
   }
 
   return (
@@ -681,30 +763,57 @@ export default function AIVisibilityCard({ visibility, siteName, selfUrl, onMeas
       <div className="border-t border-slate-100 bg-slate-50/50 px-5 py-4 flex flex-col">
         {state.phase === 'idle' && (
           <div>
+            {availableQueries && availableQueries.length > 1 && !customQueryInput.trim() && (
+              <div className="mb-2">
+                <label
+                  htmlFor={`diag-query-pattern-${visibility.platform}`}
+                  className="block text-[11px] font-bold text-slate-600 mb-1"
+                >
+                  📋 쿼리 패턴 <span className="font-normal text-slate-400">(자동 추천)</span>
+                </label>
+                <select
+                  id={`diag-query-pattern-${visibility.platform}`}
+                  value={selectedQueryId}
+                  onChange={(e) => setSelectedQueryId(e.target.value)}
+                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
+                >
+                  {availableQueries.map((q) => (
+                    <option key={q.id} value={q.id}>
+                      {q.label} — {q.query}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             <label
               htmlFor={`diag-stream-query-${visibility.platform}`}
               className="block text-[11px] font-bold text-slate-600 mb-1"
             >
-              🔍 실측 검색어 <span className="font-normal text-slate-400">(선택)</span>
+              🔍 직접 입력 <span className="font-normal text-slate-400">(선택, 입력 시 위 패턴 무시)</span>
             </label>
             <input
               id={`diag-stream-query-${visibility.platform}`}
               type="text"
               value={customQueryInput}
               onChange={(e) => setCustomQueryInput(e.target.value)}
-              placeholder="예: 안산 치과 추천 (비우면 자동 추출)"
+              placeholder="예: 안산 치과 추천 (비우면 위 패턴 사용)"
               maxLength={MAX_QUERY_LEN}
               className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 mb-2"
             />
             <button
               type="button"
               onClick={startStream}
-              className={`w-full px-4 py-2.5 rounded-lg text-sm font-bold text-white ${pm.buttonCls} transition-colors`}
+              disabled={inFlight > 0 && !ownedSlotRef.current}
+              className={`w-full px-4 py-2.5 rounded-lg text-sm font-bold text-white ${pm.buttonCls} transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
             >
-              {pm.emoji} {visibility.platform} 로 실측하기
+              {inFlight > 0 && !ownedSlotRef.current
+                ? '⏳ 다른 카드 실측 중…'
+                : `${pm.emoji} ${visibility.platform} 로 실측하기`}
             </button>
             <p className="mt-2 text-[10px] text-slate-400 leading-relaxed">
-              클릭하면 {visibility.platform} 에 실제로 물어본 답변을 실시간으로 보여줍니다. 약 30~90초 소요.
+              {inFlight > 0 && !ownedSlotRef.current
+                ? 'TPM 한도 보호를 위해 한 번에 한 카드만 실측합니다. 잠시 기다려 주세요.'
+                : `클릭하면 ${visibility.platform} 에 실제로 물어본 답변을 실시간으로 보여줍니다. 약 30~90초 소요.`}
             </p>
           </div>
         )}
