@@ -123,6 +123,31 @@ function applyIssuesPatch(
   return { html: result, applied, skipped, noMatchQuotes };
 }
 
+/**
+ * 최상단으로 robust 스크롤 — next-app 의 동일 헬퍼와 1:1 미러 (PR #162 후속).
+ * dashboard layout 이 <main> 에 별도 overflow-y:auto 를 두면 window.scrollTo 무효 →
+ * documentElement / body / <main> / 임의 scrollable ancestor 모두 0 으로.
+ */
+function scrollDashboardToTop(): void {
+  if (typeof window === 'undefined') return;
+  try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch { /* noop */ }
+  if (document.documentElement) document.documentElement.scrollTop = 0;
+  if (document.body) document.body.scrollTop = 0;
+  const main = document.querySelector('main');
+  if (main && main.scrollTop > 0) main.scrollTop = 0;
+  const blogResult = document.getElementById('blog-result');
+  if (blogResult) {
+    let parent: HTMLElement | null = blogResult.parentElement;
+    while (parent && parent !== document.body) {
+      const overflow = window.getComputedStyle(parent).overflowY;
+      if ((overflow === 'auto' || overflow === 'scroll') && parent.scrollTop > 0) {
+        parent.scrollTop = 0;
+      }
+      parent = parent.parentElement;
+    }
+  }
+}
+
 function BlogForm() {
   const creditCtx = useCreditContext();
   const searchParams = useSearchParams();
@@ -987,8 +1012,8 @@ JSON 형식으로 응답해주세요.`;
     e.preventDefault();
     if (!topic.trim() || isGenerating) return;
 
-    // 자동 스크롤 먼저 — setState 후엔 리렌더링이 layout 을 바꿔 smooth scroll 이 중단되는 케이스 방지.
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // 자동 스크롤 먼저 — 다중 fallback (PR #162: 일부 환경에서 window.scrollTo 무효 회귀).
+    scrollDashboardToTop();
 
     // 즉시 UI 인디케이터 ON — 자동 제목 LLM(1~3초) 동안 사용자가 idle 로 인지해
     // 다시 클릭하던 회귀 차단 + isGenerating 가드로 두 번 클릭 자체 막힘.

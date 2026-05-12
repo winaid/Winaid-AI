@@ -85,6 +85,42 @@ function applyIssuesPatch(
   return { html: result, applied, skipped, noMatchQuotes };
 }
 
+/**
+ * 최상단으로 robust 스크롤 — 글쓰기 클릭 시 호출.
+ *
+ * dashboard layout 이 <main> 에 별도 overflow-y:auto 를 두면 window.scrollTo 는
+ * 무효. 다중 fallback 으로 모든 환경 커버:
+ *   1) window.scrollTo (일반 케이스)
+ *   2) documentElement / body scrollTop = 0 (Safari + 일부 환경)
+ *   3) dashboard <main> overflow 컨테이너 (있으면) scrollTop = 0
+ *   4) BlogForm 의 가장 가까운 scrollable ancestor (안전망)
+ *
+ * smooth animation 차단 케이스 회피 위해 'auto' 도 즉시 한 번 호출, 그 후 smooth.
+ */
+function scrollDashboardToTop(): void {
+  if (typeof window === 'undefined') return;
+  // 1) 일반
+  try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch { /* noop */ }
+  // 2) documentElement / body — Safari fallback
+  if (document.documentElement) document.documentElement.scrollTop = 0;
+  if (document.body) document.body.scrollTop = 0;
+  // 3) dashboard <main> 컨테이너 (overflow-y:auto 인 경우)
+  const main = document.querySelector('main');
+  if (main && main.scrollTop > 0) main.scrollTop = 0;
+  // 4) 임의 scrollable ancestor — overflow auto/scroll 보유한 부모 찾기
+  const blogResult = document.getElementById('blog-result');
+  if (blogResult) {
+    let parent: HTMLElement | null = blogResult.parentElement;
+    while (parent && parent !== document.body) {
+      const overflow = window.getComputedStyle(parent).overflowY;
+      if ((overflow === 'auto' || overflow === 'scroll') && parent.scrollTop > 0) {
+        parent.scrollTop = 0;
+      }
+      parent = parent.parentElement;
+    }
+  }
+}
+
 function BlogForm() {
   const creditCtx = useCreditContext();
   const searchParams = useSearchParams();
@@ -962,7 +998,10 @@ JSON 형식으로 응답해주세요.`;
     if (!topic.trim() || isGenerating) return;
 
     // 자동 스크롤 먼저 — setState 후엔 리렌더링이 layout 을 바꿔 smooth scroll 이 중단되는 케이스 방지.
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // 다중 fallback: window + documentElement + body + dashboard <main> 컨테이너.
+    // dashboard layout 이 <main> 에 별도 overflow-y:auto 를 두면 window.scrollTo 가
+    // 무효 — 그 경우에도 <main> 의 scrollTop=0 으로 안전망.
+    scrollDashboardToTop();
 
     // 즉시 UI 인디케이터 ON — 자동 제목 LLM(1~3초) 동안 사용자가 idle 로 인지해
     // 다시 클릭하던 회귀 차단 + isGenerating 가드로 두 번 클릭 자체 막힘.
@@ -1083,7 +1122,7 @@ JSON 형식으로 응답해주세요.`;
 
     // 렌더 사이클 이후 확실히 최상단 이동 (state 업데이트로 인한 레이아웃 변화 후)
     requestAnimationFrame(() => {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      scrollDashboardToTop();
     });
 
     // ── 로그: 요청 시작 ──
@@ -1598,10 +1637,16 @@ JSON 형식으로 응답해주세요.`;
               };
 
               for (const marker of imgMarkers) {
-                const [fullMatch, num, altText] = marker;
-                // 마커 alt 텍스트 한국어 명사도 키워드로 추가
-                const altKeywords = altText.split(/[\s,]+/).filter(w => w.length >= 2);
-                const coreKeywords = [...new Set([...baseCoreKeywords, ...altKeywords])];
+                const [fullMatch, num, markerAlt] = marker;
+                // 매칭 키워드: topic + disease 만 사용 (baseCoreKeywords).
+                // markerAlt = LLM 이 작성한 이미지 생성용 영문 prompt (alt 텍스트).
+                // 이전엔 alt 의 영어 단어를 매칭 키워드에 합쳤지만(implant/wisdom/
+                // whitening 등) 그러면 주제와 무관한 이미지가 잡힘 — 예: 스케일링
+                // 글이라도 LLM alt 에 "implant" 가 들어가면 임플란트 이미지 매칭.
+                // PR #154 의 score>0 임계치도 이 경우엔 무력화됨.
+                // → markerAlt 는 매칭 키워드로 쓰지 않고, HTML <img alt="..."> 의
+                //   fallback (라이브러리 이미지의 altText 가 비었을 때) 으로만 사용.
+                const coreKeywords = baseCoreKeywords;
 
                 // 1차: 아직 사용되지 않은 이미지에서 best match
                 let candidates = libraryImages
@@ -1627,7 +1672,7 @@ JSON 형식으로 응답해주세요.`;
                   const best = bestCandidate.img;
                   blogText = blogText.replace(
                     fullMatch,
-                    `<img src="${best.publicUrl}" alt="${best.altText || altText}" data-image-index="${num}" style="max-width:100%;border-radius:12px;" />`,
+                    `<img src="${best.publicUrl}" alt="${best.altText || markerAlt}" data-image-index="${num}" style="max-width:100%;border-radius:12px;" />`,
                   );
                   usedIds.add(best.id);
                   matched++;
@@ -2630,8 +2675,13 @@ Output ONLY the prompt. No explanation.`;
 
       {/* ── 결과 영역 — BlogResultArea 컴포넌트로 분리 ── */}
       <div id="blog-result" />
+      {/* onClick 이중 보장: wrapper (display:contents) + BlogResultArea root.
+          일부 환경에서 display:contents wrapper 의 클릭 hit-test 가 자식으로 가도
+          React onClick bubble 이 정상이지만, 환경에 따라 회귀 보고 발생 — 양쪽
+          모두 wiring 해 안전망. */}
       <div onClick={handleResultClick} style={{ display: 'contents' }}>
       <BlogResultArea
+        onResultClick={handleResultClick}
         isGenerating={isGenerating}
         displayStage={displayStage}
         rotationIdx={rotationIdx}
