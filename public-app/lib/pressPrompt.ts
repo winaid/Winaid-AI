@@ -179,8 +179,13 @@ ${getMedicalLawPromptBlock(true)}
 ❌ 블로그체: "레이저토닝은 기미 치료에 효과가 좋은 시술이에요. 한 번 받아보시면 차이를 느끼실 수 있습니다."
 ✅ 기사체: "레이저토닝은 1064nm 파장을 이용해 멜라닌 색소를 선택적으로 파괴하는 시술이다. 5~10회 반복 시술이 권장되며, 시술 후 자외선 차단이 필수적이라는 것이 전문가들의 공통된 견해다."
 
-[출력 형식 — HTML]
-반드시 아래 HTML 구조로 출력한다. 마크다운 금지.
+[META: instructions for the model — do NOT copy any of this into the generated content.]
+[Output format — HTML]
+Output must follow the exact HTML structure below. No markdown.
+Preserve every class name (e.g. press-release-container, press-title, press-body,
+press-footer, references-footer, press-disclaimer) as-is — downstream CSS depends on them.
+The article body itself must be written in Korean.
+Do NOT echo this META block into the output.
 <div class="press-release-container">
   <h1 class="press-title">제목</h1>
   <div class="press-body">
@@ -199,8 +204,8 @@ ${getMedicalLawPromptBlock(true)}
 
 전문의 인용 형식:
 <p>${hospitalName} ${req.category || ''} ${req.doctorName} ${req.doctorTitle}은 "인용문"이라고 설명했다.</p>
-⛔ blockquote 태그 사용 금지! <p> 태그 안에서 기사체로 인용!
-⛔ h2 부제 태그 출력 금지!
+[CRITICAL] blockquote tag forbidden! Wrap quotes inside <p> using reportorial Korean prose.
+[CRITICAL] Do NOT output any <h2> subheading tags.
 
 ${getTrustedSourcesPromptBlock(req.category)}
 ${PRESS_CATEGORY_GUIDES[req.category || ''] ? `\n[${req.category} 전문 용어 — 기사에 정확한 명칭 사용]\n${PRESS_CATEGORY_GUIDES[req.category || '']}` : ''}`;
