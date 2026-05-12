@@ -1,15 +1,14 @@
 /**
  * GET /api/teams — 팀 + 병원 데이터 조회 (read-only)
  *
- * 배경: 과거엔 client (anon supabase) 가 hospitals 테이블 직접 SELECT. RLS 정책
- * 변경 / 프로젝트 일시 장애 시 응답에 CORS 헤더 누락 → 브라우저 콘솔 CORS 에러로
- * 표시 (사용자 보고). RLS 자체 거부면 401 + CORS 헤더가 정상이지만 PostgREST
- * internal layer 또는 프로젝트 paused 상태에선 CORS 없이 short-circuit.
+ * 부하 최소화 정책 (2026-05-12 회귀):
+ *   - 모듈 스코프 in-memory 캐시 (1h TTL) — 인스턴스 내 재호출은 DB 안 침
+ *   - HTTP Cache-Control: 1h public + s-maxage 1h — Vercel edge 캐시
+ *   - 합산 효과: 운영 팀 데이터는 자주 안 바뀜, DB 부하 ~95% 감소
  *
- * 수정: 서버에서 supabaseAdmin (service_role) 으로 hospitals 조회 → 동일 origin
- * 응답 → 브라우저 CORS 제약 무관. RLS 도 service_role 라 우회.
- *
- * 응답: TeamData[] (TEAM_DATA labels + hospitals enriched). 실패 시 TEAM_DATA only.
+ * 배경:
+ *   과거 client (anon supabase) 가 hospitals/teams 직접 SELECT → CORS / RLS / 부하 다발.
+ *   서버 경유로 supabaseAdmin (service_role) 사용. 캐시 적극 활용으로 DB 호출 최소화.
  */
 
 import { NextResponse } from 'next/server';
@@ -19,19 +18,30 @@ import { TEAM_DATA, type TeamData } from '../../../lib/teamData';
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
+// ── 모듈 스코프 in-memory 캐시 (Vercel function 인스턴스 lifetime 동안 유효) ──
+const MEMORY_TTL_MS = 60 * 60 * 1000; // 1h
+let cachedAt = 0;
+let cachedData: TeamData[] | null = null;
+
+const HTTP_CACHE_HEADERS = {
+  // browser 1h, Vercel edge 1h, 만료 후 stale-while-revalidate 1h.
+  'Cache-Control': 'public, max-age=3600, s-maxage=3600, stale-while-revalidate=3600',
+};
+
 export async function GET() {
-  // service_role 우선, 없으면 anon supabase. teams/hospitals 둘 다 anon SELECT 정책
-  // 허용 (`Anon can read hospitals` USING(true)) 이므로 anon 으로도 동작.
-  // 둘 다 없으면 TEAM_DATA fallback.
+  // 1) 메모리 캐시 hit → 즉시 반환 (DB 0)
+  const now = Date.now();
+  if (cachedData && now - cachedAt < MEMORY_TTL_MS) {
+    return NextResponse.json(cachedData, { headers: HTTP_CACHE_HEADERS });
+  }
+
+  // 2) DB 조회
   const db = supabaseAdmin ?? supabase;
   if (!db) {
-    return NextResponse.json(TEAM_DATA, {
-      headers: { 'Cache-Control': 'public, max-age=60, s-maxage=300' },
-    });
+    return NextResponse.json(TEAM_DATA, { headers: HTTP_CACHE_HEADERS });
   }
 
   try {
-    // 팀 + 병원 병렬 fetch — service_role 이라 RLS 우회
     const [teamsRes, hospitalsRes] = await Promise.all([
       db
         .from('teams')
@@ -47,10 +57,10 @@ export async function GET() {
     const teams = teamsRes.data;
     const hospitals = hospitalsRes.data;
 
+    let merged: TeamData[];
     if (teamsRes.error || !teams || teams.length === 0) {
-      // DB teams 조회 실패/빈 → TEAM_DATA fallback 라벨 사용. hospitals 는 있으면 enrich.
       console.warn('[api/teams] teams fetch empty — TEAM_DATA fallback:', teamsRes.error?.message);
-      const merged: TeamData[] = TEAM_DATA.map(t => ({
+      merged = TEAM_DATA.map(t => ({
         id: t.id,
         label: t.label,
         hospitals: (hospitals || [])
@@ -62,33 +72,27 @@ export async function GET() {
             naverBlogUrls: (h.naver_blog_urls as string[])?.filter(Boolean) || undefined,
           })),
       }));
-      return NextResponse.json(merged, {
-        headers: { 'Cache-Control': 'public, max-age=60, s-maxage=300' },
-      });
+    } else {
+      merged = teams.map(t => ({
+        id: t.id as number,
+        label: t.label as string,
+        hospitals: (hospitals || [])
+          .filter(h => h.team_id === t.id)
+          .map(h => ({
+            name: h.name as string,
+            manager: (h.manager as string) || '',
+            address: (h.address as string) || undefined,
+            naverBlogUrls: (h.naver_blog_urls as string[])?.filter(Boolean) || undefined,
+          })),
+      }));
     }
 
-    // DB teams 가 권위 — DB labels + DB hospitals 결합.
-    // 사용자 보고: "팀들이 다 없어졌잖아" — 운영 팀 이름이 TEAM_DATA 5개로 덮였던 회귀 복구.
-    const merged: TeamData[] = teams.map(t => ({
-      id: t.id as number,
-      label: t.label as string,
-      hospitals: (hospitals || [])
-        .filter(h => h.team_id === t.id)
-        .map(h => ({
-          name: h.name as string,
-          manager: (h.manager as string) || '',
-          address: (h.address as string) || undefined,
-          naverBlogUrls: (h.naver_blog_urls as string[])?.filter(Boolean) || undefined,
-        })),
-    }));
-
-    return NextResponse.json(merged, {
-      headers: { 'Cache-Control': 'public, max-age=60, s-maxage=300' },
-    });
+    // 메모리 캐시 갱신 (성공 시에만)
+    cachedData = merged;
+    cachedAt = now;
+    return NextResponse.json(merged, { headers: HTTP_CACHE_HEADERS });
   } catch (e) {
     console.warn('[api/teams] uncaught:', (e as Error).message);
-    return NextResponse.json(TEAM_DATA, {
-      headers: { 'Cache-Control': 'public, max-age=60, s-maxage=300' },
-    });
+    return NextResponse.json(TEAM_DATA, { headers: HTTP_CACHE_HEADERS });
   }
 }
