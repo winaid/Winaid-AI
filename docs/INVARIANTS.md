@@ -92,4 +92,44 @@
 
 ---
 
+## 3. **next-app admin 로그인 흐름 자체 — 절대 건드리지 말 것**
+
+본 항목은 §2 (admin 무제한 사용) 의 **선결조건**. admin 로그인이 깨지면 §2 도 의미 없음. 변경 시 **즉시 prod 운영 중단**.
+
+**보호 대상 파일** (READ-ONLY 정신):
+- `next-app/lib/adminCookie.ts` — admin_session cookie 발급/검증, HMAC + 7일 expiry + HttpOnly + Secure + SameSite=Strict
+- `next-app/app/api/admin/login/route.ts` — password 로그인 + timing-safe + IP 분당 5회 rate limit
+- `next-app/lib/apiAuth.ts` `checkAuth()` — admin cookie OR Bearer 둘 다 허용
+- `next-app/lib/auth.ts` `signInWithTeam` / `signUpWithTeam` — 일반 사용자 로그인 (admin 도 supabase 세션 보유 시 영향)
+- `next-app/hooks/useAuthGuard.ts` — `localStorage.winaid_admin === 'true'` 인식 → `/auth` redirect 우회
+
+**왜 절대 안 건드리는가**:
+- 운영자 (admin) 가 prod 들어와서 디버깅·시연·데이터 점검·CS 응대를 할 수 없으면 회사 전체가 멈춤. 사용자 신고 응답 불가, 서비스 정상화 불가.
+- 로그인 흐름은 (1) admin_session cookie 발급 → (2) localStorage 힌트 set → (3) /auth redirect 우회 → (4) checkAuth 통과 → (5) routes 무차감 — **5단계 중 어느 하나라도 깨지면 admin 로그인 불가**.
+- 사용자가 명시: **"admin 로그인 하면 모든 기능 사용 가능해야 돼"** + **"앞으로 admin 로그인 건들면 죽인다"**.
+
+**규칙**:
+1. 위 5개 파일은 시니어 승인 + 명확한 이유 없으면 **건드리지 말 것**.
+2. 다른 라우트/페이지 추가 시 `checkAuth(request)` 사용 (Bearer 만 요구 금지).
+3. dashboard 페이지가 `user` 또는 `creditInfo` 가 null 일 때 기능을 가드하면 admin 차단 — `userId truthy` 확인 후 가드.
+4. 로그인 흐름 의존 함수에 `await` 길게 늘어뜨리지 말 것. profile/subscription upsert 등 supabase REST 호출은 **fire-and-forget** (PR #176 사례 참고 — await profile upsert 가 hung 되어 로그인 무한 로딩 회귀).
+5. admin_session cookie 검증 정책 변경 (만료, HMAC 키 rotation 등) 시 기존 발급 cookie 무효화 — 모든 admin 재로그인 필요. 반드시 사전 공지.
+
+**회귀 시 즉시 증상**:
+- /admin 페이지 password 입력 후 401 (cookie 발급 실패)
+- 로그인 후 /blog 진입 시 즉시 /auth 로 redirect (useAuthGuard 가 admin 인식 못함)
+- "로그인 중..." 무한 로딩 (profile upsert 가 await 됨 — PR #176 회귀 케이스)
+- /api/generate/* 가 admin 에게 `insufficient_credits` 응답 (§2 위반)
+
+**과거 회귀 사례**:
+- **PR #176** (`cff87938`, 2026-05-12): `signInWithTeam` 의 profile upsert 가 `await` 로 묶여 있어 Supabase REST hung 시 로그인 전체 hung. fire-and-forget 으로 복구. → 다음에도 await 추가 절대 금지.
+- **PR #171** (`ea8cd941`, 2026-05-12): admin 이 Bearer + admin cookie 둘 다 보유한 케이스에서 useCredit 차감 발생. 명시적 `isAdmin` 우회 가드 추가. → routes 가 admin 가드 누락 시 즉시 회귀.
+
+**변경하려면**:
+- 사용자 (제품 오너) 의 명시적 GO 사인.
+- 변경 전 사용자가 운영 중단 가능한 시간대 확인.
+- 변경 후 즉시 admin 로그인 5분 테스트 (cookie 발급 → dashboard 진입 → 글쓰기 1건 → 이미지 1장 → 로그아웃).
+
+---
+
 <!-- 새 invariant 추가 시 위 형식으로 append. -->
