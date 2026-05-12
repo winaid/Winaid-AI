@@ -13,19 +13,18 @@ const writeDb = () => supabaseAdmin ?? supabase;
 
 // ── 조회 ──
 
-/** DB에서 팀+병원 전체 로드. 실패/빈 결과 시 teamData.ts fallback */
+/** DB에서 팀+병원 전체 로드. 팀 라벨은 TEAM_DATA fallback 항상 권위 — 회귀 차단.
+ *
+ * 사용자 보고: "팀이 왜 없어졌어" — DB `teams` 테이블에서 row 가 사라지거나 RLS
+ * 변경으로 빈 결과가 반환되면 드롭다운에서 팀 자체가 사라져 로그인 불가.
+ * 수정: `teams` 테이블 의존 제거. TEAM_DATA fallback (본부장님/1팀/2팀/3팀/콘텐츠팀)
+ * 을 권위로 두고 DB `hospitals` row 만 enrich. 새 팀 추가 시 본 fallback 도 함께
+ * 갱신해야 함 (1줄 commit 으로 처리).
+ */
 export async function getTeamDataFromDB(): Promise<TeamData[]> {
   if (!supabase) return TEAM_DATA;
 
   try {
-    // 팀
-    const { data: teams, error: teamErr } = await supabase
-      .from('teams')
-      .select('id, label, sort_order')
-      .order('sort_order', { ascending: true });
-    if (teamErr || !teams || teams.length === 0) return TEAM_DATA;
-
-    // 병원
     const { data: hospitals, error: hospErr } = await supabase
       .from('hospitals')
       .select('id, team_id, name, manager, address, naver_blog_urls, is_active')
@@ -33,8 +32,8 @@ export async function getTeamDataFromDB(): Promise<TeamData[]> {
       .order('created_at', { ascending: true });
     if (hospErr || !hospitals) return TEAM_DATA;
 
-    // TeamData[] 형태로 조립
-    return teams.map(t => ({
+    // TEAM_DATA labels 를 source of truth 로, DB hospitals 만 team_id 로 매핑.
+    return TEAM_DATA.map(t => ({
       id: t.id,
       label: t.label,
       hospitals: hospitals

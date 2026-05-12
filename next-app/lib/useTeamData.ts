@@ -21,10 +21,12 @@
 
 import { useEffect, useState } from 'react';
 import { getTeamDataFromDB } from './hospitalService';
-import type { TeamData } from './teamData';
+import { TEAM_DATA, type TeamData } from './teamData';
 
 export function useTeamData(): { teamData: TeamData[]; loading: boolean } {
-  const [teamData, setTeamData] = useState<TeamData[]>([]);
+  // 초기값을 TEAM_DATA fallback 으로 — 첫 렌더에서 드롭다운 비어 보이는 회귀 차단.
+  // DB 응답이 들어오면 enrich 된 결과로 교체 (라벨은 그대로, hospitals 만 채워짐).
+  const [teamData, setTeamData] = useState<TeamData[]>(TEAM_DATA);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
