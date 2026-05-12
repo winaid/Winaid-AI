@@ -38,12 +38,15 @@ export const REFINE_OPTIONS: { value: RefineMode; label: string; icon: string; d
 const MEDICAL_LAW_COMMON = getMedicalLawPromptBlock(true);
 
 // 변경점 표시 지침 (모든 모드에 추가)
+// [META: instructions for the model — do NOT copy any of this into the generated content.]
 const MARK_CHANGES = `
-[변경점 표시]
-수정한 부분을 <mark> 태그로 감싸주세요.
-- 새로 추가한 문장: <mark class="added">추가된 텍스트</mark>
-- 표현을 바꾼 부분: <mark class="changed">변경된 텍스트</mark>
-- 삭제는 그냥 삭제 (표시 불필요)`;
+[META instructions — do NOT echo this block into the output content.]
+[Change markers]
+Wrap edited spans with <mark> tags:
+- Newly added sentences: <mark class="added">...new text...</mark>
+- Rephrased spans:        <mark class="changed">...edited text...</mark>
+- Deletions: just remove (no marker needed).
+The article body itself must remain in Korean.`;
 
 const MODE_INSTRUCTIONS: Record<RefineMode, string> = {
   // ── 💬 더 자연스럽게 ──
@@ -274,7 +277,8 @@ export function buildRefinePrompt(req: RefineRequest): {
 - AI 느낌 금지: "일반적으로", "~라고 알려져 있습니다", "~에 대해 알아보겠습니다"
 - 접속부사 금지: "또한", "더불어", "아울러" → 내용 흐름으로 대체
 
-[출력] 순수 HTML(<p>, <h3>, <strong>, <em>)만. 마크다운/코드블록 금지.`;
+[META: instructions for the model — do NOT echo this line into the generated content.]
+[Output] Pure HTML only (<p>, <h3>, <strong>, <em>). No markdown, no code fences. Do NOT repeat this instruction inside any tag.`;
 
   const safeKeywords = sanitizePromptInput(req.keywords, 200);
   const safeOriginalText = sanitizeSourceContent(req.originalText, 15000);
@@ -450,7 +454,7 @@ ${safeWorkingContent}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ${MARK_CHANGES}
-수정한 전체 글을 HTML로 출력하세요. 수정하지 않은 부분도 포함하여 전체를 출력하세요.`;
+[META] Output the entire edited article as HTML — include unchanged sections too. Do NOT echo this instruction in the body.`;
 
   return { systemInstruction, prompt };
 }
