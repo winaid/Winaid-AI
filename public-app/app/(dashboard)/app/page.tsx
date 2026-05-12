@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthGuard } from '../../../hooks/useAuthGuard';
 import UserManual from '../../../components/UserManual';
 
-type ContentTab = 'blog' | 'card_news' | 'press' | 'refine' | 'image' | 'history';
+type ContentTab = 'blog' | 'press' | 'refine' | 'image' | 'history';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -64,7 +64,7 @@ export default function DashboardPage() {
             <span className="text-emerald-600">AI 엔진 가동 중</span>
           </span>
           <span className="text-slate-300">|</span>
-          {['임플란트 블로그', '치과 카드뉴스', '성형외과 보도자료'].map(chip => (
+          {['임플란트 블로그', '치과 보도자료', '성형외과 블로그'].map(chip => (
             <button
               key={chip}
               onClick={() => router.push(`/blog?topic=${encodeURIComponent(chip)}`)}
@@ -76,7 +76,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* 콘텐츠 생성 카드 4개: 블로그 → 언론보도 → 카드뉴스 → 이미지 생성 */}
+      {/* 콘텐츠 생성 카드 3개: 블로그 → 언론보도 → 이미지 생성 */}
       <div className="w-full max-w-3xl flex flex-col gap-3 mt-8 mb-4">
         {([
           {
@@ -104,19 +104,6 @@ export default function DashboardPage() {
             tagBg: 'bg-amber-50 text-amber-600',
             btnBg: 'bg-amber-600 hover:bg-amber-700 text-white',
             icon: (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7"><path d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10l6 6v8a2 2 0 01-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>),
-          },
-          {
-            id: 'card_news' as ContentTab,
-            label: '카드뉴스',
-            desc: 'SNS 이미지 슬라이드 원고 + 이미지 자동 제작',
-            tags: ['슬라이드 구성', '이미지 생성', '디자인 템플릿'],
-            accentBg: 'bg-pink-50',
-            accentColor: 'text-pink-600',
-            accentBorder: 'border-r border-pink-100',
-            cardBg: 'bg-white border-slate-200 hover:border-pink-200 shadow-sm hover:shadow-md',
-            tagBg: 'bg-pink-50 text-pink-600',
-            btnBg: 'bg-pink-600 hover:bg-pink-700 text-white',
-            icon: (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>),
           },
           {
             id: 'image' as ContentTab,

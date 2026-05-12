@@ -8,10 +8,10 @@ export const YEARS_OF_EXPERIENCE = new Date().getFullYear() - SINCE_YEAR;
 export const QUICK_TAGS = [
   '#임플란트 블로그 자동 생성',
   '#의료광고법 검증',
-  '#카드뉴스 제작',
   '#블로그 SEO 최적화',
   '#교정 마케팅 콘텐츠',
   '#보도자료 작성',
+  '#AI 이미지 생성',
 ] as const;
 
 export const MORE_TAGS = [
@@ -73,8 +73,8 @@ export const AI_SOLUTIONS: AiSolution[] = [
     iconName: 'law',
   },
   {
-    title: 'AI 이미지 & 카드뉴스',
-    desc: '저작권 걱정 없는 고품질 이미지와 카드뉴스를 AI가 자동 생성합니다.',
+    title: 'AI 이미지 생성',
+    desc: '저작권 걱정 없는 고품질 병원 마케팅 이미지를 AI가 자동 생성합니다.',
     iconName: 'image',
   },
 ];
@@ -147,7 +147,7 @@ export interface Testimonial {
 export const TESTIMONIALS: Testimonial[] = [
   { name: '김OO 원장님', hospital: '서울 강남 S치과', text: '블로그 글 하나 쓰는 데 2시간 걸렸는데, 이제 1분이면 끝나요. 의료광고법 검증까지 자동이라 너무 편합니다.', rating: 5 },
   { name: '이OO 원장님', hospital: '부산 해운대 M치과', text: '마케팅 대행 비용 월 200만원 쓰다가 윈에이아이로 바꿨어요. 퀄리티는 오히려 더 좋아졌습니다.', rating: 5 },
-  { name: '박OO 원장님', hospital: '대전 유성 P치과', text: '카드뉴스 자동 생성이 정말 혁신적이에요. 인스타그램 콘텐츠를 매일 올릴 수 있게 됐습니다.', rating: 5 },
+  { name: '박OO 원장님', hospital: '대전 유성 P치과', text: 'AI 이미지 자동 생성이 정말 혁신적이에요. 블로그와 SNS 콘텐츠를 매일 올릴 수 있게 됐습니다.', rating: 5 },
   { name: '정OO 원장님', hospital: '인천 연수 J치과', text: 'SEO 최적화가 정말 잘 되어 있어요. 블로그 포스팅 퀄리티가 확실히 달라졌습니다.', rating: 5 },
   { name: '최OO 원장님', hospital: '경기 분당 C치과', text: 'AI가 생성한 글이 자연스러워서 놀랐어요. 환자들도 블로그를 보고 많이 찾아오시더라고요.', rating: 5 },
   { name: '한OO 원장님', hospital: '광주 서구 H치과', text: '보도자료 작성 기능이 특히 좋아요. 언론보도가 쉬워지니 병원 신뢰도가 확실히 올랐습니다.', rating: 5 },

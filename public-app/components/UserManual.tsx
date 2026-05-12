@@ -2,21 +2,18 @@
 
 import React, { useState } from 'react';
 
-type SectionKey = 'overview' | 'blog' | 'cardnews' | 'press' | 'refine' | 'image' | 'tips';
+type SectionKey = 'overview' | 'blog' | 'press' | 'refine' | 'image' | 'tips';
 
 const SECTIONS: { id: SectionKey; title: string; icon: string; items: { heading: string; body: string }[] }[] = [
   { id: 'overview', title: '서비스 소개', icon: '🏥', items: [
-    { heading: 'WINAI란?', body: 'WINAI는 병원 마케팅 전문 AI 콘텐츠 생성 플랫폼입니다. 블로그, 카드뉴스, 언론 보도자료를 AI가 자동으로 생성하며, 의료광고법 준수 여부까지 자동 검증합니다.' },
-    { heading: '주요 기능', body: '• 블로그 글 생성 (네이버 SEO 최적화)\n• 카드뉴스 생성\n• 언론 보도자료 작성\n• AI 글 보정\n• AI 이미지 생성\n• 의료광고법 자동 검증' },
+    { heading: 'WINAI란?', body: 'WINAI는 병원 마케팅 전문 AI 콘텐츠 생성 플랫폼입니다. 블로그, 언론 보도자료를 AI가 자동으로 생성하며, 의료광고법 준수 여부까지 자동 검증합니다.' },
+    { heading: '주요 기능', body: '• 블로그 글 생성 (네이버 SEO 최적화)\n• 언론 보도자료 작성\n• AI 글 보정\n• AI 이미지 생성\n• 의료광고법 자동 검증' },
     { heading: '권장 브라우저', body: 'Chrome, Edge 최신 버전을 권장합니다.' },
   ]},
   { id: 'blog', title: '블로그 작성', icon: '📝', items: [
     { heading: '블로그 글 생성 방법', body: '1. 사이드바에서 "블로그"를 클릭\n2. 주제(키워드) 입력\n3. 카테고리 선택\n4. "AI 콘텐츠 생성" 클릭\n5. AI가 SEO 최적화된 글과 이미지를 생성합니다' },
     { heading: '결과 활용', body: '• "블로그로 복사": 네이버 블로그에 바로 붙여넣기 (서식 유지)\n• "Word 다운로드": .doc 파일 저장\n• "PDF 다운로드": 인쇄/공유용 PDF\n• AI 에디터: 수정 요청 입력 시 AI가 글을 수정' },
     { heading: '소제목별 재생성', body: '"소제목별 수정" 버튼 클릭 시 특정 소제목 부분만 선택적으로 재생성할 수 있습니다.' },
-  ]},
-  { id: 'cardnews', title: '카드뉴스', icon: '🎨', items: [
-    { heading: 'AI 자동 생성 카드뉴스 — 준비 중', body: '주제 한 줄로 슬라이드 + 이미지가 자동 생성되는 새 버전을 준비하고 있습니다 (2026-05~). 기존 캔버스 편집기 기반 카드뉴스는 일시 중단됐으며, 새 버전 오픈 시 다시 안내드립니다.' },
   ]},
   { id: 'press', title: '언론보도', icon: '🗞️', items: [
     { heading: '보도자료 작성', body: '1. "언론보도" 메뉴 클릭\n2. 병원명, 의료진, 주제, 보도 유형 입력\n3. AI가 3인칭 기자 문체로 보도자료 생성\n4. 전문의 인용 2회 이상 자동 포함' },

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 
-type ContentTab = 'blog' | 'clinical' | 'card_news' | 'press' | 'refine' | 'image' | 'history' | 'youtube' | 'video_edit' | 'mypage';
+type ContentTab = 'blog' | 'clinical' | 'press' | 'refine' | 'image' | 'history' | 'youtube' | 'video_edit' | 'mypage';
 
 interface SidebarProps {
   collapsed: boolean;
@@ -23,7 +23,6 @@ const writeItems: { id: ContentTab; label: string; icon: string; href: string }[
 ];
 
 const visualItems: { id: ContentTab; label: string; icon: string; href: string }[] = [
-  { id: 'card_news', label: '카드뉴스', icon: '🎨', href: '/card_news' },
   { id: 'image', label: '이미지 생성', icon: '🖼️', href: '/image' },
   { id: 'image_library' as ContentTab, label: '이미지 관리', icon: '📸', href: '/image-library' },
 ];
@@ -138,7 +137,7 @@ export function Sidebar({
                 <span className="text-[10px] text-slate-400 cursor-help">?</span>
                 <div className="hidden group-hover:block absolute bottom-full right-0 mb-2 w-52 p-3 bg-white border border-slate-200 rounded-xl shadow-lg z-50 text-[10px] text-slate-600 leading-relaxed">
                   <p className="font-bold text-slate-700 mb-1">크레딧 소모 기준</p>
-                  <p className="text-emerald-600">✅ 소모: 블로그/카드뉴스/보도자료/이미지 새 생성</p>
+                  <p className="text-emerald-600">✅ 소모: 블로그/보도자료/이미지 새 생성</p>
                   <p className="text-blue-600 mt-0.5">🆓 무료: 이미지 재생성, 소제목 수정, AI 채팅 수정, AI 보정</p>
                 </div>
               </div>
