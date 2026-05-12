@@ -38,6 +38,7 @@ import AdminContentsTab from './AdminContentsTab';
 import AdminUsersTab from './AdminUsersTab';
 import AdminStyleTab from './AdminStyleTab';
 import AdminFeedbackTab from './AdminFeedbackTab';
+import AdminLeadsTab from './AdminLeadsTab';
 import {
   listFeedbacks,
   deleteFeedback,
@@ -896,6 +897,7 @@ export default function AdminPage() {
           { key: 'style' as Tab, label: '말투 학습', activeClass: 'bg-violet-600 text-white shadow-sm' },
           { key: 'users' as Tab, label: '사용자 관리', activeClass: 'bg-emerald-600 text-white shadow-sm' },
           { key: 'feedback' as Tab, label: '피드백 관리', activeClass: 'bg-blue-600 text-white shadow-sm' },
+          { key: 'leads' as Tab, label: '상담 신청', activeClass: 'bg-indigo-600 text-white shadow-sm' },
         ]).map(t => (
           <button
             key={t.key}
@@ -1020,6 +1022,10 @@ export default function AdminPage() {
           }}
           onRefresh={() => loadAdminFeedbacks()}
         />
+      )}
+
+      {tab === 'leads' && (
+        <AdminLeadsTab />
       )}
 
       </div>

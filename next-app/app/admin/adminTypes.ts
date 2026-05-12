@@ -72,7 +72,7 @@ export interface UserProfile {
   created_at: string;
 }
 
-export type Tab = 'contents' | 'users' | 'style' | 'feedback';
+export type Tab = 'contents' | 'users' | 'style' | 'feedback' | 'leads';
 export type PostTypeFilter = 'all' | 'blog' | 'card_news' | 'press_release' | 'image';
 
 export const POST_TYPE_LABELS: Record<string, string> = {
