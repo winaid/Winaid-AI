@@ -2228,20 +2228,39 @@ JSON 형식으로 응답해주세요.`;
     finally { setIsChatRefining(false); }
   }, [chatInput, generatedContent, isChatRefining]);
 
-  // ── 이미지 클릭 → 액션 모달 열기 ──
+  // ── 이미지 클릭 → 모드별 모달 분기 ──
+  // GenerationResult 의 editor onClick 이 stopPropagation 으로 dispatch 를 차단하므로
+  // 여기서 단일 dispatcher 로 처리.
+  //   - library 이미지 (savedImagePrompts 없음) → 변경 모달만 (다운로드/재생성 X)
+  //   - AI 이미지 (savedImagePrompts 있음) → 액션 모달 (다운로드/재생성)
   const handleImageClick = useCallback((imageIndex: number) => {
-    // library 모드: 교체 모달이 처리 (handleResultClick). hybrid 는 AI 생성 이미지만 여기서 처리.
-    if (imageSourceMode === 'library') return;
     const promptIdx = imageIndex - 1;
     const originalPrompt = savedImagePrompts[promptIdx];
-    if (!originalPrompt) return;
-    // 현재 이미지 src 가져오기
+
+    // 현재 이미지 src (모달 공통 데이터)
+    let currentSrc = '';
     if (generatedContent) {
       const div = document.createElement('div');
       div.innerHTML = generatedContent;
       const img = div.querySelector(`img[data-image-index="${imageIndex}"]`);
-      setSelectedImgSrc(img?.getAttribute('src') || '');
+      currentSrc = img?.getAttribute('src') || '';
     }
+
+    // 라이브러리 이미지 판정: library 모드는 전부 / hybrid 모드는 prompt 없는 슬롯
+    const isLibraryImage =
+      imageSourceMode === 'library' ||
+      (imageSourceMode === 'hybrid' && !originalPrompt);
+
+    if (isLibraryImage) {
+      setReplaceSlotIndex(imageIndex);
+      setReplaceCurrentUrl(currentSrc || undefined);
+      setReplaceModalOpen(true);
+      return;
+    }
+
+    // AI 생성 이미지 → 액션 모달 (다운로드/재생성)
+    if (!originalPrompt) return;
+    setSelectedImgSrc(currentSrc);
     setSelectedImgIndex(imageIndex);
     setRegenPrompt(originalPrompt);
     setImgActionModalOpen(true);
