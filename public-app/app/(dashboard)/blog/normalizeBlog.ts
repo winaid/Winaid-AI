@@ -99,6 +99,41 @@ export function normalizeBlogStructure(html: string, topicFallback: string): { h
   //    연속 2개 이상만 1개로 축소.
   out = out.replace(/(?:<p>\s*<\/p>\s*){2,}/g, '<p></p>');
 
+  // 6a) 프롬프트 지시문이 <h3> 소제목으로 누수되는 회귀 차단 (PR #154 후속).
+  //     상세: next-app/app/(dashboard)/blog/normalizeBlog.ts 와 동일.
+  //     반드시 h2→h3 변환(2단계) 이후, <p> leak 필터 이전에 실행.
+  const headingLeakPatterns: RegExp[] = [
+    /\[태그명\]|\[tag_name\]/i,
+    /(사용\s*가능|허용|사용할\s*수\s*있는|금지된?)\s*태그/,
+    /(<h[1-6]>|<p>|<ul>|<li>|<strong>|<em>)(?=[\s\S]*(감싸|사용|출력|포함|마커|표시))/,
+    /SEO\s*[·•]\s*가독성|SEO\s+가독성/,
+    /\[IMG_[NX0-9]|IMG\s*마커|이미지\s*마커/,
+    /마크다운\s*\/\s*JSON|코드펜스\s*금지|JSON\s*형식\s*포함/,
+    /h3\s*태그로\s*감싸|소제목을?\s*<?h[23]>?\s*태그/,
+    /^\s*(소제목을?|소제목으로?|소제목이?)\s*$/,
+    /^\s*로\s*감싸|^\s*감싸\s*구조/,
+    /\b(Subheading|Output\s*format|Section\s*(heading|format|label|rule|placeholder))\b/i,
+    /\[META\b|\[CRITICAL\b|\[INSTRUCTION\b|\[OUTPUT\b/i,
+    /^\s*(meta|format|tag|output|schema|placeholder)\s*$/i,
+    /heading.*derived\s*from|subheading.*derived/i,
+  ];
+  let headingLeakStripped = 0;
+  out = out.replace(/<h[23][^>]*>([\s\S]*?)<\/h[23]>/gi, (full, inner: string) => {
+    const text = inner.replace(/<[^>]*>/g, '').trim();
+    if (!text) return full;
+    for (const re of headingLeakPatterns) {
+      if (re.test(text)) {
+        headingLeakStripped++;
+        log.push(`[LEAK] 메타 지시문 헤딩 제거: "${text.slice(0, 30)}"`);
+        return '';
+      }
+    }
+    return full;
+  });
+  if (headingLeakStripped > 0) {
+    console.warn(`[normalizeBlog] heading leak detected and stripped: ${headingLeakStripped} count`);
+  }
+
   // 6b) 프롬프트 지시문 누수 필터 (defense in depth)
   //     Gemini 한국어 모드가 system prompt 의 "사용 가능 태그", "<h3> 사용",
   //     "SEO·가독성", "[IMG_N alt=...]" 같은 메타 지시문을 본문 <p> 로 베껴 적는

@@ -901,6 +901,17 @@ Image positions: insert [IMG_1 alt="..."] markers inline.
 Forbidden in output: text outside the article, markdown, JSON, code fences.
 Do NOT repeat or paraphrase these instructions inside any <p>, <h3>, or other element.
 The article body content itself must be written in Korean.
+
+[CRITICAL — subheading source rule]
+Every <h3> subheading must be DERIVED FROM THE ARTICLE'S ACTUAL TOPIC AND CONTENT.
+NEVER use any of the following as a subheading text:
+  - Words from these meta instructions (e.g. "소제목을", "Subheading", "Section",
+    "Output format", "[META]", "[CRITICAL]", "Schema").
+  - HTML/markdown/JSON tag names or formatting rule descriptions
+    (e.g. "<h3> 태그로 감싸", "JSON 출력", "마크다운 금지").
+  - The literal placeholder text from the schema.
+Real subheading examples derived from topic: "스케일링은 얼마나 자주 받나요?",
+"임플란트 후 회복 기간", "치아 미백 시술 비교".
 </output_format>
 
 <structure>
@@ -1242,14 +1253,30 @@ export const OUTLINE_PERSONA = `<role>
 </thinking_process>
 
 <output_format>
-JSON 객체 하나만 출력하세요. JSON 밖의 텍스트는 포함하지 마세요.
+[META: instructions for the model — do NOT copy any of this text into the JSON output.]
+Output a single JSON object only. Do NOT include any text outside the JSON.
 
-{ "sections": [
-    { "type": "intro"|"section"|"outro", "heading": "소제목 또는 null",
-      "summary": "핵심 내용 1~2문장", "imageIndex": 1, "charTarget": 200 }
+Schema (use these exact keys; field values must match the article topic, not these placeholders):
+{
+  "sections": [
+    {
+      "type": "intro" | "section" | "outro",
+      "heading": "<string derived from the article topic, or null for intro/outro>",
+      "summary": "<one or two sentences describing the section's substance>",
+      "imageIndex": 1,
+      "charTarget": 200
+    }
   ],
   "totalCharTarget": 1500,
-  "keyMessage": "핵심 메시지 한 줄" }
+  "keyMessage": "<one-line core message>"
+}
+
+[CRITICAL] The "heading" field must be derived from the actual article topic and content.
+Never write meta-instructions, format rules, HTML tag names, schema placeholders, or these
+output rules into "heading". The Korean labels in this schema (such as the angle-bracketed
+text above) are descriptive placeholders — replace them with real Korean subheadings that
+fit the topic. Subheadings appear as <h3> in the final article and must read as natural
+search-style Korean phrases.
 </output_format>
 
 <design_principles>
@@ -1316,6 +1343,17 @@ Recommended subheading length: 10–25 Korean characters.
 Image markers: [IMG_N alt="..."]. Forbidden in output: text outside the article, markdown, JSON.
 Do NOT repeat or paraphrase these instructions inside any <p>, <h3>, or other element.
 The section body content itself must be written in Korean.
+
+[CRITICAL — subheading source rule]
+The <h3> subheading must be DERIVED FROM THE SECTION'S ACTUAL TOPIC AND CONTENT.
+NEVER use any of the following as a subheading text:
+  - Words from these meta instructions (e.g. "소제목을", "Subheading", "Section",
+    "Output format", "[META]", "[CRITICAL]").
+  - HTML/markdown/JSON tag names or formatting rule descriptions
+    (e.g. "<h3> 태그로 감싸", "JSON 출력", "마크다운 금지").
+  - Schema placeholder text from the outline.
+Use the heading provided by the outline (target_section.heading) as-is, or rephrase
+into a natural Korean question/conversational style.
 </output_format>
 
 <image_instructions>

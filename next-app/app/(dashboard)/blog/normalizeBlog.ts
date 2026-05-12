@@ -113,6 +113,53 @@ export function normalizeBlogStructure(
   //    <p></p> 와 <p>&nbsp;</p> 모두 처리. 연속 2개 이상만 1개로 축소 (nbsp 형태로 통일).
   out = out.replace(/(?:<p>(?:&nbsp;|\s)*<\/p>\s*){2,}/g, '<p>&nbsp;</p>\n');
 
+  // 6a) 프롬프트 지시문이 <h3> 소제목으로 누수되는 회귀 차단 (PR #154 후속)
+  //     PR #154 의 <p> 필터가 헤딩을 검사 안 해서, LLM 이 메타 지시문을 목차로
+  //     사용한 케이스 (예: "소제목을" / "로 감싸 구조 명확화" 가 두 개의 h3 로 분리).
+  //     blogSectionParser 가 h3 단위로 섹션을 자르므로 leak heading 은 본문 목차로
+  //     전파됨 → 사용자에게 그대로 노출.
+  //
+  //     처리: leak heading 만 제거 (heading 만 strip), body 는 보존.
+  //       parseBlogSections 가 흡수 가능 — 첫 h3 leak 제거 시 body 는 intro 로,
+  //       중간 h3 leak 제거 시 이전 섹션의 body 로 자연스럽게 합쳐짐.
+  //
+  //     반드시 h2→h3 변환(2단계, line 80-83) 이후에 실행 — h2 leak 도 h3 으로
+  //     변환된 후 함께 잡힘.
+  const headingLeakPatterns: RegExp[] = [
+    // 기존 7개 누수 패턴 (heading 텍스트에도 적용)
+    /\[태그명\]|\[tag_name\]/i,
+    /(사용\s*가능|허용|사용할\s*수\s*있는|금지된?)\s*태그/,
+    /(<h[1-6]>|<p>|<ul>|<li>|<strong>|<em>)(?=[\s\S]*(감싸|사용|출력|포함|마커|표시))/,
+    /SEO\s*[·•]\s*가독성|SEO\s+가독성/,
+    /\[IMG_[NX0-9]|IMG\s*마커|이미지\s*마커/,
+    /마크다운\s*\/\s*JSON|코드펜스\s*금지|JSON\s*형식\s*포함/,
+    /h3\s*태그로\s*감싸|소제목을?\s*<?h[23]>?\s*태그/,
+    // 헤딩 전용 추가 패턴
+    /^\s*(소제목을?|소제목으로?|소제목이?)\s*$/,           // "소제목을" 단독
+    /^\s*로\s*감싸|^\s*감싸\s*구조/,                       // "로 감싸 구조 명확화" 단독
+    /\b(Subheading|Output\s*format|Section\s*(heading|format|label|rule|placeholder))\b/i, // 영문 메타 단어 (Section/Format 단독은 의료 약어 가능 — compound 만)
+    /\[META\b|\[CRITICAL\b|\[INSTRUCTION\b|\[OUTPUT\b/i,   // 대괄호 메타 라벨
+    /^\s*(meta|format|tag|output|schema|placeholder)\s*$/i, // 단독 영문 메타 단어
+    /heading.*derived\s*from|subheading.*derived/i,         // 영문 룰 본문화
+  ];
+  let headingLeakStripped = 0;
+  out = out.replace(/<h[23][^>]*>([\s\S]*?)<\/h[23]>/gi, (full, inner: string) => {
+    const text = inner.replace(/<[^>]*>/g, '').trim();
+    if (!text) return full;
+    for (const re of headingLeakPatterns) {
+      if (re.test(text)) {
+        headingLeakStripped++;
+        log.push(`[LEAK] 메타 지시문 헤딩 제거: "${text.slice(0, 30)}"`);
+        return '';
+      }
+    }
+    return full;
+  });
+  if (headingLeakStripped > 0) {
+    // 운영 모니터링용 — prod 로그 검색으로 빈도 추적.
+    console.warn(`[normalizeBlog] heading leak detected and stripped: ${headingLeakStripped} count`);
+  }
+
   // 6b) 프롬프트 지시문 누수 필터 (defense in depth)
   //     Gemini 한국어 모드가 system prompt 의 "사용 가능 태그", "<h3> 사용",
   //     "SEO·가독성", "[IMG_N alt=...]" 같은 메타 지시문을 본문 <p> 로 베껴 적는
