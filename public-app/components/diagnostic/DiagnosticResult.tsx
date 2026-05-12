@@ -13,6 +13,9 @@ import ScoreRing from './ScoreRing';
 import CategoryCard from './CategoryCard';
 import AIVisibilityCard from './AIVisibilityCard';
 import ActionPlan from './ActionPlan';
+import CompetitorAutoSuggestions from './CompetitorAutoSuggestions';
+import SnippetsPanel from './SnippetsPanel';
+import { authFetch } from '../../lib/authFetch';
 
 interface DiagnosticResultProps {
   result: DiagnosticResponse;
@@ -20,13 +23,14 @@ interface DiagnosticResultProps {
   onResultUpdate?: (updated: DiagnosticResponse) => void;
 }
 
-type Tab = 'summary' | 'details' | 'ai' | 'actions';
+type Tab = 'summary' | 'details' | 'ai' | 'actions' | 'snippets';
 
 const TABS: { id: Tab; label: string; emoji: string }[] = [
   { id: 'summary', label: '종합 진단', emoji: '📊' },
   { id: 'details', label: '항목별 상세', emoji: '🧾' },
   { id: 'ai', label: 'AI 플랫폼별 노출', emoji: '🤖' },
   { id: 'actions', label: '우선 조치', emoji: '🎯' },
+  { id: 'snippets', label: '코드 스니펫', emoji: '🛠' },
 ];
 
 function scoreHeadline(score: number): string {
@@ -102,6 +106,31 @@ export default function DiagnosticResult({ result, onResultUpdate }: DiagnosticR
   const [refreshing, setRefreshing] = useState(false);
   const [refreshDone, setRefreshDone] = useState(false);
 
+  // 공유 링크
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [generating, setGenerating] = useState(false);
+
+  const handleShare = useCallback(async () => {
+    if (generating) return;
+    if (shareUrl) { await navigator.clipboard.writeText(shareUrl).catch(() => {}); return; }
+    setGenerating(true);
+    try {
+      const res = await authFetch('/api/diagnostic/share', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ result }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = (await res.json()) as { token: string; publicUrl: string };
+      setShareUrl(data.publicUrl);
+      await navigator.clipboard.writeText(data.publicUrl).catch(() => {});
+    } catch (e) {
+      console.warn('[share]', e);
+    } finally {
+      setGenerating(false);
+    }
+  }, [generating, shareUrl, result]);
+
   // Tier 3-B: 경쟁사 GAP 분석
   const [gapResult, setGapResult] = useState<GapAnalysis | null>(null);
   const [gapLoading, setGapLoading] = useState(false);
@@ -148,15 +177,18 @@ export default function DiagnosticResult({ result, onResultUpdate }: DiagnosticR
     }
   }, [topUrlCandidates.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleGapAnalysis = useCallback(async () => {
-    if (gapLoading || !competitorUrl.trim()) return;
+  const handleGapAnalysis = useCallback(async (urlOverride?: string) => {
+    if (gapLoading) return;
+    const target = (urlOverride ?? competitorUrl).trim();
+    if (!target) return;
+    if (urlOverride) setCompetitorUrl(urlOverride);
     setGapLoading(true);
     setGapResult(null);
     try {
       const res = await fetch('/api/diagnostic/competitor-gap', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ selfResult: result, competitorUrl: competitorUrl.trim() }),
+        body: JSON.stringify({ selfResult: result, competitorUrl: target }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
@@ -169,6 +201,25 @@ export default function DiagnosticResult({ result, onResultUpdate }: DiagnosticR
       setGapLoading(false);
     }
   }, [gapLoading, competitorUrl, result]);
+
+  // Phase 3: 자동 경쟁사 추천 카드용 — 양 플랫폼 topResults 합치고 dedupe
+  const autoSuggestionsRaw = Object.values(measurementResults)
+    .flatMap((m) => m.topResults ?? []);
+  const autoSuggestions = (() => {
+    const seen = new Set<string>();
+    const out: typeof autoSuggestionsRaw = [];
+    for (const r of autoSuggestionsRaw) {
+      const d = r.domain.replace(/^www\./, '').toLowerCase();
+      if (!d || seen.has(d)) continue;
+      seen.add(d);
+      out.push(r);
+    }
+    return out;
+  })();
+  const ownDomain = (() => {
+    try { return new URL(result.url).hostname.replace(/^www\./, '').toLowerCase(); }
+    catch { return ''; }
+  })();
 
   return (
     <div className="w-full max-w-5xl mx-auto space-y-5">
@@ -205,6 +256,24 @@ export default function DiagnosticResult({ result, onResultUpdate }: DiagnosticR
                 <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-violet-50 text-violet-700">
                   시술 {result.crawlMeta.detectedServices.length}개 감지
                 </span>
+              )}
+            </div>
+            {/* 공유 버튼 */}
+            <div className="mt-4">
+              <button
+                type="button"
+                onClick={handleShare}
+                disabled={generating}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-[12px] font-semibold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+              >
+                {generating
+                  ? '링크 생성 중...'
+                  : shareUrl
+                  ? '🔗 링크 복사됨!'
+                  : '🔗 공유 링크 생성'}
+              </button>
+              {shareUrl && (
+                <p className="mt-1.5 text-[11px] text-slate-400 break-all">{shareUrl}</p>
               )}
             </div>
           </div>
@@ -328,6 +397,7 @@ export default function DiagnosticResult({ result, onResultUpdate }: DiagnosticR
                 siteName={result.siteName}
                 selfUrl={result.url}
                 onMeasurementDone={handleMeasurementDone}
+                availableQueries={result.availableQueries}
               />
             ))}
           </div>
@@ -376,7 +446,18 @@ export default function DiagnosticResult({ result, onResultUpdate }: DiagnosticR
             </div>
           )}
 
-          {/* Tier 3-B: 경쟁사 GAP 분석 */}
+          {/* Phase 3: 자동 경쟁사 추천 — AI 실측 완료 후 본인 외 상위 도메인 자동 발굴 */}
+          {autoSuggestions.length > 0 && (
+            <div className="mt-6">
+              <CompetitorAutoSuggestions
+                ownDomain={ownDomain}
+                topResults={autoSuggestions}
+                onSelect={handleGapAnalysis}
+              />
+            </div>
+          )}
+
+          {/* Tier 3-B: 경쟁사 GAP 분석 (수동 입력 + 분석 결과 표시) */}
           <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm max-w-4xl mx-auto">
             <h3 className="text-sm font-bold text-slate-700 mb-2">🏆 경쟁사 GAP 분석</h3>
             <p className="text-[12px] text-slate-500 mb-3">
@@ -392,7 +473,7 @@ export default function DiagnosticResult({ result, onResultUpdate }: DiagnosticR
               />
               <button
                 type="button"
-                onClick={handleGapAnalysis}
+                onClick={() => handleGapAnalysis()}
                 disabled={!competitorUrl.trim() || gapLoading}
                 className={`px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition-colors ${
                   competitorUrl.trim() && !gapLoading
@@ -482,6 +563,9 @@ export default function DiagnosticResult({ result, onResultUpdate }: DiagnosticR
 
       {/* 탭 4: 우선 조치 */}
       {tab === 'actions' && <ActionPlan actions={result.priorityActions} />}
+
+      {/* 탭 5: 코드 스니펫 — fail/warning 항목 중 코드로 고칠 수 있는 것 자동 생성 */}
+      {tab === 'snippets' && <SnippetsPanel result={result} />}
 
       {/* CTA — WINAID 대행 문의 */}
       <div className="mt-8 rounded-2xl bg-gradient-to-r from-indigo-600 to-blue-600 p-8 text-white shadow-lg">

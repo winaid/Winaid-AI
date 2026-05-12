@@ -311,7 +311,7 @@ const PLATFORM_OR_NOISE_DOMAINS: readonly string[] = [
   'medicalkoreaguide.com', 'koreahealthtrip.com',
 ];
 
-function isBlockedDomain(domain: string): boolean {
+export function isBlockedDomain(domain: string): boolean {
   const d = domain.replace(/^www\./, '').toLowerCase();
   return PLATFORM_OR_NOISE_DOMAINS.some((bad) => d === bad || d.endsWith('.' + bad));
 }
