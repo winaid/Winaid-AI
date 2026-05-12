@@ -20,12 +20,15 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getTeamDataFromDB } from './hospitalService';
 import { TEAM_DATA, type TeamData } from './teamData';
 
 export function useTeamData(): { teamData: TeamData[]; loading: boolean } {
   // 초기값을 TEAM_DATA fallback 으로 — 첫 렌더에서 드롭다운 비어 보이는 회귀 차단.
-  // DB 응답이 들어오면 enrich 된 결과로 교체 (라벨은 그대로, hospitals 만 채워짐).
+  // /api/teams 응답이 들어오면 enrich 된 결과로 교체.
+  //
+  // 과거 (회귀): client (anon supabase) 가 hospitals 테이블 직접 SELECT →
+  // RLS / 프로젝트 일시 장애 시 CORS 에러로 콘솔 폭발 + fallback 만 보임.
+  // 수정: server-side `/api/teams` (supabaseAdmin) 경유 → CORS 무관 + RLS 우회.
   const [teamData, setTeamData] = useState<TeamData[]>(TEAM_DATA);
   const [loading, setLoading] = useState(true);
 
@@ -33,8 +36,12 @@ export function useTeamData(): { teamData: TeamData[]; loading: boolean } {
     let mounted = true;
     (async () => {
       try {
-        const data = await getTeamDataFromDB();
-        if (mounted) setTeamData(data);
+        const res = await fetch('/api/teams', { cache: 'no-store' });
+        if (!res.ok) throw new Error(`/api/teams ${res.status}`);
+        const data = (await res.json()) as TeamData[];
+        if (mounted && Array.isArray(data) && data.length > 0) setTeamData(data);
+      } catch (e) {
+        console.warn('[useTeamData] /api/teams 조회 실패 — TEAM_DATA fallback 유지:', (e as Error).message);
       } finally {
         if (mounted) setLoading(false);
       }
