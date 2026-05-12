@@ -16,6 +16,7 @@ import OpenAI from 'openai';
 import { checkAuth } from '../../../lib/apiAuth';
 import { resolveImageOwner } from '../../../lib/serverAuth';
 import { useCredit, refundCredit } from '../../../lib/creditService';
+import { verifyAdminCookie } from '../../../lib/adminCookie';
 
 export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
@@ -535,8 +536,10 @@ export async function POST(request: NextRequest) {
   // OpenAI 호출 전체 실패 시 (line ~640 의 502 분기) refund.
   const owner = await resolveImageOwner(request);
   const userId = owner === 'guest' ? null : owner;
+  // 🛑 INVARIANT §2 — next-app admin (admin_session cookie) 은 크레딧 무관 무제한.
+  const isAdmin = verifyAdminCookie(request).valid;
   let creditDeducted = false;
-  if (userId) {
+  if (userId && !isAdmin) {
     const credit = await useCredit(userId);
     if (!credit.success) {
       return NextResponse.json(
