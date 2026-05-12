@@ -24,7 +24,7 @@ PR 머지 후 별도 PR 로 다룰 항목들. 메모용 — 각 항목은 개별
 - **패턴**: `[META: instructions for the model — do NOT copy any of this into the generated content.]` 라벨 + 영문 + "Do NOT echo" 명시
 - **보존**: JSON 스키마 키, press HTML 클래스명, 한국어 본문 가이드/예시/금지어, 진료과 시술 용어
 - **머지 SHA**: `ebed568b`
-- **한계**: 영문화는 1차 방어. 후처리 필터는 없음 → #5 참고.
+- **한계**: 영문화는 1차 방어. 후처리 필터는 PR #161 (#5) 에서 추가됨.
 
 ### 3. chore(blog): normalizeBlog 죽은 패턴 제거 — ✅ 완료 (PR #159) — 47/47 sanity 통과로 dead 직접 증명
 - 패턴 3 — `(<h[1-6]>|<p>|<ul>|<li>|<strong>|<em>)(?=...)` 가 `inner.replace(/<[^>]*>/g, '')` 이후에 적용되어 매칭 불가능 (HTML 태그가 이미 strip 된 텍스트에서 `<h3>` 못 찾음).
@@ -43,13 +43,16 @@ PR 머지 후 별도 PR 로 다룰 항목들. 메모용 — 각 항목은 개별
 - **부수 효과**: tsx 추가로 기존 `next-app/__tests__/safeUtils.test.ts` 도 자동 실행됨 (12/12 통과).
 - **머지 SHA**: `0111df07`
 
-### 5. feat(blog-core): clinical / press / cardNews 출력 정규화 필터 도입 (PR #158 후속)
-- 영문화(#2)는 1차 방어. blog 와 달리 normalizeBlog 후처리 필터가 없어 누수 발생 시 자동 strip 되지 않음.
-- prod 모니터링에서 누수 발견 시 우선 처리 (현재 발생 빈도 0 예상 — `[META]` / `[CRITICAL]` 영문 라벨로 1차 차단).
-- **위치 후보**:
-  - `packages/blog-core/src/normalize/` 같은 공통 모듈로 추출 (양 앱 + 다중 콘텐츠 타입 공유)
-  - 또는 각 generate route (`/api/generate/clinical`, `/api/generate/press`, `/api/card-news/*`) 에서 후처리 단계 추가
-- **위험도**: 낮음 — `[META`/`[CRITICAL`/`마크다운/JSON` 같은 패턴은 정상 의료 콘텐츠에 거의 안 나옴
+### 5. feat(blog-core): clinical / press / cardNews 출력 정규화 필터 도입 — ✅ 완료 (PR #161)
+- PR #158 영문화의 한계 보완. blog 와 달리 후처리 필터가 없어 누수 발생 시 무방비였음 → 2차 방어선 추가.
+- **신규 모듈**:
+  - `packages/blog-core/src/normalize/leakFilter.ts` — `sanitizeLeakInHtml`, `sanitizeLeakInString`
+  - `packages/blog-core/src/normalize/leakFilterJson.ts` — `sanitizeLeakInSlideOutline`, `sanitizeLeakInSlideData`, `sanitizeLeakInSlides`
+- **5 라우트 와이어링**: clinical(next-app) + press(양 앱) + cardNews outline/text(public-app)
+- **카드뉴스 정책**: PR #151 의 "기능은 두고 UI 에서 없애줘" 그대로 유지. backend API 만 강화.
+- **신규 테스트**: 52 cases (`packages/blog-core/src/__tests__/leakFilter.test.ts`)
+- **모니터링 키워드**: `[clinical] leak stripped`, `[press] leak stripped`, `[card-news/outline] leak stripped`, `[card-news/text] leak stripped`
+- **머지 SHA**: `fadee3fb`
 
 ### 6. feat(blog): entity-encoded HTML leak 차단 (`&lt;h3&gt; 태그를 감싸` 류) — PR #159 진단 중 발견
 - 현재 어떤 누수 패턴도 entity-encoded HTML 을 잡지 못함.
@@ -60,14 +63,17 @@ PR 머지 후 별도 PR 로 다룰 항목들. 메모용 — 각 항목은 개별
   - (b) entity-aware 패턴 별도 추가 (`&lt;h[1-6]&gt;` 류)
 - prod 모니터링에서 발견 시 우선 처리.
 
-### 7. test(infra): packages/blog-core 의 piiMask.test.ts CI 통합 — PR #160 후속
-- `packages/blog-core/src/__tests__/piiMask.test.ts` 가 존재하지만 자동 실행 X (별도 워크스페이스, test runner 미설정).
-- `next-app/__tests__/safeUtils.test.ts` 는 PR #160 부수 효과로 자동 실행 중 (next-app 의 `for f in __tests__/*.test.ts` 글로브가 잡음).
-- **작업**:
-  - `packages/blog-core/package.json` 에 `tsx` + `"test"` script 추가
-  - 또는 monorepo root 차원의 통합 test runner 검토
-  - `.github/workflows/ci.yml` 에 새 job `test — blog-core` 추가
-- **위험도**: 매우 낮음 (테스트 파일 자체는 이미 작성됨, 실행 환경만 추가)
+### 7. test(infra): packages/blog-core 의 piiMask.test.ts CI 통합 — 🟡 부분 완료 (PR #161 부수 효과)
+- **PR #161 부수 효과로 핵심 부분 해결됨**: next-app `"test"` script glob 에 `../packages/blog-core/src/__tests__/*.test.ts` 추가 → `piiMask.test.ts` (50건) + `leakFilter.test.ts` (52건) 자동 실행 (next-app test job 안).
+- **잔여 (선택)**: 별도 `test — blog-core` CI job 신설. 현재는 next-app test job 안에서 함께 돌므로 회귀 감지에는 충분. 워크플로우 분리 가독성만 차이.
+- **위험도**: 매우 낮음 (이미 자동 실행 중).
+
+### 8. refactor(blog-core): normalizeBlog 와 leakFilter 패턴 통합 — PR #161 후속
+- `normalizeBlog.ts` (양 앱) 의 `LEAK_PATTERNS` 와 `packages/blog-core/src/normalize/leakFilter.ts` 의 `LEAK_PATTERNS` 가 **중복**.
+- 패턴 한 곳 관리 → normalizeBlog 가 leakFilter 의 `LEAK_PATTERNS` / `HEADING_LEAK_PATTERNS` 를 import.
+- 또는 더 큰 리팩토링: normalizeBlog 의 6a/6b 누수 검사 블록을 `sanitizeLeakInHtml` 호출로 교체.
+- **회귀 risk**: 중간 — 양 앱 normalizeBlog 동작 변경. PR #160 의 45-case 회귀 테스트가 즉시 fail-fast 해줌.
+- **선결조건**: PR #160 회귀 테스트 인프라가 보장 (확보됨).
 
 ---
 
@@ -76,7 +82,8 @@ PR 머지 후 별도 PR 로 다룰 항목들. 메모용 — 각 항목은 개별
 - 머지 후 며칠간 Vercel 로그에서 다음 키워드 검색:
   - `[normalizeBlog] heading leak detected` — PR #156 헤딩 누수 발견 횟수
   - `[LEAK] 프롬프트 지시문 누수` — PR #154 본문 누수 발견 횟수
+  - `[clinical] leak stripped`, `[press] leak stripped`, `[card-news/outline] leak stripped`, `[card-news/text] leak stripped` — PR #161 후처리 발견 횟수
 - 발생 빈도가 0 으로 수렴하면 프롬프트 영문화가 효과적임을 확인. 잔존 시 위 후속 PR 우선 진행.
 - **PR #157 회고**: PR #154 (5/12) ~ PR #156 (5/12) 머지 후 본문/이미지 누락 사용자 신고가 있었는지 검토 권장. IMG 패턴 false-positive 로 정상 마커가 든 `<p>` / `<h3>` 가 통째로 strip 되어 본문 손실 발생 가능 (PR #157 머지로 차단됨).
-- **PR #158 회고**: 임상글·보도자료 본문에 `[출력 형식]` / `반드시 ... 출력` 류 메타 텍스트 노출이 발생했는지 검토 권장. 영문화로 1차 차단됨 (#5 후처리 필터 없으면 LLM 이 일부 다시 한국어로 paraphrase 할 가능성 — 모니터링 필요).
+- **PR #158/#161 회고**: 임상글·보도자료·카드뉴스 본문에 `[출력 형식]` / `[META]` / `[CRITICAL]` 류 메타 텍스트 노출이 있었는지 검토 권장. PR #158 영문화 + PR #161 후처리 필터로 2단계 방어 완비.
 - **PR #160 회고 X**: 회귀 테스트만 추가 — prod 영향 없음. 후속 PR 자동 검증 발판.
