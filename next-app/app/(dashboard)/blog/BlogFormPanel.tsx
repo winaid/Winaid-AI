@@ -174,9 +174,13 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
             <h2 className="text-base font-bold text-slate-800">블로그 생성</h2>
           </div>
 
-          {/* 팀 선택 + 병원명 (old 동일) */}
+          {/* 팀 선택 + 병원명.
+              과거: `hospitals.length > 0` 필터로 hospitals 가 있는 팀만 표시 →
+              DB hospitals 가 비거나 매핑 0건이면 팀 자체가 사라짐 (사용자 보고).
+              수정: TEAM_DATA 5개 팀 항상 노출. 팀 선택 후 hospitals=0 이면
+              "등록된 병원이 없습니다" 표시되도록 기존 dropdown 분기에 위임. */}
           <div className="flex bg-slate-100 rounded-lg p-0.5">
-            {TEAM_DATA.filter(team => team.hospitals.length > 0).map(team => (
+            {TEAM_DATA.map(team => (
               <button
                 key={team.id}
                 type="button"
