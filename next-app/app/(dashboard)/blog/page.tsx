@@ -1618,8 +1618,12 @@ JSON 형식으로 응답해주세요.`;
                 }
 
                 const bestCandidate = candidates[0];
-                // 라이브러리에 이미지가 있으면 best match 를 무조건 사용 (score 무관).
-                if (bestCandidate) {
+                // 매칭 임계치: score > 0 (= 최소 1개 키워드 매칭) 일 때만 채택.
+                // 이전: score 무관 무조건 채택 → "스케일링" 주제에 "임플란트" 이미지가
+                // fallback (모두 score=0) 으로 잘못 매칭되는 버그.
+                // score=0 슬롯은 remainingMarkers (L1652-) 로 자연스럽게 떨어져
+                // ai/hybrid 모드면 AI 생성, library 모드면 placeholder 처리.
+                if (bestCandidate && bestCandidate.score > 0) {
                   const best = bestCandidate.img;
                   blogText = blogText.replace(
                     fullMatch,
@@ -1628,6 +1632,8 @@ JSON 형식으로 응답해주세요.`;
                   usedIds.add(best.id);
                   matched++;
                   console.info(`[BLOG] IMG_${num} 매칭: score=${bestCandidate.score} tags=[${best.tags?.join(',')}]`);
+                } else if (bestCandidate) {
+                  console.info(`[BLOG] IMG_${num} 매칭 스킵: score=0 (관련 이미지 없음, AI/placeholder 폴백)`);
                 }
               }
               console.info(`[BLOG] 라이브러리 자동 매칭: ${matched}/${imgMarkers.length}장 배치`);
