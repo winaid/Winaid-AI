@@ -1578,15 +1578,28 @@ JSON 형식으로 응답해주세요.`;
         blogText = blogText.replace(/(<p>&nbsp;<\/p>\s*){2,}/g, '<p>&nbsp;</p>\n');
       }
 
-      // 4) imageCount 초과 마커 제거 — 모든 모드 공통 (Claude 가 초과 부여한 경우)
+      // 4) imageCount 초과 + 중복 마커 제거 — 모든 모드 공통
+      //    LLM 이 [IMG_1] 을 2번 출력하면 strip 의 n≤target 체크는 통과 →
+      //    뒤에서 라이브러리 매칭/AI 생성이 마커 수만큼 일어나 이미지 수 초과.
+      //    예: 사용자가 라이브러리 1 + AI 1 (target=2) 선택했는데 LLM 이
+      //    [IMG_1] [IMG_1] [IMG_2] 출력 → 라이브러리 2 + AI 1 = 3장 회귀.
+      //    fix: 같은 번호 중복도 첫 출현만 유지.
       const targetImageCount = request.imageCount ?? imageCount;
       const beforeStrip = (blogText.match(/\[IMG_\d+/g) || []).length;
       console.info(`[BLOG] strip 시작: ${beforeStrip}개 마커, target=${targetImageCount}, state=${imageCount}`);
+      const seenImgNumbers = new Set<number>();
       blogText = blogText.replace(/\[IMG_(\d+)[^\]]*\]/g, (match, num) => {
         const n = parseInt(num, 10);
-        const keep = n <= targetImageCount;
-        if (!keep) console.info(`[BLOG] strip 제거: [IMG_${num}] (${n} > ${targetImageCount})`);
-        return keep ? match : '';
+        if (n > targetImageCount) {
+          console.info(`[BLOG] strip 제거: ${match} (n=${n} > ${targetImageCount})`);
+          return '';
+        }
+        if (seenImgNumbers.has(n)) {
+          console.info(`[BLOG] strip 제거: ${match} (n=${n} 중복)`);
+          return '';
+        }
+        seenImgNumbers.add(n);
+        return match;
       });
       const afterStrip = (blogText.match(/\[IMG_\d+/g) || []).length;
       console.info(`[BLOG] strip 완료: ${beforeStrip}→${afterStrip} (target=${targetImageCount}, state=${imageCount})`);
