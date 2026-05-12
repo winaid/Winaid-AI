@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { checkAuth } from '../../../../lib/apiAuth';
 import { resolveImageOwner } from '../../../../lib/serverAuth';
 import { useCredit, refundCredit } from '../../../../lib/creditService';
+import { verifyAdminCookie } from '../../../../lib/adminCookie';
 import { getHospitalStylePrompt } from '@winaid/blog-core';
 import { buildBlogPromptV3, buildOutlinePrompt, buildSectionFromOutlinePrompt } from '@winaid/blog-core';
 import { filterMedicalLawViolations } from '@winaid/blog-core';
@@ -48,8 +49,11 @@ export async function POST(request: NextRequest) {
   // userId 는 Bearer 토큰에서 도출 (client body.userId 신뢰 금지 — 다른 사용자 크레딧 차감 방지)
   const owner = await resolveImageOwner(request);
   const userId = owner === 'guest' ? null : owner;
+  // 🛑 INVARIANT §2 — next-app admin (admin_session HttpOnly cookie) 은 크레딧 무관 무제한.
+  //    admin 이 Bearer 까지 보유한 케이스에서도 useCredit/insufficient_credits 차단.
+  const isAdmin = verifyAdminCookie(request).valid;
   let creditDeducted = false;
-  if (userId) {
+  if (userId && !isAdmin) {
     const credit = await useCredit(userId);
     if (!credit.success) {
       return NextResponse.json({ error: 'insufficient_credits', remaining: credit.remaining }, { status: 402 });

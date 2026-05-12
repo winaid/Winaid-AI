@@ -17,6 +17,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { checkAuth } from '../../../../lib/apiAuth';
 import { resolveImageOwner } from '../../../../lib/serverAuth';
 import { useCredit, refundCredit } from '../../../../lib/creditService';
+import { verifyAdminCookie } from '../../../../lib/adminCookie';
 import { buildPressPrompt, type PressType } from '../../../../lib/pressPrompt';
 import { getHospitalStylePrompt, sanitizeLeakInHtml } from '@winaid/blog-core';
 
@@ -74,8 +75,10 @@ export async function POST(request: NextRequest) {
   // 1 user action = 1 credit (audit Q-2c). validation 후 차감.
   const owner = await resolveImageOwner(request);
   const userId = owner === 'guest' ? null : owner;
+  // 🛑 INVARIANT §2 — next-app admin (admin_session cookie) 은 크레딧 무관 무제한.
+  const isAdmin = verifyAdminCookie(request).valid;
   let creditDeducted = false;
-  if (userId) {
+  if (userId && !isAdmin) {
     const credit = await useCredit(userId);
     if (!credit.success) {
       return NextResponse.json({ error: 'insufficient_credits', remaining: credit.remaining }, { status: 402 });

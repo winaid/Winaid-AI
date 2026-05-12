@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { checkAuth } from '../../../../../lib/apiAuth';
 import { resolveImageOwner } from '../../../../../lib/serverAuth';
 import { useCredit, refundCredit } from '../../../../../lib/creditService';
+import { verifyAdminCookie } from '../../../../../lib/adminCookie';
 import {
   buildBlogSectionPromptV3,
   type SectionRegenerateInputV3,
@@ -38,8 +39,10 @@ export async function POST(request: NextRequest) {
 
   const owner = await resolveImageOwner(request);
   const userId = owner === 'guest' ? null : owner;
+  // 🛑 INVARIANT §2 — next-app admin (admin_session cookie) 은 크레딧 무관 무제한.
+  const isAdmin = verifyAdminCookie(request).valid;
   let creditDeducted = false;
-  if (userId) {
+  if (userId && !isAdmin) {
     const credit = await useCredit(userId);
     if (!credit.success) {
       return NextResponse.json({ error: 'insufficient_credits', remaining: credit.remaining }, { status: 402 });
