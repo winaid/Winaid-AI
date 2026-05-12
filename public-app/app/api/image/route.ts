@@ -767,10 +767,13 @@ All people in the scene must have coherent, natural gazes. NO unfocused or empty
   }
 
   // ── OpenAI 호출 + 멀티키 로테이션 ──
+  // 🛑 INVARIANT — per-key timeout = 120_000 ms. 절대 줄이지 말 것.
+  //    docs/INVARIANTS.md §1 참조. PR #47 에서 next-app 만 60s 로 줄여 prod 502 회귀 발생 → PR #163 복구.
+  //    gpt-image-2 정상 추론이 60s 를 자주 초과.
   let lastError = '';
   for (let ki = 0; ki < keys.length; ki++) {
     const keyIdx = (keyIndex + ki) % keys.length;
-    const openai = new OpenAI({ apiKey: keys[keyIdx], timeout: 120_000 });
+    const openai = new OpenAI({ apiKey: keys[keyIdx], timeout: 120_000 }); // 🛑 INVARIANT: docs/INVARIANTS.md §1
 
     try {
       // C2-fix-1e: edit 분기 우선 시도, 실패 시 generate. generate fallback 시 prompt
