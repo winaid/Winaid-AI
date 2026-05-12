@@ -4,16 +4,21 @@ import { useMemo } from 'react';
 import type { DiagnosticResponse } from '../../lib/diagnostic/types';
 import { buildSnippetsForResult } from '../../lib/diagnostic/snippets';
 import HtmlSnippetCard from './HtmlSnippetCard';
+import type { LeadSource } from '../../lib/diagnostic/leadTypes';
 
 interface Props {
   result: DiagnosticResponse;
+  /** 게스트 게이트 — true 면 각 코드 카드 잠금 (라벨/메타는 노출). */
+  isGuest?: boolean;
+  /** 자물쇠 클릭 시 부모가 LeadFormModal 오픈. */
+  onUnlock?: (source: LeadSource) => void;
 }
 
 /**
  * fail/warning 항목 중 코드 스니펫이 정의된 것만 모아서 렌더.
  * 진단에서 fail 0건이면 빈 안내 메시지.
  */
-export default function SnippetsPanel({ result }: Props) {
+export default function SnippetsPanel({ result, isGuest, onUnlock }: Props) {
   const snippets = useMemo(() => buildSnippetsForResult(result), [result]);
 
   if (snippets.length === 0) {
@@ -46,21 +51,21 @@ export default function SnippetsPanel({ result }: Props) {
       {html.length > 0 && (
         <section className="space-y-3">
           <h3 className="text-[13px] font-bold text-slate-600 px-1">🏷️ HTML 메타 태그 ({html.length}개)</h3>
-          {html.map((s) => <HtmlSnippetCard key={s.label} snippet={s} />)}
+          {html.map((s) => <HtmlSnippetCard key={s.label} snippet={s} isGuest={isGuest} onUnlock={onUnlock} />)}
         </section>
       )}
 
       {jsonld.length > 0 && (
         <section className="space-y-3">
           <h3 className="text-[13px] font-bold text-slate-600 px-1">📋 JSON-LD 구조화 데이터 ({jsonld.length}개)</h3>
-          {jsonld.map((s) => <HtmlSnippetCard key={s.label} snippet={s} />)}
+          {jsonld.map((s) => <HtmlSnippetCard key={s.label} snippet={s} isGuest={isGuest} onUnlock={onUnlock} />)}
         </section>
       )}
 
       {header.length > 0 && (
         <section className="space-y-3">
           <h3 className="text-[13px] font-bold text-slate-600 px-1">🛡️ HTTP 응답 헤더 ({header.length}개)</h3>
-          {header.map((s) => <HtmlSnippetCard key={s.label} snippet={s} />)}
+          {header.map((s) => <HtmlSnippetCard key={s.label} snippet={s} isGuest={isGuest} onUnlock={onUnlock} />)}
         </section>
       )}
     </div>

@@ -15,7 +15,10 @@ import AIVisibilityCard from './AIVisibilityCard';
 import ActionPlan from './ActionPlan';
 import CompetitorAutoSuggestions from './CompetitorAutoSuggestions';
 import SnippetsPanel from './SnippetsPanel';
+import LeadFormModal from './LeadFormModal';
 import { authFetch } from '../../lib/authFetch';
+import { getSupabaseClient, isSupabaseConfigured } from '@winaid/blog-core';
+import type { LeadSource } from '../../lib/diagnostic/leadTypes';
 
 interface DiagnosticResultProps {
   result: DiagnosticResponse;
@@ -105,6 +108,40 @@ export default function DiagnosticResult({ result, onResultUpdate }: DiagnosticR
   const [measurementResults, setMeasurementResults] = useState<Partial<Record<AIPlatform, MeasurementData>>>({});
   const [refreshing, setRefreshing] = useState(false);
   const [refreshDone, setRefreshDone] = useState(false);
+
+  // 리드 폼 모달 상태
+  const [leadModalSource, setLeadModalSource] = useState<LeadSource | null>(null);
+  const [authedContactName, setAuthedContactName] = useState<string | undefined>(undefined);
+  const [isGuest, setIsGuest] = useState<boolean>(true);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured) {
+      setIsGuest(true);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const sb = getSupabaseClient();
+        const { data: { user } } = await sb.auth.getUser();
+        if (cancelled) return;
+        if (user) {
+          setIsGuest(false);
+          const meta = (user.user_metadata || {}) as { name?: string; full_name?: string };
+          setAuthedContactName(meta.name || meta.full_name || undefined);
+        } else {
+          setIsGuest(true);
+        }
+      } catch {
+        setIsGuest(true);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const openLeadModal = useCallback((source: LeadSource) => {
+    setLeadModalSource(source);
+  }, []);
 
   // 공유 링크
   const [shareUrl, setShareUrl] = useState<string | null>(null);
@@ -327,10 +364,13 @@ export default function DiagnosticResult({ result, onResultUpdate }: DiagnosticR
                 <div key={c.id} className="flex flex-col items-center">
                   <ScoreRing score={c.score} size={90} label={c.name} />
                   {c.score < 50 && (
-                    <p className="mt-1 text-[10px] text-indigo-500 cursor-pointer hover:underline text-center"
-                       onClick={() => window.open('https://winaid.co.kr/', '_blank')}>
+                    <button
+                      type="button"
+                      onClick={() => openLeadModal('bottom-cta')}
+                      className="mt-1 text-[10px] text-indigo-500 cursor-pointer hover:underline text-center bg-transparent border-0 p-0"
+                    >
                       💡 개선이 필요하면 WINAID에 맡겨보세요
-                    </p>
+                    </button>
                   )}
                 </div>
               ))}
@@ -562,10 +602,14 @@ export default function DiagnosticResult({ result, onResultUpdate }: DiagnosticR
       )}
 
       {/* 탭 4: 우선 조치 */}
-      {tab === 'actions' && <ActionPlan actions={result.priorityActions} />}
+      {tab === 'actions' && (
+        <ActionPlan actions={result.priorityActions} isGuest={isGuest} onUnlock={openLeadModal} />
+      )}
 
       {/* 탭 5: 코드 스니펫 — fail/warning 항목 중 코드로 고칠 수 있는 것 자동 생성 */}
-      {tab === 'snippets' && <SnippetsPanel result={result} />}
+      {tab === 'snippets' && (
+        <SnippetsPanel result={result} isGuest={isGuest} onUnlock={openLeadModal} />
+      )}
 
       {/* CTA — WINAID 대행 문의 */}
       <div className="mt-8 rounded-2xl bg-gradient-to-r from-indigo-600 to-blue-600 p-8 text-white shadow-lg">
@@ -581,14 +625,13 @@ export default function DiagnosticResult({ result, onResultUpdate }: DiagnosticR
             AEO/GEO 최적화 · 블로그 콘텐츠 · 구조화 데이터 · 검색 노출 전략까지 원스톱 대행
           </p>
 
-          <a
-            href="https://winaid.co.kr/"
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            type="button"
+            onClick={() => openLeadModal('bottom-cta')}
             className="inline-block px-8 py-3 bg-white text-indigo-700 font-bold rounded-xl hover:bg-indigo-50 transition-colors shadow-md"
           >
             📞 무료 상담 신청하기
-          </a>
+          </button>
 
           <div className="mt-6 flex flex-wrap justify-center gap-4 text-[12px] text-indigo-200">
             <span>✅ 진단 결과 기반 맞춤 전략</span>
@@ -597,6 +640,16 @@ export default function DiagnosticResult({ result, onResultUpdate }: DiagnosticR
           </div>
         </div>
       </div>
+
+      {/* 리드 폼 모달 — 4곳(저점수 카드 / 우선조치 잠금 / 코드 스니펫 잠금 / 하단 배너) 에서 공유 */}
+      <LeadFormModal
+        open={leadModalSource !== null}
+        onClose={() => setLeadModalSource(null)}
+        source={leadModalSource ?? 'bottom-cta'}
+        diagnosticUrl={result.url}
+        diagnosticScore={result.overallScore}
+        defaultContactName={authedContactName}
+      />
     </div>
   );
 }

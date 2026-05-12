@@ -3,9 +3,15 @@
 import { useState } from 'react';
 import type { SnippetSpec, OrganizationFormInput } from '../../lib/diagnostic/snippets';
 import { generateOrganizationSchema } from '../../lib/diagnostic/snippets';
+import type { LeadSource } from '../../lib/diagnostic/leadTypes';
+import LockOverlay from './LockOverlay';
 
 interface Props {
   snippet: SnippetSpec;
+  /** 게스트 게이트 — true 면 코드 영역 잠금 (복사 disabled + 자물쇠 오버레이). */
+  isGuest?: boolean;
+  /** 자물쇠 클릭 시 부모가 LeadFormModal 오픈. */
+  onUnlock?: (source: LeadSource) => void;
 }
 
 const TYPE_META: Record<SnippetSpec['type'], { emoji: string; label: string; cls: string }> = {
@@ -14,7 +20,8 @@ const TYPE_META: Record<SnippetSpec['type'], { emoji: string; label: string; cls
   jsonld: { emoji: '📋', label: 'JSON-LD',   cls: 'bg-violet-50 text-violet-700 border-violet-200' },
 };
 
-export default function HtmlSnippetCard({ snippet }: Props) {
+export default function HtmlSnippetCard({ snippet, isGuest, onUnlock }: Props) {
+  const locked = !!isGuest && !!onUnlock;
   const meta = TYPE_META[snippet.type];
   const [copied, setCopied] = useState(false);
 
@@ -60,8 +67,8 @@ export default function HtmlSnippetCard({ snippet }: Props) {
         </div>
       </div>
 
-      {/* JSON-LD 폼 */}
-      {snippet.type === 'jsonld' && snippet.formFields && (
+      {/* JSON-LD 폼 — 게스트는 입력 잠금 */}
+      {snippet.type === 'jsonld' && snippet.formFields && !locked && (
         <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/50">
           <p className="text-[11px] font-bold text-slate-600 mb-2">📝 입력 (필요한 항목만 채우면 자동 생성)</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -101,14 +108,26 @@ export default function HtmlSnippetCard({ snippet }: Props) {
         <button
           type="button"
           onClick={handleCopy}
+          disabled={locked}
           className={`absolute top-2 right-2 px-2.5 py-1 rounded-md text-[11px] font-bold transition-colors ${
-            copied
+            locked
+              ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
+              : copied
               ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
               : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
           }`}
         >
           {copied ? '✅ 복사됨' : '📋 복사'}
         </button>
+        {locked && onUnlock && (
+          <LockOverlay
+            label="코드 받기"
+            sublabel="상담 신청 후 전체 코드 발송"
+            source="lock-snippets"
+            onTrigger={onUnlock}
+            rounded="md"
+          />
+        )}
       </div>
     </div>
   );

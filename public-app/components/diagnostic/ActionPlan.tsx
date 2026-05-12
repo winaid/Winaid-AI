@@ -2,10 +2,19 @@
 
 import { useEffect, useState } from 'react';
 import type { ActionItem, ActionExecutor } from '../../lib/diagnostic/types';
+import type { LeadSource } from '../../lib/diagnostic/leadTypes';
+import LockOverlay from './LockOverlay';
 
 interface ActionPlanProps {
   actions: ActionItem[];
+  /** 게스트 게이트 — true 면 4번째(originalIdx >= 3) 이후 카드 잠금. */
+  isGuest?: boolean;
+  /** 자물쇠 클릭 시 부모가 LeadFormModal 오픈. */
+  onUnlock?: (source: LeadSource) => void;
 }
+
+/** 게스트에게 정상 노출되는 우선 카드 수. */
+const GUEST_UNLOCKED_COUNT = 3;
 
 const IMPACT_CLS: Record<ActionItem['impact'], string> = {
   high: 'bg-red-50 text-red-700 border-red-200',
@@ -89,7 +98,7 @@ function parseDetailedGuide(guide: string): ParsedGuide {
   };
 }
 
-export default function ActionPlan({ actions }: ActionPlanProps) {
+export default function ActionPlan({ actions, isGuest, onUnlock }: ActionPlanProps) {
   const [selectedAction, setSelectedAction] = useState<ActionItem | null>(null);
 
   // ESC 키로 모달 닫기
@@ -143,13 +152,22 @@ export default function ActionPlan({ actions }: ActionPlanProps) {
               </div>
             </div>
             <ul className="divide-y divide-slate-100">
-              {items.map(({ a, originalIdx }) => (
-                <li key={originalIdx}>
+              {items.map(({ a, originalIdx }) => {
+                const locked = !!isGuest && !!onUnlock && originalIdx >= GUEST_UNLOCKED_COUNT;
+                return (
+                <li key={originalIdx} className={locked ? 'relative' : ''}>
                   <button
                     type="button"
-                    onClick={() => setSelectedAction(a)}
+                    onClick={() => { if (!locked) setSelectedAction(a); }}
                     aria-haspopup="dialog"
-                    className="w-full text-left px-5 py-4 hover:bg-slate-50 focus:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 transition-colors cursor-pointer"
+                    disabled={locked}
+                    tabIndex={locked ? -1 : 0}
+                    aria-hidden={locked || undefined}
+                    className={`w-full text-left px-5 py-4 transition-colors ${
+                      locked
+                        ? 'cursor-default select-none'
+                        : 'hover:bg-slate-50 focus:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 cursor-pointer'
+                    }`}
                   >
                     <div className="flex items-start gap-3">
                       <span className="flex-none w-6 h-6 rounded-full bg-blue-100 text-blue-700 text-[11px] font-bold flex items-center justify-center mt-0.5">
@@ -175,8 +193,18 @@ export default function ActionPlan({ actions }: ActionPlanProps) {
                       </div>
                     </div>
                   </button>
+                  {locked && onUnlock && (
+                    <LockOverlay
+                      label="전체 우선조치 받기"
+                      sublabel="상담 신청 1분"
+                      source="lock-actionplan"
+                      onTrigger={onUnlock}
+                      rounded="md"
+                    />
+                  )}
                 </li>
-              ))}
+                );
+              })}
             </ul>
           </div>
         );
