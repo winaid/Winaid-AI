@@ -26,13 +26,12 @@ PR 머지 후 별도 PR 로 다룰 항목들. 메모용 — 각 항목은 개별
 - **머지 SHA**: `ebed568b`
 - **한계**: 영문화는 1차 방어. 후처리 필터는 없음 → #5 참고.
 
-### 3. chore(blog): normalizeBlog 죽은 패턴 제거 또는 재작성 — dead 확정 (PR #157 실증)
+### 3. chore(blog): normalizeBlog 죽은 패턴 제거 — ✅ 완료 (PR #159) — 47/47 sanity 통과로 dead 직접 증명
 - 패턴 3 — `(<h[1-6]>|<p>|<ul>|<li>|<strong>|<em>)(?=...)` 가 `inner.replace(/<[^>]*>/g, '')` 이후에 적용되어 매칭 불가능 (HTML 태그가 이미 strip 된 텍스트에서 `<h3>` 못 찾음).
-- **PR #157 sanity test 중 실증됨**: 초기 raw HTML 매칭 테스트에서는 패턴 3 이 잡아 false positive 가 났지만, 실제 normalizeBlog 동작은 `inner.replace(/<[^>]*>/g, '')` 로 HTML 태그 strip 한 후 text 에 대해 매칭하므로 패턴 3 의 `<h[1-6]>|<p>|...` 부분이 절대 매칭 안 됨이 확인됨. **#3 작업 시 안전하게 (a) 제거 가능 — 회귀 risk 0**.
-- **선택지**:
-  - (a) 패턴 제거 (실효 0 — 권장)
-  - (b) entity-decoded 텍스트 기준 재작성 — 예: `&lt;h3&gt;` 같이 escape 된 형태로 본문에 노출되는 경우 잡기
-- **양 앱 영향**: 동일
+- **PR #159 47-case 결과**: 패턴 3 제거 전후 결과 100% 동일 → dead 직접 증명.
+- **적용 위치**: 양 앱 × 양 필터 = 4곳 동일 한 줄 삭제. 헤딩 필터 13→12, `<p>` 필터 7→6 패턴.
+- **다른 패턴 커버리지**: 의도된 leak 케이스(사용 가능 태그/h3 태그로 감싸/마크다운 JSON 등) 는 패턴 2, 6, 7 또는 헤딩 전용 8-13 이 이미 커버.
+- **머지 SHA**: `566cfc01`
 
 ### 4. test(blog): normalizeBlog leak filter 정식 회귀 테스트 추가
 - 현재 sanity test 는 작업 중에만 ad-hoc 으로 돌림 (Bash + node -e)
@@ -53,6 +52,15 @@ PR 머지 후 별도 PR 로 다룰 항목들. 메모용 — 각 항목은 개별
   - `packages/blog-core/src/normalize/` 같은 공통 모듈로 추출 (양 앱 + 다중 콘텐츠 타입 공유)
   - 또는 각 generate route (`/api/generate/clinical`, `/api/generate/press`, `/api/card-news/*`) 에서 후처리 단계 추가
 - **위험도**: 낮음 — `[META`/`[CRITICAL`/`마크다운/JSON` 같은 패턴은 정상 의료 콘텐츠에 거의 안 나옴
+
+### 6. feat(blog): entity-encoded HTML leak 차단 (`&lt;h3&gt; 태그를 감싸` 류) — PR #159 진단 중 발견
+- 현재 어떤 누수 패턴도 entity-encoded HTML 을 잡지 못함.
+- **PR #159 edge case 실증**: `<p>설명: &lt;h3&gt; 태그를 감싸 사용합니다.</p>` 가 stripped text `"설명: &lt;h3&gt; 태그를 감싸 사용합니다."` 로 변환됨. 어떤 패턴도 매칭 안 됨.
+- 발생 빈도 극히 낮으나 LLM 이 system prompt 의 HTML 지시문을 escape 형태로 본문화할 수 있음.
+- **처리 옵션**:
+  - (a) normalizeBlog 의 inner 처리 단계에서 entity decode 후 매칭
+  - (b) entity-aware 패턴 별도 추가 (`&lt;h[1-6]&gt;` 류)
+- prod 모니터링에서 발견 시 우선 처리.
 
 ---
 
