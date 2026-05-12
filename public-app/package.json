@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "tsc --noEmit",
+    "test": "for f in __tests__/*.test.ts; do echo \"\\n>>> $f\"; tsx \"$f\" || exit 1; done",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui"
   },
@@ -36,6 +37,7 @@
     "@types/react-dom": "^19.0.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.18",
+    "tsx": "^4.20.3",
     "typescript": "^5.8.0"
   }
 }
