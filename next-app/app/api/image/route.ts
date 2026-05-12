@@ -705,13 +705,15 @@ All people in the scene must have coherent, natural gazes. NO unfocused or empty
   // (isCardNewsMode + premium quality 는 quality='high' 로 자동 매핑 — 기존 2-Stage 우회.)
 
   // ── OpenAI 호출 + 멀티키 로테이션 ──
-  // 시연: 키 캐스케이드 캡 — 60s × 2 + waits ≤ 130s. Vercel 300s 한도 절반 이하 유지.
-  // (이전: 11키 × 120s = 최악 1320s → 300s 초과로 timeout 발생.)
+  // 키 캐스케이드 캡 — 120s × 2 + waits ≤ 245s. Vercel 300s 한도 안에 안전.
+  // (PR #47 에서 데모용 maxDuration=60 캡에 맞추려 60s 로 줄였으나, 이후 maxDuration=300
+  //  복구 시 함께 못 올린 회귀. gpt-image-2 의 정상 추론 시간이 60s 를 자주 초과해
+  //  Timeout 502 가 빈발 → 원래 120s 로 복구. public-app 은 이미 120s.)
   const MAX_KEY_ATTEMPTS = Math.min(keys.length, 2);
   let lastError = '';
   for (let ki = 0; ki < MAX_KEY_ATTEMPTS; ki++) {
     const keyIdx = (keyIndex + ki) % keys.length;
-    const openai = new OpenAI({ apiKey: keys[keyIdx], timeout: 60_000 });
+    const openai = new OpenAI({ apiKey: keys[keyIdx], timeout: 120_000 });
 
     try {
       const result = await openai.images.generate({
