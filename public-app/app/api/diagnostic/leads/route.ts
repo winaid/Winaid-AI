@@ -22,6 +22,7 @@ import {
   LEAD_SOURCES,
   isValidPhone,
 } from '../../../../lib/diagnostic/leadTypes';
+import { notifyLeadToSlack } from '../../../../lib/slackLeadsNotifier';
 
 export const dynamic = 'force-dynamic';
 
@@ -163,6 +164,19 @@ export async function POST(request: NextRequest) {
     console.error('[leads] insert error', error);
     return err('저장에 실패했습니다. 잠시 후 다시 시도해 주세요.', 500);
   }
+
+  // 9) 슬랙 알림 (fire-and-forget, SLACK_LEADS_WEBHOOK_URL 미설정 시 no-op).
+  //    INSERT 가 성공한 경우에만 호출 → 멱등성 보장 (실패 케이스로는 알림 안 감).
+  notifyLeadToSlack({
+    leadId: data.id,
+    hospitalName: hospital,
+    contactName: contact,
+    phone: phoneRaw,
+    message: sanitizedMessage,
+    source: body.source,
+    diagnosticUrl,
+    diagnosticScore,
+  });
 
   return NextResponse.json({ success: true, id: data.id });
 }
