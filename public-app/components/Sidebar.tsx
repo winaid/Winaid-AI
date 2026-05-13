@@ -33,7 +33,6 @@ const videoItems: { id: ContentTab; label: string; icon: string; href: string }[
 ];
 
 const extraItems: { label: string; icon: string; href: string }[] = [
-  { label: 'AEO/GEO 진단', icon: '🔍', href: '/diagnostic' },
   { label: '마이페이지', icon: '👤', href: '/mypage' },
   { label: '사용 가이드', icon: '📖', href: '/app?guide=1' },
 ];
@@ -97,6 +96,8 @@ export function Sidebar({
 
       {/* 네비게이션 */}
       <nav className="flex-1 py-3 px-2 space-y-1 overflow-y-auto">
+        {navButton({ label: 'AEO/GEO 진단', icon: '🔍', href: '/diagnostic' })}
+
         <div className={`px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider ${collapsed ? 'text-center' : ''} text-slate-400`}>
           {collapsed ? '···' : '글 작성'}
         </div>
