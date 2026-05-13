@@ -166,7 +166,18 @@ export interface AIVisibility {
   reason: string;
 }
 
-export type ActionExecutor = 'ai' | 'human' | 'hybrid';
+/** 실행 주체. 'hybrid' 는 'both' 와 동의어 — 과거 데이터 호환용. */
+export type ActionExecutor = 'ai' | 'human' | 'hybrid' | 'both';
+
+/** 실행 방식 — 그룹 섹션 분류의 1차 축. 누락 시 UI "미분류" fallback. */
+export type ExecutionType = 'instant' | 'developer' | 'homepage';
+
+/** 비용 축 — 배지 표시. 누락 시 chip 미렌더. */
+export type ActionCost = 'free' | 'time_only' | 'external';
+
+export const EXECUTION_TYPES: ExecutionType[] = ['instant', 'developer', 'homepage'];
+export const ACTION_COSTS: ActionCost[] = ['free', 'time_only', 'external'];
+export const ACTION_EXECUTORS: ActionExecutor[] = ['ai', 'human', 'hybrid', 'both'];
 
 export interface ActionItem {
   action: string;
@@ -176,6 +187,10 @@ export interface ActionItem {
   category: string;
   /** 단계 5-B: Sonnet 이 분류하는 실행 주체. 규칙 기반 fallback 은 undefined. */
   executor?: ActionExecutor;
+  /** 실행 방식 — 텍스트/메타 수정(instant) / 코드·스키마(developer) / 페이지 구조·디자인(homepage). */
+  executionType?: ExecutionType;
+  /** 무료 / 시간만 소요 / 외부 비용 발생. */
+  cost?: ActionCost;
   /** 60대 원장님이 직접 제작사에 요청할 수 있도록 한 상세 가이드 (이게 뭐예요? / 어떻게 하나요? / 팁). */
   detailedGuide?: string;
 }

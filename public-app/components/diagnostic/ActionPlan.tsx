@@ -1,8 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import type { ActionItem, ActionExecutor } from '../../lib/diagnostic/types';
+import type { ActionItem, ExecutionType, ActionCost } from '../../lib/diagnostic/types';
 import type { LeadSource } from '../../lib/diagnostic/leadTypes';
+import {
+  classifyActionGroup,
+  ACTION_GROUP_LABEL,
+  ACTION_GROUP_ORDER,
+  type ActionGroup,
+} from '../../lib/diagnostic/actionGroups';
 import LockOverlay from './LockOverlay';
 
 interface ActionPlanProps {
@@ -23,54 +29,53 @@ const IMPACT_CLS: Record<ActionItem['impact'], string> = {
 };
 const IMPACT_LABEL: Record<ActionItem['impact'], string> = { high: '영향 큼', medium: '영향 중', low: '영향 낮음' };
 
-const DIFF_CLS: Record<ActionItem['difficulty'], string> = {
-  easy: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  medium: 'bg-amber-50 text-amber-700 border-amber-200',
-  hard: 'bg-red-50 text-red-700 border-red-200',
-};
-const DIFF_LABEL: Record<ActionItem['difficulty'], string> = { easy: '쉬움', medium: '보통', hard: '어려움' };
-
 const TIME_CLS = 'bg-blue-50 text-blue-700 border-blue-200';
 
-// ── executor 그룹 메타 ──────────────────────────────────────
-type GroupKey = 'ai' | 'hybrid' | 'human' | 'other';
-const GROUP_META: Record<GroupKey, { emoji: string; title: string; subtitle: string; badgeCls: string; badgeLabel: string }> = {
-  ai: {
-    emoji: '🤖',
-    title: 'AI로 바로 가능',
-    subtitle: 'WINAID 도구로 즉시 생성/적용할 수 있는 작업',
-    badgeCls: 'bg-indigo-50 text-indigo-700 border-indigo-200',
-    badgeLabel: 'AI',
-  },
-  hybrid: {
-    emoji: '🤝',
-    title: 'AI 초안 + 사람 검수·발행',
-    subtitle: 'AI 가 초안을 만들고 사람이 검수·업로드해야 완성되는 작업',
-    badgeCls: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    badgeLabel: 'HYBRID',
-  },
-  human: {
-    emoji: '👤',
-    title: '사람이 직접 해야 할 것',
-    subtitle: '외부 서비스 등록·계약·배포 등 사람 개입 필수',
-    badgeCls: 'bg-amber-50 text-amber-700 border-amber-200',
-    badgeLabel: 'HUMAN',
-  },
-  other: {
-    emoji: '📎',
-    title: '기타',
-    subtitle: '실행 주체가 분류되지 않은 항목 (LLM 실패 시 fallback)',
-    badgeCls: 'bg-slate-50 text-slate-600 border-slate-200',
-    badgeLabel: '기타',
-  },
+// 명세 chip — 신규 색상 도입 없이 기존 Tailwind 팔레트 재사용.
+const EXEC_TYPE_CLS: Record<ExecutionType, string> = {
+  instant: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  developer: 'bg-blue-50 text-blue-700 border-blue-200',
+  homepage: 'bg-violet-50 text-violet-700 border-violet-200',
+};
+const EXEC_TYPE_LABEL: Record<ExecutionType, string> = {
+  instant: '즉시',
+  developer: '개발자',
+  homepage: '홈페이지',
 };
 
-function groupKeyOf(executor: ActionExecutor | undefined): GroupKey {
-  if (executor === 'ai' || executor === 'hybrid' || executor === 'human') return executor;
-  return 'other';
-}
+const COST_CLS: Record<ActionCost, string> = {
+  free: 'bg-slate-50 text-slate-600 border-slate-200',
+  time_only: 'bg-amber-50 text-amber-700 border-amber-200',
+  external: 'bg-red-50 text-red-700 border-red-200',
+};
+const COST_LABEL: Record<ActionCost, string> = {
+  free: '무료',
+  time_only: '시간만',
+  external: '외부 비용',
+};
 
-const GROUP_ORDER: GroupKey[] = ['ai', 'hybrid', 'human', 'other'];
+const GROUP_META: Record<ActionGroup, { emoji: string; title: string; subtitle: string }> = {
+  ai_helpable: {
+    emoji: ACTION_GROUP_LABEL.ai_helpable.emoji,
+    title: ACTION_GROUP_LABEL.ai_helpable.label,
+    subtitle: 'WINAID 도구로 즉시 생성/적용 가능. 가장 빠른 ROI.',
+  },
+  instant_human: {
+    emoji: ACTION_GROUP_LABEL.instant_human.emoji,
+    title: ACTION_GROUP_LABEL.instant_human.label,
+    subtitle: '텍스트·메타·이미지 alt 같은 즉시 수정 가능한 작업.',
+  },
+  dev_required: {
+    emoji: ACTION_GROUP_LABEL.dev_required.emoji,
+    title: ACTION_GROUP_LABEL.dev_required.label,
+    subtitle: '제작사 또는 홈페이지 구조 변경이 필요한 작업.',
+  },
+  unclassified: {
+    emoji: ACTION_GROUP_LABEL.unclassified.emoji,
+    title: ACTION_GROUP_LABEL.unclassified.label,
+    subtitle: '실행 방식·비용 정보가 없는 항목 (과거 진단 데이터 fallback).',
+  },
+};
 
 // ── detailedGuide 3섹션 파서 ────────────────────────────────
 // "이게 뭐예요?" / "어떻게 하나요?" / "팁" 헤더로 본문을 나눠 각각을 별도 박스로 렌더.
@@ -120,11 +125,14 @@ export default function ActionPlan({ actions, isGuest, onUnlock }: ActionPlanPro
   }
 
   // 그룹핑 — 서버 정렬(난이도→영향도→기간)을 각 그룹 내부에서 유지
-  const groups: Record<GroupKey, Array<{ a: ActionItem; originalIdx: number }>> = {
-    ai: [], hybrid: [], human: [], other: [],
+  const groups: Record<ActionGroup, Array<{ a: ActionItem; originalIdx: number }>> = {
+    ai_helpable: [],
+    instant_human: [],
+    dev_required: [],
+    unclassified: [],
   };
   actions.forEach((a, idx) => {
-    groups[groupKeyOf(a.executor)].push({ a, originalIdx: idx });
+    groups[classifyActionGroup(a)].push({ a, originalIdx: idx });
   });
 
   return (
@@ -134,11 +142,11 @@ export default function ActionPlan({ actions, isGuest, onUnlock }: ActionPlanPro
           우선 조치 · 총 {actions.length}개
         </h3>
         <p className="text-[11px] text-slate-400 mt-0.5">
-          실행 주체별로 분류되었습니다. 난이도 쉬움 · 영향 큼 · 즉시 가능 순. 각 박스를 클릭하면 상세 가이드가 보입니다.
+          실행 방식·주체별로 분류되었습니다. 가장 빠른 행동부터 순서대로. 각 박스를 클릭하면 상세 가이드가 보입니다.
         </p>
       </div>
 
-      {GROUP_ORDER.map((key) => {
+      {ACTION_GROUP_ORDER.map((key) => {
         const items = groups[key];
         if (items.length === 0) return null;
         const meta = GROUP_META[key];
@@ -177,15 +185,19 @@ export default function ActionPlan({ actions, isGuest, onUnlock }: ActionPlanPro
                         <p className="text-sm font-semibold text-slate-800 leading-relaxed">{a.action}</p>
                         <p className="text-[11px] text-slate-400 mt-1">분류: {a.category} · 클릭해서 자세히 보기 →</p>
                         <div className="flex flex-wrap gap-1.5 mt-2">
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${meta.badgeCls}`}>
-                            {meta.badgeLabel}
-                          </span>
                           <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${IMPACT_CLS[a.impact]}`}>
                             {IMPACT_LABEL[a.impact]}
                           </span>
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${DIFF_CLS[a.difficulty]}`}>
-                            난이도 {DIFF_LABEL[a.difficulty]}
-                          </span>
+                          {a.executionType && (
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${EXEC_TYPE_CLS[a.executionType]}`}>
+                              {EXEC_TYPE_LABEL[a.executionType]}
+                            </span>
+                          )}
+                          {a.cost && (
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${COST_CLS[a.cost]}`}>
+                              {COST_LABEL[a.cost]}
+                            </span>
+                          )}
                           <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${TIME_CLS}`}>
                             {a.timeframe}
                           </span>
@@ -213,7 +225,6 @@ export default function ActionPlan({ actions, isGuest, onUnlock }: ActionPlanPro
       {/* ── 상세 가이드 모달 ─────────────────────────────────── */}
       {selectedAction && (() => {
         const a = selectedAction;
-        const meta = GROUP_META[groupKeyOf(a.executor)];
         return (
           <>
             {/* backdrop */}
@@ -246,15 +257,19 @@ export default function ActionPlan({ actions, isGuest, onUnlock }: ActionPlanPro
               <div className="px-6 pt-4 pb-2">
                 <p className="text-[11px] text-slate-400 mb-2">분류: {a.category}</p>
                 <div className="flex flex-wrap gap-1.5">
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${meta.badgeCls}`}>
-                    {meta.badgeLabel}
-                  </span>
                   <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${IMPACT_CLS[a.impact]}`}>
                     {IMPACT_LABEL[a.impact]}
                   </span>
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${DIFF_CLS[a.difficulty]}`}>
-                    난이도 {DIFF_LABEL[a.difficulty]}
-                  </span>
+                  {a.executionType && (
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${EXEC_TYPE_CLS[a.executionType]}`}>
+                      {EXEC_TYPE_LABEL[a.executionType]}
+                    </span>
+                  )}
+                  {a.cost && (
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${COST_CLS[a.cost]}`}>
+                      {COST_LABEL[a.cost]}
+                    </span>
+                  )}
                   <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${TIME_CLS}`}>
                     {a.timeframe}
                   </span>
