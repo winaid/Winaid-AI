@@ -7,6 +7,7 @@
  * 경쟁사 크롤 + scoring (PSI 생략) + calculateGap + Sonnet GAP narrative.
  */
 
+import { withApiError } from '@/lib/apiErrorHandler';
 import { NextRequest, NextResponse } from 'next/server';
 import { gateDiagnosticRequest } from '../../../../lib/guestRateLimit';
 import { crawlSite } from '../../../../lib/diagnostic/crawler';
@@ -37,7 +38,7 @@ function normalizeUrl(raw: string): string | null {
   }
 }
 
-export async function POST(request: NextRequest) {
+async function _wrappedPOST(request: NextRequest) {
   const gate = gateDiagnosticRequest(request);
   if (!gate.ok) {
     return NextResponse.json({ error: gate.error }, { status: gate.status });
@@ -136,3 +137,5 @@ ${gap.strongerItems.length > 0 ? gap.strongerItems.join(', ') : '없음'}
   };
   return NextResponse.json(result);
 }
+
+export const POST = withApiError(_wrappedPOST, { route: '/api/diagnostic/competitor-gap' });

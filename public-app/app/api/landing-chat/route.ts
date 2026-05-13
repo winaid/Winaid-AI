@@ -19,6 +19,7 @@
  *   - in-memory rate limit은 서버리스 인스턴스 간 공유가 안 됨. 완벽한 차단은
  *     아니지만 일반 브라우저 봇에는 충분한 저지선. 필요 시 Upstash Redis 전환.
  */
+import { withApiError } from '@/lib/apiErrorHandler';
 import { NextRequest, NextResponse } from 'next/server';
 
 export const maxDuration = 300;
@@ -105,7 +106,7 @@ function getKeys(): string[] {
   return keys;
 }
 
-export async function POST(request: NextRequest) {
+async function _wrappedPOST(request: NextRequest) {
   // 1) rate limit
   const clientKey = getClientKey(request);
   const rate = checkRate(clientKey);
@@ -193,3 +194,5 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error.message || '서버 오류' }, { status: 500 });
   }
 }
+
+export const POST = withApiError(_wrappedPOST, { route: '/api/landing-chat' });

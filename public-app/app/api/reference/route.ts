@@ -4,6 +4,7 @@
  * response: ReferenceResult
  */
 
+import { withApiError } from '@/lib/apiErrorHandler';
 import { NextRequest, NextResponse } from 'next/server';
 import { sanitizePromptInput } from '@winaid/blog-core';
 import { gateDiagnosticRequest } from '../../../lib/guestRateLimit';
@@ -14,7 +15,7 @@ import { fetchMedicalReference } from '../../../lib/referenceFetcher';
 export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
 
-export async function POST(request: NextRequest) {
+async function _wrappedPOST(request: NextRequest) {
   const gate = gateDiagnosticRequest(request);
   if (!gate.ok) {
     return NextResponse.json({ error: gate.error }, { status: gate.status });
@@ -62,3 +63,5 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+export const POST = withApiError(_wrappedPOST, { route: '/api/reference' });

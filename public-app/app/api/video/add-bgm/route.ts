@@ -8,6 +8,7 @@
  *   - 예외 발생 시에도 환불.
  */
 
+import { withApiError } from '@/lib/apiErrorHandler';
 import { NextRequest, NextResponse } from 'next/server';
 import { gateGuestRequest } from '../../../../lib/guestRateLimit';
 import { resolveImageOwner } from '../../../../lib/serverAuth';
@@ -17,7 +18,7 @@ import { proxyFormData, isVideoProcessorConfigured, translateVideoError } from '
 export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
 
-export async function POST(request: NextRequest) {
+async function _wrappedPOST(request: NextRequest) {
   const gate = gateGuestRequest(request, 3, '/api/video/add-bgm');
   if (!gate.ok) return NextResponse.json({ error: gate.error }, { status: gate.status });
 
@@ -100,3 +101,5 @@ function copyHeader(res: Response, key: string): Record<string, string> {
   const val = res.headers.get(key);
   return val ? { [key]: val } : {};
 }
+
+export const POST = withApiError(_wrappedPOST, { route: '/api/video/add-bgm' });

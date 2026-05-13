@@ -18,6 +18,7 @@
  *   500 — LLM 호출 실패 / JSON parse 실패
  */
 
+import { withApiError } from '@/lib/apiErrorHandler';
 import { NextRequest, NextResponse } from 'next/server';
 import { gateGuestRequest } from '../../../../lib/guestRateLimit';
 import { callLLM, sanitizeLeakInSlideOutline } from '@winaid/blog-core';
@@ -44,7 +45,7 @@ function err(message: string, status: number, extra?: Record<string, unknown>) {
   return NextResponse.json({ error: message, ...(extra || {}) }, { status });
 }
 
-export async function POST(request: NextRequest) {
+async function _wrappedPOST(request: NextRequest) {
   // ── 1) rate limit — 구성 안은 가벼우니 분당 10회 ─────────────────────
   const gate = gateGuestRequest(request, 10);
   if (!gate.ok) {
@@ -143,3 +144,5 @@ export async function POST(request: NextRequest) {
     creditsUsed: 0,
   });
 }
+
+export const POST = withApiError(_wrappedPOST, { route: '/api/card-news/generate-outline' });

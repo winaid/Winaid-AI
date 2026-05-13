@@ -13,6 +13,7 @@
  *     hospital_images 테이블에 저장된 publicUrl 만 허용.
  */
 
+import { withApiError } from '@/lib/apiErrorHandler';
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, supabaseAdmin } from '@winaid/blog-core';
 // safeFetch 는 server-only (Node 'dns' / 'net') — relative path 로 직접 import.
@@ -41,7 +42,7 @@ function isAllowedImageUrl(url: string): boolean {
   }
 }
 
-export async function POST(request: NextRequest) {
+async function _wrappedPOST(request: NextRequest) {
   const gate = gateGuestRequest(request, 100);
   if (!gate.ok) return NextResponse.json({ error: gate.error }, { status: gate.status });
 
@@ -205,3 +206,5 @@ async function analyzeImageWithGemini(
   }
   return null;
 }
+
+export const POST = withApiError(_wrappedPOST, { route: '/api/hospital-images/auto-tag' });

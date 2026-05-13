@@ -4,6 +4,7 @@
  * 섹션은 검수(Opus) 미수행 경로이므로 여기서 applyContentFilters 를 직접 적용한다.
  */
 
+import { withApiError } from '@/lib/apiErrorHandler';
 import { NextRequest, NextResponse } from 'next/server';
 import { gateGuestRequest } from '../../../../../lib/guestRateLimit';
 import { resolveImageOwner } from '../../../../../lib/serverAuth';
@@ -23,7 +24,7 @@ interface Body {
   // userId 는 client 입력 신뢰 안 함. Bearer 토큰에서 도출.
 }
 
-export async function POST(request: NextRequest) {
+async function _wrappedPOST(request: NextRequest) {
   const gate = gateGuestRequest(request, 10);
   if (!gate.ok) {
     return NextResponse.json({ error: gate.error }, { status: gate.status });
@@ -87,3 +88,5 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+export const POST = withApiError(_wrappedPOST, { route: '/api/generate/blog/section' });

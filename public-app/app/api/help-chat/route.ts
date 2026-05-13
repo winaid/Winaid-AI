@@ -18,6 +18,7 @@
  *   helpFaq.ts 의 aliases 를 시스템 프롬프트에 주입 → Gemini 가 매칭에 참고.
  */
 
+import { withApiError } from '@/lib/apiErrorHandler';
 import { NextRequest, NextResponse } from 'next/server';
 import { HELP_FAQS, formatFaqKnowledge, type HelpDomain } from '../../../lib/helpFaq';
 
@@ -180,7 +181,7 @@ interface HelpChatBody {
   model?: unknown;
 }
 
-export async function POST(request: NextRequest) {
+async function _wrappedPOST(request: NextRequest) {
   // 1) rate limit
   const clientKey = getClientKey(request);
   const rate = checkRate(clientKey);
@@ -302,3 +303,5 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
+
+export const POST = withApiError(_wrappedPOST, { route: '/api/help-chat' });

@@ -7,6 +7,7 @@
  * BIZ-001: step별 1 credit 차감 (PR #109 BIZ-003 패턴 동일).
  */
 
+import { withApiError } from '@/lib/apiErrorHandler';
 import { NextRequest, NextResponse } from 'next/server';
 import { gateGuestRequest } from '../../../../lib/guestRateLimit';
 import { resolveImageOwner } from '../../../../lib/serverAuth';
@@ -16,7 +17,7 @@ import { proxyFormData, isVideoProcessorConfigured, translateVideoError } from '
 export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
 
-export async function POST(request: NextRequest) {
+async function _wrappedPOST(request: NextRequest) {
   const gate = gateGuestRequest(request, 3, '/api/video/silence-remove');
   if (!gate.ok) return NextResponse.json({ error: gate.error }, { status: gate.status });
 
@@ -78,3 +79,5 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
+
+export const POST = withApiError(_wrappedPOST, { route: '/api/video/silence-remove' });

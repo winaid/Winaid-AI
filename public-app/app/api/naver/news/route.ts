@@ -4,12 +4,13 @@
  * OLD api/naver-news.js 포팅.
  * GET ?query=키워드&display=10
  */
+import { withApiError } from '@/lib/apiErrorHandler';
 import { NextRequest, NextResponse } from 'next/server';
 import { gateGuestRequest } from '../../../../lib/guestRateLimit';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(request: NextRequest) {
+async function _wrappedGET(request: NextRequest) {
   // 게스트 허용: 로그인 쿠키 없으면 IP 기반 분당 10회 제한
   const gate = gateGuestRequest(request);
   if (!gate.ok) {
@@ -79,3 +80,5 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
+export const GET = withApiError(_wrappedGET, { route: '/api/naver/news' });

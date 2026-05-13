@@ -3,12 +3,13 @@
  * 같은 URL 의 최근 N건 진단 히스토리 반환 (점수 추이 바 차트용).
  */
 
+import { withApiError } from '@/lib/apiErrorHandler';
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@winaid/blog-core';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(request: NextRequest) {
+async function _wrappedGET(request: NextRequest) {
   const url = request.nextUrl.searchParams.get('url');
   const limitRaw = request.nextUrl.searchParams.get('limit');
   const limit = Math.min(Math.max(parseInt(limitRaw || '10', 10) || 10, 1), 50);
@@ -39,3 +40,5 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ history: [] });
   }
 }
+
+export const GET = withApiError(_wrappedGET, { route: '/api/diagnostic/history' });

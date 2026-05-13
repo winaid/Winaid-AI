@@ -12,6 +12,7 @@
  * 외부에서 직접 호출 X. share infra 와 같은 secret 재사용.
  */
 
+import { withApiError } from '@/lib/apiErrorHandler';
 import { NextRequest, NextResponse } from 'next/server';
 import { timingSafeEqual } from 'node:crypto';
 import { supabaseAdmin } from '@winaid/blog-core';
@@ -39,7 +40,7 @@ function unauthorized() {
   return NextResponse.json({ success: false, error: 'unauthorized' }, { status: 401 });
 }
 
-export async function GET(request: NextRequest) {
+async function _wrappedGET(request: NextRequest) {
   if (!verifyInternalSecret(request)) return unauthorized();
   if (!supabaseAdmin) {
     return NextResponse.json({ success: false, error: 'admin client missing' }, { status: 500 });
@@ -77,7 +78,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({ success: true, rows: data ?? [], total: count ?? 0 });
 }
 
-export async function PATCH(request: NextRequest) {
+async function _wrappedPATCH(request: NextRequest) {
   if (!verifyInternalSecret(request)) return unauthorized();
   if (!supabaseAdmin) {
     return NextResponse.json({ success: false, error: 'admin client missing' }, { status: 500 });
@@ -109,3 +110,6 @@ export async function PATCH(request: NextRequest) {
 
   return NextResponse.json({ success: true });
 }
+
+export const GET = withApiError(_wrappedGET, { route: '/api/internal/admin/leads' });
+export const PATCH = withApiError(_wrappedPATCH, { route: '/api/internal/admin/leads' });

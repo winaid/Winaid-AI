@@ -1,3 +1,4 @@
+import { withApiError } from '@/lib/apiErrorHandler';
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@winaid/blog-core';
 import { gateGuestRequest } from '../../../lib/guestRateLimit';
@@ -7,7 +8,7 @@ import { resolveImageOwner } from '../../../lib/serverAuth';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(request: NextRequest) {
+async function _wrappedGET(request: NextRequest) {
   if (!supabase) {
     return NextResponse.json({ images: [], total: 0 });
   }
@@ -98,3 +99,5 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json(images);
 }
+
+export const GET = withApiError(_wrappedGET, { route: '/api/hospital-images' });

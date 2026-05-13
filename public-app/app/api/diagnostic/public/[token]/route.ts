@@ -9,12 +9,13 @@
  *   500 — DB 오류
  */
 
+import { withApiError } from '@/lib/apiErrorHandler';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@winaid/blog-core';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(
+async function _wrappedGET(
   _req: NextRequest,
   { params }: { params: Promise<{ token: string }> },
 ) {
@@ -47,3 +48,5 @@ export async function GET(
     headers: { 'Cache-Control': 'public, max-age=300, stale-while-revalidate=60' },
   });
 }
+
+export const GET = withApiError(_wrappedGET, { route: '/api/diagnostic/public/[token]' });

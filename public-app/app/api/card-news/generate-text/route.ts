@@ -24,6 +24,7 @@
  *   500 — LLM 실패 / parse 실패 (인증 사용자에 refundCredit 후)
  */
 
+import { withApiError } from '@/lib/apiErrorHandler';
 import { NextRequest, NextResponse } from 'next/server';
 import { gateGuestRequest } from '../../../../lib/guestRateLimit';
 import { resolveImageOwner } from '../../../../lib/serverAuth';
@@ -77,7 +78,7 @@ function isValidOutline(value: unknown): value is SlideOutline[] {
   return true;
 }
 
-export async function POST(request: NextRequest) {
+async function _wrappedPOST(request: NextRequest) {
   // ── 1) rate limit — 텍스트 LLM 호출은 가격대 중간. 분당 5회 ──────────
   const gate = gateGuestRequest(request, 5);
   if (!gate.ok) {
@@ -248,3 +249,5 @@ export async function POST(request: NextRequest) {
     replacedCount: totalReplaced,
   });
 }
+
+export const POST = withApiError(_wrappedPOST, { route: '/api/card-news/generate-text' });

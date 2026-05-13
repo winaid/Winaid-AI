@@ -6,6 +6,7 @@
  * Fallback: 아웃라인 실패 시 기존 1-pass (buildBlogPromptV3) 로 ��환
  */
 
+import { withApiError } from '@/lib/apiErrorHandler';
 import { NextRequest, NextResponse } from 'next/server';
 import { gateGuestRequest } from '../../../../lib/guestRateLimit';
 import { resolveImageOwner } from '../../../../lib/serverAuth';
@@ -25,7 +26,7 @@ interface Body {
   // userId 는 client 입력 신뢰 안 함. Bearer 토큰에서 도출.
 }
 
-export async function POST(request: NextRequest) {
+async function _wrappedPOST(request: NextRequest) {
   // 1) rate limit — 생성은 가장 비싼 호출이므로 타이트하게 분당 5회
   const gate = gateGuestRequest(request, 5);
   if (!gate.ok) {
@@ -297,3 +298,5 @@ async function generate1Pass(
     mode: '1pass',
   };
 }
+
+export const POST = withApiError(_wrappedPOST, { route: '/api/generate/blog' });

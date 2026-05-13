@@ -1,3 +1,4 @@
+import { withApiError } from '@/lib/apiErrorHandler';
 import { NextRequest, NextResponse } from 'next/server';
 import { devLog } from '../../../../lib/devLog';
 import { supabase, supabaseAdmin } from '@winaid/blog-core';
@@ -8,7 +9,7 @@ import { resolveImageOwner } from '../../../../lib/serverAuth';
 export const maxDuration = 30;
 export const dynamic = 'force-dynamic';
 
-export async function POST(request: NextRequest) {
+async function _wrappedPOST(request: NextRequest) {
   try {
     if (!supabase) {
       return NextResponse.json({ error: 'supabase_not_configured' }, { status: 500 });
@@ -121,3 +122,5 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'uncaught' }, { status: 500 });
   }
 }
+
+export const POST = withApiError(_wrappedPOST, { route: '/api/hospital-images/upload' });

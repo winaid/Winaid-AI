@@ -13,6 +13,7 @@
  *   PARSE_ERROR → 500 / UNKNOWN → 500
  */
 
+import { withApiError } from '@/lib/apiErrorHandler';
 import { NextRequest, NextResponse } from 'next/server';
 import { gateDiagnosticRequest } from '../../../lib/guestRateLimit';
 import { crawlSite, detectCategory } from '../../../lib/diagnostic/crawler';
@@ -109,7 +110,7 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
   ]);
 }
 
-export async function POST(request: NextRequest) {
+async function _wrappedPOST(request: NextRequest) {
   const traceId = generateTraceId();
   const t0 = Date.now();
   try {
@@ -254,3 +255,5 @@ export async function POST(request: NextRequest) {
     return err('UNKNOWN', `진단 중 예상치 못한 오류가 발생했습니다 (${name}).`, 500);
   }
 }
+
+export const POST = withApiError(_wrappedPOST, { route: '/api/diagnostic' });
