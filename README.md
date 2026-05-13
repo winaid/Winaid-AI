@@ -134,6 +134,8 @@ npm run dev
 | `GOOGLE_CLOUD_CREDENTIALS_JSON` | 선택 | GCP 서비스 계정 (JSON 원문) | 서버 전용 |
 | `INTERNAL_SHARE_PROXY_SECRET` | 선택 | next-app `/api/diagnostic/share` + `/api/admin/leads` proxy → public-app 내부 인증 (32+자 랜덤). `PROCESSOR_SHARED_SECRET` 와 동일 패턴. **양 앱에 동일 값 필요** | **서버 전용** |
 | `NEXT_PUBLIC_PUBLIC_APP_URL` | 선택 (next-app) | next-app `/check/[token]` redirect 대상 + share proxy 대상. 기본 `https://winai.kr` | 브라우저 노출 OK |
+| `SLACK_LEADS_WEBHOOK_URL` | 선택 (public-app) | 진단 문의 폼 신규 접수 → 슬랙 채널 알림 webhook. 미설정 시 알림만 skip (폼은 정상 동작) | 서버 전용 |
+| `NEXT_APP_ADMIN_URL` | 선택 (public-app) | 슬랙 알림 메시지의 "어드민에서 보기" 링크 base URL. 미설정 시 링크 생략 | 서버 전용 |
 
 `next-app`(내부 도구)도 거의 동일한 환경변수 사용. 자세한 내용은 각 프로젝트의 `.env.example` 참고.
 
