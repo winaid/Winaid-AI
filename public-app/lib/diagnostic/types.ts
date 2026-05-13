@@ -164,6 +164,8 @@ export interface AIVisibility {
   platform: AIPlatform;
   likelihood: 'high' | 'medium' | 'low';
   reason: string;
+  /** 0-100 휴리스틱 점수. KPI 카드 표시용 (블로그 7 KPI). */
+  score?: number;
 }
 
 /** 실행 주체. 'hybrid' 는 'both' 와 동의어 — 과거 데이터 호환용. */
