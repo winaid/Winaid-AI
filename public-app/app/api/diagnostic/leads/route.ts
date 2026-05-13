@@ -14,6 +14,7 @@
  */
 
 import { withApiError } from '@/lib/apiErrorHandler';
+import { logger } from '@/lib/logger';
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin, sanitizePromptInput, getSessionSafe } from '@winaid/blog-core';
 import { checkRateLimit, getClientIp } from '../../../../lib/rateLimit';
@@ -107,7 +108,7 @@ async function _wrappedPOST(request: NextRequest) {
     }
   } catch (e) {
     // rate limit 자체 실패는 fail-open. 로그만 남기고 진행.
-    console.warn('[leads] rate limit check error', e);
+    logger.warn('leads.rate_limit_check_failed', { module: 'leads' }, e);
   }
 
   // 5) sanitize
@@ -137,7 +138,7 @@ async function _wrappedPOST(request: NextRequest) {
 
   // 8) INSERT
   if (!supabaseAdmin) {
-    console.error('[leads] supabaseAdmin 미구성 — SUPABASE_SERVICE_ROLE_KEY 확인');
+    logger.error('leads.supabase_admin_missing', { module: 'leads', hint: 'SUPABASE_SERVICE_ROLE_KEY' });
     return err('서버 설정 오류. 잠시 후 다시 시도해 주세요.', 500);
   }
 
@@ -162,7 +163,7 @@ async function _wrappedPOST(request: NextRequest) {
     .single();
 
   if (error || !data) {
-    console.error('[leads] insert error', error);
+    logger.error('leads.insert_failed', { module: 'leads' }, error);
     return err('저장에 실패했습니다. 잠시 후 다시 시도해 주세요.', 500);
   }
 
