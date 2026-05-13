@@ -15,6 +15,18 @@
 3. **이모지/아이콘으로 항목 시작** — ✅ ❌ 🔥 등
 4. **번호 매김 단락** — "1) ... 2) ... 3) ..." 항목 list
 5. **HTML `<ul>`/`<ol>` 리스트** — FAQ·비교표·의도적 옵션 나열 외 모두 금지
+6. **마크다운 syntax** — 출력은 HTML 만. 다음 패턴 모두 금지:
+   - `**bold**` / `__bold__` (강조 — `<strong>` 사용)
+   - `*italic*` / `_italic_` (이탤릭 — `<em>` 사용)
+   - `# 헤더` / `## 헤더` / `### 헤더` (헤더 — `<h2>` / `<h3>` 사용)
+   - `- list` / `* list` / `1. list` (list — prose 권장, 의도 시 `<ul>` / `<ol>`)
+   - `[text](url)` (링크 — `<a href>` 사용)
+   - `` `code` `` / ` ```block``` ` (코드 — `<code>` / `<pre>` 또는 prose)
+   - `> blockquote` (인용 — `<blockquote>` 사용)
+
+   회귀 사례 (2026-05): Sonnet/Opus 응답에 `**볼드**` / `### 소제목` 그대로 노출.
+   후처리(`packages/blog-core/src/normalizeMarkdownToHtml.ts`) 가 deterministic 차단하나
+   1차 책임은 본 룰 준수.
 
 ### 실제 회귀 케이스 (2026-05 프로덕션)
 

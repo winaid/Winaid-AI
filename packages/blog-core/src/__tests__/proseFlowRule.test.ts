@@ -125,13 +125,13 @@ test('review_criteria 에 prose_flow 항목 포함', () => {
   );
 });
 
-test('review_criteria 항목 번호 일관성: 6=prose_flow, 7=학습/인사', () => {
+test('review_criteria 항목 번호 일관성: 6=prose_flow, 7=markdown_artifact, 8=학습/인사', () => {
   const prompt = buildBlogReviewPrompt('<h2>x</h2><p>y</p>', {});
-  // "6. **prose_flow" 와 "7. 학습 말투 경로" 또는 "7. 인사 패턴" 중 하나
   assert.ok(/6\.\s*\*\*prose_flow/.test(prompt.userPrompt), '6번이 prose_flow 가 아님');
+  assert.ok(/7\.\s*\*\*markdown_artifact/.test(prompt.userPrompt), '7번이 markdown_artifact 가 아님');
   assert.ok(
-    /7\.\s*(학습 말투|인사 패턴)/.test(prompt.userPrompt),
-    '7번이 학습/인사 가 아님 — 번호 충돌',
+    /8\.\s*(학습 말투|인사 패턴)/.test(prompt.userPrompt),
+    '8번이 학습/인사 가 아님 — 번호 충돌',
   );
 });
 

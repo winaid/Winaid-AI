@@ -5,6 +5,7 @@
  * 새 단어 추가나 패턴 수정은 이 파일에서만 하면 된다.
  */
 import { normalizeForMedicalAdMatch } from './medicalLawNormalize';
+import { normalizeMarkdownToHtml } from './normalizeMarkdownToHtml';
 
 /** [패턴, 치환어] 배열. 순서는 의도적 — 더 구체적인 패턴을 먼저 둔다. */
 const MEDICAL_LAW_REPLACEMENTS: Array<[RegExp, string]> = [
@@ -255,15 +256,19 @@ export function filterOutputArtifacts(text: string): string {
 }
 
 /**
- * 두 필터를 한 번에 적용하는 편의 함수.
- * 의료법 필터 → 출력 아티팩트 필터 순서로 돌린다.
+ * 세 필터를 한 번에 적용하는 편의 함수.
+ * 의료법 필터 → 마크다운 → HTML → 출력 아티팩트 필터 순서.
+ *
+ * 마크다운 회귀(LLM 응답에 `**볼드**`, `### 헤더` 등 잔여) 는 normalizeMarkdownToHtml 에서
+ * deterministic 치환. <code>/<pre> 안은 보존 (false-positive 가드).
  */
 export function applyContentFilters(text: string): MedicalLawFilterResult {
   const medLaw = filterMedicalLawViolations(text);
-  const finalText = filterOutputArtifacts(medLaw.filtered);
+  const mdNorm = normalizeMarkdownToHtml(medLaw.filtered);
+  const finalText = filterOutputArtifacts(mdNorm.html);
   return {
     filtered: finalText,
-    replacedCount: medLaw.replacedCount,
-    foundTerms: medLaw.foundTerms,
+    replacedCount: medLaw.replacedCount + mdNorm.replacedCount,
+    foundTerms: [...medLaw.foundTerms, ...mdNorm.patterns],
   };
 }
