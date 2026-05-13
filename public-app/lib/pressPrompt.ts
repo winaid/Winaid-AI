@@ -5,7 +5,7 @@
  * 3인칭 기자 문체, 의료광고법 준수, 전문의 인용, HTML 출력.
  */
 
-import { sanitizePromptInput, sanitizeSourceContent } from '@winaid/blog-core';
+import { sanitizePromptInput, sanitizeSourceContent, buildPressCategoryToneBlock } from '@winaid/blog-core';
 
 export type PressType = 'achievement' | 'new_service' | 'research' | 'event' | 'award' | 'health_tips';
 
@@ -208,7 +208,8 @@ Do NOT echo this META block into the output.
 [CRITICAL] Do NOT output any <h2> subheading tags.
 
 ${getTrustedSourcesPromptBlock(req.category)}
-${PRESS_CATEGORY_GUIDES[req.category || ''] ? `\n[${req.category} 전문 용어 — 기사에 정확한 명칭 사용]\n${PRESS_CATEGORY_GUIDES[req.category || '']}` : ''}`;
+${PRESS_CATEGORY_GUIDES[req.category || ''] ? `\n[${req.category} 전문 용어 — 기사에 정확한 명칭 사용]\n${PRESS_CATEGORY_GUIDES[req.category || '']}` : ''}
+${buildPressCategoryToneBlock(req.category) || ''}`;
 
   const promptParts = [
     `[기본 정보]`,
