@@ -187,6 +187,47 @@ async function run() {
     assert.equal(res.headers.get('X-Request-Id'), 'als-test-id');
   });
 
+  // ── Cache-Control ─────────────────────────────────────
+
+  await test('기본 응답에 Cache-Control: no-store, must-revalidate 자동 부착', async () => {
+    const handler = withApiError(async () => new Response('ok', { status: 200 }));
+    const res = await handler(makeReq(), undefined);
+    assert.equal(res.headers.get('Cache-Control'), 'no-store, must-revalidate');
+  });
+
+  await test('opts.cacheControl opt-in 값이 응답 헤더에 반영', async () => {
+    const handler = withApiError(
+      async () => new Response('ok', { status: 200 }),
+      { cacheControl: 'public, max-age=60' },
+    );
+    const res = await handler(makeReq(), undefined);
+    assert.equal(res.headers.get('Cache-Control'), 'public, max-age=60');
+  });
+
+  await test('라우트 본문이 직접 Cache-Control 설정 → wrapper 가 덮어쓰지 않음 (idempotent)', async () => {
+    const handler = withApiError(async () =>
+      new Response('ok', {
+        status: 200,
+        headers: { 'Cache-Control': 'public, max-age=300, stale-while-revalidate=60' },
+      }),
+    );
+    const res = await handler(makeReq(), undefined);
+    assert.equal(
+      res.headers.get('Cache-Control'),
+      'public, max-age=300, stale-while-revalidate=60',
+      'wrapper 가 라우트의 명시 캐시 정책을 덮어씀 — 회귀',
+    );
+  });
+
+  await test('throw → 500 응답에도 Cache-Control: no-store 부착', async () => {
+    const handler = withApiError(async () => {
+      throw new Error('boom');
+    });
+    const res = await handler(makeReq(), undefined);
+    assert.equal(res.status, 500);
+    assert.equal(res.headers.get('Cache-Control'), 'no-store, must-revalidate');
+  });
+
   // eslint-disable-next-line no-console
   console.log(`\n${passed} passed, ${failed} failed`);
   if (failed > 0) {

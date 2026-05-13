@@ -25,12 +25,20 @@ import { runWithRequestContext } from './requestContext';
 
 const GENERIC_MESSAGE = '서버에서 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
 const REQUEST_ID_HEADER = 'X-Request-Id';
+const CACHE_CONTROL_HEADER = 'Cache-Control';
+const DEFAULT_CACHE_CONTROL = 'no-store, must-revalidate';
 const MAX_INCOMING_REQUEST_ID_LEN = 128;
 const VALID_REQUEST_ID_RE = /^[A-Za-z0-9._-]{1,128}$/;
 
 export interface ApiErrorOptions {
   /** 명시적 라우트 식별자 (Sentry tag). 없으면 req.url pathname fallback. */
   route?: string;
+  /**
+   * 응답 Cache-Control 헤더 기본값. 미지정 시 'no-store, must-revalidate'.
+   * 명시적 cache 가 필요한 라우트만 opt-in 으로 'public, max-age=60' 같은 값 전달.
+   * 라우트 본문이 응답에 직접 Cache-Control 헤더를 설정했다면 wrapper 가 덮어쓰지 않음 (idempotent).
+   */
+  cacheControl?: string;
 }
 
 type Handler<TReq, TCtx> = (req: TReq, ctx: TCtx) => Promise<Response> | Response;
@@ -56,7 +64,7 @@ export function withApiError<TReq extends Request, TCtx = unknown>(
           status: res.status,
           durationMs: Date.now() - startedAt,
         });
-        return attachRequestId(res, requestId);
+        return decorate(res, requestId, opts.cacheControl);
       } catch (err) {
         logger.error(
           'api.error',
@@ -77,7 +85,7 @@ export function withApiError<TReq extends Request, TCtx = unknown>(
           body._debug = { name: err.name, message: err.message, stack: err.stack };
         }
         const res = NextResponse.json(body, { status: 500 });
-        return attachRequestId(res, requestId);
+        return decorate(res, requestId, opts.cacheControl);
       }
     });
   };
@@ -100,14 +108,21 @@ function extractRoutePath(req: Request): string {
 }
 
 /**
- * 응답에 X-Request-Id 헤더 추가. Response 는 immutable 이므로 새 객체 생성 — 단
- * res.body 가 stream 인 경우엔 stream 그대로 전달 (re-wrap 으로 인한 backpressure
- * 영향은 없음). SSE 라우트는 어차피 wrap 제외이므로 일반 JSON/buffered 응답만 처리.
+ * 응답에 X-Request-Id + Cache-Control 헤더 추가 (idempotent). Response 는 immutable
+ * 이므로 두 헤더 중 하나라도 추가 필요하면 새 객체 생성. 이미 라우트 본문이 설정한
+ * 헤더는 덮어쓰지 않음 (다른 의도된 cache 정책 보존 — 예: diagnostic/public/[token]
+ * 의 5분 SWR).
+ *
+ * SSE 라우트는 어차피 wrap 제외이므로 일반 JSON/buffered 응답만 처리.
  */
-function attachRequestId(res: Response, requestId: string): Response {
-  if (res.headers.get(REQUEST_ID_HEADER)) return res;
+function decorate(res: Response, requestId: string, cacheControl: string | undefined): Response {
+  const hasRid = !!res.headers.get(REQUEST_ID_HEADER);
+  const hasCc = !!res.headers.get(CACHE_CONTROL_HEADER);
+  if (hasRid && hasCc) return res;
+
   const headers = new Headers(res.headers);
-  headers.set(REQUEST_ID_HEADER, requestId);
+  if (!hasRid) headers.set(REQUEST_ID_HEADER, requestId);
+  if (!hasCc) headers.set(CACHE_CONTROL_HEADER, cacheControl || DEFAULT_CACHE_CONTROL);
   return new Response(res.body, {
     status: res.status,
     statusText: res.statusText,
