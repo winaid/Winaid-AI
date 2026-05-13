@@ -98,6 +98,62 @@ const SCENE_VARIANTS = [
   'reception desk and waiting area, calm welcoming atmosphere',
 ];
 
+/**
+ * 카테고리별 이미지 컨텍스트 가이드 (블로그 7).
+ *
+ * PR #194 텍스트 톤의 이미지 짝 — pressPrompt.ts:45 enum 7개와 정합 (drift 0).
+ * 비임상 행동(양치·식사 등) 우회는 /api/image/route.ts 의 HARD OVERRIDE + stripClinicalSegments
+ * 안전망이 처리 (A4 hybrid 결정: 본 가이드는 정합 + 안전망 유지).
+ *
+ * 미등록 카테고리 → buildImagePrompt 에서 guideBlock skip (기존 fallback 동작 보존).
+ */
+export interface CategoryImageGuide {
+  /** 진료 환경 — clinic interior 묘사 1-2 어구 (영문). */
+  setting: string;
+  /** 환자·의료진 페르소나 — 연령·성별·복장 (영문). */
+  subject: string;
+  /** 촬영 스타일 — lighting·angle·tone (영문). */
+  style: string;
+}
+
+export const CATEGORY_IMAGE_GUIDES: Record<string, CategoryImageGuide> = {
+  '치과': {
+    setting: 'bright dental operatory with chair and overhead light',
+    subject: 'Korean adult patient in 30s-50s, dentist in white coat with mask down',
+    style: 'warm natural light, eye-level, calm professional atmosphere',
+  },
+  '피부과': {
+    setting: 'clean dermatology room with treatment bed and laser device on stand',
+    subject: 'Korean adult woman in 20s-40s, dermatologist in lab coat',
+    style: 'soft diffused light, clean minimalist palette, modern aesthetic',
+  },
+  '정형외과': {
+    setting: 'orthopedic examination room with rehab equipment and posture chart',
+    subject: 'Korean adult patient in 40s-60s, orthopedist in white coat',
+    style: 'bright natural light, trustworthy clinical tone, eye-level shot',
+  },
+  '한의원': {
+    setting: 'modern Korean traditional medicine clinic with wood accents and herbal cabinet',
+    subject: 'Korean adult patient in 40s-60s, hanbok-inspired touches, hanui practitioner in modern uniform',
+    style: 'warm wooden tones, soft natural light, calming traditional atmosphere',
+  },
+  '성형외과': {
+    setting: 'upscale consultation room with mirror and sketch tablet, clean modern interior',
+    subject: 'Korean adult woman in 20s-40s consulting, surgeon in tailored uniform',
+    style: 'refined neutral palette, soft directional light, sophisticated mood',
+  },
+  '안과': {
+    setting: 'ophthalmology examination room with slit lamp and vision chart',
+    subject: 'Korean adult patient in 20s-60s, ophthalmologist in white coat',
+    style: 'crisp clinical light, precise focus on eye area, professional tone',
+  },
+  '내과': {
+    setting: 'internal medicine consultation room with desk, BP monitor and stethoscope',
+    subject: 'Korean adult patient in 40s-70s, internist in white coat',
+    style: 'warm natural light, trustworthy reassuring atmosphere, eye-level',
+  },
+};
+
 export function buildImagePrompt(args: {
   altText: string;
   imageStyle: 'photo' | 'illustration' | 'medical' | 'custom';
@@ -111,21 +167,25 @@ export function buildImagePrompt(args: {
 }): string {
   const { altText, imageStyle, category, topic, disease, customImagePrompt } = args;
 
-  // 카테고리별 subject hint
+  // 카테고리별 subject hint — pressPrompt.ts:45 enum + PR #194 CATEGORY_TONE 와 동일 7개로 정합 (drift 0).
+  // 비임상 행동(양치·식사 등) 우회는 /api/image/route.ts 의 HARD OVERRIDE + stripClinicalSegments 가 처리 (안전망 유지).
   const categoryHints: Record<string, string> = {
     '치과': 'dental clinic setting, modern minimalist Korean dental office',
     '피부과': 'dermatology clinic, skincare treatment environment',
     '정형외과': 'orthopedic clinic with examination area',
     '한의원': 'Korean oriental medicine clinic, traditional yet modern',
-    '한방': 'Korean oriental medicine clinic, traditional yet modern',
     '성형외과': 'plastic surgery consultation environment, clean modern interior',
     '안과': 'ophthalmology clinic, eye examination setting',
-    '이비인후과': 'ENT clinic, examination environment',
     '내과': 'internal medicine clinic, professional consultation setting',
-    '소아과': 'pediatric clinic, warm child-friendly atmosphere',
-    '산부인과': 'obstetrics clinic, comfortable examination setting',
   };
   const subjectHint = categoryHints[category] || 'Korean medical clinic interior';
+
+  // 카테고리별 이미지 컨텍스트 가이드 (블로그 7) — setting/subject/style 3축. PR #194 텍스트 톤의 이미지 짝.
+  // 미등록 카테고리는 null → 본 블록 미주입 (기존 동작 보존, fallback 강제하지 않음).
+  const imageGuide = CATEGORY_IMAGE_GUIDES[category];
+  const guideBlock = imageGuide
+    ? `, ${imageGuide.subject}, ${imageGuide.setting}, ${imageGuide.style}`
+    : '';
 
   // 섹션별 다양화 키워드 — Sonnet alt 가 비슷하거나 fallback 분기일 때 슬롯 간 시각적 차별화 강제.
   // gpt-image-2 가 미세한 단어 차이는 무시하므로 장면·각도·인물 구성을 명시 (audit hotfix).
@@ -155,7 +215,7 @@ export function buildImagePrompt(args: {
     ? `, ${customImagePrompt.trim()}`
     : '';
 
-  const result = `${subjectHint}, ${subject}${customBoost}, Korean patient context, warm approachable atmosphere`;
+  const result = `${subjectHint}${guideBlock}, ${subject}${customBoost}, Korean patient context, warm approachable atmosphere`;
   // gpt-image-2 prompt 길이 cap (audit A-5). subjectHint + subject + customBoost +
   // SCENE_VARIANTS + 'Korean patient...' 누적 시 1500+ 가능 → LLM context truncate /
   // gpt-image-2 prompt 잘림 risk. customImagePrompt 가 sanitize(300) 통과해도 concat 누적.
