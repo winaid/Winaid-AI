@@ -16,6 +16,7 @@ import ActionPlan from './ActionPlan';
 import CompetitorAutoSuggestions from './CompetitorAutoSuggestions';
 import SnippetsPanel from './SnippetsPanel';
 import LeadFormModal from './LeadFormModal';
+import InlineLeadCta from './InlineLeadCta';
 import { authFetch } from '../../lib/authFetch';
 import { getSupabaseClient, isSupabaseConfigured } from '@winaid/blog-core';
 import type { LeadSource } from '../../lib/diagnostic/leadTypes';
@@ -353,6 +354,10 @@ export default function DiagnosticResult({ result, onResultUpdate }: DiagnosticR
           </button>
         ))}
       </div>
+
+      {/* 인라인 CTA — overallScore < 80 일 때만 노출. 하단 배너(스크롤 끝)의
+          사각지대(스크롤 미수행 + 카테고리별 작은 링크가 50점 미만에서만 뜨는 한계)를 보강. */}
+      <InlineLeadCta overallScore={result.overallScore} onOpen={openLeadModal} />
 
       {/* 탭 1: 종합 */}
       {tab === 'summary' && (
