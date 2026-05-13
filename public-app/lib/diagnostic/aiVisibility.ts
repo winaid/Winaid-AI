@@ -54,7 +54,7 @@ const RULES: Rule[] = [
 
 export function predictAIVisibility(categories: CategoryScore[]): AIVisibility[] {
   return RULES.map(r => {
-    const { reason, likelihood } = r.compute(categories);
-    return { platform: r.platform, likelihood, reason };
+    const { score, reason, likelihood } = r.compute(categories);
+    return { platform: r.platform, likelihood, reason, score };
   });
 }

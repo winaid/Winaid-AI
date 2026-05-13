@@ -17,6 +17,8 @@ import CompetitorAutoSuggestions from './CompetitorAutoSuggestions';
 import SnippetsPanel from './SnippetsPanel';
 import LeadFormModal from './LeadFormModal';
 import InlineLeadCta from './InlineLeadCta';
+import AIVisibilityKPICards from './AIVisibilityKPICards';
+import { deriveAIVisibilityKPI } from '../../lib/diagnostic/aiVisibilityKPI';
 import { authFetch } from '../../lib/authFetch';
 import { getSupabaseClient, isSupabaseConfigured } from '@winaid/blog-core';
 import type { LeadSource } from '../../lib/diagnostic/leadTypes';
@@ -259,6 +261,9 @@ export default function DiagnosticResult({ result, onResultUpdate }: DiagnosticR
     catch { return ''; }
   })();
 
+  // ChatGPT / Gemini KPI — 실측 우선, 휴리스틱 fallback.
+  const aiKPI = deriveAIVisibilityKPI(result.aiVisibility, measurementResults);
+
   return (
     <div className="w-full max-w-5xl mx-auto space-y-5">
       {/* 히어로 */}
@@ -317,6 +322,9 @@ export default function DiagnosticResult({ result, onResultUpdate }: DiagnosticR
           </div>
         </div>
       </div>
+
+      {/* AI Visibility KPI — ChatGPT / Gemini 모델별 점수 + Avg Position */}
+      <AIVisibilityKPICards kpi={aiKPI} />
 
       {/* 📈 점수 추이 — 히스토리 2건 이상일 때만 표시 */}
       {history.length > 1 && (
