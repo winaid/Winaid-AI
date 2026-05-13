@@ -536,6 +536,49 @@ export const E_E_A_T_GUIDE = `<e_e_a_t_signals>
 </korean_authority_signals>
 </e_e_a_t_signals>`;
 
+/**
+ * Reviewer (Opus 감수) 전용 E-E-A-T 판정 가이드.
+ *
+ * 생성용 E_E_A_T_GUIDE 는 "어떻게 쓸지" 가이드라 감수 판정에 부적합. 본 변형은
+ * "통과/약함" 패턴으로 구체 사례를 보여줘 감수자가 일관성 있게 판정.
+ *
+ * REVIEWER_PERSONA 의 추상 기준 "13) E-E-A-T: ... 신호 중 2개 이상" 을 실제 검증
+ * 가능한 신호 패턴으로 보강. PR #199 패턴 (slot 1 텍스트 영역 확장) 동일.
+ */
+export const REVIEWER_E_E_A_T_GUIDE = `<reviewer_e_e_a_t_check>
+감수자가 E-E-A-T 신호 검출 시 다음 구체 패턴을 기준으로 판단한다.
+
+[현장 경험 (Experience)]
+  ✅ 통과 — "환자분들께서 상담 오실 때 자주 여쭤보시는 것이…"
+  ✅ 통과 — "시술 후 첫 주에 많은 분들이 느끼시는 변화는…"
+  ✅ 통과 — 시술 단계의 구체 수치 (시간 30~40분, 회복 2주, 횟수 5~10회)
+  ⚠️ 약함 — "일반적으로 ~이라고 합니다", "흔히 ~이라고 알려져 있습니다" (현장 디테일 0)
+
+[전문성 (Expertise — 의학 근거)]
+  ✅ 통과 — "임플란트 주위염은 잇몸뼈 흡수로 이어지는 염증 반응" 같은 기전 설명
+  ✅ 통과 — 구체 장비명·시술법 (CT, 파노라마, 마이크로스코프, 피코레이저)
+  ⚠️ 약함 — 추상적 설명 ("좋아진다", "안 좋아지는 상태")
+  ❌ 위반 — 해외 가이드라인 인용 ("ADA", "WHO", "FDA") 또는 구체 논문번호
+
+[권위 (Authoritativeness)]
+  ✅ 통과 — "대한OO학회에서도 강조하는" / "보건복지부 가이드라인에 따르면"
+  ✅ 통과 — 의료진 자격·직책 명시 ("대표원장 OOO 정형외과 전문의")
+  ⚠️ 약함 — 익명 진료진·"우리 병원" 만, 구체 권위 표현 0
+  ❌ 위반 — "2024년 JCO 연구" 같은 구체 논문 인용 (환각 위험)
+
+[신뢰 (Trustworthiness — 한계 인정)]
+  ✅ 통과 — "개인 상태에 따라 결과는 달라질 수 있습니다" 류 한계 명시
+  ✅ 통과 — 부작용·주의사항·정확한 진단을 위한 내원 권유
+  ⚠️ 약함 — 한계·주의사항 0건 (의료법은 통과해도 신뢰 약함)
+  ❌ 위반 — "100% 효과", "부작용 없는", "완전 회복" (의료법 + E-E-A-T 둘 다)
+
+[판정 규칙]
+위 4축 중 통과 신호 ≥ 2 → "E-E-A-T 충족" (별도 issue 발급 안 함).
+통과 신호 ≤ 1 → issue 발급 (category="structure", severity="medium",
+  problem="E-E-A-T 신호 부족 (4축 중 통과 N개)", suggestion 에 약한 축 명시).
+위반(❌) 1건이라도 발견 → 별도 issue (severity="high"). 의료법 위반과 cross-cite 가능.
+</reviewer_e_e_a_t_check>`;
+
 export type JourneyStage = 'discovery' | 'consideration' | 'aftercare' | 'general';
 
 export const JOURNEY_STAGE_GUIDES: Record<JourneyStage, string> = {
@@ -2893,8 +2936,17 @@ export function buildBlogReviewPrompt(
   } = {},
 ): BlogPromptV3 {
   const systemBlocks: CacheableBlock[] = [];
+  const SEP = '\n\n---\n\n';
 
-  systemBlocks.push({ type: 'text', text: REVIEWER_PERSONA, cacheable: true, cacheTtl: '1h' });
+  // slot 1: REVIEWER_PERSONA + REVIEWER_E_E_A_T_GUIDE
+  // REVIEWER_PERSONA 의 추상 기준 "13) E-E-A-T: 신호 중 2개 이상" 만으로는 판정 일관성 약함.
+  // 통과/약함/위반 구체 사례로 보강 — PR #199 5빌더 안전망 패턴 완결.
+  systemBlocks.push({
+    type: 'text',
+    text: [REVIEWER_PERSONA, REVIEWER_E_E_A_T_GUIDE].join(SEP),
+    cacheable: true,
+    cacheTtl: '1h',
+  });
   systemBlocks.push({ type: 'text', text: MEDICAL_LAW_CONSTRAINTS, cacheable: true, cacheTtl: '1h' });
 
   if (ctx.category && CATEGORY_DEPTH_GUIDES[ctx.category]) {
