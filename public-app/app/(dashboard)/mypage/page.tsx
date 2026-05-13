@@ -6,6 +6,7 @@ import { getCredits, type CreditInfo } from '../../../lib/creditService';
 import { listPosts, deletePost, type SavedPost } from '../../../lib/postStorage';
 import { getSessionSafe } from '@winaid/blog-core';
 import { sanitizeHtml } from '../../../lib/sanitize';
+import DiagnosticHistorySection from '../../../components/diagnostic/DiagnosticHistorySection';
 
 // ── 상대 시간 ──
 function relativeTime(dateStr: string): string {
@@ -70,7 +71,7 @@ function filterPosts(posts: SavedPost[], tab: FilterTab): SavedPost[] {
 }
 
 export default function MyPage() {
-  const [mainTab, setMainTab] = useState<'profile' | 'history'>('profile');
+  const [mainTab, setMainTab] = useState<'profile' | 'history' | 'diagnostic'>('profile');
 
   // ── 프로필 상태 ──
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -222,7 +223,7 @@ export default function MyPage() {
         </div>
       </div>
 
-      {/* 2탭 */}
+      {/* 3탭 */}
       <div className="flex border-b border-slate-200">
         <button type="button" onClick={() => setMainTab('profile')}
           className={`flex-1 py-3 text-sm font-bold border-b-2 transition-all ${mainTab === 'profile' ? 'border-blue-500 text-blue-600' : 'border-transparent text-slate-400'}`}>
@@ -230,7 +231,11 @@ export default function MyPage() {
         </button>
         <button type="button" onClick={() => setMainTab('history')}
           className={`flex-1 py-3 text-sm font-bold border-b-2 transition-all ${mainTab === 'history' ? 'border-blue-500 text-blue-600' : 'border-transparent text-slate-400'}`}>
-          🕐 히스토리 {posts.length > 0 && <span className="ml-1 px-1.5 py-0.5 bg-slate-100 text-slate-500 text-[10px] rounded-full">{posts.length}</span>}
+          🕐 콘텐츠 이력 {posts.length > 0 && <span className="ml-1 px-1.5 py-0.5 bg-slate-100 text-slate-500 text-[10px] rounded-full">{posts.length}</span>}
+        </button>
+        <button type="button" onClick={() => setMainTab('diagnostic')}
+          className={`flex-1 py-3 text-sm font-bold border-b-2 transition-all ${mainTab === 'diagnostic' ? 'border-blue-500 text-blue-600' : 'border-transparent text-slate-400'}`}>
+          🔍 진단 이력
         </button>
       </div>
 
@@ -472,6 +477,9 @@ export default function MyPage() {
           )}
         </div>
       )}
+
+      {/* ══════ 진단 이력 탭 ══════ */}
+      {mainTab === 'diagnostic' && <DiagnosticHistorySection />}
     </div>
   );
 }
