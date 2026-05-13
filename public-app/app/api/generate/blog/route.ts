@@ -15,6 +15,7 @@ import { getHospitalStylePrompt } from '@winaid/blog-core';
 import { buildBlogPromptV3, buildOutlinePrompt, buildSectionFromOutlinePrompt } from '@winaid/blog-core';
 import { filterMedicalLawViolations } from '@winaid/blog-core';
 import { callLLM } from '@winaid/blog-core';
+import { VALID_CONTENT_CATEGORIES } from '@winaid/blog-core';
 import type { GenerationRequest, BlogOutline } from '@winaid/blog-core';
 
 export const maxDuration = 300;
@@ -45,8 +46,7 @@ async function _wrappedPOST(request: NextRequest) {
     return NextResponse.json({ error: 'bad_request', details: 'request.topic/category required' }, { status: 400 });
   }
   // category 화이트리스트 — ContentCategory enum 외 임의 문자열 차단 (prompt injection 방어)
-  const VALID_CATEGORIES = new Set(['치과', '피부과', '정형외과']);
-  if (!VALID_CATEGORIES.has(req.category)) {
+  if (!VALID_CONTENT_CATEGORIES.has(req.category)) {
     return NextResponse.json({ error: 'bad_request', details: `invalid category: ${String(req.category).slice(0, 30)}` }, { status: 400 });
   }
 

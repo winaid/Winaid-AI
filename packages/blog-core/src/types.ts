@@ -9,7 +9,20 @@ export enum ContentCategory {
   DENTAL = '치과',
   DERMATOLOGY = '피부과',
   ORTHOPEDICS = '정형외과',
+  PLASTIC_SURGERY = '성형외과',
+  INTERNAL_MEDICINE = '내과',
+  OPHTHALMOLOGY = '안과',
+  KOREAN_MEDICINE = '한의원',
 }
+
+/**
+ * 콘텐츠 생성·진단 API 양쪽 화이트리스트 (prompt injection 가드).
+ * ContentCategory enum value set 와 정확 일치 — drift-zero invariant (테스트로 보장).
+ * 양 앱의 모든 route.ts 가 본 Set 을 import 해서 사용 (중복 정의 금지).
+ */
+export const VALID_CONTENT_CATEGORIES: ReadonlySet<string> = new Set(
+  Object.values(ContentCategory),
+);
 
 export type AudienceMode =
   | '환자용(친절/공감)'

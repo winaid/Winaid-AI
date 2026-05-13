@@ -23,6 +23,7 @@ import { predictAIVisibility } from '../../../lib/diagnostic/aiVisibility';
 import { buildActionPlan } from '../../../lib/diagnostic/actionPlan';
 import { enrichDiagnostic } from '../../../lib/diagnostic/enrich';
 import { extractRegion } from '../../../lib/diagnostic/discovery';
+import { VALID_CONTENT_CATEGORIES } from '@winaid/blog-core';
 import { logDiagnostic, generateTraceId } from '../../../lib/diagnostic/logger';
 import { supabase, supabaseAdmin, getSessionSafe } from '@winaid/blog-core';
 import type { DiagnosticResponse, DiagnosticErrorResponse } from '../../../lib/diagnostic/types';
@@ -36,7 +37,7 @@ export const dynamic = 'force-dynamic';
 
 interface Body { url?: string; customQuery?: string; category?: string }
 
-const VALID_DIAG_CATEGORIES = new Set(['치과', '피부과', '정형외과', '성형외과']);
+const VALID_DIAG_CATEGORIES = VALID_CONTENT_CATEGORIES;
 
 /** 사용자 직접 입력 검색어 상한 — 프론트와 일치. 초과 시 절단(거부 아님). */
 const MAX_QUERY_LEN = 100;

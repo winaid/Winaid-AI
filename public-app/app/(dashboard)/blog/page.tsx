@@ -23,6 +23,7 @@ import { analyzeClinicContent, type ClinicContext } from '../../../lib/clinicCon
 import { BLOG_STAGES, BLOG_MESSAGE_POOL, MSG_ROTATION_INTERVAL } from './blogConstants';
 import { normalizeBlogStructure } from './normalizeBlog';
 import { buildChatRefinePrompt, inferChatRefineTarget } from '../../../lib/refinePrompt';
+import { parseFunnelParams } from '../../../lib/diagnostic/contentFunnel';
 import BlogResultArea from './BlogResultArea';
 import BlogFormPanel from './BlogFormPanel';
 import { useCreditContext } from '../layout';
@@ -169,7 +170,12 @@ function BlogForm() {
   const [keywordDensity, setKeywordDensity] = useState<number | 'auto'>('auto');
   const [disease, setDisease] = useState('');
   const [customSubheadings, setCustomSubheadings] = useState('');
-  const [category, setCategory] = useState<ContentCategory>(ContentCategory.DENTAL);
+  // 진단 funnel: ?category=X&source=diagnostic 으로 초기 카테고리 prefill
+  const funnelCategory = parseFunnelParams(searchParams).category;
+  const initialCategory = (funnelCategory && (Object.values(ContentCategory) as string[]).includes(funnelCategory))
+    ? (funnelCategory as ContentCategory)
+    : ContentCategory.DENTAL;
+  const [category, setCategory] = useState<ContentCategory>(initialCategory);
   const [persona, setPersona] = useState(PERSONAS[0].value);
   const [tone, setTone] = useState(TONES[0].value);
   const [audienceMode, setAudienceMode] = useState<AudienceMode>('환자용(친절/공감)');

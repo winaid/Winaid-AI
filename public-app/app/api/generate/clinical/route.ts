@@ -13,7 +13,7 @@ import { gateGuestRequest } from '../../../../lib/guestRateLimit';
 import { resolveImageOwner } from '../../../../lib/serverAuth';
 import { useCredit, refundCredit } from '../../../../lib/creditService';
 import { buildClinicalPrompt } from '../../../../lib/clinicalPrompt';
-import { maskPII, unmaskPII, DEFAULT_PII_MASKING_LEVEL } from '@winaid/blog-core';
+import { maskPII, unmaskPII, DEFAULT_PII_MASKING_LEVEL, VALID_CONTENT_CATEGORIES } from '@winaid/blog-core';
 
 export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
@@ -30,7 +30,6 @@ interface Body {
   keywords?: string;
 }
 
-const VALID_CATEGORIES = new Set(['치과', '피부과', '정형외과']);
 const VALID_ARTICLE_TYPES = new Set(['case', 'procedure', 'comparison', 'general']);
 
 function resolveInternalUrl(path: string): string {
@@ -57,7 +56,7 @@ async function _wrappedPOST(request: NextRequest) {
   if (!body.topic?.trim() || !body.category) {
     return NextResponse.json({ error: 'bad_request', details: 'topic/category required' }, { status: 400 });
   }
-  if (!VALID_CATEGORIES.has(body.category)) {
+  if (!VALID_CONTENT_CATEGORIES.has(body.category)) {
     return NextResponse.json({ error: 'bad_request', details: 'invalid category' }, { status: 400 });
   }
   if (!body.imageAnalysis?.trim()) {

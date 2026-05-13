@@ -1,7 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { PRESS_TYPES, DOCTOR_TITLES, CATEGORIES, PRESS_CSS, type PressType } from '../../../lib/pressPrompt';
+import { CATEGORIES as CATEGORY_OPTIONS } from '../../../lib/constants';
+import { parseFunnelParams } from '../../../lib/diagnostic/contentFunnel';
 import { authFetch } from '../../../lib/authFetch';
 import { savePost } from '../../../lib/postStorage';
 import { getSessionSafe, getSupabaseClient, isSupabaseConfigured } from '@winaid/blog-core';
@@ -14,6 +17,8 @@ import { consumeGuestCredit } from '../../../lib/guestCredits';
 
 export default function PressPage() {
   const creditCtx = useCreditContext();
+  const searchParams = useSearchParams();
+  const funnelCategory = parseFunnelParams(searchParams).category;
   const [topic, setTopic] = useState('');
   const [keywords, setKeywords] = useState('');
   const [hospitalName, setHospitalName] = useState('');
@@ -30,7 +35,7 @@ export default function PressPage() {
     { value: 1200, label: '중간 기사', desc: '일반 보도' },
     { value: 1800, label: '긴 기사', desc: '심층 보도' },
   ];
-  const [category, setCategory] = useState('치과');
+  const [category, setCategory] = useState(funnelCategory ?? '치과');
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState('');
@@ -182,7 +187,7 @@ export default function PressPage() {
           <div className="grid grid-cols-3 gap-3">
             <div><label className={labelCls}>의료진 *</label><input type="text" value={doctorName} onChange={e => setDoctorName(e.target.value)} placeholder="홍길동" required className={inputCls} /></div>
             <div><label className={labelCls}>직함</label><select value={doctorTitle} onChange={e => setDoctorTitle(e.target.value)} className={inputCls}>{DOCTOR_TITLES.map(t => <option key={t} value={t}>{t}</option>)}</select></div>
-            <div><label className={labelCls}>진료과</label><select value={category} onChange={e => setCategory(e.target.value)} className={inputCls}>{['치과', '피부과', '정형외과'].map(c => <option key={c} value={c}>{c}</option>)}</select></div>
+            <div><label className={labelCls}>진료과</label><select value={category} onChange={e => setCategory(e.target.value)} className={inputCls}>{CATEGORY_OPTIONS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}</select></div>
           </div>
 
           {/* 주제 */}

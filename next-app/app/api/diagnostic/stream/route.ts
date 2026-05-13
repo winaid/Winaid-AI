@@ -21,7 +21,7 @@
 
 import { NextRequest } from 'next/server';
 import { checkAuth } from '../../../../lib/apiAuth';
-import { supabase, supabaseAdmin } from '@winaid/blog-core';
+import { supabase, supabaseAdmin, VALID_CONTENT_CATEGORIES } from '@winaid/blog-core';
 import { crawlSite, detectCategory } from '../../../../lib/diagnostic/crawler';
 import {
   streamChatGPT,
@@ -122,7 +122,7 @@ interface Body {
   category?: string;
 }
 
-const VALID_DIAG_CATEGORIES = new Set(['치과', '피부과', '정형외과', '성형외과']);
+const VALID_DIAG_CATEGORIES = VALID_CONTENT_CATEGORIES;
 
 function sanitizeCustomQuery(raw: unknown): string | undefined {
   if (typeof raw !== 'string') return undefined;

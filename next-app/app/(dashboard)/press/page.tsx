@@ -1,8 +1,11 @@
 'use client';
 
 import { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useTeamData } from '../../../lib/useTeamData';
 import { PRESS_TYPES, DOCTOR_TITLES, CATEGORIES, PRESS_CSS, type PressType } from '../../../lib/pressPrompt';
+import { CATEGORIES as CATEGORY_OPTIONS } from '../../../lib/constants';
+import { VALID_CONTENT_CATEGORIES } from '@winaid/blog-core';
 import { savePost } from '../../../lib/postStorage';
 import { getSessionSafe } from '@winaid/blog-core';
 import { ErrorPanel } from '../../../components/GenerationResult';
@@ -15,6 +18,10 @@ import { authFetch } from '../../../lib/authFetch';
 export default function PressPage() {
   const creditCtx = useCreditContext();
   const { teamData: TEAM_DATA } = useTeamData();
+  const searchParams = useSearchParams();
+  const categoryParam = searchParams.get('category');
+  const initialCategory =
+    categoryParam && VALID_CONTENT_CATEGORIES.has(categoryParam) ? categoryParam : '치과';
 
   const [topic, setTopic] = useState('');
   const [keywords, setKeywords] = useState('');
@@ -29,7 +36,7 @@ export default function PressPage() {
     { value: 1200, label: '중간 기사', desc: '일반 보도' },
     { value: 1800, label: '긴 기사', desc: '심층 보도' },
   ];
-  const [category, setCategory] = useState('치과');
+  const [category, setCategory] = useState(initialCategory);
   const [hospitalWebsite, setHospitalWebsite] = useState('');
 
   const [isGenerating, setIsGenerating] = useState(false);

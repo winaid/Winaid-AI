@@ -17,6 +17,7 @@ import { resolveImageOwner } from '../../../../lib/serverAuth';
 import { useCredit, refundCredit } from '../../../../lib/creditService';
 import { verifyAdminCookie } from '../../../../lib/adminCookie';
 import { buildYoutubePrompt, type YoutubeWritingStyle } from '../../../../lib/youtubePrompt';
+import { VALID_CONTENT_CATEGORIES } from '@winaid/blog-core';
 
 export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
@@ -32,7 +33,6 @@ interface Body {
   keywords?: string;
 }
 
-const VALID_CATEGORIES = new Set(['치과', '피부과', '정형외과']);
 const VALID_STYLES = new Set<YoutubeWritingStyle>(['blog', 'clinical', 'summary']);
 
 function resolveInternalUrl(path: string): string {
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
   if (!body.topic?.trim() || !body.transcript?.trim() || !body.category) {
     return NextResponse.json({ error: 'bad_request', details: 'topic/transcript/category required' }, { status: 400 });
   }
-  if (!VALID_CATEGORIES.has(body.category)) {
+  if (!VALID_CONTENT_CATEGORIES.has(body.category)) {
     return NextResponse.json({ error: 'bad_request', details: 'invalid category' }, { status: 400 });
   }
   const writingStyle = body.writingStyle ?? 'blog';
