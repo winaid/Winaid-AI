@@ -4,6 +4,7 @@
  * 기존에 blog/press/clinical 페이지에 중복 복사되어 있던 패턴을 한 곳으로 모은 버전.
  * 새 단어 추가나 패턴 수정은 이 파일에서만 하면 된다.
  */
+import { normalizeForMedicalAdMatch } from './medicalLawNormalize';
 
 /** [패턴, 치환어] 배열. 순서는 의도적 — 더 구체적인 패턴을 먼저 둔다. */
 const MEDICAL_LAW_REPLACEMENTS: Array<[RegExp, string]> = [
@@ -157,6 +158,7 @@ function transformTextOnly(input: string, fn: (text: string) => string): string 
 
 /**
  * 의료광고법 금지어를 자동 대체한다. HTML 태그 / 속성은 보존, 텍스트 노드만 변환.
+ * 텍스트 노드는 변환 전 Unicode 정규화 (zero-width / 호모글리프 / 전각 등) — 우회 차단.
  * @param text HTML 또는 평문 — 평문은 태그 0건이라 그대로 변환
  */
 export function filterMedicalLawViolations(text: string): MedicalLawFilterResult {
@@ -164,7 +166,7 @@ export function filterMedicalLawViolations(text: string): MedicalLawFilterResult
   const foundTerms: string[] = [];
 
   const filtered = transformTextOnly(text, (textOnly) => {
-    let result = textOnly;
+    let result = normalizeForMedicalAdMatch(textOnly);
     for (const [pattern, replacement] of MEDICAL_LAW_REPLACEMENTS) {
       const matches = result.match(pattern);
       if (matches && matches.length > 0) {
