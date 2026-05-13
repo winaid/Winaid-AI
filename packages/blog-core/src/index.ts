@@ -4,6 +4,7 @@ export * from './medicalLawRules';
 export * from './medicalLawFilter';
 export * from './medicalLawNormalize';
 export * from './pressCategoryTone';
+export * from './clinicalCategoryTone';
 export * from './types';
 export * from './supabase';
 export * from './llm';

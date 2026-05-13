@@ -10,7 +10,7 @@
  * - 담백하면서 친근한 톤
  */
 
-import { getMedicalLawPromptBlock, sanitizePromptInput, sanitizeSourceContent } from '@winaid/blog-core';
+import { getMedicalLawPromptBlock, sanitizePromptInput, sanitizeSourceContent, buildClinicalCategoryToneBlock } from '@winaid/blog-core';
 
 export interface ClinicalArticleRequest {
   topic: string;
@@ -220,6 +220,12 @@ Do NOT echo this block into the output body. The article body itself must be wri
   const categoryHint = CLINICAL_CATEGORY_HINTS[req.category] || '';
   if (categoryHint) {
     promptParts.push('', categoryHint);
+  }
+
+  // 진료과별 톤 가이드 (blog-core 단일 source of truth, drift 0). 미등록 → push skip.
+  const clinicalTone = buildClinicalCategoryToneBlock(req.category);
+  if (clinicalTone) {
+    promptParts.push('', clinicalTone);
   }
 
   // 이미지 삽입 규칙
