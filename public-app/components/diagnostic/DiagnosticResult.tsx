@@ -18,6 +18,8 @@ import SnippetsPanel from './SnippetsPanel';
 import LeadFormModal from './LeadFormModal';
 import InlineLeadCta from './InlineLeadCta';
 import AIVisibilityKPICards from './AIVisibilityKPICards';
+import ToneRecommendationCards from './ToneRecommendationCards';
+import AnalyzedSubpages from './AnalyzedSubpages';
 import { deriveAIVisibilityKPI } from '../../lib/diagnostic/aiVisibilityKPI';
 import { authFetch } from '../../lib/authFetch';
 import { getSupabaseClient, isSupabaseConfigured } from '@winaid/blog-core';
@@ -326,6 +328,9 @@ export default function DiagnosticResult({ result, onResultUpdate }: DiagnosticR
       {/* AI Visibility KPI — ChatGPT / Gemini 모델별 점수 + Avg Position */}
       <AIVisibilityKPICards kpi={aiKPI} />
 
+      {/* 카테고리 톤 가이드 — quartet (PR #194-197) ROI 직접 노출 */}
+      <ToneRecommendationCards category={result.detectedCategory} />
+
       {/* 📈 점수 추이 — 히스토리 2건 이상일 때만 표시 */}
       {history.length > 1 && (
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -370,6 +375,11 @@ export default function DiagnosticResult({ result, onResultUpdate }: DiagnosticR
       {/* 탭 1: 종합 */}
       {tab === 'summary' && (
         <div className="space-y-5">
+          <AnalyzedSubpages
+            subpages={result.crawlMeta.subpagesReached}
+            mainUrl={result.url}
+          />
+
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <h3 className="text-sm font-bold text-slate-700 mb-4">카테고리별 점수</h3>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
