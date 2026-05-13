@@ -13,6 +13,7 @@
  *      ip/user_agent/user_id 자동 첨부 위해 server-side 처리)
  */
 
+import { withApiError } from '@/lib/apiErrorHandler';
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin, sanitizePromptInput, getSessionSafe } from '@winaid/blog-core';
 import { checkRateLimit, getClientIp } from '../../../../lib/rateLimit';
@@ -43,7 +44,7 @@ function err(message: string, status: number, headers?: Record<string, string>) 
   );
 }
 
-export async function POST(request: NextRequest) {
+async function _wrappedPOST(request: NextRequest) {
   // 1) body 파싱
   let body: LeadSubmitBody;
   try {
@@ -180,3 +181,5 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({ success: true, id: data.id });
 }
+
+export const POST = withApiError(_wrappedPOST, { route: '/api/diagnostic/leads' });

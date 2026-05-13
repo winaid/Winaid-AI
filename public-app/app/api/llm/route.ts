@@ -3,6 +3,7 @@
  * 클라이언트에서 /api/gemini 대신 사용. 응답: { text: string }
  */
 
+import { withApiError } from '@/lib/apiErrorHandler';
 import { NextRequest, NextResponse } from 'next/server';
 import { gateGuestRequest } from '../../../lib/guestRateLimit';
 import { resolveImageOwner } from '../../../lib/serverAuth';
@@ -46,7 +47,7 @@ interface Body {
   responseType?: string;
 }
 
-export async function POST(request: NextRequest) {
+async function _wrappedPOST(request: NextRequest) {
   const gate = gateGuestRequest(request, 10);
   if (!gate.ok) {
     return NextResponse.json({ error: gate.error }, { status: gate.status });
@@ -135,3 +136,5 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: (e as Error).message.slice(0, 200) }, { status: 500 });
   }
 }
+
+export const POST = withApiError(_wrappedPOST, { route: '/api/llm' });

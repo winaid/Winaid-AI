@@ -7,6 +7,7 @@
  * public-app mirror of next-app — 동일 패턴.
  */
 
+import { withApiError } from '@/lib/apiErrorHandler';
 import { NextRequest, NextResponse } from 'next/server';
 import { gateGuestRequest } from '../../../../lib/guestRateLimit';
 import { resolveImageOwner } from '../../../../lib/serverAuth';
@@ -41,7 +42,7 @@ function resolveInternalUrl(path: string): string {
   return `${base}${path}`;
 }
 
-export async function POST(request: NextRequest) {
+async function _wrappedPOST(request: NextRequest) {
   // 게스트 cap (gemini ×N 호출 들어가니 보수적)
   const gate = gateGuestRequest(request, 10);
   if (!gate.ok) return NextResponse.json({ error: gate.error }, { status: gate.status });
@@ -158,3 +159,5 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'generation_failed', code: message.slice(0, 200) }, { status: 500 });
   }
 }
+
+export const POST = withApiError(_wrappedPOST, { route: '/api/generate/clinical' });

@@ -1,7 +1,8 @@
+import { withApiError } from '@/lib/apiErrorHandler';
 import { NextRequest, NextResponse } from 'next/server';
 import { gateGuestRequest } from '../../../lib/guestRateLimit';
 
-export async function GET(req: NextRequest) {
+async function _wrappedGET(req: NextRequest) {
   // 게스트 rate limit — 외부 이미지 검색 API, 분당 20회
   const gate = gateGuestRequest(req, 20, '/api/pexels');
   if (!gate.ok) return NextResponse.json({ photos: [], error: gate.error }, { status: gate.status });
@@ -43,3 +44,5 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ photos: [] });
   }
 }
+
+export const GET = withApiError(_wrappedGET, { route: '/api/pexels' });

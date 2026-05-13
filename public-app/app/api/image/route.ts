@@ -9,6 +9,7 @@
  * openai-node 이슈 #1844 로 images.edit 가 gpt-image-2 거부 중. 픽스되면
  * OPENAI_IMAGE_EDIT_ENABLED=1 로 활성화 가능 (TODO 분기 마련됨).
  */
+import { withApiError } from '@/lib/apiErrorHandler';
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -507,7 +508,7 @@ function stripClinicalSegments(prompt: string): string {
     .join(', ');
 }
 
-export async function POST(request: NextRequest) {
+async function _wrappedPOST(request: NextRequest) {
   // 게스트 허용: 로그인 쿠키 없으면 IP 기반 분당 5회 (gpt-image-2 비용 burst 차단, audit Q-1).
   const gate = gateGuestRequest(request, 5);
   if (!gate.ok) {
@@ -856,3 +857,5 @@ Forbidden:
     { status: 502 },
   );
 }
+
+export const POST = withApiError(_wrappedPOST, { route: '/api/image' });

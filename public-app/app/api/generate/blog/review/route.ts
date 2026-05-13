@@ -11,6 +11,7 @@
  *      verdict='minor_fix' 로 승격. Opus 가 놓친 금지어를 안전망이 잡는 구조.
  */
 
+import { withApiError } from '@/lib/apiErrorHandler';
 import { NextRequest, NextResponse } from 'next/server';
 import { gateGuestRequest } from '../../../../../lib/guestRateLimit';
 import { resolveImageOwner } from '../../../../../lib/serverAuth';
@@ -72,7 +73,7 @@ function tryParseJson(raw: string): ReviewJson | null {
   return null;
 }
 
-export async function POST(request: NextRequest) {
+async function _wrappedPOST(request: NextRequest) {
   // 1) rate limit
   const gate = gateGuestRequest(request, 10);
   if (!gate.ok) {
@@ -284,3 +285,5 @@ export async function POST(request: NextRequest) {
     model,
   });
 }
+
+export const POST = withApiError(_wrappedPOST, { route: '/api/generate/blog/review' });

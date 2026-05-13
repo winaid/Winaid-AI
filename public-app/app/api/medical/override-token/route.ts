@@ -25,6 +25,7 @@
  *   - violation_text 길이 200자 제한 — PII 누설 방지 (server-side 재절단)
  */
 
+import { withApiError } from '@/lib/apiErrorHandler';
 import { NextRequest, NextResponse } from 'next/server';
 import { createHash } from 'crypto';
 import { resolveImageOwner } from '../../../../lib/serverAuth';
@@ -62,7 +63,7 @@ function ipHash(request: NextRequest): string | null {
   return createHash('sha256').update(`${ip}::${salt}`).digest('hex').slice(0, 32);
 }
 
-export async function POST(request: NextRequest) {
+async function _wrappedPOST(request: NextRequest) {
   // 1. 인증 확인 — 로그인 사용자만
   const owner = await resolveImageOwner(request);
   if (owner === 'guest') {
@@ -142,3 +143,5 @@ export async function POST(request: NextRequest) {
     expires_in: OVERRIDE_TOKEN_TTL_SECONDS,
   });
 }
+
+export const POST = withApiError(_wrappedPOST, { route: '/api/medical/override-token' });

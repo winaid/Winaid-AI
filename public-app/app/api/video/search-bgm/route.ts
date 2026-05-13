@@ -7,6 +7,7 @@
  * 환경변수: JAMENDO_CLIENT_ID (https://developer.jamendo.com 에서 발급)
  */
 
+import { withApiError } from '@/lib/apiErrorHandler';
 import { NextRequest, NextResponse } from 'next/server';
 import { gateGuestRequest } from '../../../../lib/guestRateLimit';
 
@@ -20,7 +21,7 @@ const MOOD_MAP: Record<string, string> = {
   corporate: 'inspiring+corporate',
 };
 
-export async function GET(request: NextRequest) {
+async function _wrappedGET(request: NextRequest) {
   // BIZ-001: no credit charge — external search only, no Railway/ffmpeg compute
   // 게스트 rate limit — Jamendo 외부 API, 분당 20회
   const gate = gateGuestRequest(request, 20, '/api/video/search-bgm');
@@ -107,3 +108,5 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: '음악 검색 중 오류가 발생했습니다.' }, { status: 500 });
   }
 }
+
+export const GET = withApiError(_wrappedGET, { route: '/api/video/search-bgm' });

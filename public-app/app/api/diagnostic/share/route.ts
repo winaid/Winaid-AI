@@ -17,6 +17,7 @@
  *   잘못된 secret → 401.
  */
 
+import { withApiError } from '@/lib/apiErrorHandler';
 import { NextRequest, NextResponse } from 'next/server';
 import { timingSafeEqual } from 'node:crypto';
 import { generateShareToken, buildPublicView } from '../../../../lib/diagnostic/publicShare';
@@ -61,7 +62,7 @@ function verifyInternalSecret(request: NextRequest): 'absent' | 'valid' | 'inval
   }
 }
 
-export async function POST(request: NextRequest) {
+async function _wrappedPOST(request: NextRequest) {
   // ── 0) 내부 proxy 인증 분기 (A1a P4-a) ─────────────────────────────────
   const internalAuth = verifyInternalSecret(request);
   if (internalAuth === 'invalid') {
@@ -150,3 +151,5 @@ export async function POST(request: NextRequest) {
 
   return err('공유 토큰 생성에 실패했습니다. 다시 시도해 주세요.', 500);
 }
+
+export const POST = withApiError(_wrappedPOST, { route: '/api/diagnostic/share' });

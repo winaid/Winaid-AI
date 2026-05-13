@@ -1,3 +1,4 @@
+import { withApiError } from '@/lib/apiErrorHandler';
 import { NextRequest, NextResponse } from 'next/server';
 import { gateGuestRequest } from '../../../lib/guestRateLimit';
 
@@ -6,7 +7,7 @@ const toBase64 = (buf: ArrayBuffer): string => Buffer.from(buf).toString('base64
 const ALLOWED_MIME = new Set(['image/png', 'image/jpeg', 'image/webp']);
 const MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
 
-export async function POST(req: NextRequest) {
+async function _wrappedPOST(req: NextRequest) {
   // 게스트 rate limit — remove.bg 유료 API라 분당 10회 제한
   const gate = gateGuestRequest(req, 10, '/api/remove-bg');
   if (!gate.ok) return NextResponse.json({ error: gate.error }, { status: gate.status });
@@ -86,3 +87,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Background removal failed. remove.bg API key를 .env.local에 추가하세요.' }, { status: 500 });
   }
 }
+
+export const POST = withApiError(_wrappedPOST, { route: '/api/remove-bg' });

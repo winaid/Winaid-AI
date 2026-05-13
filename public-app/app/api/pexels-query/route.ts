@@ -1,7 +1,8 @@
+import { withApiError } from '@/lib/apiErrorHandler';
 import { NextRequest, NextResponse } from 'next/server';
 import { gateGuestRequest } from '../../../lib/guestRateLimit';
 
-export async function POST(req: NextRequest) {
+async function _wrappedPOST(req: NextRequest) {
   // 게스트 rate limit — Gemini 호출이라 분당 10회 제한
   const gate = gateGuestRequest(req, 10, '/api/pexels-query');
   if (!gate.ok) return NextResponse.json({ error: gate.error }, { status: gate.status });
@@ -70,3 +71,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ query: 'professional clinic' });
   }
 }
+
+export const POST = withApiError(_wrappedPOST, { route: '/api/pexels-query' });

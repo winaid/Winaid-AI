@@ -10,6 +10,7 @@
  *   GOOGLE_APPLICATION_CREDENTIALS — 서비스 계정 키 JSON 경로
  */
 
+import { withApiError } from '@/lib/apiErrorHandler';
 import { NextRequest, NextResponse } from 'next/server';
 import { gateGuestRequest } from '../../../../lib/guestRateLimit';
 import { resolveImageOwner } from '../../../../lib/serverAuth';
@@ -46,7 +47,7 @@ interface GenerateSubtitlesResponse {
   srt_content: string;
 }
 
-export async function POST(request: NextRequest) {
+async function _wrappedPOST(request: NextRequest) {
   // ── 게스트 rate limit ──
   const gate = gateGuestRequest(request, 5, '/api/video/generate-subtitles');
   if (!gate.ok) return NextResponse.json({ error: gate.error }, { status: gate.status });
@@ -386,3 +387,5 @@ async function getAccessToken(): Promise<string | null> {
     return null;
   }
 }
+
+export const POST = withApiError(_wrappedPOST, { route: '/api/video/generate-subtitles' });

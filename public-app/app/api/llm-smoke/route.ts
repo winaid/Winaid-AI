@@ -10,6 +10,7 @@
  *   같은 요청을 두 번 보내면 두 번째 응답의 usage.cacheReadTokens 가 > 0 이어야 함.
  */
 
+import { withApiError } from '@/lib/apiErrorHandler';
 import { NextRequest, NextResponse } from 'next/server';
 import { callLLM } from '@winaid/blog-core';
 import type { CacheableBlock, LLMTaskKind } from '@winaid/blog-core';
@@ -56,7 +57,7 @@ const CACHE_PREFIX_TEXT = `[의료광고법 — 간결 버전]
 이 시스템 프롬프트는 동일 세션에서 여러 번 재사용될 수 있으므로
 캐시(Anthropic prompt caching)로 재사용 시 비용이 90% 이상 절감됩니다.`;
 
-export async function GET(request: NextRequest) {
+async function _wrappedGET(request: NextRequest) {
   if (process.env.NODE_ENV === 'production') {
     return new Response('not found', { status: 404 });
   }
@@ -104,3 +105,5 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
+export const GET = withApiError(_wrappedGET, { route: '/api/llm-smoke' });

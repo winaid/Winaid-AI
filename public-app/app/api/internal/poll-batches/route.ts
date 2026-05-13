@@ -13,13 +13,14 @@
  *   3. { checked, completed, errored } 반환
  */
 
+import { withApiError } from '@/lib/apiErrorHandler';
 import { NextRequest, NextResponse } from 'next/server';
 import { listInFlightBatches, pollLLMBatch } from '@winaid/blog-core';
 
 export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
 
-export async function GET(request: NextRequest) {
+async function _wrappedGET(request: NextRequest) {
   // 1. 시크릿 검증
   const expected = process.env.LLM_BATCH_CRON_SECRET;
   if (!expected) {
@@ -62,3 +63,5 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({ checked, completed, errored });
 }
+
+export const GET = withApiError(_wrappedGET, { route: '/api/internal/poll-batches' });

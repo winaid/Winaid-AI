@@ -1,3 +1,4 @@
+import { withApiError } from '@/lib/apiErrorHandler';
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, supabaseAdmin } from '@winaid/blog-core';
 import { gateGuestRequest } from '../../../../lib/guestRateLimit';
@@ -9,7 +10,7 @@ export const dynamic = 'force-dynamic';
 
 interface Ctx { params: Promise<{ id: string }> }
 
-export async function DELETE(request: NextRequest, ctx: Ctx) {
+async function _wrappedDELETE(request: NextRequest, ctx: Ctx) {
   if (!supabase) return NextResponse.json({ error: 'Supabase 미연결' }, { status: 500 });
 
   const gate = gateGuestRequest(request, 10);
@@ -52,7 +53,7 @@ export async function DELETE(request: NextRequest, ctx: Ctx) {
   return NextResponse.json({ success: true });
 }
 
-export async function PATCH(request: NextRequest, ctx: Ctx) {
+async function _wrappedPATCH(request: NextRequest, ctx: Ctx) {
   if (!supabase) return NextResponse.json({ error: 'Supabase 미연결' }, { status: 500 });
 
   const gate = gateGuestRequest(request, 10);
@@ -88,3 +89,6 @@ export async function PATCH(request: NextRequest, ctx: Ctx) {
 
   return NextResponse.json(image);
 }
+
+export const DELETE = withApiError(_wrappedDELETE, { route: '/api/hospital-images/[id]' });
+export const PATCH = withApiError(_wrappedPATCH, { route: '/api/hospital-images/[id]' });

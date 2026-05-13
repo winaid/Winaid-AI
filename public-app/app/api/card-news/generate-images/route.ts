@@ -30,6 +30,7 @@
  *     netDeducted: number (사전·사후 잔액 실측) }
  */
 
+import { withApiError } from '@/lib/apiErrorHandler';
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -175,7 +176,7 @@ async function callImageRoute(
   }
 }
 
-export async function POST(request: NextRequest) {
+async function _wrappedPOST(request: NextRequest) {
   // ── 1) rate limit — 이미지 5장 병렬은 비용 큼. 분당 3회 ───────────────
   const gate = gateGuestRequest(request, 3);
   if (!gate.ok) {
@@ -288,3 +289,5 @@ export async function POST(request: NextRequest) {
     netDeducted,
   });
 }
+
+export const POST = withApiError(_wrappedPOST, { route: '/api/card-news/generate-images' });

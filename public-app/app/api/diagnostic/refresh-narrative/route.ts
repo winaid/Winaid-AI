@@ -8,6 +8,7 @@
  * response: RefreshNarrativeResponse
  */
 
+import { withApiError } from '@/lib/apiErrorHandler';
 import { NextRequest, NextResponse } from 'next/server';
 import { gateDiagnosticRequest } from '../../../../lib/guestRateLimit';
 import { generateNarratives } from '../../../../lib/diagnostic/enrich';
@@ -27,7 +28,7 @@ interface Body {
   measurements?: Partial<Record<AIPlatform, MeasurementData>>;
 }
 
-export async function POST(request: NextRequest) {
+async function _wrappedPOST(request: NextRequest) {
   const gate = gateDiagnosticRequest(request);
   if (!gate.ok) {
     return NextResponse.json({ error: gate.error }, { status: gate.status });
@@ -88,3 +89,5 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'internal error' }, { status: 500 });
   }
 }
+
+export const POST = withApiError(_wrappedPOST, { route: '/api/diagnostic/refresh-narrative' });

@@ -1,10 +1,11 @@
+import { withApiError } from '@/lib/apiErrorHandler';
 import { NextRequest, NextResponse } from 'next/server';
 import { gateGuestRequest } from '../../../../lib/guestRateLimit';
 
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
 
-export async function POST(req: NextRequest) {
+async function _wrappedPOST(req: NextRequest) {
   // 게스트 허용: 로그인 쿠키 없으면 IP 기반 분당 10회 제한
   const gate = gateGuestRequest(req);
   if (!gate.ok) {
@@ -69,3 +70,5 @@ ${transcript.slice(0, 6000)}`,
     return NextResponse.json({ success: false, error: '서버 오류' }, { status: 500 });
   }
 }
+
+export const POST = withApiError(_wrappedPOST, { route: '/api/youtube/key-moments' });

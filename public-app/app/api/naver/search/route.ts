@@ -4,10 +4,11 @@
  * Env: NAVER_CLIENT_ID, NAVER_CLIENT_SECRET
  */
 
+import { withApiError } from '@/lib/apiErrorHandler';
 import { NextRequest, NextResponse } from 'next/server';
 import { gateGuestRequest } from '../../../../lib/guestRateLimit';
 
-export async function POST(request: NextRequest) {
+async function _wrappedPOST(request: NextRequest) {
   // 게스트 허용: 로그인 쿠키 없으면 IP 기반 분당 10회 제한
   const gate = gateGuestRequest(request);
   if (!gate.ok) {
@@ -74,3 +75,5 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
+export const POST = withApiError(_wrappedPOST, { route: '/api/naver/search' });
