@@ -45,7 +45,7 @@ export const CATEGORIES = [
   '정신건강의학과', '재활의학과', '영상의학과', '마취통증의학과', '기타',
 ];
 
-import { getMedicalLawPromptBlock, sanitizePromptInput } from '@winaid/blog-core';
+import { getMedicalLawPromptBlock, sanitizePromptInput, buildPressCategoryToneBlock } from '@winaid/blog-core';
 import { getTrustedSourcesPromptBlock } from './trustedMedicalSources';
 
 const PRESS_TYPE_STRUCTURES: Record<PressType, string> = {
@@ -201,7 +201,8 @@ Do NOT echo this META block into the output.
 [CRITICAL] Do NOT output any <h2> subheading tags.
 
 ${getTrustedSourcesPromptBlock(safeCategory)}
-${PRESS_CATEGORY_GUIDES[safeCategory || ''] ? `\n[${safeCategory} 전문 용어 — 기사에 정확한 명칭 사용]\n${PRESS_CATEGORY_GUIDES[safeCategory || '']}` : ''}`;
+${PRESS_CATEGORY_GUIDES[safeCategory || ''] ? `\n[${safeCategory} 전문 용어 — 기사에 정확한 명칭 사용]\n${PRESS_CATEGORY_GUIDES[safeCategory || '']}` : ''}
+${buildPressCategoryToneBlock(safeCategory) || ''}`;
 
   const promptParts = [
     `[기본 정보]`,
