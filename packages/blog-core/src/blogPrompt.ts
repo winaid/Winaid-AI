@@ -998,6 +998,12 @@ export const COMMON_WRITING_STYLE = `<common_writing_style>
         임플란트 흔들림 — 혀나 손가락으로 눌렀을 때 미세하게라도 움직이는 느낌이 있을 때
         잇몸 부기 재발 — 한 번 가라앉은 붓기가 다시 생기거나 잇몸 색이 붉어질 때"
        ↑ 이건 위장된 리스트입니다. 모든 항목은 완결된 문장으로 풀어 단락 안에 녹이세요.
+   ❌ ⚠️ 2026-05 회귀 케이스 (CLAUDE.md 인용) — "조건 — 설명" 4-5줄 반복도 동일 금지:
+       "1시간 이상 지혈이 안 될 때 — 거즈를 교체해도 선홍색 출혈이 계속된다면 ...
+        발치 후 3일이 지났는데 통증이 심해질 때 — 드라이소켓(치조골 노출)은 ...
+        뺨이 점점 더 부어오를 때 — 48시간 이후에도 부기가 줄지 않고 ...
+        38도 이상 열이 날 때 — 발치 부위 염증이 번진 신호일 수 있으니 ..."
+       ↑ 권장: "또한 / 한편 / 특히 / 다만" 접속·부사로 항목 사이를 연결해 한 단락으로 풀어쓰기.
    ✅ 풀어쓰기 예시 (위 ❌ 사례를 단락 서술로 변환):
        "수술 후 초기 통증이 가라앉았다가 며칠 뒤 다시 묵직하게 욱신거리는 느낌이 있다면
         그냥 넘기지 말고 점검을 받아보는 게 좋습니다. 혀나 손가락으로 임플란트 부위를 눌렀을
@@ -2943,7 +2949,7 @@ export function buildBlogReviewPrompt(
   // 통과/약함/위반 구체 사례로 보강 — PR #199 5빌더 안전망 패턴 완결.
   systemBlocks.push({
     type: 'text',
-    text: [REVIEWER_PERSONA, REVIEWER_E_E_A_T_GUIDE].join(SEP),
+    text: [REVIEWER_PERSONA, REVIEWER_E_E_A_T_GUIDE, COMMON_WRITING_STYLE].join(SEP),
     cacheable: true,
     cacheTtl: '1h',
   });
@@ -2980,15 +2986,19 @@ ${hasLearnedStyle ? '  <has_learned_style>true</has_learned_style>' : ''}
 3. SEO (본문에 키워드 자연스럽게 배치, 소제목에는 키워드 직접 사용 금지, 중복 없음)
 4. 가독성 (문단 150자 이내, 3+ 나열 시 리스트, 핵심 수치 strong)
 5. 구조 (도입→본문→마무리 논리 흐름, 소제목 순서)
-${hasLearnedStyle ? `6. 학습 말투 경로:
+6. **prose_flow (CLAUDE.md 회귀 방지)** — "조건 — 설명" 라벨 list 패턴, <p> 줄바꿈 4-5줄 반복,
+   글머리표·번호·하이픈·이모지·HTML <ul>/<ol> 검출 시 violation. severity=high (의료법 동급).
+   2026-05 회귀 케이스 정확 인용: "1시간 이상 지혈이 안 될 때 — ..." 같은 4-5줄 라벨-대시 list.
+   issues category="ai_artifact" 로 발급, suggestion 에 풀어쓰기 예시 ("또한/한편/특히" 접속 연결).
+${hasLearnedStyle ? `7. 학습 말투 경로:
    - 초안의 인사·수식구·어미·단락 리듬을 있는 그대로 존중.
    - 인사 MISSING/FRAGMENTED 판정 금지.
    - revisedHtml 작성 시 학습된 말투 깨뜨리는 교체 금지.
-   - 의료법 위반 단어만 교체, 문장 구조는 원본 유지.` : '6. 인사 패턴 — "안녕하세요. {수식구} {병원명} {직책}입니다." 형식이 요구된 경우 첫 p를 검증/복원.'}
+   - 의료법 위반 단어만 교체, 문장 구조는 원본 유지.` : '7. 인사 패턴 — "안녕하세요. {수식구} {병원명} {직책}입니다." 형식이 요구된 경우 첫 p를 검증/복원.'}
 </review_criteria>`,
     '',
     `<task>
-draft_to_review를 review_criteria 5~6개 항목으로 전수 검토하고 JSON 객체 하나만 출력하세요.
+draft_to_review를 review_criteria 6~7개 항목으로 전수 검토하고 JSON 객체 하나만 출력하세요.
 
 {
   "qualityScores": {
