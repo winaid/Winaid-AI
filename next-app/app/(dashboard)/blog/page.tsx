@@ -5,7 +5,7 @@ import { useState, useEffect, useMemo, useRef, useCallback, Suspense } from 'rea
 import { useSearchParams } from 'next/navigation';
 import { CATEGORIES, PERSONAS, TONES } from '../../../lib/constants';
 import { useTeamData } from '../../../lib/useTeamData';
-import { ContentCategory, type GenerationRequest, type AudienceMode, type ImageStyle, type ImageSourceMode, type WritingStyle, type CssTheme, type TrendingItem, type SeoTitleItem, type SeoReport } from '@winaid/blog-core';
+import { ContentCategory, VALID_CONTENT_CATEGORIES, type GenerationRequest, type AudienceMode, type ImageStyle, type ImageSourceMode, type WritingStyle, type CssTheme, type TrendingItem, type SeoTitleItem, type SeoReport } from '@winaid/blog-core';
 import { applyContentFilters, buildBlogTopicRecommendPrompt } from '@winaid/blog-core';
 import { savePost } from '../../../lib/postStorage';
 import { getSessionSafe, supabase } from '@winaid/blog-core';
@@ -142,7 +142,13 @@ function BlogForm() {
   const [keywordDensity, setKeywordDensity] = useState<number | 'auto'>('auto');
   const [disease, setDisease] = useState('');
   const [customSubheadings, setCustomSubheadings] = useState('');
-  const [category, setCategory] = useState<ContentCategory>(ContentCategory.DENTAL);
+  // 진단 funnel: ?category=X&source=diagnostic 으로 초기 카테고리 prefill (XSS 가드: 화이트리스트)
+  const categoryParam = searchParams.get('category');
+  const initialCategory: ContentCategory =
+    categoryParam && VALID_CONTENT_CATEGORIES.has(categoryParam)
+      ? (categoryParam as ContentCategory)
+      : ContentCategory.DENTAL;
+  const [category, setCategory] = useState<ContentCategory>(initialCategory);
   const [persona, setPersona] = useState('director_1st');
   const [tone, setTone] = useState(TONES[0].value);
   const [audienceMode, setAudienceMode] = useState<AudienceMode>('환자용(친절/공감)');

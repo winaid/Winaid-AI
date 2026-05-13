@@ -20,6 +20,7 @@ import { applyContentFilters } from '@winaid/blog-core';
 import { callLLM } from '@winaid/blog-core';
 import { getHospitalStylePrompt } from '@winaid/blog-core';
 import { maskPII, unmaskPII, DEFAULT_PII_MASKING_LEVEL } from '@winaid/blog-core';
+import { VALID_CONTENT_CATEGORIES } from '@winaid/blog-core';
 
 export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
@@ -92,7 +93,7 @@ async function _wrappedPOST(request: NextRequest) {
     return NextResponse.json({ error: 'bad_request', details: 'draftHtml required' }, { status: 400 });
   }
   // category 화이트리스트 (prompt 보간 방어)
-  if (body.category !== undefined && !['치과', '피부과', '정형외과'].includes(String(body.category))) {
+  if (body.category !== undefined && !VALID_CONTENT_CATEGORIES.has(String(body.category))) {
     return NextResponse.json({ error: 'bad_request', details: 'invalid category' }, { status: 400 });
   }
 

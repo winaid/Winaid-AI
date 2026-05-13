@@ -7,6 +7,10 @@ export const CATEGORIES = [
   { value: ContentCategory.DENTAL, label: '🦷 치과' },
   { value: ContentCategory.DERMATOLOGY, label: '🧴 피부과' },
   { value: ContentCategory.ORTHOPEDICS, label: '🦴 정형외과' },
+  { value: ContentCategory.PLASTIC_SURGERY, label: '💉 성형외과' },
+  { value: ContentCategory.INTERNAL_MEDICINE, label: '🩺 내과' },
+  { value: ContentCategory.OPHTHALMOLOGY, label: '👁 안과' },
+  { value: ContentCategory.KOREAN_MEDICINE, label: '🌿 한의원' },
 ];
 
 export const PERSONAS = [
