@@ -96,9 +96,12 @@ export function Sidebar({
 
       {/* 네비게이션 */}
       <nav className="flex-1 py-3 px-2 space-y-1 overflow-y-auto">
+        <div className={`px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider ${collapsed ? 'text-center' : ''} text-slate-400`}>
+          {collapsed ? '···' : '진단'}
+        </div>
         {navButton({ label: 'AEO/GEO 진단', icon: '🔍', href: '/diagnostic' })}
 
-        <div className={`px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider ${collapsed ? 'text-center' : ''} text-slate-400`}>
+        <div className={`px-2 py-1.5 mt-4 text-[10px] font-bold uppercase tracking-wider ${collapsed ? 'text-center' : ''} text-slate-400`}>
           {collapsed ? '···' : '글 작성'}
         </div>
         {writeItems.map(navButton)}
