@@ -206,7 +206,137 @@ export const CATEGORY_DEPTH_GUIDES: Record<string, string> = {
 수술: 관절경, 인공관절, 척추 내시경.
 재활: 급성기→회복기→강화기. 예방: 구체 동작명+횟수+주의점.
 </specialist_guide>`,
+  '한의원': `<specialist_guide topic="korean_medicine">
+진단: 망(望)·문(問)·문(聞)·절(切) 사진(四診) → 변증(辨證). 체질(사상/태소음양) 분류.
+치료: 침(자침/전침/약침)·뜸·부항·추나·한약. 각 적응증과 비적응증 명시.
+한약: 처방명(예: 보중익기탕, 갈근탕) 위주로 작용·복용 가이드. 임의 처방 단정 금지.
+재활·관리: 일상 자세·식이·수면·운동. "한방+양방 병행" 상황별 권고.
+경계: 양방 진단·수술이 필요한 상황은 솔직히 안내 (응급, 골절, 종양 의심 등).
+</specialist_guide>`,
+  '안과': `<specialist_guide topic="ophthalmology">
+검사: 시력·굴절(자동/현성)·안압·안저(OCT)·각막지형도. 노안·근시·난시·원시 구분.
+시력교정: 라식·라섹·스마일·렌즈삽입술(ICL). 적응증(각막 두께·도수)과 부적응증 명확히.
+백내장: 인공수정체(단초점/다초점/난시교정) 선택. 동반 노안 교정 옵션.
+망막·녹내장: 황반변성·당뇨망막병증·녹내장 조기 진단 중요성. 정기 검진 주기.
+드라이아이·결막염: 생활습관·점안제·IPL/LipiFlow 안내. 콘택트렌즈 관리 팁.
+</specialist_guide>`,
+  '성형외과': `<specialist_guide topic="plastic_surgery">
+부위별: 눈(쌍꺼풀/앞트임/뒷트임/눈매교정)·코(코끝/콧대/매부리)·얼굴윤곽(광대/턱끝/V라인)·가슴/지방(보형물/지방이식).
+수술 vs 비수술: 절개 수술 vs 실리프팅·필러·보톡스·고주파/초음파 시술. 회복 기간·유지 기간 차이.
+재수술: 1차 수술 결과 평가 후 시기·방법. 재수술 빈도와 한계 솔직히.
+회복: 부기·멍 시기별 가이드(당일·1주·1개월·3개월). 흉터 관리.
+상담: 사진·시뮬레이션·의료진 직접 상담. 과도한 결과 약속 금지 (의료법 준수).
+</specialist_guide>`,
+  '내과': `<specialist_guide topic="internal_medicine">
+영역: 소화기·순환기·호흡기·내분비·신장·감염. 만성질환(고혈압·당뇨·이상지질혈증) 관리 중심.
+진단: 혈액검사·소변검사·심전도·복부초음파·내시경(위/대장). 정기 건강검진 주기.
+만성질환: 약물 복용 순응도, 생활습관 교정(식이·운동·금연·절주), 합병증 예방.
+영양·운동: 질환별 식이 가이드 (저염/저당/저지방). 운동 강도·시간 권고.
+응급 신호: 흉통·호흡곤란·심한 두통·의식 변화 등 즉시 응급실 안내.
+</specialist_guide>`,
 };
+
+/**
+ * 카테고리별 톤·페르소나·금기. 4개 빌더에서 specialist_guide / terminology 와 함께 주입.
+ * fallback 가이드(`FALLBACK_CATEGORY_TONE`) 는 카테고리 미선택·기타 케이스용 — invariant 테스트가
+ * 모든 카테고리(MEDICAL_CATEGORIES) 에 매핑 존재함을 보장.
+ */
+export interface CategoryTone {
+  /** 한 문장 어조 지시. 글 전체 보이스 결정. */
+  tone: string;
+  /** 권장 어휘 — 자연스럽게 녹여 쓸 표현. 5-10개. */
+  vocabulary: string[];
+  /** 금기 표현 — 카테고리 특성상 피해야 할 어휘·과장. 3-7개. */
+  avoid: string[];
+}
+
+export const FALLBACK_CATEGORY_TONE: CategoryTone = {
+  tone: '환자가 이해 가능한 친절한 어조. 전문성은 자연스럽게 드러내되 권위적이지 않게.',
+  vocabulary: ['자연스럽게', '편안한', '꼼꼼한', '체계적인', '솔직히'],
+  avoid: ['단연 최고', '100% 보장', '완치', '부작용 없는'],
+};
+
+export const CATEGORY_TONE: Record<string, CategoryTone> = {
+  '치과': {
+    tone:
+      '담담하고 차분한 어조. 시술 통증·비용 등 환자가 가장 걱정하는 지점을 솔직하게 다루되, 과장 없이 안심시키는 톤.',
+    vocabulary: [
+      '꼼꼼하게', '단계별로', '회복 기간', '정기 검진', '구강 위생',
+      '환자분', '맞춤 진료', '경과 관찰', '솔직히 말씀드리면',
+    ],
+    avoid: ['통증 제로', '무통 보장', '평생 보장', '단 한 번에', '단연 최고의 기술'],
+  },
+  '피부과': {
+    tone:
+      '깔끔하고 세련된 어조. 시술 원리·다운타임·유지 기간을 명확히 안내하되, 결과 단정·과장 회피.',
+    vocabulary: [
+      '시술 원리', '다운타임', '유지 기간', '꾸준한 관리', '맞춤 케어',
+      '피부 타입', '경과', '회복', '관리 루틴',
+    ],
+    avoid: ['완벽한 피부', '평생 유지', '부작용 없는', '즉시 효과', '리프팅 보장'],
+  },
+  '정형외과': {
+    tone:
+      '신뢰감 있고 침착한 어조. 통증 원인·치료 옵션·재활 단계를 환자 입장에서 풀어 설명. 수술 결정의 무게감을 존중.',
+    vocabulary: [
+      '단계별 재활', '꾸준한 관리', '경과 관찰', '맞춤 치료',
+      '회복 기간', '일상 복귀', '진단 결과', '솔직히',
+    ],
+    avoid: ['완전 회복 보장', '단번에 해결', '재발 제로', '통증 100% 사라짐'],
+  },
+  '한의원': {
+    tone:
+      '편안하고 따뜻한 어조. 체질·증상을 종합적으로 보는 한방 관점 강조. 한약·침의 효능을 단정하지 않고 가능성과 한계를 균형 있게.',
+    vocabulary: [
+      '꾸준히', '체질에 맞는', '몸 전체', '균형', '관리',
+      '경과를 지켜보며', '꼼꼼한 진단', '맞춤 처방',
+    ],
+    avoid: ['만병통치', '완치', '부작용 전혀 없는', '양방보다 우수', '단번에 효과'],
+  },
+  '안과': {
+    tone:
+      '정확하고 안심시키는 어조. 시력 교정·백내장 등 결정 무게가 큰 시술은 적응증·한계를 명확히. 정기 검진 중요성 자연스럽게.',
+    vocabulary: [
+      '정밀 검사', '시력 교정', '적응증', '검진 주기',
+      '경과 관찰', '맞춤 방법', '회복 기간', '시력 변화',
+    ],
+    avoid: ['시력 완벽 회복', '평생 시력 보장', '재수술 0%', '단 한 번에 해결'],
+  },
+  '성형외과': {
+    tone:
+      '세련되고 절제된 어조. 결과 단정·과장은 의료법상 금기. 회복 기간·재수술 가능성·한계를 솔직히 안내.',
+    vocabulary: [
+      '맞춤 디자인', '회복 기간', '경과', '자연스러운', '균형',
+      '솔직한 상담', '시술 한계', '사후 관리',
+    ],
+    avoid: ['완벽한 결과', '부작용 0%', '평생 유지', '인생 변화', '단연 가장 자연스러운'],
+  },
+  '내과': {
+    tone:
+      '신뢰감 있고 차분한 어조. 만성질환 관리 중심이라 "꾸준함" 강조. 응급 신호와 일반 증상 구분을 분명히.',
+    vocabulary: [
+      '꾸준한 관리', '정기 검진', '복약 순응', '생활습관',
+      '체계적인', '합병증 예방', '경과 추적', '솔직히',
+    ],
+    avoid: ['완치 보장', '약 없이 회복', '단번에 해결', '부작용 없는 약'],
+  },
+};
+
+/**
+ * 톤 가이드를 카테고리별 XML 블록으로 직렬화. 미정의 카테고리는 null 반환
+ * (호출자가 push 자체를 skip — fallback 가이드를 강제로 끼지 않음으로써 기존 동작과
+ *  완벽 호환 = "톤 미설정 = 기존 단일 톤 fallback").
+ */
+export function buildCategoryToneBlock(category: string | undefined | null): string | null {
+  if (!category) return null;
+  const tone = CATEGORY_TONE[category];
+  if (!tone) return null;
+  return `<category_tone category="${category}">
+어조: ${tone.tone}
+권장 어휘 (자연스럽게 녹여 사용): ${tone.vocabulary.join(', ')}
+금기 표현 (사용 금지): ${tone.avoid.join(', ')}
+</category_tone>`;
+}
 
 export const TOPIC_TYPE_GUIDES: Record<TopicType, string> = {
   info: `<topic_type_guide type="info">
@@ -548,6 +678,119 @@ export const TERMINOLOGY_GUIDE: Record<string, string> = {
   "디스크" ✅ (환자 친화 표현. "추간판"은 괄호 병기 용으로만)
   "MRI" ✅ / "엠알아이" ❌ (영문 대문자 통일)
   "물리 치료" ✅ / "물리치료" ❌
+</consistency>
+</terminology>`,
+  '한의원': `<terminology category="한의원">
+<patient_friendly>
+이 병원 글은 환자 대상입니다. 전문 용어는 환자 친화 표현으로 쓰되, 괄호 안에 한방 용어를 병기하세요.
+
+매핑:
+  "체질" → 그대로 사용 (이미 환자 통용)
+  "변증" → "체질·증상 종합 진단(변증)"
+  "기허" → "기력 저하(기허)"
+  "혈허" → "혈액 부족(혈허)"
+  "어혈" → "혈액 순환 정체(어혈)"
+  "담음" → "노폐물 정체(담음)"
+  "사상체질" → "사상체질(태양·소양·태음·소음)"
+  "추나" → "추나 요법(손으로 교정하는 한방 도수치료)"
+  "약침" → 그대로 사용 (이미 환자 통용)
+  "한약 첩약" → "한약(첩약)"
+  "맥진" → "맥 짚기(맥진)"
+
+글 전체에서 같은 용어는 첫 등장 시 병기, 이후는 환자 친화 표현만.
+</patient_friendly>
+
+<consistency>
+띄어쓰기·표기 통일:
+  "한약" ✅ / "한 약" ❌
+  "체질 진단" ✅ / "체질진단" ❌
+  "추나 요법" ✅ / "추나요법" ❌
+</consistency>
+</terminology>`,
+  '안과': `<terminology category="안과">
+<patient_friendly>
+이 병원 글은 환자 대상입니다. 전문 용어는 환자 친화 표현으로 쓰되, 괄호 안에 전문 용어를 병기하세요.
+
+매핑:
+  "굴절 이상" → "시력 이상(굴절 이상)"
+  "근시·원시·난시" → 그대로 사용 (이미 환자 통용)
+  "안압" → "눈의 압력(안압)"
+  "안저" → "안저(망막·시신경)"
+  "황반" → "황반(망막 중심부)"
+  "각막" → 그대로 사용 (이미 환자 통용)
+  "수정체" → 그대로 사용
+  "백내장" → 그대로 사용
+  "녹내장" → 그대로 사용
+  "라식·라섹·스마일" → 그대로 사용 (이미 환자 통용. 풀이 금지)
+  "ICL" → "ICL(렌즈삽입술)"
+  "OCT" → "OCT(망막 단층 촬영)"
+  "결막염" → 그대로 사용
+
+글 전체에서 같은 용어는 첫 등장 시 병기, 이후는 환자 친화 표현만.
+</patient_friendly>
+
+<consistency>
+띄어쓰기·표기 통일:
+  "라식" ✅ / "라 식" ❌
+  "ICL" ✅ / "아이씨엘" ❌ (영문 대문자 통일)
+  "안압 검사" ✅ / "안압검사" ❌
+</consistency>
+</terminology>`,
+  '성형외과': `<terminology category="성형외과">
+<patient_friendly>
+이 병원 글은 환자 대상입니다. 전문 용어는 환자 친화 표현으로 쓰되, 괄호 안에 전문 용어를 병기하세요.
+
+매핑:
+  "쌍꺼풀" → 그대로 사용 (이미 환자 통용. 풀이 금지)
+  "앞트임·뒷트임" → 그대로 사용
+  "눈매교정" → 그대로 사용
+  "코끝 성형" → 그대로 사용
+  "코 보형물" → 그대로 사용
+  "광대 축소" → 그대로 사용
+  "안면 윤곽" → 그대로 사용
+  "지방 흡입" → 그대로 사용
+  "지방 이식" → 그대로 사용
+  "보형물" → "보형물(인공 삽입물)"
+  "절개 수술" → "절개 수술(피부를 열고 진행)"
+  "비절개" → "비절개(피부를 열지 않음)"
+  "실리프팅" → 그대로 사용 (이미 환자 통용)
+
+글 전체에서 같은 용어는 첫 등장 시 병기, 이후는 환자 친화 표현만.
+</patient_friendly>
+
+<consistency>
+띄어쓰기·표기 통일:
+  "쌍꺼풀 수술" ✅ / "쌍꺼풀수술" ❌
+  "지방 흡입" ✅ / "지방흡입" ❌
+  "안면 윤곽" ✅ / "안면윤곽" ❌
+</consistency>
+</terminology>`,
+  '내과': `<terminology category="내과">
+<patient_friendly>
+이 병원 글은 환자 대상입니다. 전문 용어는 환자 친화 표현으로 쓰되, 괄호 안에 전문 용어를 병기하세요.
+
+매핑:
+  "고혈압" → 그대로 사용 (이미 환자 통용)
+  "당뇨병" → 그대로 사용
+  "이상지질혈증" → "이상지질혈증(고지혈증)"
+  "위염" → 그대로 사용
+  "위·식도 역류" → 그대로 사용
+  "과민성 대장" → 그대로 사용
+  "내시경" → "내시경(위·대장 카메라 검사)"
+  "복부 초음파" → 그대로 사용
+  "심전도" → "심전도(심장 전기 신호 검사)"
+  "갑상선" → 그대로 사용
+  "당화혈색소" → "당화혈색소(HbA1c, 평균 혈당)"
+  "혈압약" → 그대로 사용 (이미 환자 통용)
+
+글 전체에서 같은 용어는 첫 등장 시 병기, 이후는 환자 친화 표현만.
+</patient_friendly>
+
+<consistency>
+띄어쓰기·표기 통일:
+  "고혈압" ✅ / "고 혈압" ❌
+  "당뇨병" ✅ / "당뇨 병" ❌
+  "건강 검진" ✅ / "건강검진" ❌
 </consistency>
 </terminology>`,
 };
@@ -2097,6 +2340,7 @@ export function buildOutlinePrompt(
   // 슬롯 2/4: CATEGORY_PACK — 카테고리 가이드 + (조건부) DENTAL_PROSTHETIC_GUIDE
   const categoryParts: string[] = [];
   if (req.category && CATEGORY_DEPTH_GUIDES[req.category]) categoryParts.push(CATEGORY_DEPTH_GUIDES[req.category]);
+  { const toneBlock = buildCategoryToneBlock(req.category); if (toneBlock) categoryParts.push(toneBlock); }
   if (req.category === '치과' && isProstheticTopic(req.topic, req.disease)) categoryParts.push(DENTAL_PROSTHETIC_GUIDE);
   if (categoryParts.length > 0) {
     systemBlocks.push({ type: 'text', text: categoryParts.join(SEP), cacheable: true, cacheTtl: '1h' });
@@ -2175,6 +2419,7 @@ export function buildSectionFromOutlinePrompt(
   // 슬롯 2/4: CATEGORY_PACK — 카테고리 + (조건부) DENTAL + IMAGE_PROMPT_GUIDE
   const categoryParts: string[] = [];
   if (req.category && CATEGORY_DEPTH_GUIDES[req.category]) categoryParts.push(CATEGORY_DEPTH_GUIDES[req.category]);
+  { const toneBlock = buildCategoryToneBlock(req.category); if (toneBlock) categoryParts.push(toneBlock); }
   if (req.category === '치과' && isProstheticTopic(req.topic, req.disease)) categoryParts.push(DENTAL_PROSTHETIC_GUIDE);
   if ((req.imageCount ?? 0) > 0 && section.imageIndex) categoryParts.push(IMAGE_PROMPT_GUIDE);
   if (categoryParts.length > 0) {
@@ -2351,6 +2596,7 @@ export function buildBlogPromptV3(
   // 슬롯 2/4: CATEGORY_PACK — 카테고리 + (조건부) DENTAL + IMAGE_PROMPT_GUIDE
   const categoryParts: string[] = [];
   if (req.category && CATEGORY_DEPTH_GUIDES[req.category]) categoryParts.push(CATEGORY_DEPTH_GUIDES[req.category]);
+  { const toneBlock = buildCategoryToneBlock(req.category); if (toneBlock) categoryParts.push(toneBlock); }
   if (req.category === '치과' && isProstheticTopic(req.topic, req.disease)) categoryParts.push(DENTAL_PROSTHETIC_GUIDE);
   if ((req.imageCount ?? 0) > 0) categoryParts.push(IMAGE_PROMPT_GUIDE);
   if (categoryParts.length > 0) {
@@ -2507,6 +2753,8 @@ export function buildBlogSectionPromptV3(
   // 슬롯 2/3: CATEGORY_PACK — 조건부
   if (input.category && CATEGORY_DEPTH_GUIDES[input.category]) {
     systemBlocks.push({ type: 'text', text: CATEGORY_DEPTH_GUIDES[input.category], cacheable: true, cacheTtl: '1h' });
+    const toneBlock = buildCategoryToneBlock(input.category);
+    if (toneBlock) systemBlocks.push({ type: 'text', text: toneBlock, cacheable: true, cacheTtl: '1h' });
   }
 
   // 슬롯 3/3: STYLE_PACK — learned_style 또는 fallback + MEDICAL_LAW (후미 attention 보존)
@@ -2584,6 +2832,8 @@ export function buildBlogReviewPrompt(
 
   if (ctx.category && CATEGORY_DEPTH_GUIDES[ctx.category]) {
     systemBlocks.push({ type: 'text', text: CATEGORY_DEPTH_GUIDES[ctx.category], cacheable: true, cacheTtl: '1h' });
+    const toneBlock = buildCategoryToneBlock(ctx.category);
+    if (toneBlock) systemBlocks.push({ type: 'text', text: toneBlock, cacheable: true, cacheTtl: '1h' });
   }
 
   const hasLearnedStyle = !!(ctx.stylePromptText?.trim() || ctx.hospitalStyleBlock?.trim());
