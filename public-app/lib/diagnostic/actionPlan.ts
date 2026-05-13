@@ -8,6 +8,7 @@
 
 import type { CategoryScore, ActionItem } from './types';
 import { LABELS } from './scoring';
+import { getActionCost, getExecutionType } from './actionGroups';
 
 interface ActionMeta {
   impact: 'high' | 'medium' | 'low';
@@ -791,6 +792,8 @@ export function buildActionPlan(categories: CategoryScore[]): ActionItem[] {
         difficulty: meta.difficulty,
         timeframe: meta.timeframe,
         category: cat.name,
+        executionType: getExecutionType(it.label),
+        cost: getActionCost(it.label),
         detailedGuide: meta.detailedGuide || undefined, // 빈 문자열이면 undefined 로 전달 (UI 가 "준비 중" 표시)
       });
     }
