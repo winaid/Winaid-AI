@@ -182,6 +182,7 @@ async function _wrappedPOST(request: NextRequest) {
       totalImages: crawl.totalImages,
       schemaTypesFound: crawl.schemaTypes,
       detectedServices: crawl.detectedServices,
+      subpagesReached: crawl.subpagesReached ?? [],
     },
   };
 

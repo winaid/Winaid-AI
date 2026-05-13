@@ -203,6 +203,8 @@ export interface CrawlMeta {
   totalImages: number;
   schemaTypesFound: string[];
   detectedServices: string[];
+  /** 실제 fetch 성공한 서브페이지 URL list. UI 투명성용 (진단 dashboard 노출). */
+  subpagesReached?: string[];
 }
 
 export interface DiagnosticResponse {
