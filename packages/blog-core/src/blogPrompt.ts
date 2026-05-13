@@ -2617,6 +2617,10 @@ prev_heading과 next_heading이 있으면 문맥이 자연스럽게 이어지도
 ${keywordInstruction}${section.type === 'intro' ? `
 
 <intro_table_of_contents>
+주의: <table_of_contents> 블록은 styleService.ts (line 308) 의 learnedStyle 또는
+hospitalStyleBlock 안에서만 옵셔널 주입됨 (style 학습 데이터 있을 때만). 미주입 시 모델이
+아래 instruction 의 fallback 분기로 자동 skip — 본 instruction 자체는 dead 가 아님.
+
 learned_style 또는 medical_blog_voice 의 <table_of_contents> 블록이 비어있지 않으면,
 intro section 출력은 **반드시 다음 순서를 그대로 따르세요**:
 1) 인사 1-2문장 (greeting_rule / opening_style 따름) — **절대 생략 금지**
@@ -2802,10 +2806,13 @@ export function buildBlogSectionPromptV3(
   const systemBlocks: CacheableBlock[] = [];
   const SEP = '\n\n---\n\n';
 
-  // 슬롯 1/3: STATIC_PRELUDE — persona + common_writing_style (audit Q-4 — 6개 push → 3 슬롯)
+  // 슬롯 1/3: STATIC_PRELUDE — persona + priority + e_e_a_t + common_writing_style
+  // 다른 빌더(buildOutline/Section/Blog/Review) 와 동등 수준 안전망. 섹션 재생성은
+  // Opus 감수 미경유라 가드가 더 엄격해야 함 — PRIORITY_ORDER_BLOCK + E_E_A_T_GUIDE
+  // 누락이 회귀였음. 슬롯 invariant(3) 유지 — 텍스트 영역만 확장.
   systemBlocks.push({
     type: 'text',
-    text: [SECTION_REGEN_PERSONA, COMMON_WRITING_STYLE].join(SEP),
+    text: [SECTION_REGEN_PERSONA, PRIORITY_ORDER_BLOCK, E_E_A_T_GUIDE, COMMON_WRITING_STYLE].join(SEP),
     cacheable: true,
     cacheTtl: '1h',
   });
