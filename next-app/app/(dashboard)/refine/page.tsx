@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { buildRefinePrompt, buildChatRefinePrompt, REFINE_OPTIONS, type RefineMode } from '../../../lib/refinePrompt';
+import { buildRefinePrompt, buildChatRefinePrompt, inferChatRefineTarget, REFINE_OPTIONS, type RefineMode } from '../../../lib/refinePrompt';
 import { savePost } from '../../../lib/postStorage';
 import { getSessionSafe } from '@winaid/blog-core';
 import { ErrorPanel } from '../../../components/GenerationResult';
@@ -143,8 +143,9 @@ export default function RefinePage() {
           } catch { crawledContent += `\n[${fullUrl} — 접근 불가]\n`; }
         }
       }
+      const targetScope = inferChatRefineTarget(msg);
       const { systemInstruction, prompt } = buildChatRefinePrompt({
-        workingContent: getWorkingContent(), userMessage: msg, crawledContent: crawledContent || undefined,
+        workingContent: getWorkingContent(), userMessage: msg, crawledContent: crawledContent || undefined, targetScope,
       });
       const res = await authFetch('/api/gemini', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },

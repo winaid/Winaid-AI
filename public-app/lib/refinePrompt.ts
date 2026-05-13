@@ -15,10 +15,48 @@ export interface RefineRequest {
   keywords?: string;  // SEO 모드에서 핵심 키워드 전달
 }
 
+/**
+ * chip 클릭 시 명시적 영역 지정. 자유 텍스트는 inferChatRefineTarget 로 자동 추론.
+ * 'whole' = 전체 글 (default).
+ */
+export type ChatRefineTarget = 'intro' | 'conclusion' | 'whole' | 'tone' | 'cleanup';
+
 export interface ChatRefineRequest {
   workingContent: string;   // 현재 보정 중인 콘텐츠
   userMessage: string;      // 사용자 수정 요청
   crawledContent?: string;  // URL 크롤링 결과 (있으면)
+  /** 명시 영역. chip 클릭 시 5종 매핑, 자유 텍스트는 inferChatRefineTarget fallback. */
+  targetScope?: ChatRefineTarget;
+}
+
+/** 5 chip 문자열 → ChatRefineTarget. BlogResultArea.tsx 의 chip 라벨 정확 일치. */
+const CHIP_TO_SCOPE: Record<string, ChatRefineTarget> = {
+  '도입부 자연스럽게': 'intro',
+  '전체 톤 부드럽게': 'tone',
+  '결론 강화': 'conclusion',
+  '문장 다듬기': 'cleanup',
+  'AI 느낌 제거': 'cleanup',
+};
+
+const KEYWORD_TO_SCOPE: Array<[RegExp, ChatRefineTarget]> = [
+  [/도입부|서론|첫\s*문단|인사|시작\s*부분/, 'intro'],
+  [/결론|마무리|마지막|끝\s*부분/, 'conclusion'],
+  [/전체\s*톤|전체\s*어조|전반적/, 'tone'],
+  [/AI\s*느낌|다듬|정리|어색/, 'cleanup'],
+  [/전체\s*글|전부|글\s*전체/, 'whole'],
+];
+
+/**
+ * 사용자 메시지 → ChatRefineTarget 자동 추론. chip 정확 일치 우선, 자유 텍스트는 키워드 매칭.
+ * 매칭 없으면 'whole' (기존 동작).
+ */
+export function inferChatRefineTarget(userMessage: string): ChatRefineTarget {
+  const trimmed = userMessage.trim();
+  if (CHIP_TO_SCOPE[trimmed]) return CHIP_TO_SCOPE[trimmed];
+  for (const [re, scope] of KEYWORD_TO_SCOPE) {
+    if (re.test(trimmed)) return scope;
+  }
+  return 'whole';
 }
 
 export const REFINE_OPTIONS: { value: RefineMode; label: string; icon: string; description: string }[] = [
@@ -350,21 +388,33 @@ export function buildChatRefinePrompt(req: ChatRefineRequest): {
   const isSpecific = !!(targetSection || targetIntro || targetConclusion || targetSpecificText);
 
   // ── 수정 범위 지시 ──
-  // 주의: targetSection/targetSpecificText 는 raw userMessage 의 regex 매치 결과.
-  // 프롬프트에 삽입할 때는 sanitize 필요 — 특히 targetSpecificText[1] 은 사용자가
-  // 따옴표로 감싼 임의 텍스트이므로 인젝션 페이로드가 들어올 수 있음.
+  // 우선순위: 명시 targetScope (chip) > userMessage regex 자동 추론.
+  // 명시되지 않았으면 inferChatRefineTarget 으로 자동 결정 (whole/intro/conclusion/tone/cleanup).
+  // FROZEN 강제 어조 (한 글자도 변경 금지) — LLM 이 instruction 무시 회귀 차단.
+  const explicitScope: ChatRefineTarget = req.targetScope ?? inferChatRefineTarget(userMessage);
+  const FROZEN_GUARD =
+    '\n🛑 FROZEN 영역은 응답에 원본을 한 글자도 변경하지 말고 그대로 복사하세요. ' +
+    '응답 = 수정된 [target] + frozen [나머지] = 완전한 글. 일부만 보내거나 "...생략..." placeholder 금지.';
+
   let scopeInstruction = '';
   if (targetSection) {
     // [1] 은 숫자, [2] 는 '소제목'|'문단'|'섹션' 중 하나 — 안전.
-    scopeInstruction = `\n⚠️ 수정 범위: ${targetSection[1]}번째 ${targetSection[2]}만 수정하세요. 나머지는 원본 그대로 유지.`;
-  } else if (targetIntro) {
-    scopeInstruction = '\n⚠️ 수정 범위: 도입부(첫 번째 <h3> 태그 이전)만 수정하세요. 나머지는 원본 그대로.';
-  } else if (targetConclusion) {
-    scopeInstruction = '\n⚠️ 수정 범위: 마지막 소제목 섹션만 수정하세요. 나머지는 원본 그대로.';
+    scopeInstruction = `\n⚠️ 수정 범위: ${targetSection[1]}번째 ${targetSection[2]}만 수정하세요. 나머지는 FROZEN.${FROZEN_GUARD}`;
   } else if (targetSpecificText) {
     const safeTarget = sanitizePromptInput(targetSpecificText[1], 300);
-    scopeInstruction = `\n⚠️ 수정 범위: "${safeTarget}" 부분만 수정하세요. 나머지는 원본 그대로.`;
+    scopeInstruction = `\n⚠️ 수정 범위: "${safeTarget}" 부분만 수정하세요. 나머지는 FROZEN.${FROZEN_GUARD}`;
+  } else if (explicitScope === 'intro') {
+    scopeInstruction = `\n⚠️ 수정 범위: 도입부 (첫 번째 <h2>/<h3> 태그 이전 단락) 만 수정.${FROZEN_GUARD}`;
+  } else if (explicitScope === 'conclusion') {
+    scopeInstruction = `\n⚠️ 수정 범위: 결론 (마지막 <h2>/<h3> 이후 단락) 만 수정.${FROZEN_GUARD}`;
+  } else if (explicitScope === 'tone') {
+    scopeInstruction =
+      '\n⚠️ 수정 범위: 전체 글의 어조·어미만 부드럽게 조정. 단어·문장 구조 최소 변경. 정보·수치·구조는 FROZEN.';
+  } else if (explicitScope === 'cleanup') {
+    scopeInstruction =
+      '\n⚠️ 수정 범위: AI 느낌 제거 + 문장 다듬기. 단어 교체·어미 다양화 위주. 구조·정보 FROZEN.';
   }
+  // explicitScope === 'whole' (또는 targetSection/targetSpecificText 도 없음) → 기존 전체 동작
 
   // ── 동작별 지침 (복수 동작 지원) ──
   const actions: string[] = [];
