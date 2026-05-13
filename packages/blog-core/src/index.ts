@@ -2,6 +2,7 @@ export * from './promptSanitize';
 export * from './piiMask';
 export * from './medicalLawRules';
 export * from './medicalLawFilter';
+export * from './medicalLawNormalize';
 export * from './types';
 export * from './supabase';
 export * from './llm';

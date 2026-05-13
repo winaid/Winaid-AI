@@ -6,7 +6,7 @@
  * "위반 감지 + 대체 표현 제안"에 초점을 맞춘 모듈.
  */
 
-import type { SlideData } from '@winaid/blog-core';
+import { normalizeForMedicalAdMatch, type SlideData } from '@winaid/blog-core';
 
 // ── 타입 ──
 
@@ -224,8 +224,10 @@ function maskWhitelistedPhrases(text: string): string {
 /** 텍스트에서 의료광고법 위반 키워드를 검사한다 (긴 키워드 우선 매칭) */
 export function validateMedicalAd(text: string): ViolationResult[] {
   if (!text) return [];
-  // 오탐 화이트리스트 구문은 먼저 마스킹 → 그 안의 키워드는 매칭되지 않음
-  const sanitized = maskWhitelistedPhrases(text);
+  // Unicode 우회 차단 — zero-width / 호모글리프 / 전각 / 자모 분리 정규화 후 매칭.
+  // 화이트리스트 phrases 는 NFC 한글 + ASCII 공백이라 normalize 영향 0.
+  const normalized = normalizeForMedicalAdMatch(text);
+  const sanitized = maskWhitelistedPhrases(normalized);
 
   const found: ViolationResult[] = [];
   const matched = new Set<string>();
