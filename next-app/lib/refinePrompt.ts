@@ -15,10 +15,43 @@ export interface RefineRequest {
   keywords?: string;  // SEO 모드에서 핵심 키워드 전달
 }
 
+/**
+ * chip 클릭 시 명시적 영역 지정. 자유 텍스트는 inferChatRefineTarget 로 자동 추론.
+ * 'whole' = 전체 글 (default).
+ */
+export type ChatRefineTarget = 'intro' | 'conclusion' | 'whole' | 'tone' | 'cleanup';
+
 export interface ChatRefineRequest {
   workingContent: string;   // 현재 보정 중인 콘텐츠
   userMessage: string;      // 사용자 수정 요청
   crawledContent?: string;  // URL 크롤링 결과 (있으면)
+  /** 명시 영역. chip 클릭 시 5종 매핑, 자유 텍스트는 inferChatRefineTarget fallback. */
+  targetScope?: ChatRefineTarget;
+}
+
+const CHIP_TO_SCOPE: Record<string, ChatRefineTarget> = {
+  '도입부 자연스럽게': 'intro',
+  '전체 톤 부드럽게': 'tone',
+  '결론 강화': 'conclusion',
+  '문장 다듬기': 'cleanup',
+  'AI 느낌 제거': 'cleanup',
+};
+
+const KEYWORD_TO_SCOPE: Array<[RegExp, ChatRefineTarget]> = [
+  [/도입부|서론|첫\s*문단|인사|시작\s*부분/, 'intro'],
+  [/결론|마무리|마지막|끝\s*부분/, 'conclusion'],
+  [/전체\s*톤|전체\s*어조|전반적/, 'tone'],
+  [/AI\s*느낌|다듬|정리|어색/, 'cleanup'],
+  [/전체\s*글|전부|글\s*전체/, 'whole'],
+];
+
+export function inferChatRefineTarget(userMessage: string): ChatRefineTarget {
+  const trimmed = userMessage.trim();
+  if (CHIP_TO_SCOPE[trimmed]) return CHIP_TO_SCOPE[trimmed];
+  for (const [re, scope] of KEYWORD_TO_SCOPE) {
+    if (re.test(trimmed)) return scope;
+  }
+  return 'whole';
 }
 
 export const REFINE_OPTIONS: { value: RefineMode; label: string; icon: string; description: string }[] = [
@@ -353,16 +386,30 @@ export function buildChatRefinePrompt(req: ChatRefineRequest): {
   const safeTargetSpecific = targetSpecificText ? sanitizePromptInput(targetSpecificText[1], 200) : '';
 
   // ── 수정 범위 지시 ──
+  // 우선순위: regex 위치 매칭 (n번째/"인용") > 명시 targetScope (chip) > userMessage 자동 추론.
+  // FROZEN 강제 어조 (한 글자도 변경 금지) — LLM 이 instruction 무시 회귀 차단.
+  const explicitScope: ChatRefineTarget = req.targetScope ?? inferChatRefineTarget(userMessage);
+  const FROZEN_GUARD =
+    '\n🛑 FROZEN 영역은 응답에 원본을 한 글자도 변경하지 말고 그대로 복사하세요. ' +
+    '응답 = 수정된 [target] + frozen [나머지] = 완전한 글. 일부만 보내거나 "...생략..." placeholder 금지.';
+
   let scopeInstruction = '';
   if (targetSection) {
-    scopeInstruction = `\n⚠️ 수정 범위: ${targetSection[1]}번째 ${targetSection[2]}만 수정하세요. 나머지는 원본 그대로 유지.`;
-  } else if (targetIntro) {
-    scopeInstruction = '\n⚠️ 수정 범위: 도입부(첫 번째 <h3> 태그 이전)만 수정하세요. 나머지는 원본 그대로.';
-  } else if (targetConclusion) {
-    scopeInstruction = '\n⚠️ 수정 범위: 마지막 소제목 섹션만 수정하세요. 나머지는 원본 그대로.';
+    scopeInstruction = `\n⚠️ 수정 범위: ${targetSection[1]}번째 ${targetSection[2]}만 수정하세요. 나머지는 FROZEN.${FROZEN_GUARD}`;
   } else if (targetSpecificText) {
-    scopeInstruction = `\n⚠️ 수정 범위: "${safeTargetSpecific}" 부분만 수정하세요. 나머지는 원본 그대로.`;
+    scopeInstruction = `\n⚠️ 수정 범위: "${safeTargetSpecific}" 부분만 수정하세요. 나머지는 FROZEN.${FROZEN_GUARD}`;
+  } else if (explicitScope === 'intro' || targetIntro) {
+    scopeInstruction = `\n⚠️ 수정 범위: 도입부 (첫 번째 <h2>/<h3> 태그 이전 단락) 만 수정.${FROZEN_GUARD}`;
+  } else if (explicitScope === 'conclusion' || targetConclusion) {
+    scopeInstruction = `\n⚠️ 수정 범위: 결론 (마지막 <h2>/<h3> 이후 단락) 만 수정.${FROZEN_GUARD}`;
+  } else if (explicitScope === 'tone') {
+    scopeInstruction =
+      '\n⚠️ 수정 범위: 전체 글의 어조·어미만 부드럽게 조정. 단어·문장 구조 최소 변경. 정보·수치·구조는 FROZEN.';
+  } else if (explicitScope === 'cleanup') {
+    scopeInstruction =
+      '\n⚠️ 수정 범위: AI 느낌 제거 + 문장 다듬기. 단어 교체·어미 다양화 위주. 구조·정보 FROZEN.';
   }
+  // explicitScope === 'whole' (그리고 regex 매칭 없음) → 기존 전체 동작
 
   // ── 동작별 지침 (복수 동작 지원) ──
   const actions: string[] = [];

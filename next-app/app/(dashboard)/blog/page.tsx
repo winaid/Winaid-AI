@@ -25,7 +25,7 @@ import { analyzeHospitalKeywords, loadMoreKeywords, checkKeywordRankings, MAX_KE
 import { analyzeClinicContent, type ClinicContext } from '../../../lib/clinicContextService';
 import { BLOG_STAGES, BLOG_MESSAGE_POOL, MSG_ROTATION_INTERVAL } from './blogConstants';
 import { normalizeBlogStructure } from './normalizeBlog';
-import { buildChatRefinePrompt } from '../../../lib/refinePrompt';
+import { buildChatRefinePrompt, inferChatRefineTarget } from '../../../lib/refinePrompt';
 import BlogResultArea from './BlogResultArea';
 import BlogFormPanel from './BlogFormPanel';
 import { useCreditContext } from '../layout';
@@ -2156,9 +2156,12 @@ JSON 형식으로 응답해주세요.`;
     if (!chatInput.trim() || !generatedContent || isChatRefining) return;
     setIsChatRefining(true);
     try {
+      const trimmed = chatInput.trim();
+      const targetScope = inferChatRefineTarget(trimmed);
       const { systemInstruction, prompt } = buildChatRefinePrompt({
         workingContent: generatedContent,
-        userMessage: chatInput.trim(),
+        userMessage: trimmed,
+        targetScope,
       });
       const res = await authFetch('/api/llm', {
         method: 'POST',
