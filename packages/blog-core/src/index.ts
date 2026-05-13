@@ -7,6 +7,7 @@ export * from './pressCategoryTone';
 export * from './clinicalCategoryTone';
 export * from './blogTopicRecommendPrompt';
 export * from './normalizeMarkdownToHtml';
+export * from './koreanGrammarFilter';
 export * from './types';
 export * from './supabase';
 export * from './llm';
