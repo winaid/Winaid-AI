@@ -6,6 +6,7 @@ export * from './medicalLawNormalize';
 export * from './pressCategoryTone';
 export * from './clinicalCategoryTone';
 export * from './blogTopicRecommendPrompt';
+export * from './normalizeMarkdownToHtml';
 export * from './types';
 export * from './supabase';
 export * from './llm';

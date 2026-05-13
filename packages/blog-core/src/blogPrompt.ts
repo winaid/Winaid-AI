@@ -1023,6 +1023,24 @@ export const COMMON_WRITING_STYLE = `<common_writing_style>
     ✅ 같은 권고는 한 곳에서만, 후속 문단은 다른 측면(예: 약 복용·세정·운동)으로 전환.
 </paragraph>
 
+<no_markdown>
+  마크다운 syntax 절대 금지 — 출력은 HTML 만. 모든 강조·헤더·list·링크·코드는 HTML 태그로.
+  <forbidden_patterns>
+    - **볼드** / __볼드__ 금지 → <strong> 사용
+    - *이탤릭* / _이탤릭_ 금지 → <em> 사용
+    - # 헤더 / ## 헤더 / ### 헤더 금지 → <h2> / <h3> 사용
+    - - list / * list / 1. list 줄바꿈 list 금지 (prose_flow 와 동일)
+    - [text](url) 금지 → <a href="url">text</a> 사용
+    - inline code (backtick wrap) / triple-backtick code block 금지 → <code> / <pre> 사용
+    - > blockquote 금지 → <blockquote> 사용
+  </forbidden_patterns>
+  <regression_case>
+    2026-05 회귀: Sonnet/Opus 응답에 **볼드**, ### 소제목 그대로 노출됨.
+    의심 시 모든 강조·헤더·list 를 HTML 태그로. 후처리(applyContentFilters → normalizeMarkdownToHtml)
+    가 자동 차단하지만 1차 책임은 본 룰 준수.
+  </regression_case>
+</no_markdown>
+
 <output_constraint>
 [META: instructions for the model — do NOT copy any of this into the generated content.]
 Output HTML only. Allowed tags: h2, h3, p, ul, li, strong, em.
@@ -2990,15 +3008,20 @@ ${hasLearnedStyle ? '  <has_learned_style>true</has_learned_style>' : ''}
    글머리표·번호·하이픈·이모지·HTML <ul>/<ol> 검출 시 violation. severity=high (의료법 동급).
    2026-05 회귀 케이스 정확 인용: "1시간 이상 지혈이 안 될 때 — ..." 같은 4-5줄 라벨-대시 list.
    issues category="ai_artifact" 로 발급, suggestion 에 풀어쓰기 예시 ("또한/한편/특히" 접속 연결).
-${hasLearnedStyle ? `7. 학습 말투 경로:
+7. **markdown_artifact (CLAUDE.md 회귀 방지)** — 응답에 마크다운 syntax 그대로 (HTML 변환 없이) 노출.
+   패턴: **bold** / __bold__ / *italic* / # 헤더 / ## 헤더 / ### 헤더 /
+   - list / * list / 1. list / [text](url) / inline code / triple-backtick block / > blockquote.
+   각 패턴 발견 시 issue 발급 (category="ai_artifact", severity="high").
+   2026-05 회귀: Sonnet/Opus 가 가끔 마크다운 그대로 출력. 후처리 normalizeMarkdownToHtml 가 자동 차단하나 issue 로 가시화.
+${hasLearnedStyle ? `8. 학습 말투 경로:
    - 초안의 인사·수식구·어미·단락 리듬을 있는 그대로 존중.
    - 인사 MISSING/FRAGMENTED 판정 금지.
    - revisedHtml 작성 시 학습된 말투 깨뜨리는 교체 금지.
-   - 의료법 위반 단어만 교체, 문장 구조는 원본 유지.` : '7. 인사 패턴 — "안녕하세요. {수식구} {병원명} {직책}입니다." 형식이 요구된 경우 첫 p를 검증/복원.'}
+   - 의료법 위반 단어만 교체, 문장 구조는 원본 유지.` : '8. 인사 패턴 — "안녕하세요. {수식구} {병원명} {직책}입니다." 형식이 요구된 경우 첫 p를 검증/복원.'}
 </review_criteria>`,
     '',
     `<task>
-draft_to_review를 review_criteria 6~7개 항목으로 전수 검토하고 JSON 객체 하나만 출력하세요.
+draft_to_review를 review_criteria 7~8개 항목으로 전수 검토하고 JSON 객체 하나만 출력하세요.
 
 {
   "qualityScores": {
