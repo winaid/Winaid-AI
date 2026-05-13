@@ -6,7 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { CATEGORIES, PERSONAS, TONES } from '../../../lib/constants';
 import { useTeamData } from '../../../lib/useTeamData';
 import { ContentCategory, type GenerationRequest, type AudienceMode, type ImageStyle, type ImageSourceMode, type WritingStyle, type CssTheme, type TrendingItem, type SeoTitleItem, type SeoReport } from '@winaid/blog-core';
-import { applyContentFilters } from '@winaid/blog-core';
+import { applyContentFilters, buildBlogTopicRecommendPrompt } from '@winaid/blog-core';
 import { savePost } from '../../../lib/postStorage';
 import { getSessionSafe, supabase } from '@winaid/blog-core';
 import { getHospitalStylePrompt } from '@winaid/blog-core';
@@ -761,76 +761,25 @@ SEO 점수 기준:
     try {
       const userKeyword = (disease.trim() || topic.trim());
 
-      let prompt: string;
-      if (userKeyword) {
-        // 키워드가 있으면 → 관련 세부 주제 추천
-        prompt = `"${userKeyword}" 키워드와 관련된 병원 마케팅용 블로그 주제를 5개 추천해줘.
-
-규칙:
-1. 환자가 실제로 네이버에서 검색할만한 구체적인 주제
-2. 각 주제(topic)는 **20자 이내**로 짧고 핵심적으로 (예: "임플란트 오래 쓰는 법", "잇몸 출혈 원인")
-3. 다양한 각도 (비용, 과정, 비교, 주의사항, 사후관리, 기간, 대상 등)
-4. condition에는 핵심 질환명 또는 시술명만 (예: "임플란트", "치주염", "라미네이트")
-   - topic이 "임플란트 관리법"이면 condition은 "임플란트"
-   - topic이 "잇몸병 초기 증상"이면 condition은 "잇몸병"
-
-⚠️ 의료광고법 준수 필수:
-- "최고", "최초", "유일", "100%" 등 과대광고 표현 금지
-- "보장", "확실", "완치" 등 치료 효과 보장 표현 금지
-- 전후 비교, 시술 후기, 특정 의료기관 추천 표현 금지
-- 비급여 가격을 특정 금액으로 명시하지 않기
-- "무통", "무절개" 등 부작용 가능성 축소 표현 주의
-- 환자가 정보를 얻을 수 있는 교육형·정보형 주제로 작성
-
-5. 웹 검색으로 최신 트렌드 반영
-6. 네이버 블로그 SEO에 유리한 롱테일 키워드 포함`;
-      } else {
-        // 키워드 없으면 → 진료과별 핫 키워드
-        prompt = `${category} 분야에서 요즘 환자들이 가장 많이 검색하는 핫한 블로그 주제 5개를 추천해줘.
-
-규칙:
-1. 최신 검색 트렌드 반영 (웹 검색으로 확인)
-2. 각 주제(topic)는 **20자 이내**로 짧고 핵심적으로 (예: "사랑니 발치 후 식사", "치아미백 주의사항")
-3. 환자 입장에서 관심 가질 구체적 주제
-4. 시즌/계절 트렌드 포함 (지금 시기에 맞는)
-5. condition에는 핵심 질환명 또는 시술명만 (한 단어~두 단어)
-   - topic이 "사랑니 발치 후 식사"이면 condition은 "사랑니 발치"
-
-⚠️ 의료광고법 준수 필수:
-- "최고", "최초", "유일", "100%" 등 과대광고 표현 금지
-- "보장", "확실", "완치" 등 치료 효과 보장 표현 금지
-- 전후 비교, 시술 후기, 특정 의료기관 추천 표현 금지
-- "무통", "무절개" 등 부작용 가능성 축소 표현 주의
-- 환자가 정보를 얻을 수 있는 교육형·정보형 주제로 작성
-
-6. 네이버 블로그 SEO에 유리한 롱테일 키워드 포함`;
-      }
+      // blog-core 통합 — 양 앱 drift 0. CATEGORY_TONE + 5 intent 다양성 + long-tail specificity.
+      const { prompt, systemInstruction, responseSchema } = buildBlogTopicRecommendPrompt({
+        category,
+        keyword: userKeyword || undefined,
+        count: 8,
+      });
 
       const res = await authFetch('/api/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt,
-          systemInstruction: '병원 마케팅 트렌드 분석 전문가. JSON만 출력. 마크다운/코드블록 금지.',
+          systemInstruction,
           model: 'gemini-3.1-flash-lite-preview',
           responseType: 'json',
           googleSearch: true,
           temperature: 0.7,
           maxOutputTokens: 1500,
-          schema: {
-            type: 'ARRAY',
-            items: {
-              type: 'OBJECT',
-              properties: {
-                topic: { type: 'STRING' },
-                condition: { type: 'STRING' },
-                keywords: { type: 'STRING' },
-                score: { type: 'NUMBER' },
-                seasonal_factor: { type: 'STRING' },
-              },
-              required: ['topic', 'condition', 'keywords', 'score', 'seasonal_factor'],
-            },
-          },
+          schema: responseSchema,
         }),
       });
 
