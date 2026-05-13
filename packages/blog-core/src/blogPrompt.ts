@@ -1023,6 +1023,19 @@ export const COMMON_WRITING_STYLE = `<common_writing_style>
     ✅ 같은 권고는 한 곳에서만, 후속 문단은 다른 측면(예: 약 복용·세정·운동)으로 전환.
 </paragraph>
 
+<korean_grammar>
+  한국어 비문 절대 금지 — LLM 이 자주 만드는 활용 오류·이중 피동 패턴:
+  ❌ "필요하는 / 중요하는 / 안전하는 / 건강하는 / 가능하는 / 충분하는 / 정확하는"
+     → ✅ "필요한 / 중요한 / 안전한 / 건강한 / 가능한 / 충분한 / 정확한"
+     (형용사 "X하다" 의 관형형은 "X한". 동사 활용 "-는" 사용 불가)
+  ❌ "되어진다 / 되어지는 / 되어진 / 되어질" (이중 피동 — "되-" + "-어지-" 중복)
+     → ✅ "된다 / 되는 / 된 / 될"
+  ❌ "어떻해"
+     → ✅ "어떡해"
+  후처리(normalizeKoreanGrammar) 가 자동 차단하나 1차 책임은 본 룰 준수.
+  회귀 사례 (2026-05): "필요하는 정보입니다" 같은 비문 응답 발견.
+</korean_grammar>
+
 <no_markdown>
   마크다운 syntax 절대 금지 — 출력은 HTML 만. 모든 강조·헤더·list·링크·코드는 HTML 태그로.
   <forbidden_patterns>
@@ -3013,15 +3026,20 @@ ${hasLearnedStyle ? '  <has_learned_style>true</has_learned_style>' : ''}
    - list / * list / 1. list / [text](url) / inline code / triple-backtick block / > blockquote.
    각 패턴 발견 시 issue 발급 (category="ai_artifact", severity="high").
    2026-05 회귀: Sonnet/Opus 가 가끔 마크다운 그대로 출력. 후처리 normalizeMarkdownToHtml 가 자동 차단하나 issue 로 가시화.
-${hasLearnedStyle ? `8. 학습 말투 경로:
+8. **grammar_artifact (CLAUDE.md 회귀 방지)** — 한국어 비문 (활용 오류·이중 피동) 검출.
+   패턴: "필요하는/중요하는/안전하는/건강하는/가능하는/충분하는/정확하는/확실하는" (형용사 동사 활용),
+   "되어진다/되어지는/되어진/되어질" (이중 피동), "어떻해" (어떡해 오타).
+   발견 시 issue 발급 (category="ai_artifact", severity="medium").
+   후처리 normalizeKoreanGrammar 가 자동 치환하나 issue 로 가시화.
+${hasLearnedStyle ? `9. 학습 말투 경로:
    - 초안의 인사·수식구·어미·단락 리듬을 있는 그대로 존중.
    - 인사 MISSING/FRAGMENTED 판정 금지.
    - revisedHtml 작성 시 학습된 말투 깨뜨리는 교체 금지.
-   - 의료법 위반 단어만 교체, 문장 구조는 원본 유지.` : '8. 인사 패턴 — "안녕하세요. {수식구} {병원명} {직책}입니다." 형식이 요구된 경우 첫 p를 검증/복원.'}
+   - 의료법 위반 단어만 교체, 문장 구조는 원본 유지.` : '9. 인사 패턴 — "안녕하세요. {수식구} {병원명} {직책}입니다." 형식이 요구된 경우 첫 p를 검증/복원.'}
 </review_criteria>`,
     '',
     `<task>
-draft_to_review를 review_criteria 7~8개 항목으로 전수 검토하고 JSON 객체 하나만 출력하세요.
+draft_to_review를 review_criteria 8~9개 항목으로 전수 검토하고 JSON 객체 하나만 출력하세요.
 
 {
   "qualityScores": {

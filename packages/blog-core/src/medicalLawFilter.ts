@@ -6,6 +6,7 @@
  */
 import { normalizeForMedicalAdMatch } from './medicalLawNormalize';
 import { normalizeMarkdownToHtml } from './normalizeMarkdownToHtml';
+import { normalizeKoreanGrammar } from './koreanGrammarFilter';
 
 /** [패턴, 치환어] 배열. 순서는 의도적 — 더 구체적인 패턴을 먼저 둔다. */
 const MEDICAL_LAW_REPLACEMENTS: Array<[RegExp, string]> = [
@@ -256,19 +257,20 @@ export function filterOutputArtifacts(text: string): string {
 }
 
 /**
- * 세 필터를 한 번에 적용하는 편의 함수.
- * 의료법 필터 → 마크다운 → HTML → 출력 아티팩트 필터 순서.
+ * 네 필터를 한 번에 적용하는 편의 함수.
+ * 의료법 → 마크다운 → 한국어 문법 → 출력 아티팩트 순서.
  *
- * 마크다운 회귀(LLM 응답에 `**볼드**`, `### 헤더` 등 잔여) 는 normalizeMarkdownToHtml 에서
- * deterministic 치환. <code>/<pre> 안은 보존 (false-positive 가드).
+ * 한국어 문법 회귀: LLM 응답에 "필요하는" (형용사 동사 활용) / "되어진다" (이중 피동) 등 비문 잔여.
+ * 보수적 치환 (false-positive ≈ 0 패턴만). <code>/<pre> 안 보존.
  */
 export function applyContentFilters(text: string): MedicalLawFilterResult {
   const medLaw = filterMedicalLawViolations(text);
   const mdNorm = normalizeMarkdownToHtml(medLaw.filtered);
-  const finalText = filterOutputArtifacts(mdNorm.html);
+  const grammar = normalizeKoreanGrammar(mdNorm.html);
+  const finalText = filterOutputArtifacts(grammar.html);
   return {
     filtered: finalText,
-    replacedCount: medLaw.replacedCount + mdNorm.replacedCount,
-    foundTerms: [...medLaw.foundTerms, ...mdNorm.patterns],
+    replacedCount: medLaw.replacedCount + mdNorm.replacedCount + grammar.replacedCount,
+    foundTerms: [...medLaw.foundTerms, ...mdNorm.patterns, ...grammar.patterns],
   };
 }
