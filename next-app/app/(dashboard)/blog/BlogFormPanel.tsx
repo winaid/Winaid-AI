@@ -328,7 +328,34 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
             )}
           </div>
 
-          {/* 질환명·제목추천·트렌드 — next-app 에서 제거 (주제 하나로 통합) */}
+          {/* 트렌드 주제 (UI 복구 — public-app L424-451 mirror, drift 0) */}
+          <button type="button" onClick={handleRecommendTrends} disabled={isLoadingTrends}
+            className="w-full py-2 bg-slate-100 text-slate-600 rounded-lg text-xs font-semibold hover:bg-slate-200 transition-all disabled:opacity-40 flex items-center justify-center gap-1">
+            {isLoadingTrends ? <><div className="w-3 h-3 border-2 border-slate-400 border-t-slate-600 rounded-full animate-spin" />검색 중...</> : topic.trim() ? <>🔍 &ldquo;{topic.trim().length > 8 ? topic.trim().slice(0, 8) + '…' : topic.trim()}&rdquo; 관련 주제</> : <>🔥 트렌드 주제</>}
+          </button>
+
+          {/* 트렌드 주제 결과 */}
+          {trendingItems.length > 0 && (
+            <div className="space-y-1.5">
+              {trendingItems.map((item, idx) => (
+                <button key={idx} type="button" onClick={() => { setTopic(item.topic); setDisease(item.condition || item.topic); setTrendingItems([]); }}
+                  className="w-full text-left px-4 py-3 bg-white border border-slate-200 rounded-xl hover:border-blue-300 hover:bg-blue-50 transition-all group">
+                  <div className="flex items-center gap-2">
+                    <span className="text-blue-500 font-bold text-sm">{idx + 1}</span>
+                    <span className="font-semibold text-slate-800 text-sm group-hover:text-blue-700">{item.topic}</span>
+                    {item.condition && (
+                      <span className="ml-auto text-[10px] font-bold text-blue-500 bg-blue-50 px-2 py-0.5 rounded-full flex-shrink-0">
+                        {item.condition}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 mt-1 pl-5">
+                    <span className="text-[11px] text-slate-400">{item.seasonal_factor}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* 병원 홈페이지/블로그 URL */}
           {hospitalName && (
