@@ -10,6 +10,7 @@
  * (`'use client'` 컴포넌트에서 직접 import 금지).
  */
 import { LEAD_SOURCE_LABEL, type LeadSource } from './diagnostic/leadTypes';
+import { logger } from './logger';
 
 export interface SlackLeadPayload {
   leadId: string;
@@ -122,15 +123,23 @@ export function notifyLeadToSlack(payload: SlackLeadPayload): void {
     .then(async (res) => {
       if (!res.ok) {
         const text = await res.text().catch(() => '');
-        console.warn('[leads/slack] webhook non-200', res.status, text.slice(0, 200));
+        logger.warn('leads.slack.webhook_non_2xx', {
+          module: 'slackLeadsNotifier',
+          status: res.status,
+          body: text.slice(0, 200),
+        });
       }
     })
     .catch((e) => {
       const name = (e as { name?: string } | null)?.name;
       if (name === 'TimeoutError' || name === 'AbortError') {
-        console.warn('[leads/slack] webhook timeout');
+        logger.warn('leads.slack.webhook_timeout', { module: 'slackLeadsNotifier' });
       } else {
-        console.warn('[leads/slack] webhook error', (e as Error)?.message);
+        logger.warn(
+          'leads.slack.webhook_error',
+          { module: 'slackLeadsNotifier', message: (e as Error)?.message },
+          e,
+        );
       }
     });
 }

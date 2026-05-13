@@ -13,6 +13,7 @@
  */
 import assert from 'node:assert/strict';
 import { withApiError } from '../lib/apiErrorHandler';
+import { getRequestId } from '../lib/requestContext';
 
 let passed = 0;
 let failed = 0;
@@ -126,6 +127,64 @@ async function run() {
     });
     const res = await handler(makeReq(), undefined);
     assert.equal(res.status, 500);
+  });
+
+  // ── request_id 전파 / 응답 헤더 / ALS ──
+
+  await test('X-Request-Id 헤더 없는 요청 → UUID 발급 + 응답 헤더 부착', async () => {
+    const handler = withApiError(async () => new Response('ok', { status: 200 }));
+    const res = await handler(makeReq(), undefined);
+    const rid = res.headers.get('X-Request-Id');
+    assert.ok(rid, 'X-Request-Id 헤더 누락');
+    // UUID 형태 (대략)
+    assert.match(rid!, /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+  });
+
+  await test('X-Request-Id 헤더 있는 요청 → 그 값 재사용', async () => {
+    const incomingId = 'incoming-abc-123';
+    const handler = withApiError(async () => new Response('ok', { status: 200 }));
+    const req = new Request('http://localhost/api/test', {
+      method: 'POST',
+      headers: { 'X-Request-Id': incomingId },
+    });
+    const res = await handler(req, undefined);
+    assert.equal(res.headers.get('X-Request-Id'), incomingId);
+  });
+
+  await test('X-Request-Id 헤더가 패턴 위반(특수문자) → 발급 fallback', async () => {
+    const handler = withApiError(async () => new Response('ok', { status: 200 }));
+    const req = new Request('http://localhost/api/test', {
+      method: 'POST',
+      headers: { 'X-Request-Id': 'bad;injection<script>' },
+    });
+    const res = await handler(req, undefined);
+    const rid = res.headers.get('X-Request-Id');
+    assert.ok(rid && !rid.includes(';'), `악성 패턴이 그대로 통과: ${rid}`);
+  });
+
+  await test('throw 시에도 응답에 X-Request-Id 헤더 부착', async () => {
+    const handler = withApiError(async () => {
+      throw new Error('boom');
+    });
+    const res = await handler(makeReq(), undefined);
+    assert.equal(res.status, 500);
+    assert.ok(res.headers.get('X-Request-Id'), 'error 응답에 헤더 누락');
+  });
+
+  await test('handler 내부 lib 함수가 getRequestId() 호출 시 ALS 로 값 획득', async () => {
+    let observed: string | undefined;
+    const handler = withApiError(async () => {
+      // 라우트 본문에서 lib 함수처럼 ALS 접근
+      observed = getRequestId();
+      return new Response('ok', { status: 200 });
+    });
+    const req = new Request('http://localhost/api/test', {
+      method: 'POST',
+      headers: { 'X-Request-Id': 'als-test-id' },
+    });
+    const res = await handler(req, undefined);
+    assert.equal(observed, 'als-test-id', 'ALS 로 requestId 미전파');
+    assert.equal(res.headers.get('X-Request-Id'), 'als-test-id');
   });
 
   // eslint-disable-next-line no-console
