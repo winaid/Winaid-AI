@@ -6,7 +6,7 @@ import { useState, useEffect, useMemo, useRef, useCallback, Suspense } from 'rea
 import { useSearchParams } from 'next/navigation';
 import { CATEGORIES, PERSONAS, TONES } from '../../../lib/constants';
 import { ContentCategory, type GenerationRequest, type AudienceMode, type ImageStyle, type WritingStyle, type CssTheme, type TrendingItem, type SeoTitleItem, type SeoReport } from '@winaid/blog-core';
-import { applyContentFilters, buildBlogTopicRecommendPrompt } from '@winaid/blog-core';
+import { applyContentFilters, buildBlogTopicRecommendPrompt, pickBestLibraryImage } from '@winaid/blog-core';
 import { savePost } from '../../../lib/postStorage';
 import { getSessionSafe, supabase, getSupabaseClient, isSupabaseConfigured } from '@winaid/blog-core';
 import { getHospitalStylePrompt } from '@winaid/blog-core';
@@ -1359,24 +1359,26 @@ JSON 형식으로 응답해주세요.`;
               const libraryImages: HospitalImage[] = Array.isArray(data) ? data : (data.images || []);
               const usedIds = new Set<string>();
               let matched = 0;
+              // 매칭 로직은 @winaid/blog-core 의 pickBestLibraryImage 로 통합 — 양 앱 lockstep.
+              // markerAlt 는 매칭 키워드로 쓰지 않고 (LLM 이 작성한 영문 alt 가 confusable 표현을
+              // 본문 의도와 무관하게 끌어옴) HTML <img alt> fallback 으로만 사용.
               for (const marker of imgMarkers) {
-                const [fullMatch, , altText] = marker;
-                const altWords = altText.toLowerCase().split(/\s+/).filter(w => w.length > 1);
-                const scored = libraryImages
-                  .filter(img => !usedIds.has(img.id))
-                  .map(img => {
-                    const imgText = [...(img.tags || []), img.altText || '', img.aiDescription || ''].join(' ').toLowerCase();
-                    const score = altWords.filter(w => imgText.includes(w)).length;
-                    return { img, score };
-                  })
-                  .sort((a, b) => b.score - a.score);
-                if (scored.length > 0 && scored[0].score > 0) {
-                  const best = scored[0].img;
+                const [fullMatch, , markerAlt] = marker;
+                const best = pickBestLibraryImage(libraryImages, {
+                  title: topic || '',
+                  bodyKeywords: [disease || ''].filter(Boolean),
+                }, {
+                  excludeIds: usedIds,
+                  minScore: 0,
+                  allowReuseFallback: true,
+                });
+                if (best) {
+                  const img = best.image;
                   blogText = blogText.replace(
                     fullMatch,
-                    `<img src="${best.publicUrl}" alt="${best.altText || altText}" style="max-width:100%;border-radius:12px;" />`,
+                    `<img src="${img.publicUrl}" alt="${img.altText || markerAlt}" style="max-width:100%;border-radius:12px;" />`,
                   );
-                  usedIds.add(best.id);
+                  usedIds.add(img.id);
                   matched++;
                 }
               }
