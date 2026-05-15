@@ -120,20 +120,24 @@ export async function POST(req: NextRequest) {
     }
 
     if (op === 'delete-all') {
-      // 30초 타임아웃 — 기존 adminService.ts:14~19 패턴 보존
-      const rpcPromise = supabaseAdmin.rpc('delete_all_generated_posts', {
-        admin_password: '',
-      });
+      // RPC 의존 제거 — 운영자가 SQL 수동 배포 안 해도 동작 (내부 admin UX).
+      // 인증/권한은 이미 (1) admin_session cookie 검증 + (2) service_role 키로 충족.
+      // RLS 는 service_role 가 bypass. supabase-js DELETE 는 filter 필수 →
+      // `not('id', 'is', null)` 로 전 row 매치 (id NOT NULL PRIMARY KEY).
+      const deletePromise = supabaseAdmin
+        .from('generated_posts')
+        .delete({ count: 'exact' })
+        .not('id', 'is', null);
       const timeoutPromise = new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error('rpc_timeout_30s')), DELETE_ALL_TIMEOUT_MS),
       );
       try {
-        const { data, error } = (await Promise.race([rpcPromise, timeoutPromise])) as {
-          data: unknown;
+        const { error, count } = (await Promise.race([deletePromise, timeoutPromise])) as {
           error: { message: string } | null;
+          count: number | null;
         };
         if (error) return NextResponse.json({ error: 'rpc_failed', detail: error.message, op }, { status: 500 });
-        return NextResponse.json({ data });
+        return NextResponse.json({ data: count ?? 0 });
       } catch (err) {
         const msg = (err as Error).message || 'unknown';
         return NextResponse.json({ error: 'rpc_failed', detail: msg, op }, { status: 500 });
