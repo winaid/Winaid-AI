@@ -16,25 +16,33 @@
 
 ## 적용 절차
 
-### 1) DB 컬럼 추가 (1회)
+### 1) DB 컬럼 추가 (1회) — SQL Editor 에서 직접 실행
 
-`hospital_images` 테이블에 `exclude_keywords` 컬럼 필요. 두 Supabase 프로젝트 모두:
+두 Supabase 프로젝트 (winaid-internal-seoul / winaid-public-seoul) 각각 다음 SQL 파일을 Dashboard → SQL Editor 에서 실행:
 
-```sql
-ALTER TABLE hospital_images
-  ADD COLUMN IF NOT EXISTS exclude_keywords text[] NOT NULL DEFAULT '{}';
-```
+- `sql/migrations/2026-05-15_hospital_images_exclude_keywords.sql` → winaid-internal-seoul (next-app)
+- `public-app-sql/migrations/2026-05-15_hospital_images_exclude_keywords.sql` → winaid-public-seoul (public-app)
 
-Supabase Dashboard → SQL Editor 에서 실행. 또는 `scripts/migrate-image-exclusions.ts --apply` (env 에 service_role 키 설정 시).
+본 파일은 idempotent (`IF NOT EXISTS`) — 재실행해도 안전.
 
-### 2) 자동 제안 생성
+### 2) 자동 제안 생성 — 분석 전용 (DB 변경 X)
+
+DB 컬럼이 추가된 후, 운영자가 어떤 이미지에 어떤 excludeKeywords 를 boost 하면 좋을지 자동 제안을 생성:
 
 ```bash
-# dry-run (제안만 출력, DB 변경 X)
-npx tsx scripts/migrate-image-exclusions.ts
+# 양 Supabase 인스턴스 각각 실행 (env 분리)
+SUPABASE_URL=https://winaid-internal-seoul.supabase.co \
+  SUPABASE_SERVICE_ROLE_KEY=... \
+  npx tsx scripts/migrate-image-exclusions.ts
+# → docs/image-library-exclusion-suggestions.md (next-app pool)
 
-# 결과: docs/image-library-exclusion-suggestions.md (table 형식)
+SUPABASE_URL=https://winaid-public-seoul.supabase.co \
+  SUPABASE_SERVICE_ROLE_KEY=... \
+  npx tsx scripts/migrate-image-exclusions.ts
+# → docs/image-library-exclusion-suggestions.md (public-app pool, 이전 파일 덮어씀 — 미리 백업)
 ```
+
+스크립트는 select-only — DB 변경 안 함. 출력은 table 형식 + UPDATE SQL 예시.
 
 스크립트는 다음 boost rule 로 제안:
 
