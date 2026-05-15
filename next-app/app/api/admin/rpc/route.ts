@@ -32,11 +32,14 @@ import { supabaseAdmin } from '@winaid/blog-core';
 import { verifyAdminCookie } from '../../../../lib/adminCookie';
 
 export const runtime = 'nodejs';
+export const maxDuration = 60;
 
 type Op = 'stats' | 'posts' | 'delete-post' | 'delete-all';
 const OPS: ReadonlySet<string> = new Set(['stats', 'posts', 'delete-post', 'delete-all']);
 
-const DELETE_ALL_TIMEOUT_MS = 30_000;
+// 배치 DELETE 파라미터 — Postgres statement_timeout 회피
+const DELETE_BATCH_SIZE = 500;
+const DELETE_BUDGET_MS = 50_000; // maxDuration 60s - 10s 응답 여유
 
 function badRequest(detail: string) {
   return NextResponse.json({ error: 'bad_request', detail }, { status: 400 });
@@ -130,27 +133,50 @@ export async function POST(req: NextRequest) {
     }
 
     if (op === 'delete-all') {
-      // RPC 의존 제거 — 운영자가 SQL 수동 배포 안 해도 동작 (내부 admin UX).
-      // 인증/권한은 이미 (1) admin_session cookie 검증 + (2) service_role 키로 충족.
-      // RLS 는 service_role 가 bypass. supabase-js DELETE 는 filter 필수 →
-      // `not('id', 'is', null)` 로 전 row 매치 (id NOT NULL PRIMARY KEY).
-      const deletePromise = supabaseAdmin
-        .from('generated_posts')
-        .delete({ count: 'exact' })
-        .not('id', 'is', null);
-      const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('rpc_timeout_30s')), DELETE_ALL_TIMEOUT_MS),
-      );
+      // 배치 DELETE — 한 번에 모두 지우면 Postgres statement_timeout 초과
+      // ("canceling statement due to statement timeout"). 500 row 씩 잘라
+      // 50s 안에 처리한 만큼만 반환. 더 남으면 클라이언트가 같은 op 재호출 (idempotent).
+      const startTime = Date.now();
+      let totalDeleted = 0;
       try {
-        const { error, count } = (await Promise.race([deletePromise, timeoutPromise])) as {
-          error: { message: string } | null;
-          count: number | null;
-        };
-        if (error) return NextResponse.json({ error: 'rpc_failed', detail: error.message, op }, { status: 500 });
-        return NextResponse.json({ data: count ?? 0 });
+        while (Date.now() - startTime < DELETE_BUDGET_MS) {
+          // 1) 다음 배치의 id 만 조회 (content 컬럼 제외 — SELECT 도 가벼움)
+          const { data: idRows, error: selectErr } = await supabaseAdmin
+            .from('generated_posts')
+            .select('id')
+            .limit(DELETE_BATCH_SIZE);
+          if (selectErr) {
+            return NextResponse.json(
+              { error: 'rpc_failed', detail: selectErr.message, op, partialCount: totalDeleted },
+              { status: 500 },
+            );
+          }
+          if (!idRows || idRows.length === 0) break; // 남은 row 0 — 완료
+
+          // 2) 추출한 id 만 IN 절로 DELETE — row 수 cap → statement_timeout 안 닿음
+          const ids = (idRows as { id: string }[]).map((r) => r.id);
+          const { error: deleteErr, count } = await supabaseAdmin
+            .from('generated_posts')
+            .delete({ count: 'exact' })
+            .in('id', ids);
+          if (deleteErr) {
+            return NextResponse.json(
+              { error: 'rpc_failed', detail: deleteErr.message, op, partialCount: totalDeleted },
+              { status: 500 },
+            );
+          }
+          totalDeleted += count ?? ids.length;
+
+          // 배치보다 적게 잡혔다 = 전부 처리 끝
+          if (idRows.length < DELETE_BATCH_SIZE) break;
+        }
+        return NextResponse.json({ data: totalDeleted });
       } catch (err) {
         const msg = (err as Error).message || 'unknown';
-        return NextResponse.json({ error: 'rpc_failed', detail: msg, op }, { status: 500 });
+        return NextResponse.json(
+          { error: 'rpc_failed', detail: msg, op, partialCount: totalDeleted },
+          { status: 500 },
+        );
       }
     }
 
