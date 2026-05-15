@@ -19,6 +19,7 @@ import type { TextBlockParam } from '@anthropic-ai/sdk/resources/messages/messag
 import type { CacheableBlock, LLMRequest, LLMResponse, LLMUsage } from './types';
 import { resolveRoute } from './router';
 import { fillClaudeUsage } from './cost';
+import { resolveModel } from './models';
 
 const MAX_CACHE_BLOCKS = 4;
 
@@ -113,6 +114,8 @@ export async function callClaude(req: LLMRequest): Promise<LLMResponse> {
     throw new Error('ANTHROPIC_API_KEY not set');
   }
 
+  // alias map + deprecation warn 자동 적용 (audit doc #5). 호출지 변경 0.
+  const model = resolveModel(route.model);
   const system = buildClaudeSystemParam(req.systemBlocks);
   const backoffs = [1000, 2000, 4000];
   const maxAttempts = 3;
@@ -131,7 +134,7 @@ export async function callClaude(req: LLMRequest): Promise<LLMResponse> {
       // SDK v0.88+ 의 RequestOptions 두 번째 인자로 signal 전달.
       const resp = await client.messages.create(
         {
-          model: route.model,
+          model,
           max_tokens: req.maxOutputTokens ?? 8192,
           // temperature: 신 reasoning 모델 (claude-opus-4-7, claude-sonnet-4-6 등) 에서
           // "deprecated for this model" 400 응답. SDK 가 받지 않게 아예 omit.
@@ -148,7 +151,7 @@ export async function callClaude(req: LLMRequest): Promise<LLMResponse> {
 
       const u = resp.usage;
       const usage: LLMUsage = fillClaudeUsage(
-        route.model,
+        model,
         {
           inputTokens: u.input_tokens ?? 0,
           outputTokens: u.output_tokens ?? 0,
@@ -163,7 +166,7 @@ export async function callClaude(req: LLMRequest): Promise<LLMResponse> {
       return {
         text,
         provider: 'claude',
-        model: route.model,
+        model,
         usage,
         latencyMs: Date.now() - started,
       };

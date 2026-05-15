@@ -121,6 +121,9 @@ npm run dev
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ✅ | Supabase anon key | 브라우저 노출 |
 | `GEMINI_API_KEY` | ✅ | Google Gemini | 서버 전용 |
 | `GEMINI_API_KEY_2` / `_3` | 선택 | 백업 키 (멀티키 로테이션) | 서버 전용 |
+| `OPENAI_API_KEY` | ✅ (AI 이미지) | gpt-image-2 호출 (`/api/image`). 미설정 시 AI 이미지 생성 X | 서버 전용 |
+| `OPENAI_API_KEY_2` / `_3` | 선택 | 백업 키 (멀티키 로테이션) | 서버 전용 |
+| `OPENAI_IMAGE_MODEL` | 권장 | gpt-image-2 **snapshot pin** (silent 업그레이드 차단). 권장값 `gpt-image-2-2026-04-21`. 미설정 시 `gpt-image-2` (latest pointer) 사용 — alias 가 다른 버전 가리키면 결과 품질·비용·실패 패턴이 무경고 변경됨. **production 안정성 차원에서 설정 권장** | 서버 전용 |
 | `NEXT_PUBLIC_VIDEO_PROCESSOR_URL` | 선택 | video-processor Railway URL | 브라우저 노출 |
 | `PROCESSOR_SHARED_SECRET` | 선택 | video-processor 인증 시크릿 | **서버 전용** (⚠️ `NEXT_PUBLIC_` 금지) |
 | `NEXT_PUBLIC_CRAWLER_URL` | 선택 | 크롤러 서버 (말투 학습) | 브라우저 노출 |
