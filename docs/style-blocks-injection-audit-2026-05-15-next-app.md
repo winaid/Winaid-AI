@@ -1,12 +1,12 @@
 # 기존 hospital_style_profiles injection audit — 2026-05-15 (next-app)
 
-생성: 2026-05-15T07:06:00.259Z
-Supabase: https://oljcrtavpbbobzqwfkcg.supabase.co
+생성: 2026-05-15T07:04:22.560Z
+Supabase: https://goczdncrlslflzagsycj.supabase.co
 테이블: hospital_style_profiles
 
 ## 요약
 
-- 전체 행: 1
+- 전체 행: 30
 - Injection 의심 행: **0**
 
 ## Flagged 행
