@@ -7,6 +7,7 @@
 import { normalizeForMedicalAdMatch } from './medicalLawNormalize';
 import { normalizeMarkdownToHtml } from './normalizeMarkdownToHtml';
 import { normalizeKoreanGrammar } from './koreanGrammarFilter';
+import { stripPromptLeakage } from './promptLeakageGuard';
 
 /** [패턴, 치환어] 배열. 순서는 의도적 — 더 구체적인 패턴을 먼저 둔다. */
 const MEDICAL_LAW_REPLACEMENTS: Array<[RegExp, string]> = [
@@ -266,11 +267,25 @@ export function filterOutputArtifacts(text: string): string {
 export function applyContentFilters(text: string): MedicalLawFilterResult {
   const medLaw = filterMedicalLawViolations(text);
   const mdNorm = normalizeMarkdownToHtml(medLaw.filtered);
-  const grammar = normalizeKoreanGrammar(mdNorm.html);
+  // 시스템 프롬프트 누수 (역할 정의, 빌더 내부 키, LLM 메타 토큰) 단락 strip.
+  // HIGH 1개 + LOW 2개 정책 — 자세한 룰은 promptLeakageGuard.ts 참고.
+  const leak = stripPromptLeakage(mdNorm.html);
+  const grammar = normalizeKoreanGrammar(leak.html);
   const finalText = filterOutputArtifacts(grammar.html);
+  const leakPatterns =
+    leak.detection.strippedParagraphs > 0 || leak.detection.suspectedParagraphs > 0
+      ? leak.detection.patterns.map(
+          (p) =>
+            `prompt_leak:${p}(strip=${leak.detection.strippedParagraphs},suspect=${leak.detection.suspectedParagraphs})`,
+        )
+      : [];
   return {
     filtered: finalText,
-    replacedCount: medLaw.replacedCount + mdNorm.replacedCount + grammar.replacedCount,
-    foundTerms: [...medLaw.foundTerms, ...mdNorm.patterns, ...grammar.patterns],
+    replacedCount:
+      medLaw.replacedCount +
+      mdNorm.replacedCount +
+      grammar.replacedCount +
+      leak.detection.strippedParagraphs,
+    foundTerms: [...medLaw.foundTerms, ...mdNorm.patterns, ...leakPatterns, ...grammar.patterns],
   };
 }

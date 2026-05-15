@@ -6,7 +6,8 @@ import { gateGuestRequest } from '../../../../lib/guestRateLimit';
 import { ALLOWED_MIME_TYPES, MAX_FILE_SIZE, STORAGE_BUCKET, mimeToExt } from '../../../../lib/hospitalImageService';
 import { resolveImageOwner } from '../../../../lib/serverAuth';
 
-export const maxDuration = 30;
+// 🛑 INVARIANT P-2 (CLAUDE.md "고정 정책") — 이미지 생성 + 라이브러리 후처리 모두 300s lockstep.
+export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
 
 async function _wrappedPOST(request: NextRequest) {

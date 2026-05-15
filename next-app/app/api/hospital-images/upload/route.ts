@@ -11,7 +11,8 @@ import { ALLOWED_MIME_TYPES, MAX_FILE_SIZE, STORAGE_BUCKET, mimeToExt } from '..
 //   내부 직원 풀 공유 정책이므로 모든 로그인 사용자가 조회 가능.
 const ADMIN_NIL_UUID = '00000000-0000-0000-0000-000000000000';
 
-export const maxDuration = 30;
+// 🛑 INVARIANT P-2 (CLAUDE.md "고정 정책") — 이미지 생성 + 라이브러리 후처리 모두 300s lockstep.
+export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {

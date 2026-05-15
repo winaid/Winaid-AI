@@ -15,6 +15,8 @@ export interface HospitalImage {
   width?: number;
   height?: number;
   tags: string[];
+  /** confusable 쌍 분리용 — 본 이미지가 매칭돼서는 안 되는 키워드. DB 컬럼 추가 전엔 undefined. */
+  excludeKeywords?: string[];
   altText: string;
   aiDescription?: string;
   usageCount: number;

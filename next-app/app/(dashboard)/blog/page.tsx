@@ -6,7 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { CATEGORIES, PERSONAS, TONES } from '../../../lib/constants';
 import { useTeamData } from '../../../lib/useTeamData';
 import { ContentCategory, VALID_CONTENT_CATEGORIES, type GenerationRequest, type AudienceMode, type ImageStyle, type ImageSourceMode, type WritingStyle, type CssTheme, type TrendingItem, type SeoTitleItem, type SeoReport } from '@winaid/blog-core';
-import { applyContentFilters, buildBlogTopicRecommendPrompt } from '@winaid/blog-core';
+import { applyContentFilters, buildBlogTopicRecommendPrompt, pickBestLibraryImage } from '@winaid/blog-core';
 import { savePost } from '../../../lib/postStorage';
 import { getSessionSafe, supabase } from '@winaid/blog-core';
 import { getHospitalStylePrompt } from '@winaid/blog-core';
@@ -1583,70 +1583,36 @@ JSON 형식으로 응답해주세요.`;
               const libraryImages: HospitalImage[] = Array.isArray(data) ? data : (data.images || []);
               const usedIds = new Set<string>();
               let matched = 0;
-              // 핵심 키워드: topic + disease (길이 2 이상, 전부 사용)
-              const topicKeywords = (topic || '').split(/[\s,]+/).filter(w => w.length >= 2);
-              const diseaseKeywords = (disease || '').split(/[\s,]+/).filter(w => w.length >= 2);
-              const baseCoreKeywords = [...new Set([...topicKeywords, ...diseaseKeywords])];
-              const lowPriorityTags = new Set(['일반', '로고', '외관', '대기실']);
-
-              const scoreImage = (img: HospitalImage, coreKeywords: string[]) => {
-                const tags = (img.tags || []).map(t => t.toLowerCase());
-                const tagScore = coreKeywords.filter(kw =>
-                  tags.some(tag => tag.includes(kw.toLowerCase()) || kw.toLowerCase().includes(tag))
-                ).length * 10;
-                const descText = [img.altText || '', img.aiDescription || ''].join(' ').toLowerCase();
-                const descScore = coreKeywords.filter(kw => descText.includes(kw.toLowerCase())).length * 3;
-                const altWords = coreKeywords.map(w => w.toLowerCase()).filter(w => w.length > 2);
-                const fullText = [...tags, descText].join(' ');
-                const altScore = altWords.filter(w => fullText.includes(w)).length;
-                const rawScore = tagScore + descScore + altScore;
-                const onlyLowPriority = tags.length > 0 && tags.every(t => lowPriorityTags.has(t));
-                return onlyLowPriority ? Math.floor(rawScore * 0.3) : rawScore;
-              };
+              // 매칭 로직은 @winaid/blog-core 의 pickBestLibraryImage 로 통합 — 양 앱 lockstep.
+              // title 가중치 3x + excludeKeywords 즉시 제외 + exact > edge > substring 가중치.
+              // markerAlt 는 매칭 키워드로 쓰지 않고 HTML <img alt> fallback 에만 사용.
 
               for (const marker of imgMarkers) {
                 const [fullMatch, num, markerAlt] = marker;
-                // 매칭 키워드: topic + disease 만 사용 (baseCoreKeywords).
-                // markerAlt = LLM 이 작성한 이미지 생성용 영문 prompt (alt 텍스트).
-                // 이전엔 alt 의 영어 단어를 매칭 키워드에 합쳤지만(implant/wisdom/
-                // whitening 등) 그러면 주제와 무관한 이미지가 잡힘 — 예: 스케일링
-                // 글이라도 LLM alt 에 "implant" 가 들어가면 임플란트 이미지 매칭.
-                // PR #154 의 score>0 임계치도 이 경우엔 무력화됨.
-                // → markerAlt 는 매칭 키워드로 쓰지 않고, HTML <img alt="..."> 의
-                //   fallback (라이브러리 이미지의 altText 가 비었을 때) 으로만 사용.
-                const coreKeywords = baseCoreKeywords;
+                const best = pickBestLibraryImage(libraryImages, {
+                  title: topic || '',
+                  bodyKeywords: [disease || ''].filter(Boolean),
+                }, {
+                  excludeIds: usedIds,
+                  // F-1: minScore=8 — score < 8 인 weak match (단일 generic 토큰 edge/substring) 거부
+                  // → 자연스럽게 remainingMarkers 로 떨어져 placeholder/AI 생성 fallback.
+                  // 근거: 검증된 PASS top1 최저(14.5) > 8, 가장 큰 PASS gap(16.8)의 절반≈8.4.
+                  // docs/image-matching-verification-summary-2026-05-15.md 의 F-1 섹션 참조.
+                  minScore: 8,
+                  allowReuseFallback: true,
+                });
 
-                // 1차: 아직 사용되지 않은 이미지에서 best match
-                let candidates = libraryImages
-                  .filter(img => !usedIds.has(img.id))
-                  .map(img => ({ img, score: scoreImage(img, coreKeywords) }))
-                  .sort((a, b) => b.score - a.score);
-
-                // 2차: 사용 가능한 이미지가 소진된 경우 전체에서 재사용 허용
-                if (candidates.length === 0 && libraryImages.length > 0) {
-                  candidates = libraryImages
-                    .map(img => ({ img, score: scoreImage(img, coreKeywords) }))
-                    .sort((a, b) => b.score - a.score);
-                  console.info(`[BLOG] IMG_${num}: 이미지 소진 → 재사용 허용`);
-                }
-
-                const bestCandidate = candidates[0];
-                // 매칭 임계치: score > 0 (= 최소 1개 키워드 매칭) 일 때만 채택.
-                // 이전: score 무관 무조건 채택 → "스케일링" 주제에 "임플란트" 이미지가
-                // fallback (모두 score=0) 으로 잘못 매칭되는 버그.
-                // score=0 슬롯은 remainingMarkers (L1652-) 로 자연스럽게 떨어져
-                // ai/hybrid 모드면 AI 생성, library 모드면 placeholder 처리.
-                if (bestCandidate && bestCandidate.score > 0) {
-                  const best = bestCandidate.img;
+                if (best) {
+                  const img = best.image;
                   blogText = blogText.replace(
                     fullMatch,
-                    `<img src="${best.publicUrl}" alt="${best.altText || markerAlt}" data-image-index="${num}" style="max-width:100%;border-radius:12px;" />`,
+                    `<img src="${img.publicUrl}" alt="${img.altText || markerAlt}" data-image-index="${num}" style="max-width:100%;border-radius:12px;" />`,
                   );
-                  usedIds.add(best.id);
+                  usedIds.add(img.id);
                   matched++;
-                  console.info(`[BLOG] IMG_${num} 매칭: score=${bestCandidate.score} tags=[${best.tags?.join(',')}]`);
-                } else if (bestCandidate) {
-                  console.info(`[BLOG] IMG_${num} 매칭 스킵: score=0 (관련 이미지 없음, AI/placeholder 폴백)`);
+                  console.info(`[BLOG] IMG_${num} 매칭: score=${best.score.toFixed(2)} tags=[${img.tags?.join(',')}]`);
+                } else {
+                  console.info(`[BLOG] IMG_${num} 매칭 스킵: 관련 이미지 없음 (AI/placeholder 폴백)`);
                 }
               }
               console.info(`[BLOG] 라이브러리 자동 매칭: ${matched}/${imgMarkers.length}장 배치`);

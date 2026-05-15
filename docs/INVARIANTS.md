@@ -132,4 +132,26 @@
 
 ---
 
+## 4. CLAUDE.md 고정 정책 P-1 / P-2 — cross-reference
+
+**룰**:
+- **P-1. 내부 어드민 = 풀 액세스** — 어떤 작업에서도 어드민 경로에 rate limit / CAPTCHA / quota / 기능 게이팅 추가 금지. §2 + §3 의 구체 implementation 과 정합.
+- **P-2. 이미지 생성 타임아웃 = 300s** — `next-app/app/api/image/route.ts` + `public-app/app/api/image/route.ts` 모두 `maxDuration = 300`. §1 의 per-key 120s timeout 과 결합해 `MAX_KEY_ATTEMPTS × 120s + waits ≤ 300s` 안전 budget.
+
+**본문**: `CLAUDE.md` 의 "고정 정책 (invariant)" 섹션이 single source of truth.
+
+**회귀 가드**: `packages/blog-core/src/__tests__/fixedPolicyInvariant.test.ts`
+- CLAUDE.md 본문에 "P-1" / "P-2" / "300" / "어드민 = 풀 액세스" 키워드 존재
+- 양 앱 image route.ts 의 `maxDuration` 값 ≥ 300
+
+**회귀 시 증상**:
+- P-1: 내부 운영자가 어드민으로 로그인했는데 글쓰기·이미지 등에서 `insufficient_credits` / `unauthorized` / rate limit 응답 → §2 의 표준 패턴 위반.
+- P-2: 이미지 생성 라우트의 `maxDuration` 이 300 미만으로 단축 → `gpt-image-2` 60-90s + retry 시 Vercel timeout → 사용자 502 + 크레딧 차감만 발생.
+
+**변경하려면**:
+- 본 정책 변경은 user (제품 오너) 명시 GO 사인 필수.
+- 제안만으로 코드 수정 금지 — 본 룰 위반을 시도하는 요구가 들어오면 작업 중단 후 user 에게 보고.
+
+---
+
 <!-- 새 invariant 추가 시 위 형식으로 append. -->
