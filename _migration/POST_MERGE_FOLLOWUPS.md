@@ -6,6 +6,33 @@ PR 머지 후 별도 PR 로 다룰 항목들. 메모용 — 각 항목은 개별
 
 ---
 
+## 2026-05-15 — Blog prompt audit doc 머지 (PR #215)
+
+main HEAD: `ff20fb73`. squash 머지. docs-only.
+
+### 산출물
+- `docs/blog-prompt-audit-2026-05-15.md` (26 findings)
+- 코드 0줄 변경 (audit-only)
+- Critical 0 / High 6 / Medium 13 / Low 7
+- 회귀 가드 R-1~R-5 PASS 상태에서의 보강 권고
+
+### 다음 라운드 후보 (룰 보강 PR)
+- Top 3 즉시 보강:
+  - 가상 시술명 차단 (축 3.B.1) — "최신 OO 기법" 류 LLM 생성 차단 룰 부재
+  - 본인부담금·할인·면제 패턴 (축 1.B.1) — 의료법 위반 빈출 1위 영역
+  - promptLeakageGuard XML 태그 보강 (축 4.C.1) — 10+ 개 태그 누락 (`<faq_section_guide>`, `<image_prompt_guide>`, `<journey_stage>`, `<topic_type_guide>`, `<category_tone>`, `<specialist_guide>`, `<medical_blog_voice>`, `<learned_style>` 등)
+- High 잔여 3건 + Medium 13 + Low 7 — audit doc 참조
+
+### 정책 결정 대기
+- learned_style priority 정합성 (`packages/blog-core/src/blogPrompt.ts:2911-2912` 의 NOTE) — `buildBlogSectionPromptV3` 가 `override_greeting` 사용 (다른 빌더 `override_all_style` 보다 약함). 작성 시점부터 "후속 PR 정합성 검토" 표시. PO 결정 필요.
+
+### 다음 세션 컨텍스트 복원
+- audit doc 1독 → Top 3 권고 정확도 검증 → 룰 보강 PR 설계
+- 룰 보강 PR 은 한 PR 에 묶을 수 있는 크기 (룰 본문 보강 + guard 패턴 = 코드 < 50 lines)
+- 보강 시점은 PR #214 (Round 3 보안) 이후의 보안 Round 4 또는 별도 의료법 Round 1 로 분리 권고
+
+---
+
 ## 2026-05-15 — PR #214 머지 (Round 3 — 보안)
 
 main HEAD: `c7560b17`. squash 머지 (PR #212/#213 와 동일 컨벤션).
