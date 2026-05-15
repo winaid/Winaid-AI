@@ -112,6 +112,33 @@ test('양 앱 hospital-images/upload route: maxDuration === 300 (P-2 정의 "라
   }
 });
 
+test('양 앱 .env.example: OPENAI_IMAGE_MODEL snapshot pin 안내 존재 (silent 업그레이드 차단)', () => {
+  // .env.example 에 OPENAI_IMAGE_MODEL 키 안내가 있어야 함 (활성화 또는 주석 처리 OK).
+  // 운영자가 production 에 snapshot pin 적용 가능하도록 가시화.
+  for (const app of ['next-app', 'public-app']) {
+    const p = resolve(REPO_ROOT, `${app}/.env.example`);
+    if (!existsSync(p)) continue;
+    const src = readFileSync(p, 'utf-8');
+    assert.ok(
+      /OPENAI_IMAGE_MODEL\s*=/.test(src),
+      `${app}/.env.example: OPENAI_IMAGE_MODEL 키 안내 누락`,
+    );
+    // 권장 snapshot pin 값 (gpt-image-2-YYYY-MM-DD) 이 적어도 한 곳에 명시돼야 운영자가 어떤 값을 넣을지 안다.
+    assert.ok(
+      /gpt-image-2-\d{4}-\d{2}-\d{2}/.test(src),
+      `${app}/.env.example: snapshot pin 권장 값 (gpt-image-2-YYYY-MM-DD) 누락`,
+    );
+  }
+});
+
+test('README.md: OPENAI_IMAGE_MODEL 환경변수 문서화 존재', () => {
+  const p = resolve(REPO_ROOT, 'README.md');
+  if (!existsSync(p)) return;
+  const src = readFileSync(p, 'utf-8');
+  assert.ok(src.includes('OPENAI_IMAGE_MODEL'), 'README.md 환경변수 표에 OPENAI_IMAGE_MODEL 누락');
+  assert.ok(/snapshot\s*pin/i.test(src), 'README.md 에 snapshot pin 권장 안내 누락');
+});
+
 test('docs/INVARIANTS.md: P-1 / P-2 cross-reference 존재', () => {
   const p = resolve(REPO_ROOT, 'docs/INVARIANTS.md');
   if (!existsSync(p)) {
