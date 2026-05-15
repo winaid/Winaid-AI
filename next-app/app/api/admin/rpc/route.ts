@@ -97,15 +97,25 @@ export async function POST(req: NextRequest) {
       const filterHospital = asString(args.filter_hospital) ?? null;
       const limitCount = asNumber(args.limit_count, 100);
       const offsetCount = asNumber(args.offset_count, 0);
-      const { data, error } = await supabaseAdmin.rpc('get_all_generated_posts', {
-        admin_password: '',
-        filter_post_type: filterPostType,
-        filter_hospital: filterHospital,
-        limit_count: limitCount,
-        offset_count: offsetCount,
-      });
+      // RPC 의존 제거 + content 컬럼 제외. generated_posts.content 에 base64 이미지가
+      // 박혀 row 하나가 수 MB → 100 row SELECT * 면 Postgres statement_timeout 초과
+      // (운영 보고: "canceling statement due to statement timeout"). 상세 본문은
+      // 클라이언트가 selectedPost 클릭 시 getPostContent(id) 로 lazy fetch.
+      let query = supabaseAdmin
+        .from('generated_posts')
+        .select('id, post_type, title, hospital_name, category, user_email, topic, char_count, created_at')
+        .order('created_at', { ascending: false })
+        .range(offsetCount, offsetCount + limitCount - 1);
+      if (filterPostType) query = query.eq('post_type', filterPostType);
+      if (filterHospital) query = query.eq('hospital_name', filterHospital);
+      const { data, error } = await query;
       if (error) return NextResponse.json({ error: 'rpc_failed', detail: error.message, op }, { status: 500 });
-      return NextResponse.json({ data });
+      // 클라이언트 GeneratedPost 인터페이스 호환 — content placeholder 주입 (이미지/기타).
+      const slim = (data ?? []).map((row: Record<string, unknown>) => ({
+        ...row,
+        content: row.post_type === 'image' ? '[이미지]' : '',
+      }));
+      return NextResponse.json({ data: slim });
     }
 
     if (op === 'delete-post') {
