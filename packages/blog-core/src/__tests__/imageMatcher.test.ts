@@ -205,6 +205,70 @@ test('minScore=0 — score 0 이하 후보는 매칭 안 함', () => {
   assert.equal(best, null);
 });
 
+// ── F-1: minScore=8 prod 임계치 회귀 가드 ─────────────
+// 양 앱 blog/page.tsx 의 pickBestLibraryImage 호출이 minScore=8 사용.
+// PASS 케이스 (정확 매칭) score 가 8 이상 보장 + weak match (< 8) 거부.
+
+test('F-1: minScore=8 — 정확 매칭 (임플란트 글 → 임플란트 이미지) 채택', () => {
+  // 임플란트 이미지에 "임플란트" title 매칭: tag exact match (1.0) × 3 (title) = 3.0
+  // alt "임플란트 식립 모식도" 의 토큰 "임플란트" exact × 3 (title) = 3.0
+  // aiDescription 토큰 매칭 추가… 총합 8 이상 안전 보장.
+  const best = pickBestLibraryImage([implantImage], {
+    title: '임플란트 식립 후 관리',
+    bodyKeywords: ['임플란트', '식립'],
+  }, { minScore: 8 });
+  assert.ok(best, 'minScore=8 에서 정확 매칭 거부됨 — 회귀');
+  assert.ok(best!.score >= 8, `score ${best!.score} < 8 — 회귀`);
+});
+
+test('F-1: minScore=8 — weak match (단일 generic 토큰) 거부 → null', () => {
+  // 단 1개 generic 토큰만 매칭 → score ≈ 3 → null with minScore=8.
+  // sanity check: default minScore=0 에선 같은 weak match 가 채택됨.
+  const onlyEdgeImage: LibraryImageRecord = {
+    id: 'low-relevance',
+    tags: ['진료실'],
+    altText: '의료진 부작용 상담 안내',
+  };
+  // (a) default (minScore=0) — weak match 도 채택
+  const lowThresh = pickBestLibraryImage([onlyEdgeImage], {
+    title: '필러 부작용 대처',
+    bodyKeywords: ['필러'],
+  });
+  assert.ok(lowThresh, 'sanity: minScore=0 에서 weak match 채택돼야 함');
+  assert.ok(lowThresh!.score < 8, `sanity: weak match score ${lowThresh!.score} should be < 8`);
+
+  // (b) minScore=8 — 같은 weak match 거부
+  const highThresh = pickBestLibraryImage([onlyEdgeImage], {
+    title: '필러 부작용 대처',
+    bodyKeywords: ['필러'],
+  }, { minScore: 8 });
+  assert.equal(highThresh, null, 'minScore=8 에서 weak match 채택됨 — 회귀');
+});
+
+test('F-1: minScore=8 — score < 8 후보가 다수여도 모두 거부', () => {
+  // 모든 라이브러리가 weak score 만 → null. AI fallback 으로 떨어지는 prod 시나리오.
+  const weakLibrary: LibraryImageRecord[] = [
+    { id: 'w1', tags: ['일반'], altText: '치과 외관' },
+    { id: 'w2', tags: ['로고'], altText: '병원 로고' },
+    { id: 'w3', tags: ['상담'], altText: '의료진 상담' },
+  ];
+  const best = pickBestLibraryImage(weakLibrary, {
+    title: '필러 시술 정보',
+    bodyKeywords: ['필러'],
+  }, { minScore: 8 });
+  assert.equal(best, null, '관련 없는 weak match 가 채택됨 — 회귀');
+});
+
+test('F-1: minScore=8 + confusable — 임플란트 글 vs 사랑니 이미지 (PASS+excludeKeywords)', () => {
+  // 핵심 invariant: minScore 상향이 confusable 분리에 영향 주지 않아야 함.
+  const best = pickBestLibraryImage(library, {
+    title: '임플란트 식립 후 관리',
+    bodyKeywords: ['임플란트', '식립'],
+  }, { minScore: 8 });
+  assert.ok(best, 'minScore=8 에서 임플란트 매칭 거부 — 회귀');
+  assert.equal(best!.image.id, 'img-implant-1');
+});
+
 // ── 빈 입력 ───────────────────────────────────────────
 test('빈 library → null', () => {
   const best = pickBestLibraryImage([], { title: '임플란트' });

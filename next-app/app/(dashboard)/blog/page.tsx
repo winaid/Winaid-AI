@@ -1594,7 +1594,11 @@ JSON 형식으로 응답해주세요.`;
                   bodyKeywords: [disease || ''].filter(Boolean),
                 }, {
                   excludeIds: usedIds,
-                  minScore: 0,
+                  // F-1: minScore=8 — score < 8 인 weak match (단일 generic 토큰 edge/substring) 거부
+                  // → 자연스럽게 remainingMarkers 로 떨어져 placeholder/AI 생성 fallback.
+                  // 근거: 검증된 PASS top1 최저(14.5) > 8, 가장 큰 PASS gap(16.8)의 절반≈8.4.
+                  // docs/image-matching-verification-summary-2026-05-15.md 의 F-1 섹션 참조.
+                  minScore: 8,
                   allowReuseFallback: true,
                 });
 
