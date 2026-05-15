@@ -7,6 +7,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { checkAuth } from '../../../lib/apiAuth';
+import { resolveModel } from '@winaid/blog-core';
 
 
 export const maxDuration = 300;
@@ -201,7 +202,7 @@ export async function POST(request: NextRequest) {
 
   // ═══ 스트리밍 모드 ═══
   if (body.stream === true) {
-    const model = body.model || 'gemini-3.1-pro-preview';
+    const model = resolveModel(body.model || 'gemini-3.1-pro-preview');
     const ki = keyIndex % keys.length;
     keyIndex = (ki + 1) % keys.length;
 
@@ -302,7 +303,7 @@ export async function POST(request: NextRequest) {
   if (body.maxOutputTokens !== undefined) body.maxOutputTokens = Math.min(Math.max(body.maxOutputTokens, 1), 65536);
   if (body.timeout !== undefined) body.timeout = Math.min(Math.max(body.timeout, 5000), 180000);
 
-  const model = body.model || 'gemini-3.1-pro-preview';
+  const model = resolveModel(body.model || 'gemini-3.1-pro-preview');
   const systemText = body.systemInstruction || '';
   const userText = body.prompt;
 
@@ -359,8 +360,8 @@ export async function POST(request: NextRequest) {
     };
   }
 
-  const PRO = 'gemini-3.1-pro-preview';
-  const FLASH = 'gemini-3.1-flash-lite-preview';
+  const PRO = resolveModel('gemini-3.1-pro-preview');
+  const FLASH = resolveModel('gemini-3.1-flash-lite-preview');
 
   const timeout = Math.min(body.timeout || 120000, 180000);
   let result = await fetchGemini(keys, model, apiBody, timeout);

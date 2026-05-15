@@ -69,3 +69,12 @@ export type {
 // 라우팅/단가 유틸 (검증 endpoint 등에서 재사용)
 export { resolveRoute, isBatchable } from './router';
 export { CLAUDE_RATES, GEMINI_RATES, computeClaudeCost, computeGeminiCost } from './cost';
+
+// 모델 ID alias + deprecation 추적 (preview-to-GA migration policy)
+export {
+  resolveModel,
+  isPreviewModel,
+  DEPRECATED_MODELS,
+  MODEL_ALIASES,
+  _resetDeprecationWarnCache,
+} from './models';

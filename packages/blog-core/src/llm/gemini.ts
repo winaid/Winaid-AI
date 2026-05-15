@@ -11,6 +11,7 @@
 import type { CacheableBlock, LLMRequest, LLMResponse, LLMUsage } from './types';
 import { resolveRoute } from './router';
 import { fillGeminiUsage } from './cost';
+import { resolveModel } from './models';
 
 const PRO = 'gemini-3.1-pro-preview';
 const FLASH = 'gemini-3.1-flash-lite-preview';
@@ -154,7 +155,8 @@ export async function callGemini(req: LLMRequest): Promise<LLMResponse> {
     throw new Error(`callGemini invoked for non-gemini task: ${req.task} → ${route.provider}`);
   }
 
-  const model = route.model;
+  // alias map + deprecation warn 자동 적용 (audit doc #5). 호출지 변경 0.
+  const model = resolveModel(route.model);
   const systemText = joinSystem(req.systemBlocks);
 
   const apiBody: Record<string, unknown> = {

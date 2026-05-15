@@ -4,6 +4,7 @@
  * API 라우트에서 /api/gemini를 self-fetch하면 Vercel 서버리스에서
  * 타임아웃/데드락이 발생하므로, 직접 Gemini API를 호출하는 헬퍼.
  */
+import { resolveModel } from '@winaid/blog-core';
 
 function getKeys(): string[] {
   const keys: string[] = [];
@@ -41,11 +42,12 @@ export async function callGeminiDirect(options: GeminiCallOptions): Promise<Gemi
     return { text: null, error: 'GEMINI_API_KEY 미설정' };
   }
 
-  // 모델 fallback: 요청한 모델 → pro → flash 순으로 시도
+  // 모델 fallback: 요청한 모델 → pro → flash 순으로 시도.
+  // resolveModel: alias map + deprecation warn 자동 적용 (audit doc #5).
   const models = [
-    options.model || 'gemini-3.1-flash-lite-preview',
-    'gemini-3.1-pro-preview',
-    'gemini-3.1-flash-lite-preview',
+    resolveModel(options.model || 'gemini-3.1-flash-lite-preview'),
+    resolveModel('gemini-3.1-pro-preview'),
+    resolveModel('gemini-3.1-flash-lite-preview'),
   ];
   // 중복 제거
   const uniqueModels = [...new Set(models)];
