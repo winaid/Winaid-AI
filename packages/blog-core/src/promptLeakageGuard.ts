@@ -86,16 +86,23 @@ export interface PromptLeakageResult {
 
 /**
  * HTML 단락 분리 — `<p>...</p>`, `<h2>...</h2>` 류 block-level 태그 단위.
- * 태그 안 내부 텍스트만 검사 (속성·태그명 자체는 검사 대상 아님).
+ * 검사 텍스트는 raw inner 그대로 (HTML 태그 strip 안 함) — `<|system|>` /
+ * `<persona>` 같은 meta token 이 strip 으로 사라지면 매칭 불가.
  *
- * 평문 입력 시: `\n\n` 단위 단락 분리.
+ * 평문 입력 시: `\n\n` 단위 단락 분리. sep (\n\n) 은 별도 part 로 보존해서
+ * strip 시에도 단락 간 빈줄 유지.
  */
 function splitParagraphs(input: string): Array<{ raw: string; text: string; isBlock: boolean }> {
   // HTML 인지 빠른 휴리스틱
   const looksLikeHtml = /<\s*(p|h[1-6]|div|li|blockquote|article|section)\b/i.test(input);
   if (!looksLikeHtml) {
-    // 평문: `\n\n` 단위
-    return input.split(/\n\s*\n/).map((para) => ({ raw: para, text: para, isBlock: false }));
+    // 평문: `\n\n` 분리. group capture 로 sep 도 보존해서 strip 시 빈줄 유지.
+    // split with group → ['단락1', '\n\n', '단락2', '\n\n', ...]
+    const parts = input.split(/(\n\s*\n)/);
+    return parts.map((p, i) => {
+      const isSep = i % 2 === 1;
+      return { raw: p, text: p, isBlock: !isSep };
+    });
   }
 
   // block-level 태그 단위 매칭 — 단순 정규식 (nested block 미고려 — 의료 블로그 구조는 평탄)
@@ -109,9 +116,11 @@ function splitParagraphs(input: string): Array<{ raw: string; text: string; isBl
       const gap = input.slice(lastIdx, m.index);
       out.push({ raw: gap, text: '', isBlock: false });
     }
-    // block 내부 텍스트만 검사 대상으로 추출 (속성 제외)
-    const inner = m[2].replace(/<[^>]+>/g, ' ');
-    out.push({ raw: m[0], text: inner, isBlock: true });
+    // 검사 텍스트는 raw inner 그대로. HTML 태그 (<|system|>, <persona> 등) 가
+    // meta token 인 경우 strip 으로 사라지면 못 잡으니 보존.
+    // 검사 패턴들은 모두 시스템 프롬프트 변수명·메타 토큰 — HTML attribute
+    // 안에 자연 출현 가능성 0 → false positive 0.
+    out.push({ raw: m[0], text: m[2], isBlock: true });
     lastIdx = m.index + m[0].length;
   }
   if (lastIdx < input.length) {

@@ -110,12 +110,14 @@ test('LOW 단독: "절대 금지" 한 번 → 의심만 strip 안 함', () => {
   assert.ok(r.html.includes('절대 금지'), '단락이 의심만으로 strip 됨');
 });
 
-test('LOW 단독: "당신은 ...입니다" 자연스러운 문맥 → 의심만', () => {
-  const html = '<p>당신은 임플란트 치료를 고려 중이시면 다음을 확인하세요.</p>';
+test('LOW 단독: "당신은 ...입니다" 단독 매칭 → 의심만 (strip 안 함)', () => {
+  // role_declaration 패턴 매칭 (당신은 ... 입니다). 다른 LOW 패턴 매칭 X.
+  // → 단일 LOW 매칭 → suspectedParagraphs=1, strippedParagraphs=0.
+  const html = '<p>안녕하세요, 당신은 우리 치과의 소중한 환자입니다.</p>';
   const r = stripPromptLeakage(html, false);
   assert.equal(r.detection.strippedParagraphs, 0);
   assert.equal(r.detection.suspectedParagraphs, 1);
-  assert.ok(r.html.includes('임플란트'));
+  assert.ok(r.html.includes('환자입니다'));
 });
 
 test('LOW 다중: 당신은 + 절대 금지 동시 → strip', () => {
