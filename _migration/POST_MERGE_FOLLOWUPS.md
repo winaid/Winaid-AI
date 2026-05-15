@@ -6,6 +6,51 @@ PR 머지 후 별도 PR 로 다룰 항목들. 메모용 — 각 항목은 개별
 
 ---
 
+## 2026-05-15 — PR #212 머지
+
+main HEAD: `f6d65175`. squash 머지 (레포 컨벤션).
+
+### 머지된 변경
+- **WS-0** P-1 / P-2 invariants (`CLAUDE.md` "고정 정책" / `docs/INVARIANTS.md` §4 / `fixedPolicyInvariant.test.ts`)
+- **WS-1** `promptLeakageGuard` + `applyContentFilters` 체인 통합 (HIGH 14 / LOW 6 패턴)
+- **WS-2** `imageMatcher` (excludeKeywords + specificity exact>edge>substring + title 3x). 양 앱 lockstep wiring + HospitalImage 타입 forward-compat
+- **WS-3** AI image pipeline audit (`docs/ai-image-pipeline-audit.md`) + `hospital-images/upload/route.ts` 양 앱 `maxDuration` 30→300 (P-2 위반 fix)
+- **F-1** `minScore: 0 → 8` 양 앱 lockstep. weak match defense-in-depth.
+- 검증 마이그레이션 SQL (`sql/migrations/` + `public-app-sql/migrations/` 2026-05-15 파일) + 검증 스크립트 3종 (`scripts/{audit,simulate,build}-image-*.ts`) + 양 앱 검증 결과 6 docs + 통합 summary
+
+### 검증 결과
+- WS-2 SQL 마이그레이션 양 Supabase 인스턴스 적용 완료 + 사후 검증 PASS (C1 임플란트 양 앱, C2 사랑니 next-app). excludeKeywords 채움 0% 상태에서도 (b) specificity + (c) title-first 만으로 confusable 분리.
+- 자기 모순 0건 양 앱 / prod 회귀 risk 0 (`scope=hospital` 필터 + 라이브러리 카테고리 단일).
+- 기존 invariant (prose-flow / drift-zero / 5빌더 / 의료법 normalize) 위반 0. P-1 / P-2 자체 위반 0.
+- CI 그린 — 18 test files / 224 케이스 통과. 1회 `aaeebab` 로 fixture/HTML 파싱 fix 적용.
+
+### 잔여 백로그 (별도 PR 처리)
+- **F-2**: 시뮬레이션 케이스 라이브러리 카테고리별 분리 (비치과 hospital 시드 추가 후 의미).
+- **F-3**: `hospitals.category` 매핑 인프라 → matcher category alignment 게이트 가능성.
+- **WS-3 후속 8건**: `docs/ai-image-pipeline-audit.md` 참조 — hospital-images CRUD 4건 maxDuration / card-news/generate-images / `OPENAI_IMAGE_MODEL` snapshot pin / blog-core `buildImagePrompt` 옵션 C / gemini deprecation 추적 / 시각 검수 (Vision 후처리) / per-user daily 이미지 cap / 환불 텔레메트리 강화.
+- **감사 Top 5 중 #2-#5** (`docs/code-review-2026-05-15.md`):
+  - #2 issues 패치 후 HTML sanitize 미경유 → XSS 표면 (48h)
+  - #3 hospitalStyleBlock 저장형 prompt injection (1주)
+  - #4 review JSON.parse fail-open 정책 (1주)
+  - #5 medical-ad override audit log 정책 (2-4주)
+  - **#1 CAPTCHA 는 P-1 에 의해 게스트 / public-app 한정으로 재해석됨** — 어드민 경로엔 추가 안 함.
+
+### 알려진 한계
+- F-1 `minScore=8` 은 PASS-FAIL score range overlap (PASS 최저 14.5 vs FAIL 최대 22) 영역에 대한 **absolute floor** 차원의 defense-in-depth. completest 해결은 F-3 후 category alignment 게이트.
+- WS-1 promptLeakageGuard 의 HIGH 패턴 `<persona>` / `<role>` 등은 커스텀 HTML tag 매칭 — 표준 HTML 에 자연 출현 0 이지만, 향후 web components 도입 시 재검토 필요.
+
+### 운영자 즉시 권고 (선택, optional safety net)
+임플란트 ↔ 사랑니 confusable 보강 SQL. 양 Supabase 인스턴스 각각 실행:
+```sql
+UPDATE hospital_images SET exclude_keywords = exclude_keywords || ARRAY['임플란트']::text[]
+ WHERE '사랑니' = ANY(tags) AND NOT ('임플란트' = ANY(exclude_keywords));
+UPDATE hospital_images SET exclude_keywords = exclude_keywords || ARRAY['사랑니']::text[]
+ WHERE '임플란트' = ANY(tags) AND NOT ('사랑니' = ANY(exclude_keywords));
+```
+적용 후 `npx tsx scripts/build-image-fix-todo.ts` 재실행 → HIGH 항목 변화 확인.
+
+---
+
 ## 블로그 누수/이미지 후속 (PR #154 / #155 / #156 후속)
 
 ### 1. fix(blog): IMG_N false-positive 패턴 수정 — ✅ 완료 (PR #157)
