@@ -49,7 +49,8 @@ export async function deleteAllGeneratedPosts(
         success: false,
         error:
           'DB에 delete_all_generated_posts 함수가 없습니다. ' +
-          'Supabase SQL Editor에서 sql/migrations/2026-03-20_fix_delete_all_generated_posts.sql을 실행하세요.',
+          'Supabase SQL Editor에서 sql/migrations/2026-05-08_drop_admin_password_check.sql을 실행하세요 ' +
+          '(현행 admin 인증 모델 — GUC 기반 구버전 2026-03-20 파일은 폐기됨).',
       };
     }
     return { success: false, error: `삭제 중 오류: ${detail}` };
