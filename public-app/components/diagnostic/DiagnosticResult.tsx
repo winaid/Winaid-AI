@@ -20,6 +20,7 @@ import InlineLeadCta from './InlineLeadCta';
 import AIVisibilityKPICards from './AIVisibilityKPICards';
 import ToneRecommendationCards from './ToneRecommendationCards';
 import AnalyzedSubpages from './AnalyzedSubpages';
+import AnalyzedInternalLinks from './AnalyzedInternalLinks';
 import { deriveAIVisibilityKPI } from '../../lib/diagnostic/aiVisibilityKPI';
 import { authFetch } from '../../lib/authFetch';
 import { getSupabaseClient, isSupabaseConfigured } from '@winaid/blog-core';
@@ -380,12 +381,17 @@ export default function DiagnosticResult({ result, onResultUpdate }: DiagnosticR
             mainUrl={result.url}
           />
 
+          <AnalyzedInternalLinks links={result.crawlMeta.internalLinks} />
+
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <h3 className="text-sm font-bold text-slate-700 mb-4">카테고리별 점수</h3>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
               {result.categories.map((c) => (
                 <div key={c.id} className="flex flex-col items-center">
                   <ScoreRing score={c.score} size={90} label={c.name} />
+                  <span className="mt-1 text-[10px] text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">
+                    가중치 {c.weight}%
+                  </span>
                   {c.score < 50 && (
                     <button
                       type="button"

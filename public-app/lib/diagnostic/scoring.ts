@@ -303,12 +303,12 @@ function scoreSiteStructure(crawl: CrawlResult): CategoryScore {
     }
   }
 
-  const docRegex = /의료진|원장|doctor|medical-team|staff/i;
+  const docRegex = /의료진|원장|전문의|진료진|닥터|doctor|medical-team|staff|physician|소개/i;
   items.push(crawl.hasDoctorInfo || hasInternalLinkMatch(crawl, docRegex)
     ? makeItem(LABELS.has_doctor_page, 20, 20, 'pass', '의료진 정보/링크 감지됨.')
     : makeItem(LABELS.has_doctor_page, 20, 0, 'fail', '의료진 소개 경로 없음.'));
 
-  const trtRegex = /진료|치료|서비스|services|treatment/i;
+  const trtRegex = /진료|치료|진료안내|진료과목|진료영역|서비스|services|treatment|care|클리닉/i;
   items.push(crawl.hasServicePages || hasInternalLinkMatch(crawl, trtRegex)
     ? makeItem(LABELS.has_treatment_page, 15, 15, 'pass', '진료/치료 페이지 감지됨.')
     : makeItem(LABELS.has_treatment_page, 15, 0, 'fail', '진료 안내 경로 없음.'));
@@ -318,17 +318,17 @@ function scoreSiteStructure(crawl: CrawlResult): CategoryScore {
     ? makeItem(LABELS.has_service_details, 10, 10, 'pass', `시술명 ${svcCount}개 감지.`, String(svcCount))
     : makeItem(LABELS.has_service_details, 10, 0, 'fail', `시술명 ${svcCount}개만 감지 — 상세 부족.`, String(svcCount)));
 
-  const locRegex = /오시는|위치|location|찾아오|map|contact/i;
+  const locRegex = /오시는|위치|location|찾아오|map|contact|약도|길찾기|directions|방문|위치안내/i;
   items.push(hasInternalLinkMatch(crawl, locRegex) || crawl.hasMap
     ? makeItem(LABELS.has_location_page, 10, 10, 'pass', '오시는 길/지도 감지됨.')
     : makeItem(LABELS.has_location_page, 10, 0, 'fail', '오시는 길 경로 없음.'));
 
-  const faqRegex = /faq|자주|질문|궁금/i;
+  const faqRegex = /faq|자주|질문|궁금|qna|q&a|궁금증|묻는/i;
   items.push(crawl.hasFAQ || hasInternalLinkMatch(crawl, faqRegex)
     ? makeItem(LABELS.has_faq_page, 10, 10, 'pass', 'FAQ 섹션/링크 감지됨.')
     : makeItem(LABELS.has_faq_page, 10, 0, 'fail', 'FAQ 경로 없음.'));
 
-  const priceRegex = /비용|가격|price|상담|수가/i;
+  const priceRegex = /비용|가격|price|상담|수가|요금|진료비|수가표|fee|cost|pricing/i;
   items.push(hasInternalLinkMatch(crawl, priceRegex)
     ? makeItem(LABELS.has_pricing_page, 10, 10, 'pass', '비용/가격 안내 링크 감지됨.')
     : makeItem(LABELS.has_pricing_page, 10, 0, 'fail', '비용 안내 경로 없음.'));

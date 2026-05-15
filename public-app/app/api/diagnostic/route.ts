@@ -184,6 +184,7 @@ async function _wrappedPOST(request: NextRequest) {
       schemaTypesFound: crawl.schemaTypes,
       detectedServices: crawl.detectedServices,
       subpagesReached: crawl.subpagesReached ?? [],
+      internalLinks: crawl.internalLinks.map((l) => ({ href: l.href, text: l.text })),
     },
   };
 
