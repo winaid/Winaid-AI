@@ -6,6 +6,69 @@ PR 머지 후 별도 PR 로 다룰 항목들. 메모용 — 각 항목은 개별
 
 ---
 
+## 2026-05-15 — PR #214 머지 (Round 3 — 보안)
+
+main HEAD: `c7560b17`. squash 머지 (PR #212/#213 와 동일 컨벤션).
+
+### 머지된 변경 (2 commits)
+- **#2** `b6fbd9b` — issues 패치 후 HTML sanitize 통합. 양 앱 `blog/page.tsx` 의 `applyIssuesPatch` 출력을 `sanitizeHtml` (DOMPurify wrapper, `lib/sanitize.ts`) 통과 후 `applyContentFilters` 적용. **기존 라이브러리 활용 — 신규 dep 0**.
+- **#3** `88b5db6` — hospitalStyleBlock 저장형 prompt injection 가드. 신규 `packages/blog-core/src/promptInjectionGuard.ts` (HIGH 12 패턴 + LOW 4 + length anomaly) + `styleService.sanitizeAnalyzedStylePii` 에 사용 시점 strip wiring. 마이그레이션 audit 스크립트 (`scripts/audit-existing-style-blocks.ts`, read-only) 동봉.
+
+### 정찰에서 드러난 사실
+- **#3 공격 벡터는 어드민 입력이 아니라 외부 사이트 크롤 → `analyzedStyle` 보존 → DB** 흐름. 어드민이 직접 입력하는 것이 아니라 시스템이 자동으로 추출·저장한 데이터에 외부 조작 가능성이 있음.
+- 본 가드는 P-1 (어드민 풀 액세스) 와 **무관한 content-level 검증 layer** 라는 점 명확. "권한 게이트" 아닌 "콘텐츠 무결성 검증" — 어드민이라도 LLM system instruction override 페이로드는 차단해야 출력 무결성 유지.
+
+### 검증
+- 로컬 21 test files / ~270 케이스 green (exit 0). CI 7 jobs 그린 (`88b5db6` 1회만).
+- WS-A 회귀 6/6 (양 앱 page.tsx import + 순서 패턴 + lib/sanitize SSR fallback + ALLOWED_TAGS 의료 마크업 6종).
+- WS-B 회귀 29/29 — **FP guard 6/6 통과 (false-positive 0)**.
+- 양 앱 lockstep 유지. 기존 invariant (prose-flow / drift-zero / 5빌더 / 의료법 normalize) 위반 0.
+
+### 감사 Top 5 진척 (`docs/code-review-2026-05-15.md`)
+| # | 항목 | 상태 |
+|---|---|---|
+| 1 | CAPTCHA (게스트/public 한정) | P-1 재해석 (Round 2 머지 시 명시) |
+| 2 | issues 패치 후 HTML sanitize | ✅ **Round 3 resolved** (PR #214) |
+| 3 | hospitalStyleBlock injection | ✅ **Round 3 resolved** (PR #214) |
+| 4 | review JSON.parse fail-open 정책 | 정책 결정 대기 |
+| 5 | medical-ad override audit log | 정책 결정 대기 (PIPA vs 의료법) |
+
+### 잔여 백로그 (9건)
+
+**외부 (감사 Top 5 — 2건, 정책 결정 선행)**
+- #4 review fail-open 정책 — 텔레메트리 카운터부터 시작 가능 (정책 결정 없이도)
+- #5 medical-ad audit log — 변호사 자문 후 정책 문서 작성
+
+**WS-3 audit 후속 (`docs/ai-image-pipeline-audit.md` — 5건)**
+- #1 hospital-images CRUD 4 라우트 maxDuration 명시화
+- #4 buildImagePrompt categoryHints 옵션 C (양 앱 prompt chain 재설계, Effort 5/Risk 4)
+- #6 Vision 후처리 시각 검수 (의료법 위반 risk 최대)
+- #7 per-user daily 이미지 cap — **P-1 어드민 분기 면제 설계 필수**
+- #8 환불 텔레메트리 강화 (observability only)
+
+**이미지 매칭 인프라 (2건)**
+- F-2 시뮬레이션 케이스 카테고리별 분리 (비치과 hospital 시드 후)
+- F-3 hospitals.category 매핑 인프라 + matcher category alignment 게이트
+
+### existing data audit (실행 대기)
+
+`scripts/audit-existing-style-blocks.ts` (read-only) — 기존 DB `style_profile.analyzedStyle` 행 중 #3 guard 가 detect 하는 행 list 출력. 양 Supabase 인스턴스 (winaid-internal-seoul / winaid-public-seoul) 각각 실행. user 승인 후. 실제 정리 (재학습 / row 삭제) 는 user 결정.
+
+```bash
+SUPABASE_URL=https://<project>.supabase.co \
+  SUPABASE_SERVICE_ROLE_KEY=<service-role> \
+  SUPABASE_PROJECT_LABEL=next-app \
+  npx tsx scripts/audit-existing-style-blocks.ts
+# → docs/style-blocks-injection-audit-2026-05-15-next-app.md
+```
+
+### 추가 안내 (다음 라운드 진입 시)
+- **#4 fail-open 정책** — 정책 결정 없이도 텔레메트리 카운터부터 추가 가능. 실측 데이터 수집 후 fail-closed vs fail-open 결정 뒷받침.
+- **#5 PIPA vs 의료법** — 변호사 자문 선행 권장. 본 작업은 정책 문서 작성 + 코드 변경 2단계.
+- **#7 per-user daily cap** — 어드민 분기 면제 설계 필수 (P-1 충돌 회피 — `userId === null` 또는 `admin_session cookie` 검증 분기).
+
+---
+
 ## 2026-05-15 — PR #213 머지 (Round 2)
 
 main HEAD: `fded8ff8`. squash 머지 (레포 컨벤션 + PR #212 동일 패턴).
