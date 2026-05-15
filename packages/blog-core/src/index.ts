@@ -19,6 +19,7 @@ export * from './blogPrompt';
 export * from './normalize/leakFilter';
 export * from './normalize/leakFilterJson';
 export * from './promptLeakageGuard';
+export * from './promptInjectionGuard';
 export * from './imageMatcher';
 
 // safeFetch 는 server-only (Node 'dns' / 'net' 의존). barrel 에서 제외 —

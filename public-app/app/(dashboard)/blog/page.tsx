@@ -16,6 +16,7 @@ import type { BlogSection } from '@winaid/blog-core';
 import type { HospitalImage } from '../../../lib/hospitalImageService';
 import { parseBlogSections, replaceSectionHtml } from '../../../lib/blogSectionParser';
 import { stripDoctype } from '../../../lib/htmlUtils';
+import { sanitizeHtml } from '../../../lib/sanitize';
 import { downloadWord, downloadPDF } from '../../../lib/blogExport';
 import { ImageActionModal, ImageRegenModal } from '../../../components/ImageRegenModal';
 import { analyzeHospitalKeywords, loadMoreKeywords, checkKeywordRankings, MAX_KEYWORDS, type KeywordStat, type KeywordRankResult } from '../../../lib/keywordAnalysisService';
@@ -1560,8 +1561,11 @@ JSON 형식으로 응답해주세요.`;
           // ── Issues 기반 직접 패치 ──
           const beforeImgCount = (blogText.match(/<img[^>]*data-image-index/g) || []).length;
           const patch = applyIssuesPatch(blogText, issues);
+          // 감사 #2 (Top 5): suggestion 이 LLM 출력이라 <script>/onerror= 등 XSS 벡터 가능.
+          // sanitizeHtml (DOMPurify wrapper) 로 차단 — 의료 마크업 (h2/h3/p/strong/ul) 은 보존.
+          const sanitized = sanitizeHtml(patch.html);
           // 안전망: 정규식 의료법 필터를 한 번 더 통과
-          const patched = applyContentFilters(patch.html).filtered;
+          const patched = applyContentFilters(sanitized).filtered;
           const afterImgCount = (patched.match(/<img[^>]*data-image-index/g) || []).length;
 
           // issues 패치는 텍스트 1:1 치환이라 이미지 손실 불가능하지만 방어적 검사.
