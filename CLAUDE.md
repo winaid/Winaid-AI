@@ -90,6 +90,32 @@
 
 ## 작업 컨벤션
 
+### 고정 정책 (invariant) — 협상 불가
+
+본 두 항목은 회귀 시 즉시 운영 사고. 어떤 작업에서도 위반 금지. 변경하려면 user (제품 오너) 명시 GO 사인 필수.
+
+#### P-1. 내부 어드민 = 풀 액세스 (rate limit / quota / CAPTCHA 면제)
+
+내부용 어드민(`next-app` 의 `admin_session` cookie 보유 사용자)으로 로그인한 경우 모든 기능은 무조건 사용 가능. 어떤 작업에서도 어드민 경로에 rate limit / CAPTCHA / 기능 게이팅 / 사용량 제한 / 동시성 제한을 추가하지 않는다.
+
+- 감사 리포트의 "게스트 가입 CAPTCHA" 류 권고는 **게스트 / `public-app` 경로 한정** 으로 해석한다.
+- 권한 식별이 모호한 경로를 만나면 어드민 분기에서 모든 게이트가 bypass 되는지 명시적으로 확인. 그렇지 않으면 그 경로에 게이트를 도입하지 않는다 (도입 전 user 확인 필수).
+- 본 정책의 기술적 implementation 흐름은 `docs/INVARIANTS.md` §2 (admin 무제한) + §3 (admin 로그인 흐름 보호) 참조.
+
+#### P-2. 이미지 생성 타임아웃 = Vercel Pro 최대 (300s)
+
+이미지 생성 (AI 생성 + 라이브러리 후처리 포함) 관련 모든 서버리스 함수의 타임아웃은 **300초** 로 고정한다.
+
+- `next-app/app/api/image/route.ts`, `public-app/app/api/image/route.ts` 모두 `export const maxDuration = 300` 명시. 양 앱 lockstep.
+- 짧게 잡힌 라우트는 발견 즉시 300 으로 늘린다. 단축은 금지.
+- 타임아웃을 줄이는 형태의 "성능 개선" 권고는 거부.
+- 클라이언트(`fetch` / `axios`) 측 timeout 도 함께 300s 이상으로 정렬.
+- 본 정책의 기술적 implementation 흐름은 `docs/INVARIANTS.md` §1 (`/api/image` per-key timeout 120s) 와 정합 (`MAX_KEY_ATTEMPTS × per-key + waits ≤ maxDuration`).
+
+회귀 가드: `packages/blog-core/src/__tests__/fixedPolicyInvariant.test.ts` 가 CLAUDE.md 본문에 P-1 / P-2 키워드 존재 + 두 이미지 라우트 `maxDuration === 300` invariant 강제.
+
+---
+
 ### 카테고리 set (drift 0)
 
 콘텐츠 카테고리는 7개로 통일 — `pressPrompt.ts:CATEGORIES`, PR #194-197 record 들 모두 일치:
