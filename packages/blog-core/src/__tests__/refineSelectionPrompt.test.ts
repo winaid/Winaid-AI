@@ -58,11 +58,13 @@ test('slot 1 — PRIORITY_ORDER 본문 substring 도달', () => {
 test('slot 1 — E_E_A_T 본문 4축 도달', () => {
   const p = buildRefineSelectionPrompt(baseInput);
   const merged = p.systemBlocks.map((b) => b.text).join('\n');
-  // E_E_A_T_GUIDE 본문의 4축 라벨
-  assert.ok(merged.includes('Experience'), 'E_E_A_T Experience 미전달');
-  assert.ok(merged.includes('Expertise'), 'E_E_A_T Expertise 미전달');
-  assert.ok(merged.includes('Authoritativeness'), 'E_E_A_T Authoritativeness 미전달');
-  assert.ok(merged.includes('Trustworthiness'), 'E_E_A_T Trustworthiness 미전달');
+  // E_E_A_T_GUIDE 본문은 lowercase XML tag + Korean label 패턴 사용
+  // (대문자 영어 단어는 BLOG_PERSONA <e_e_a_t> 블록에서만 등장 — 본 빌더는 그 블록 미포함)
+  assert.ok(merged.includes('<e_e_a_t_signals>'), 'E_E_A_T 래퍼 태그 미전달');
+  assert.ok(merged.includes('<experience'), 'experience (경험) 축 미전달');
+  assert.ok(merged.includes('<expertise'), 'expertise (전문성) 축 미전달');
+  assert.ok(merged.includes('<authoritativeness'), 'authoritativeness (권위) 축 미전달');
+  assert.ok(merged.includes('<trustworthiness'), 'trustworthiness (신뢰) 축 미전달');
 });
 
 test('slot 1 — COMMON_WRITING_STYLE 본문 + prose-flow 회귀 케이스 도달', () => {
