@@ -12,6 +12,7 @@ const db = () => (supabaseAdmin ?? supabase)!;
 import type { CrawledPostScore, DBCrawledPost } from '@winaid/blog-core';
 import type { BrandPreset } from '@winaid/blog-core';
 import { filterMedicalLawViolations, FORBIDDEN_EXPRESSIONS } from '@winaid/blog-core';
+import { stripInjectionForUse } from './promptInjectionGuard';
 
 // ── 타입 ──
 
@@ -181,7 +182,10 @@ function stripPii(text: string): { text: string; removedCount: number } {
 }
 
 function sanitizeAnalyzedStylePii(as_: AnalyzedStyle): AnalyzedStyle {
-  const strip = (s: string) => stripPii(s).text;
+  // 감사 #3 (Top 5): PII strip + 저장형 prompt injection strip 2단계.
+  // 외부 사이트 크롤 결과가 LLM system instruction override 페이로드 포함 가능 →
+  // builder system slot 에 도달 전 단락 strip. promptInjectionGuard 참조.
+  const strip = (s: string) => stripInjectionForUse(stripPii(s).text);
   const stripArr = (arr?: string[]) => arr?.map(strip);
   return {
     ...as_,
