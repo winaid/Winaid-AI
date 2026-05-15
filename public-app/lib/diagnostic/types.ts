@@ -205,6 +205,9 @@ export interface CrawlMeta {
   detectedServices: string[];
   /** 실제 fetch 성공한 서브페이지 URL list. UI 투명성용 (진단 dashboard 노출). */
   subpagesReached?: string[];
+  /** 크롤러가 감지한 internal link list. 사용자 자기 디버깅용 — 진료/가격 등 미감지 시
+   *  footer dynamic 렌더링 / origin 분리 / fragment-only href 등 원인 추적 가능. */
+  internalLinks?: Array<{ href: string; text: string }>;
 }
 
 export interface DiagnosticResponse {
