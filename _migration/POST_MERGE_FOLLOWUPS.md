@@ -6,6 +6,38 @@ PR 머지 후 별도 PR 로 다룰 항목들. 메모용 — 각 항목은 개별
 
 ---
 
+## 2026-05-15 — PR #213 머지 (Round 2)
+
+main HEAD: `fded8ff8`. squash 머지 (레포 컨벤션 + PR #212 동일 패턴).
+
+### 머지된 변경 (3 commits)
+- **#2** `ab0a63c` — `public-app/app/api/card-news/generate-images/route.ts` 의 `maxDuration` (이미 300) + 양 앱 `hospital-images/upload` 라우트에 대한 P-2 invariant 가드 `fixedPolicyInvariant.test.ts` 확장. 향후 단축 시도 시 fail-fast.
+- **#3** `b8eda01` — `OPENAI_IMAGE_MODEL` snapshot pin 권장 `README.md` 환경변수 표 행 신규 추가 (`OPENAI_API_KEY` / `_2/_3` / `OPENAI_IMAGE_MODEL`). `.env.example` 양 앱 안내 + `gpt-image-2-YYYY-MM-DD` 패턴 + README 의 "snapshot pin" 안내가 모두 존재함을 invariant 로 강제 — silent 삭제 시 즉시 검출.
+- **#5** `140457a` — gemini 모델 deprecation 추적 alias 인프라. 신규 `packages/blog-core/src/llm/models.ts` (`resolveModel` / `DEPRECATED_MODELS` / `MODEL_ALIASES`). callee 4곳 wiring (claude.ts / gemini.ts / `next-app/lib/geminiDirect.ts` / `/api/gemini` route.ts). **호출지 30+ 위치 변경 0** — callee 안에서 자동 처리. 운영자가 GA 발표 시 set + map 한 곳 업데이트 → 일제 502 회피.
+
+### 영향
+- 향후 gemini GA 전환 시 `DEPRECATED_MODELS` set + `MODEL_ALIASES` map 한 곳 업데이트 → 일제 502 회피. 호출지 30+ 위치 hardcode 무변경 유지.
+- card-news 라우트 maxDuration 가 향후 단축되면 invariant 테스트 fail-fast. P-2 "이미지 생성 + 라이브러리 후처리" 정의 범위 명시화.
+- `OPENAI_IMAGE_MODEL` 운영자 가시화 — silent 업그레이드로 인한 품질·비용·실패 패턴 변경 회피.
+
+### 검증
+- 19 test files / 240+ 케이스 green (로컬). CI 7 jobs 그린 (`140457a` 기준).
+- 양 앱 lockstep 유지. 기존 invariant (prose-flow / drift-zero / 5빌더 / 의료법 normalize) 위반 0.
+- P-1 / P-2 자체 위반 0. P-2 는 **강화** 방향 (fail-fast 가드 확장).
+
+### WS-3 audit 후속 백로그 잔여 (Round 3+ 대상)
+- **#1** hospital-images CRUD 4 라우트 maxDuration 명시화 — 메타데이터 CRUD, 우선순위 낮음
+- **#4** `blog-core/buildImagePrompt` categoryHints 정리 (옵션 C) — handoff §10.7. Effort 5 / Risk 4, 양 앱 prompt chain 재설계
+- **#6** Vision 후처리 시각 검수 — 의료법 위반 risk 최대 (Sev/UI 5/5). 비용·정책 결정 + FP guard 인프라 큼
+- **#7** per-user daily 이미지 cap — 비용 leakage 차단. **P-1 의해 어드민 분기 면제 필수** (다음 라운드 진입 시 반드시 명시)
+- **#8** AI 이미지 환불 텔레메트리 강화 — observability only. Sentry tag / metric
+
+### 외부 백로그 (감사 Top 5)
+- `docs/code-review-2026-05-15.md` 의 Top 5 중 #2-#5 — issues 패치 XSS / hospitalStyleBlock injection / review fail-open / medical-ad audit log 정책
+- #1 CAPTCHA 는 P-1 에 의해 게스트 / public-app 한정으로 재해석됨 (반복 명시)
+
+---
+
 ## 2026-05-15 — PR #212 머지
 
 main HEAD: `f6d65175`. squash 머지 (레포 컨벤션).
