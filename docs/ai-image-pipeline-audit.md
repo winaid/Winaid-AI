@@ -133,7 +133,7 @@ WS-3 (handoff 2026-05-15 작업) 의 진단 결과 + P-2 타임아웃 정책 (CL
 | # | 항목 | 우선순위 | 복잡도 |
 |---|---|---|---|
 | 1 | **hospital-images CRUD 4개 라우트 maxDuration 명시화** (300 또는 30 명시) | 낮음 | 낮음 |
-| 2 | **card-news/generate-images route maxDuration 확인** + P-2 정렬 | 중간 | 낮음 |
+| 2 | ✅ resolved — **card-news/generate-images route maxDuration 확인 + invariant 가드 확장** (`fixedPolicyInvariant.test.ts`). 확인 결과 라우트는 이미 `maxDuration=300` 으로 P-2 정합. 회귀 차단용 invariant 테스트 추가 (Round 2 commit) | 중간 | 낮음 |
 | 3 | **모델 ID 중앙화** — `OPENAI_IMAGE_MODEL` snapshot pin 환경변수 양 앱 .env.example 추가, README 문서화 | 중간 | 낮음 |
 | 4 | **blog-core buildImagePrompt 의 categoryHints 정리 (옵션 C)** — handoff 2026-05-07 §10.7. server-side HARD OVERRIDE + strip helper 의 의미 약화 → 정리 가능 | 중간 | 높음 (양 앱 동시 영향) |
 | 5 | **gemini 모델 deprecation 추적** — preview suffix 모델 GA 전환 시 일제 502 회피. 라우터 alias map + runtime warning. handoff 2026-05-15 §3.5 와 정합. | 중간 | 중간 |

@@ -90,6 +90,28 @@ test('public-app image route.ts: maxDuration === 300', () => {
   assert.ok(val >= 300, `maxDuration=${val} 인데 ≥300 이어야 함 (P-2 위반)`);
 });
 
+test('public-app card-news/generate-images route: maxDuration === 300 (P-2 정의 "이미지 생성" 포함)', () => {
+  const p = resolve(REPO_ROOT, 'public-app/app/api/card-news/generate-images/route.ts');
+  assert.ok(existsSync(p), `route.ts 부재 — ${p}`);
+  const src = readFileSync(p, 'utf-8');
+  const m = src.match(/export\s+const\s+maxDuration\s*=\s*(\d+)/);
+  assert.ok(m, 'export const maxDuration 선언 누락 — card-news 슬라이드 이미지 생성도 P-2 영역');
+  const val = parseInt(m![1], 10);
+  assert.ok(val >= 300, `maxDuration=${val} 인데 ≥300 이어야 함 (P-2 위반)`);
+});
+
+test('양 앱 hospital-images/upload route: maxDuration === 300 (P-2 정의 "라이브러리 후처리" 포함)', () => {
+  for (const app of ['next-app', 'public-app']) {
+    const p = resolve(REPO_ROOT, `${app}/app/api/hospital-images/upload/route.ts`);
+    if (!existsSync(p)) continue;
+    const src = readFileSync(p, 'utf-8');
+    const m = src.match(/export\s+const\s+maxDuration\s*=\s*(\d+)/);
+    assert.ok(m, `${app}: maxDuration 선언 누락`);
+    const val = parseInt(m![1], 10);
+    assert.ok(val >= 300, `${app}: maxDuration=${val} 인데 ≥300 이어야 함 (P-2 위반)`);
+  }
+});
+
 test('docs/INVARIANTS.md: P-1 / P-2 cross-reference 존재', () => {
   const p = resolve(REPO_ROOT, 'docs/INVARIANTS.md');
   if (!existsSync(p)) {
