@@ -1,31 +1,32 @@
 /**
- * POST /api/influencer/generate-dm — 인플루언서 협업 DM 자동 생성 (PR-D 2026-05-18)
+ * POST /api/influencer/generate-dm — 인플루언서 협업 DM 자동 생성 (public-app 외부 출시용)
  *
  * 흐름:
- *   1. checkAuth (admin_session HttpOnly cookie) — P-1 정책 자동 통과
+ *   1. gateGuestRequest (IP rate limit, 분당 30회) + resolveImageOwner — 게스트는 401
+ *      (DM 생성은 1 credit 차감 대상이라 게스트 식별 불가능 → 차단. PR-D 명세)
  *   2. 입력 검증 + sanitize chain (4중):
  *      - influencer.* / hospital.* 메타 → sanitizePromptInput
  *      - recent_post_text (외부 IG 텍스트) → stripInjectionForUse + sanitizeSourceContent
  *      - customInstruction (옵션) → stripInjectionForUse + sanitizePromptInput(200)
- *   3. buildDmPrompt → callLLM('instagram_dm') — Claude Haiku 4.5 (7번째 빌더)
+ *   3. buildDmPrompt → callLLM('instagram_dm') — Claude Haiku 4.5
  *   4. JSON parse → drafts 추출 (fail-closed: parse fail / 빈 응답 → 502)
  *   5. 후처리 chain (각 draft.message 에 적용):
  *      - stripPromptLeakage (plain text 모드)
  *      - applyContentFilters → filtered + 의료법 violations
- *   6. violations 발견 시 autoReplaceMessage 필드 채워 반환 — 클라이언트가 1-click 치환.
- *   7. checkMedicalAdViolations (5 패턴 휴리스틱) 도 함께 — 사용자 UI 경고용.
+ *   6. violations 발견 시 autoReplaceMessage 필드 채워 반환 — 클라이언트 1-click 치환.
  *
- * P-1 정책 (CLAUDE.md): next-app 내부 어드민 전용. checkAuth 통과 시 OK,
- * rate limit / 크레딧 차감 없음.
+ * credit:
+ *   - 서버는 차감 안 함. client-side counter 가 DM 1회 생성당 1 credit 차감 (별도 endpoint).
+ *   - 어드민 분기는 next-app 만 — public-app 은 일반 유저만 (admin_session 비보유).
  *
- * PR-D 보안 보강 (audit §3 / docs/instagram-audit-2026-05-18.md):
- *   - 기존 sanitizePromptInput 만 → 4중 sanitize chain (stripInjectionForUse +
- *     sanitizeSourceContent + stripPromptLeakage + applyContentFilters) 으로 강화
- *   - prose-flow 룰 (COMMON_WRITING_STYLE) + 5빌더 안전망 (PRIORITY_ORDER +
- *     E_E_A_T + MEDICAL_LAW) 모두 dmPrompt 빌더 slot 1 에 주입 — 7빌더 안전망 완성
+ * P-1 / P-2 비충돌 (public-app 은 일반 유저용 — admin 분기 무관, 텍스트 LLM 만).
+ *
+ * 양 앱 lockstep: next-app 의 동일 라우트와 sanitize / 빌더 호출 / 후처리 chain
+ * 모두 동일. 게이트 (gateGuestRequest + owner === 'guest' 차단) 만 추가 차이.
  */
 import { NextRequest, NextResponse } from 'next/server';
-import { checkAuth } from '../../../../lib/apiAuth';
+import { gateGuestRequest } from '../../../../lib/guestRateLimit';
+import { resolveImageOwner } from '../../../../lib/serverAuth';
 import {
   buildDmPrompt,
   callLLM,
@@ -46,7 +47,6 @@ const MAX_CUSTOM_INSTRUCTION = 200;
 const MAX_DRAFTS = 3;
 
 // ── 5 패턴 휴리스틱 (UI 경고용 — filterMedicalLawViolations 와 중복돼도 안전망) ──
-// 첫 DM 의 광고 risk 영역 (가격·긴급·전후·최상급·보장).
 const MEDICAL_AD_HEURISTICS = [
   { pattern: /최고|최초|유일|탁월|혁신/g, message: '최상급/과장 표현' },
   { pattern: /완치|100\s?%|확실히|보장/g, message: '효과 보장 표현' },
@@ -108,8 +108,21 @@ interface GenerateDmBody {
 }
 
 export async function POST(request: NextRequest) {
-  const auth = await checkAuth(request);
-  if (auth) return auth;
+  // 1) IP 기반 분당 30회 rate limit
+  const gate = gateGuestRequest(request, 30);
+  if (!gate.ok) {
+    return NextResponse.json({ error: gate.error }, { status: gate.status });
+  }
+
+  // 2) 게스트 차단 — DM 생성은 1 credit 차감 대상 (식별된 user 필요)
+  const owner = await resolveImageOwner(request);
+  if (owner === 'guest') {
+    return NextResponse.json(
+      { error: 'unauthorized', details: 'DM 생성은 로그인 후 사용 가능합니다.' },
+      { status: 401 },
+    );
+  }
+  const userId = owner;
 
   let body: GenerateDmBody;
   try { body = (await request.json()) as GenerateDmBody; }
@@ -125,7 +138,6 @@ export async function POST(request: NextRequest) {
   }
 
   // ── sanitize chain 4중 (입력) ──
-  // 메타 필드 (인플루언서/병원) — sanitizePromptInput: 길이 cap + 인젝션 키워드 제거.
   const safeUsername = sanitizePromptInput(influencer.username, 80);
   const safeFullName = sanitizePromptInput(influencer.full_name, 80);
   const safeLocation = sanitizePromptInput(influencer.estimated_location, 80);
@@ -135,7 +147,6 @@ export async function POST(request: NextRequest) {
   }
 
   // 외부 IG 게시물 텍스트 — stripInjectionForUse + sanitizeSourceContent 2단.
-  // recent_posts[0].text 가 prompt injection vector (LLM 이 인용 텍스트를 명령으로 오인) → strip.
   const rawRecent = influencer.recent_posts?.[0]?.text || '';
   const recentStripped = stripInjectionForUse(String(rawRecent));
   const recentPostText = sanitizeSourceContent(recentStripped, 150);
@@ -146,7 +157,7 @@ export async function POST(request: NextRequest) {
   const safeHospitalFeatures = sanitizePromptInput(hospital.features, 200);
   const safeHospitalInstagram = sanitizePromptInput(hospital.instagram, 80);
 
-  // customInstruction (옵션) — stripInjectionForUse + sanitizePromptInput(200)
+  // customInstruction (옵션)
   let customInstruction: string | undefined;
   if (typeof body.customInstruction === 'string' && body.customInstruction.trim()) {
     const stripped = stripInjectionForUse(body.customInstruction.trim());
@@ -154,11 +165,9 @@ export async function POST(request: NextRequest) {
     customInstruction = capped || undefined;
   }
 
-  // 숫자 필드 — 안전한 범위로 clamp (LLM hallucinated 값 방어)
   const followerCount = Math.max(0, Math.min(1_000_000_000, Number(influencer.follower_count) || 0));
   const engagementRate = Math.max(0, Math.min(100, Number(influencer.engagement_rate) || 0));
 
-  // ── 빌더 호출 ──
   const { systemBlocks, userPrompt } = buildDmPrompt({
     influencer: {
       username: safeUsername,
@@ -188,6 +197,7 @@ export async function POST(request: NextRequest) {
       userPrompt,
       temperature: 0.8,
       maxOutputTokens: 2048,
+      userId,
       abortSignal: request.signal,
     });
     rawText = resp.text;
@@ -201,7 +211,6 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // ── JSON parse — fail-closed ──
   const parsed = tryParseJson(rawText);
   const rawDrafts = Array.isArray(parsed?.drafts) ? parsed!.drafts! : [];
   if (rawDrafts.length === 0) {
@@ -212,13 +221,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // ── 출력 sanitize chain 3중 + 의료법 자동수정 마커 ──
-  // 각 draft.message 에 대해:
-  //   1. stripPromptLeakage (plain text — DM 은 HTML 아님)
-  //   2. applyContentFilters → 의료법 위반 자동 치환
-  //   3. 5 패턴 휴리스틱 (UI 경고용)
-  //   4. autoReplaceMessage: filterMedicalLawViolations 가 violations 발견했으면
-  //      그 결과를 별도 필드로 — 클라이언트가 "AI 자동 수정" 버튼 1-click 치환.
+  // 출력 sanitize chain + 의료법 자동수정 마커
   const drafts = rawDrafts.slice(0, MAX_DRAFTS).map((d): {
     tone: string;
     message: string;
@@ -230,20 +233,13 @@ export async function POST(request: NextRequest) {
     const rawMessage = String(d.message || '');
     if (!rawMessage) return { tone: draftTone, message: '', warnings: ['empty_message'] };
 
-    // 1. promptLeakageGuard — instruction echo / 변수명 누설 strip
     const leak = stripPromptLeakage(rawMessage, false);
-    // 2. applyContentFilters — 의료법 자동 치환 + 다른 artifact 제거
     const filtered = applyContentFilters(leak.html);
     const message = filtered.filtered.trim();
-
-    // 3. 5 패턴 휴리스틱 경고 (필터 후에도 잡힘 — 정규식 다름)
     const warnings = checkMedicalAdHeuristics(message);
 
-    // 4. 의료법 자동수정 가능 마커
-    //    filterMedicalLawViolations 가 무엇이라도 잡으면 autoReplaceMessage 제공.
-    //    이미 applyContentFilters 가 치환했으면 동일 — 그래도 클라이언트에 명시.
     const replaceResult = filterMedicalLawViolations(message);
-    const result: ReturnType<typeof Object.assign> & {
+    const result: {
       tone: string; message: string; warnings: string[];
       autoReplaceMessage?: string; replacedCount?: number;
     } = { tone: draftTone, message, warnings };
