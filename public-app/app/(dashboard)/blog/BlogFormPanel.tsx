@@ -1,8 +1,9 @@
 'use client';
 
 import { CATEGORIES, PERSONAS, TONES } from '../../../lib/constants';
-import type { ContentCategory, AudienceMode } from '@winaid/blog-core';
-import type { KeywordStat, KeywordRankResult } from '../../../lib/keywordAnalysisService';
+import { useTeamData } from '../../../lib/useTeamData';
+import type { ContentCategory, AudienceMode, ImageSourceMode } from '@winaid/blog-core';
+import type { KeywordStat, KeywordRankResult, SaturationLevel } from '../../../lib/keywordAnalysisService';
 import ImageLibrary from '../../../components/blog/ImageLibrary';
 import type { ClinicContext } from '../../../lib/clinicContextService';
 import type { TrendingItem } from '@winaid/blog-core';
@@ -26,10 +27,14 @@ export interface BlogFormPanelProps {
   tone: string;
   audienceMode: AudienceMode;
   imageCount: number;
+  /** hybrid 모드 전용 — AI 보완 이미지 개수 (총 이미지 = imageCount + aiImageCount) */
+  aiImageCount?: number;
   recommendedImageCount: number;
   imageAspectRatio: '4:3' | '16:9' | '1:1';
   hospitalName: string;
-  hospitalNameFromProfile?: string;
+  selectedTeam: number | null;
+  showHospitalDropdown: boolean;
+  selectedManager: string;
   selectedHospitalAddress: string;
   homepageUrl: string;
   clinicContext: ClinicContext | null;
@@ -39,7 +44,9 @@ export interface BlogFormPanelProps {
   faqCount: number;
   customSubheadings: string;
   learnedStyleId: string | undefined;
-  /** 병원 학습 말투 (DB 프로파일) 적용 여부 — 글 단위 토글. 기본 true. (next-app lockstep) */
+  dbStyleLoaded?: boolean;
+  dbStyleName?: string;
+  /** 병원 학습 말투 (DB 프로파일) 적용 여부 — 글 단위 토글. 기본 true. */
   useHospitalStyle?: boolean;
   setUseHospitalStyle?: (v: boolean) => void;
   showAdvanced: boolean;
@@ -63,9 +70,9 @@ export interface BlogFormPanelProps {
   // ── 참고 자료 상태 ──
   isLoadingReference?: boolean;
   referenceResult?: { facts: string; sources: string[] } | null;
-  // ── 이미지 라이브러리 ──
-  useImageLibrary?: boolean;
-  onToggleImageLibrary?: (v: boolean) => void;
+  // ── 이미지 소스 모드 (ai / library / hybrid) ──
+  imageSourceMode?: ImageSourceMode;
+  onChangeImageSourceMode?: (v: ImageSourceMode) => void;
   // ── 생성 상태 ──
   isGenerating: boolean;
   // ── 폼 setter ──
@@ -78,8 +85,12 @@ export interface BlogFormPanelProps {
   setTone: (v: string) => void;
   setAudienceMode: (v: AudienceMode) => void;
   setImageCount: (v: number) => void;
+  setAiImageCount?: (v: number) => void;
   setImageAspectRatio: (v: '4:3' | '16:9' | '1:1') => void;
   setHospitalName: (v: string) => void;
+  setSelectedTeam: (v: number | null) => void;
+  setShowHospitalDropdown: (v: boolean) => void;
+  setSelectedManager: (v: string) => void;
   setSelectedHospitalAddress: (v: string) => void;
   setHomepageUrl: (v: string) => void;
   setClinicContext: (v: ClinicContext | null) => void;
@@ -109,22 +120,40 @@ export interface BlogFormPanelProps {
   settingsToast?: string;
 }
 
+const SATURATION_BADGE_CONFIG: Record<SaturationLevel, { emoji: string; label: string; cls: string }> = {
+  blue:   { emoji: '🟦', label: '블루오션', cls: 'bg-blue-50 text-blue-700 border-blue-200' },
+  normal: { emoji: '🟨', label: '보통',     cls: 'bg-amber-50 text-amber-700 border-amber-200' },
+  red:    { emoji: '🟥', label: '레드오션', cls: 'bg-red-50 text-red-700 border-red-200' },
+};
+
+function SaturationBadge({ level }: { level?: SaturationLevel }) {
+  if (!level) return null;
+  const c = SATURATION_BADGE_CONFIG[level];
+  return (
+    <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold border ${c.cls}`}>
+      {c.emoji} {c.label}
+    </span>
+  );
+}
+
 export default function BlogFormPanel(props: BlogFormPanelProps) {
+  const { teamData: TEAM_DATA } = useTeamData();
   const {
-    topic, keywords, keywordDensity, disease, category, persona, tone, audienceMode, imageCount, recommendedImageCount, imageAspectRatio,
-    hospitalName, hospitalNameFromProfile, selectedHospitalAddress,
+    topic, keywords, keywordDensity, disease, category, persona, tone, audienceMode, imageCount, aiImageCount = 0, recommendedImageCount, imageAspectRatio,
+    hospitalName, selectedTeam, showHospitalDropdown, selectedManager, selectedHospitalAddress,
     homepageUrl, clinicContext, isCrawling, crawlProgress,
     includeFaq, faqCount, customSubheadings,
-    learnedStyleId, useHospitalStyle = true, setUseHospitalStyle, showAdvanced, includeHospitalIntro,
+    learnedStyleId, dbStyleLoaded, dbStyleName, useHospitalStyle = true, setUseHospitalStyle,
+    showAdvanced, includeHospitalIntro,
     keywordStats, keywordAiRec, keywordProgress, isAnalyzingKeywords, showKeywordPanel,
     keywordSortBy, keywordSearch, keywordMinVolume, isCheckingRanks, rankResults, hideRanked, isLoadingMoreKeywords,
     trendingItems, isLoadingTrends,
     isGenerating,
     isLoadingReference, referenceResult,
-    useImageLibrary, onToggleImageLibrary,
+    imageSourceMode = 'hybrid', onChangeImageSourceMode,
     setTopic, setKeywords, setKeywordDensity, setDisease, setCategory, setPersona, setTone, setAudienceMode,
-    setImageCount, setImageAspectRatio, setHospitalName,
-    setSelectedHospitalAddress,
+    setImageCount, setAiImageCount, setImageAspectRatio, setHospitalName, setSelectedTeam,
+    setShowHospitalDropdown, setSelectedManager, setSelectedHospitalAddress,
     setHomepageUrl, setClinicContext, setCrawlProgress,
     setIncludeFaq, setFaqCount, setCustomSubheadings,
     setLearnedStyleId, setShowAdvanced,
@@ -149,229 +178,123 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
             <h2 className="text-base font-bold text-slate-800">블로그 생성</h2>
           </div>
 
-          {/* 진료과 */}
-          <div>
-            <label className={labelCls}>진료과</label>
-            <select value={category} onChange={e => setCategory(e.target.value as ContentCategory)} className={inputCls} disabled={isGenerating} aria-label="진료과 선택">
-              {CATEGORIES.map(cat => <option key={cat.value} value={cat.value}>{cat.label}</option>)}
-            </select>
+          {/* 팀 선택 + 병원명.
+              과거: `hospitals.length > 0` 필터로 hospitals 가 있는 팀만 표시 →
+              DB hospitals 가 비거나 매핑 0건이면 팀 자체가 사라짐 (사용자 보고).
+              수정: TEAM_DATA 5개 팀 항상 노출. 팀 선택 후 hospitals=0 이면
+              "등록된 병원이 없습니다" 표시되도록 기존 dropdown 분기에 위임. */}
+          <div className="flex bg-slate-100 rounded-lg p-0.5">
+            {TEAM_DATA.map(team => (
+              <button
+                key={team.id}
+                type="button"
+                onClick={() => { setSelectedTeam(team.id); setShowHospitalDropdown(true); }}
+                className={`flex-1 py-1.5 rounded-md text-xs font-bold transition-all ${
+                  selectedTeam === team.id
+                    ? 'bg-white text-blue-600 shadow-sm'
+                    : 'text-slate-400 hover:text-slate-600'
+                }`}
+              >
+                {team.label}
+              </button>
+            ))}
           </div>
 
-          {/* 병원명 */}
-          <div>
-            <label className={labelCls}>병원명</label>
-            <input
-              type="text"
-              value={hospitalName}
-              onChange={e => setHospitalName(e.target.value)}
-              placeholder="병원 이름을 입력하세요 (예: OO치과)"
-              className={inputCls}
-            />
-            {hospitalNameFromProfile && hospitalName === hospitalNameFromProfile && (
-              <p className="text-[10px] text-blue-400 mt-1">회원 정보에서 자동 입력됨</p>
+          <div className="relative">
+            {selectedTeam !== null ? (
+            <>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={hospitalName}
+                  onChange={e => setHospitalName(e.target.value)}
+                  placeholder="병원명 선택"
+                  className={inputCls}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowHospitalDropdown(!showHospitalDropdown)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 transition-colors"
+                >
+                  <svg className={`w-4 h-4 transition-transform ${showHospitalDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                </button>
+              </div>
+              {showHospitalDropdown && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setShowHospitalDropdown(false)} />
+                  <div className="absolute z-50 mt-1 w-full bg-white rounded-xl border border-slate-200 shadow-lg overflow-hidden">
+                    {/* 팀 헤더 */}
+                    <div className="px-3 py-2 bg-blue-50 border-b border-blue-100">
+                      <span className="text-xs font-bold text-blue-600">{TEAM_DATA.find(t => t.id === selectedTeam)?.label}</span>
+                    </div>
+                    {/* 병원 목록 (매니저별 그룹) */}
+                    {(() => {
+                      const team = TEAM_DATA.find(t => t.id === selectedTeam);
+                      if (!team || team.hospitals.length === 0) {
+                        return <div className="p-4 text-center text-xs text-slate-400">등록된 병원이 없습니다</div>;
+                      }
+                      const managers = [...new Set(team.hospitals.map(h => h.manager))];
+                      return (
+                        <div className="max-h-64 overflow-y-auto">
+                          {managers.map(manager => (
+                            <div key={manager}>
+                              <div className="px-3 py-2 bg-slate-50 text-[11px] font-bold text-slate-500 sticky top-0">
+                                {manager}
+                              </div>
+                              {team.hospitals.filter(h => h.manager === manager).map(hospital => (
+                                <button
+                                  key={`${hospital.name}-${hospital.manager}`}
+                                  type="button"
+                                  onClick={() => {
+                                    setHospitalName(hospital.name.replace(/ \(.*\)$/, ''));
+                                    setSelectedManager(hospital.manager);
+                                    setSelectedHospitalAddress(hospital.address || '');
+                                    setHomepageUrl('');
+                                    setClinicContext(null);
+                                    setCrawlProgress('');
+                                    setKeywordStats([]);
+                                    setShowKeywordPanel(false);
+                                    setShowHospitalDropdown(false);
+                                  }}
+                                  className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition-colors flex items-center justify-between"
+                                >
+                                  <span>{hospital.name.replace(/ \(.*\)$/, '')}</span>
+                                  {hospitalName === hospital.name.replace(/ \(.*\)$/, '') && (
+                                    <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                                  )}
+                                </button>
+                              ))}
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </>
+              )}
+              {selectedManager && hospitalName && (
+                <p className="mt-1 text-[11px] text-slate-400">담당: {selectedManager}</p>
+              )}
+            </>
+            ) : (
+              <div className="px-3 py-2.5 border border-slate-200 rounded-lg text-sm text-slate-400 bg-slate-50">
+                팀을 먼저 선택해주세요
+              </div>
             )}
           </div>
 
-          {/* 병원 주소 */}
-          {hospitalName && (
-            <div>
-              <label className={labelCls}>병원 주소 (키워드 분석용)</label>
-              <input type="text" value={selectedHospitalAddress} onChange={e => setSelectedHospitalAddress(e.target.value)}
-                placeholder="예: 서울 강남구 역삼동" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:border-blue-400 outline-none bg-white" />
-            </div>
-          )}
-
-          {/* 병원 홈페이지/블로그 URL */}
-          {hospitalName && (
-            <div>
-              <label className={labelCls}>병원 홈페이지/블로그 URL</label>
-              <div className="flex gap-1.5">
-                <input type="url" value={homepageUrl} onChange={e => { setHomepageUrl(e.target.value); setClinicContext(null); setCrawlProgress(''); }}
-                  placeholder="https://blog.naver.com/..." className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-xs focus:border-blue-400 outline-none bg-white" />
-                <button type="button" onClick={handleCrawlHomepage} disabled={isCrawling || !homepageUrl.trim()}
-                  className="px-3 py-2 rounded-lg text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 whitespace-nowrap">
-                  {isCrawling ? '분석 중...' : '🔍 분석'}
-                </button>
-              </div>
-              {crawlProgress && <p className="mt-1 text-[10px] text-slate-400">{crawlProgress}</p>}
-              {clinicContext && (
-                <div className="mt-1.5 p-2 bg-emerald-50 rounded-lg border border-emerald-100">
-                  <p className="text-[10px] font-semibold text-emerald-700 mb-1">분석 결과 (신뢰도 {Math.round(clinicContext.confidence * 100)}%)</p>
-                  {clinicContext.actualServices.length > 0 && <p className="text-[10px] text-slate-600">서비스: {clinicContext.actualServices.join(', ')}</p>}
-                  {clinicContext.specialties.length > 0 && <p className="text-[10px] text-slate-600">특화: {clinicContext.specialties.join(', ')}</p>}
-                  {clinicContext.locationSignals.length > 0 && <p className="text-[10px] text-slate-400">지역: {clinicContext.locationSignals.join(', ')} <span className="text-slate-300">(글에 미포함)</span></p>}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* 키워드 분석 버튼 */}
-          {hospitalName && selectedHospitalAddress && (
-            <button type="button" onClick={handleAnalyzeKeywords}
-              disabled={isAnalyzingKeywords || !selectedHospitalAddress.trim()}
-              className="w-full py-2.5 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2">
-              {isAnalyzingKeywords
-                ? <><div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />키워드 분석 중...</>
-                : <>🔍 키워드 분석{clinicContext ? ' (홈페이지 반영)' : ''}</>
-              }
-            </button>
-          )}
-
-          {/* 키워드 분석 결과 패널 (old InputForm 동일) */}
-          {showKeywordPanel && (
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-              <div className="flex items-center justify-between px-3 py-2 bg-slate-50 border-b border-slate-100">
-                <span className="text-xs font-bold text-slate-700">키워드 분석 ({keywordStats.length}개)</span>
-                <div className="flex items-center gap-1">
-                  {(['volume', 'blog', 'saturation'] as const).map(sort => (
-                    <button key={sort} type="button" onClick={() => setKeywordSortBy(sort)}
-                      className={`px-2 py-0.5 rounded text-[10px] font-semibold transition-all ${keywordSortBy === sort ? 'bg-blue-500 text-white' : 'text-slate-400 hover:text-slate-600'}`}
-                    >
-                      {sort === 'volume' ? '검색량' : sort === 'blog' ? '발행량' : '포화도'}
-                    </button>
-                  ))}
-                  <button type="button" onClick={() => setShowKeywordPanel(false)} className="ml-1 text-slate-400 hover:text-slate-600">
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                  </button>
-                </div>
-              </div>
-              {/* 검색 + 최소 검색량 필터 */}
-              {!isAnalyzingKeywords && keywordStats.length > 0 && (
-                <div className="flex gap-2 px-3 py-2 border-b border-slate-100 bg-white">
-                  <input
-                    type="text"
-                    value={keywordSearch}
-                    onChange={e => setKeywordSearch(e.target.value)}
-                    placeholder="키워드 검색..."
-                    className="flex-1 px-2.5 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-blue-400 placeholder:text-slate-300"
-                  />
-                  {/* 노출 중 숨기기 토글 (상위권 체크 완료 시만) */}
-                  {rankResults.size > 0 && (
-                    <>
-                      <button type="button" onClick={() => setHideRanked(!hideRanked)}
-                        className={`px-2 py-1.5 text-[10px] font-semibold rounded-lg border transition-all whitespace-nowrap ${hideRanked ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'}`}
-                      >
-                        {hideRanked ? '✅ 노출 중 숨김' : '노출 중 포함'}
-                      </button>
-                      <span className="text-[9px] text-slate-400 whitespace-nowrap">※ API 참고용 (실제 순위와 다를 수 있음)</span>
-                    </>
-                  )}
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] text-slate-400 whitespace-nowrap">최소</span>
-                    <select
-                      value={keywordMinVolume}
-                      onChange={e => setKeywordMinVolume(Number(e.target.value))}
-                      className="px-1.5 py-1.5 text-[11px] border border-slate-200 rounded-lg focus:outline-none focus:border-blue-400 bg-white text-slate-600"
-                    >
-                      <option value={0}>전체</option>
-                      <option value={10}>10+</option>
-                      <option value={50}>50+</option>
-                      <option value={100}>100+</option>
-                      <option value={500}>500+</option>
-                      <option value={1000}>1,000+</option>
-                      <option value={5000}>5,000+</option>
-                    </select>
-                  </div>
-                </div>
-              )}
-              {isAnalyzingKeywords ? (
-                <div className="p-6 text-center">
-                  <div className="w-6 h-6 border-2 border-blue-200 border-t-blue-500 rounded-full animate-spin mx-auto mb-2" />
-                  <p className="text-xs text-slate-400">{keywordProgress || '검색량 분석 중...'}</p>
-                </div>
-              ) : keywordStats.length > 0 ? (
-                <>
-                  <div className="max-h-72 overflow-y-auto">
-                    <table className="w-full text-xs">
-                      <thead className="sticky top-0 bg-slate-50">
-                        <tr className="text-slate-500">
-                          <th className="text-left px-3 py-2 font-semibold">키워드</th>
-                          <th className="text-right px-3 py-2 font-semibold">월간 검색량</th>
-                          <th className="text-right px-3 py-2 font-semibold">발행량</th>
-                          <th className="text-right px-3 py-2 font-semibold">포화도</th>
-                          {rankResults.size > 0 && <th className="text-center px-2 py-2 font-semibold" title="네이버 API 기준 참고 순위 (실제와 다를 수 있음)">순위<span className="text-[8px] text-slate-400 ml-0.5">참고</span></th>}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {[...keywordStats]
-                          .filter(s => {
-                            if (keywordMinVolume > 0 && s.monthlySearchVolume < keywordMinVolume) return false;
-                            if (keywordSearch && !s.keyword.includes(keywordSearch.trim())) return false;
-                            if (hideRanked && rankResults.get(s.keyword)?.isRanked) return false;
-                            return true;
-                          })
-                          .sort((a, b) => {
-                            if (keywordSortBy === 'volume') return b.monthlySearchVolume - a.monthlySearchVolume;
-                            if (keywordSortBy === 'blog') return b.blogPostCount - a.blogPostCount;
-                            return (a.saturation || 0) - (b.saturation || 0);
-                          })
-                          .map((stat, idx) => (
-                            <tr
-                              key={stat.keyword}
-                              className={`border-t border-slate-50 hover:bg-blue-50 cursor-pointer transition-colors ${idx % 2 === 0 ? '' : 'bg-slate-50/50'}`}
-                              onClick={() => setKeywords(k => k ? `${k}, ${stat.keyword}` : stat.keyword)}
-                            >
-                              <td className="px-3 py-2 font-medium text-slate-700">{stat.keyword}</td>
-                              <td className="px-3 py-2 text-right text-slate-600">{stat.monthlySearchVolume.toLocaleString()}</td>
-                              <td className="px-3 py-2 text-right text-slate-600">{stat.blogPostCount.toLocaleString()}</td>
-                              <td className="px-3 py-2 text-right">
-                                <span className={`font-semibold ${(stat.saturation || 0) < 1 ? 'text-emerald-600' : (stat.saturation || 0) < 3 ? 'text-amber-600' : 'text-red-600'}`}>
-                                  {stat.saturation?.toFixed(1) || '0.0'}
-                                </span>
-                              </td>
-                              {rankResults.size > 0 && (
-                                <td className="px-2 py-2 text-center">
-                                  {(() => {
-                                    const r = rankResults.get(stat.keyword);
-                                    if (!r) return <span className="text-slate-300">-</span>;
-                                    if (r.isRanked && r.rank) {
-                                      const emoji = r.rank <= 5 ? '🟢' : r.rank <= 10 ? '🔵' : '🟡';
-                                      return <span className={`text-[10px] font-bold ${r.rank <= 5 ? 'text-emerald-600' : r.rank <= 10 ? 'text-blue-600' : 'text-amber-600'}`} title={r.matchedTitle || ''}>{emoji} {r.rank}위</span>;
-                                    }
-                                    return <span className="text-[10px] text-slate-400">30위권 밖</span>;
-                                  })()}
-                                </td>
-                              )}
-                            </tr>
-                          ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  {/* 더보기 + 상위권 체크 버튼 */}
-                  <div className="px-3 py-2 border-t border-slate-100 flex gap-2">
-                    {keywordStats.length < MAX_KEYWORDS && (
-                      <button type="button" onClick={handleLoadMoreKeywords} disabled={isLoadingMoreKeywords}
-                        className="flex-1 py-1.5 text-xs font-semibold text-blue-600 hover:bg-blue-50 rounded transition-all disabled:opacity-50 flex items-center justify-center gap-1">
-                        {isLoadingMoreKeywords ? (
-                          <><div className="w-3 h-3 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin" />로딩 중...</>
-                        ) : (
-                          <>더보기 ({keywordStats.length}/{MAX_KEYWORDS})</>
-                        )}
-                      </button>
-                    )}
-                    <button type="button" onClick={handleCheckRanks} disabled={isCheckingRanks || keywordStats.length === 0}
-                      className="flex-1 py-1.5 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 rounded border border-emerald-200 transition-all disabled:opacity-50 flex items-center justify-center gap-1">
-                      {isCheckingRanks ? (
-                        <><div className="w-3 h-3 border-2 border-emerald-300 border-t-emerald-600 rounded-full animate-spin" />체크 중...</>
-                      ) : (
-                        <>🔍 상위권 체크</>
-                      )}
-                    </button>
-                  </div>
-                  {keywordProgress && <p className="text-[10px] text-slate-400 text-center px-3 pb-2">{keywordProgress}</p>}
-                  {/* AI 블루오션 분석 결과 */}
-                  {keywordAiRec && (
-                    <div className="px-3 py-3 border-t border-slate-100 bg-blue-50/50">
-                      <p className="text-[11px] font-bold text-blue-700 mb-1">💡 AI 키워드 분석</p>
-                      <div className="text-[11px] text-slate-600 whitespace-pre-wrap leading-relaxed">{keywordAiRec}</div>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div className="p-4 text-center text-xs text-slate-400">분석 결과가 없습니다</div>
-              )}
-            </div>
-          )}
+          {/* 진료과 */}
+          <select
+            value={category}
+            onChange={e => setCategory(e.target.value as ContentCategory)}
+            className={inputCls}
+            disabled={isGenerating}
+            aria-label="진료과 선택"
+          >
+            {CATEGORIES.map(cat => (
+              <option key={cat.value} value={cat.value}>{cat.label}</option>
+            ))}
+          </select>
 
           {/* UI 단순화 (handoff §12.1): 제목 입력 UI 제거 — 부모가 본문 생성 직전 LLM 자동 추천 */}
 
@@ -390,19 +313,6 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
               maxLength={30}
               className={inputCls}
             />
-            {isLoadingReference && (
-              <p className="mt-1 text-[11px] text-blue-500 flex items-center gap-1">
-                <span className="h-3 w-3 animate-spin rounded-full border-2 border-blue-400 border-t-transparent" />
-                의학 참고 자료를 찾고 있어요…
-              </p>
-            )}
-            {!isLoadingReference && referenceResult && (
-              <p className="mt-1 text-[11px] text-emerald-600">
-                ✅ 참고 자료 수집 완료 ({referenceResult.sources.length > 0
-                  ? `${referenceResult.sources[0]} 외 ${Math.max(0, referenceResult.sources.length - 1)}개 기관`
-                  : '신뢰 의료 기관'})
-              </p>
-            )}
           </div>
 
           {/* 주요 키워드 */}
@@ -422,9 +332,7 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
             )}
           </div>
 
-          {/* 질환명 — public-app 에서 제거 (주제 하나로 통합, next-app 과 동일) */}
-
-          {/* 트렌드 주제 (UI 단순화: AI 제목 추천 버튼 제거 — 본문 생성 시 자동 호출됨) */}
+          {/* 트렌드 주제 (UI 복구 — public-app L424-451 mirror, drift 0) */}
           <button type="button" onClick={handleRecommendTrends} disabled={isLoadingTrends}
             className="w-full py-2 bg-slate-100 text-slate-600 rounded-lg text-xs font-semibold hover:bg-slate-200 transition-all disabled:opacity-40 flex items-center justify-center gap-1">
             {isLoadingTrends ? <><div className="w-3 h-3 border-2 border-slate-400 border-t-slate-600 rounded-full animate-spin" />검색 중...</> : topic.trim() ? <>🔍 &ldquo;{topic.trim().length > 8 ? topic.trim().slice(0, 8) + '…' : topic.trim()}&rdquo; 관련 주제</> : <>🔥 트렌드 주제</>}
@@ -453,6 +361,42 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
             </div>
           )}
 
+          {/* 병원 홈페이지/블로그 URL */}
+          {hospitalName && (
+            <div>
+              <label className={labelCls}>병원 홈페이지/블로그 URL</label>
+              <div className="flex gap-1.5">
+                <input type="url" value={homepageUrl} onChange={e => { setHomepageUrl(e.target.value); setClinicContext(null); setCrawlProgress(''); }}
+                  placeholder="https://blog.naver.com/..." className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-xs focus:border-blue-400 outline-none bg-white" />
+                <button type="button" onClick={handleCrawlHomepage} disabled={isCrawling || !homepageUrl.trim()}
+                  className="px-3 py-2 rounded-lg text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 whitespace-nowrap">
+                  {isCrawling ? '분석 중...' : '🔍 분석'}
+                </button>
+              </div>
+              {crawlProgress && <p className="mt-1 text-[10px] text-slate-400">{crawlProgress}</p>}
+              {clinicContext && (
+                <div className="mt-1.5 p-2 bg-emerald-50 rounded-lg border border-emerald-100">
+                  <p className="text-[10px] font-semibold text-emerald-700 mb-1">분석 결과 (신뢰도 {Math.round(clinicContext.confidence * 100)}%)</p>
+                  {clinicContext.actualServices.length > 0 && <p className="text-[10px] text-slate-600">서비스: {clinicContext.actualServices.join(', ')}</p>}
+                  {clinicContext.specialties.length > 0 && <p className="text-[10px] text-slate-600">특화: {clinicContext.specialties.join(', ')}</p>}
+                  {clinicContext.locationSignals.length > 0 && <p className="text-[10px] text-slate-600">지역: {clinicContext.locationSignals.join(', ')}</p>}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 키워드 분석 버튼 */}
+          {hospitalName && selectedHospitalAddress && (
+            <button type="button" onClick={handleAnalyzeKeywords}
+              disabled={isAnalyzingKeywords || !selectedHospitalAddress.trim()}
+              className="w-full py-2.5 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2">
+              {isAnalyzingKeywords
+                ? <><div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />키워드 분석 중...</>
+                : <>🔍 키워드 분석{clinicContext ? ' (홈페이지 반영)' : ''}</>
+              }
+            </button>
+          )}
+
           {/* 세부 옵션 토글 */}
           {(() => {
             // textLength / imageStyle 비교 제거 — 부모에서 고정 상수로 전환됨
@@ -460,6 +404,8 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
               audienceMode !== '환자용(친절/공감)',
               imageCount !== 2,
               customSubheadings.trim(),
+              persona !== PERSONAS[0].value,
+              tone !== TONES[0].value,
               includeFaq,
               includeHospitalIntro,
             ].filter(Boolean).length;
@@ -480,26 +426,57 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
           {showAdvanced && (
           <div className="space-y-4 p-3 bg-slate-50 rounded-xl border border-slate-100">
             <div className="space-y-3">
-              {/* 글 길이 — UI 단순화 (handoff §12.1): 2000자 고정으로 UI 제거 */}
-              {/* 이미지 소스 토글 */}
-              {onToggleImageLibrary && (
-                <div className="flex gap-2 mb-2">
-                  <button type="button" onClick={() => onToggleImageLibrary(false)}
-                    className={`flex-1 py-1.5 rounded-lg text-[11px] font-semibold transition-all ${!useImageLibrary ? 'bg-blue-100 text-blue-700 border border-blue-300' : 'bg-slate-50 text-slate-500 border border-slate-200'}`}>
-                    🎨 AI 생성
-                  </button>
-                  <button type="button" onClick={() => onToggleImageLibrary(true)}
-                    className={`flex-1 py-1.5 rounded-lg text-[11px] font-semibold transition-all ${useImageLibrary ? 'bg-blue-100 text-blue-700 border border-blue-300' : 'bg-slate-50 text-slate-500 border border-slate-200'}`}>
-                    📸 내 이미지 사용
-                  </button>
+              {showKeywordPanel && keywordStats.length > 0 && (
+                <div className="bg-white rounded-lg border border-slate-200 max-h-48 overflow-y-auto">
+                  <div className="px-3 py-1.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-slate-600">키워드 {keywordStats.length}개</span>
+                    <button type="button" onClick={() => setShowKeywordPanel(false)} className="text-slate-400 hover:text-slate-600 text-xs">✕</button>
+                  </div>
+                  {keywordStats.slice(0, 10).map(s => (
+                    <button key={s.keyword} type="button" onClick={() => setKeywords(k => k ? `${k}, ${s.keyword}` : s.keyword)}
+                      className="w-full px-3 py-1.5 text-left text-xs hover:bg-blue-50 flex items-center justify-between gap-2 border-b border-slate-50">
+                      <span className="text-slate-700 flex-1 min-w-0 truncate">{s.keyword}</span>
+                      <span className="flex items-center gap-1.5 shrink-0">
+                        <SaturationBadge level={s.saturationLevel} />
+                        <span className="text-slate-400">{s.monthlySearchVolume.toLocaleString()}</span>
+                      </span>
+                    </button>
+                  ))}
                 </div>
               )}
-
-              {/* 이미지 라이브러리 — AI 자동 배치 안내 */}
-              {useImageLibrary && (
+              {/* 글 길이 — UI 단순화 (handoff §12.1): 2000자 고정으로 UI 제거 */}
+              {/* 이미지 소스 모드 — 3-way: ai / library / hybrid */}
+              {onChangeImageSourceMode && (
+                <div className="mb-2">
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {([
+                      { id: 'ai' as const, icon: '🤖', label: 'AI 생성', desc: '모든 이미지 AI' },
+                      { id: 'library' as const, icon: '📚', label: '내 이미지만', desc: '라이브러리 매칭' },
+                      { id: 'hybrid' as const, icon: '⚡', label: '스마트', desc: '라이브러리+AI 보완', badge: '추천' },
+                    ]).map(opt => {
+                      const active = imageSourceMode === opt.id;
+                      return (
+                        <button key={opt.id} type="button" onClick={() => onChangeImageSourceMode(opt.id)}
+                          className={`relative py-2 px-1 rounded-lg text-center transition-all ${active ? 'bg-blue-100 text-blue-700 border border-blue-300' : 'bg-slate-50 text-slate-500 border border-slate-200 hover:bg-slate-100'}`}>
+                          {opt.badge && (
+                            <span className="absolute -top-1.5 -right-1 px-1.5 py-0.5 rounded-full text-[8px] font-black bg-amber-400 text-white shadow">{opt.badge}</span>
+                          )}
+                          <div className="text-sm">{opt.icon}</div>
+                          <div className="text-[11px] font-semibold mt-0.5">{opt.label}</div>
+                          <div className={`text-[9px] ${active ? 'text-blue-500' : 'text-slate-400'} mt-0.5`}>{opt.desc}</div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {imageSourceMode === 'hybrid' && (
+                    <p className="text-[10px] text-slate-500 mt-1.5">💡 라이브러리에서 우선 매칭하고 부족분은 AI 로 생성합니다 (AI 이미지는 크레딧 소모).</p>
+                  )}
+                </div>
+              )}
+              {imageSourceMode !== 'ai' && onChangeImageSourceMode && (
                 <ImageLibrary
-                  enabled={!!useImageLibrary}
-                  onToggle={onToggleImageLibrary || (() => {})}
+                  enabled={true}
+                  onToggle={() => {}}
                 />
               )}
 
@@ -534,15 +511,36 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
               )}
 
               {/* 이미지 수 슬라이더 */}
-              {useImageLibrary ? (
+              {imageSourceMode === 'hybrid' && setAiImageCount ? (
+                <div className="space-y-3">
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-xs font-semibold text-slate-500">📚 내 이미지 (라이브러리)</label>
+                      <span className="text-[10px] text-blue-500">병원 라이브러리에서 매칭</span>
+                    </div>
+                    <input type="range" min={0} max={15} step={1} value={imageCount} onChange={e => setImageCount(Number(e.target.value))} className="w-full accent-blue-500 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer" aria-label={`라이브러리 이미지 수: ${imageCount}장`} />
+                    <div className="flex justify-between mt-1 text-[10px] text-slate-400"><span>0장</span><span className="text-blue-600 font-semibold">{imageCount}장</span><span>15장</span></div>
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-xs font-semibold text-slate-500">🤖 AI 생성 보완</label>
+                      <span className="text-[10px] text-amber-600">AI 크레딧 소모</span>
+                    </div>
+                    <input type="range" min={0} max={15} step={1} value={aiImageCount} onChange={e => setAiImageCount(Number(e.target.value))} className="w-full accent-amber-500 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer" aria-label={`AI 이미지 수: ${aiImageCount}장`} />
+                    <div className="flex justify-between mt-1 text-[10px] text-slate-400"><span>0장</span><span className="text-amber-600 font-semibold">{aiImageCount}장</span><span>15장</span></div>
+                  </div>
+                  <div className="px-3 py-1.5 bg-blue-50 border border-blue-100 rounded-lg text-[11px] text-blue-700 font-semibold">
+                    총 {imageCount + aiImageCount}장 (라이브러리 {imageCount}장 + AI {aiImageCount}장)
+                  </div>
+                </div>
+              ) : imageSourceMode === 'library' ? (
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
                     <label className="text-xs font-semibold text-slate-500">이미지 수</label>
-                    <span className="text-[10px] text-blue-500">AI 자동 배치 (매칭 안 되는 자리는 비워둠)</span>
+                    <span className="text-[10px] text-blue-500">라이브러리 매칭 (부족 시 빈칸)</span>
                   </div>
                   <input type="range" min={0} max={15} step={1} value={imageCount} onChange={e => setImageCount(Number(e.target.value))} className="w-full accent-blue-500 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer" />
                   <div className="flex justify-between mt-1 text-[10px] text-slate-400"><span>0장</span><span className="text-blue-600 font-semibold">{imageCount}장</span><span>15장</span></div>
-                  <p className="mt-1 text-[10px] text-slate-400">실제 본문 자리 수에 맞춰 약 3~6장이 자동 배치됩니다 (글 길이에 따라 다름).</p>
                 </div>
               ) : (
                 <div>
@@ -555,12 +553,11 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
                 </div>
                 <input type="range" min={0} max={15} step={1} value={imageCount} onChange={e => setImageCount(Number(e.target.value))} className="w-full accent-blue-500 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer" aria-label={`AI 이미지 수: ${imageCount}장`} />
                 <div className="flex justify-between mt-1 text-[10px] text-slate-400"><span>0장</span><span className={imageCount === 0 ? 'text-slate-400' : 'text-blue-600 font-semibold'}>{imageCount}장</span><span>15장</span></div>
-                <p className="mt-1 text-[10px] text-slate-400">본문 자리 수가 한정돼 글 길이에 따라 약 3~6장만 실제 삽입될 수 있습니다.</p>
                 {imageCount >= 6 && <p className="text-[10px] text-amber-600 mt-1">이미지가 많을수록 생성 시간이 길어집니다 (6장 이상: 약 3~5분)</p>}
               </div>
               )}
-              {/* 이미지 비율 — AI 생성 모드에서만 */}
-              {!useImageLibrary && imageCount > 0 && (
+              {/* 이미지 비율 — AI 생성 모드에서만 (hybrid 의 AI 보완분 포함) */}
+              {imageSourceMode !== 'library' && (imageSourceMode === 'hybrid' ? aiImageCount > 0 : imageCount > 0) && (
                 <div>
                   <p className="text-[11px] font-semibold text-slate-500 mb-1.5">이미지 비율</p>
                   <div className="grid grid-cols-3 gap-1.5">
@@ -579,8 +576,8 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
                 </div>
               )}
               {/* 이미지 스타일 — UI 단순화 (handoff §12.1): 'photo' 고정으로 UI 제거 (커스텀 프롬프트도 제거) */}
-              {/* 병원 학습 말투 적용 토글 — hospitalName 기준 (next-app lockstep) */}
-              {hospitalName && !learnedStyleId && setUseHospitalStyle && (
+              {/* 관리자 학습 말투 자동 적용 안내 + 글 단위 ON/OFF 토글 */}
+              {dbStyleLoaded && !learnedStyleId && (
                 <div className={`px-3 py-2 rounded-lg border text-[12px] flex items-center justify-between gap-2 ${
                   useHospitalStyle
                     ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
@@ -589,25 +586,32 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
                   <div className="flex items-center gap-2 min-w-0">
                     <span>{useHospitalStyle ? '✅' : '◯'}</span>
                     <span className="truncate">
-                      <strong>{hospitalName}</strong> 학습 말투
-                      {useHospitalStyle ? ' 적용' : ' 미적용 (이번 글만)'}
+                      <strong>{dbStyleName}</strong> 관리자 학습 말투
+                      {useHospitalStyle ? ' 적용 중' : ' 미적용 (이번 글만)'}
                     </span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setUseHospitalStyle(!useHospitalStyle)}
-                    aria-pressed={useHospitalStyle}
-                    aria-label="병원 학습 말투 적용 토글"
-                    className={`relative shrink-0 rounded-full transition-colors w-[40px] h-[22px] ${
-                      useHospitalStyle ? 'bg-emerald-500' : 'bg-slate-300'
-                    }`}
-                  >
-                    <span
-                      className={`absolute top-[3px] left-[3px] w-4 h-4 bg-white rounded-full shadow transition-all duration-200 ${
-                        useHospitalStyle ? 'translate-x-[18px]' : 'translate-x-0'
+                  {setUseHospitalStyle && (
+                    <button
+                      type="button"
+                      onClick={() => setUseHospitalStyle(!useHospitalStyle)}
+                      aria-pressed={useHospitalStyle}
+                      aria-label="병원 학습 말투 적용 토글"
+                      className={`relative shrink-0 rounded-full transition-colors w-[40px] h-[22px] ${
+                        useHospitalStyle ? 'bg-emerald-500' : 'bg-slate-300'
                       }`}
-                    />
-                  </button>
+                    >
+                      <span
+                        className={`absolute top-[3px] left-[3px] w-4 h-4 bg-white rounded-full shadow transition-all duration-200 ${
+                          useHospitalStyle ? 'translate-x-[18px]' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
+                  )}
+                </div>
+              )}
+              {dbStyleLoaded && learnedStyleId && (
+                <div className="px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 text-[11px] text-amber-700">
+                  ⚠ 수동 말투 선택 중 — 관리자 학습 말투 대신 선택한 말투가 적용됩니다
                 </div>
               )}
               {/* 말투 학습 */}
@@ -622,7 +626,7 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
                   🎓 학습 말투 적용 중 — 병원 DB 프로파일은 무시됩니다
                 </div>
               )}
-              {/* 화자/어조 (학습된 말투 적용 시 숨김) */}
+              {/* 화자/어조 (학습된 말투 적용 시 숨김 — old 동일) */}
               {!learnedStyleId && (
                 <div className="grid grid-cols-2 gap-2">
                   <select value={persona} onChange={e => setPersona(e.target.value)} className={inputCls}>

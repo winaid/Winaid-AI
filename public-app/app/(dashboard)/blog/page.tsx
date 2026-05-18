@@ -5,7 +5,7 @@ import { authFetch } from '../../../lib/authFetch';
 import { useState, useEffect, useMemo, useRef, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { CATEGORIES, PERSONAS, TONES } from '../../../lib/constants';
-import { ContentCategory, type GenerationRequest, type AudienceMode, type ImageStyle, type WritingStyle, type CssTheme, type TrendingItem, type SeoTitleItem, type SeoReport } from '@winaid/blog-core';
+import { ContentCategory, type GenerationRequest, type AudienceMode, type ImageStyle, type ImageSourceMode, type WritingStyle, type CssTheme, type TrendingItem, type SeoTitleItem, type SeoReport } from '@winaid/blog-core';
 import { applyContentFilters, buildBlogTopicRecommendPrompt, pickBestLibraryImage } from '@winaid/blog-core';
 import { savePost } from '../../../lib/postStorage';
 import { getSessionSafe, supabase, getSupabaseClient, isSupabaseConfigured } from '@winaid/blog-core';
@@ -188,8 +188,21 @@ function BlogForm() {
   const imageStyle: ImageStyle = 'photo';
   const textLength = 2000;
   const [imageCount, setImageCount] = useState(3);
-  const [useImageLibrary, setUseImageLibrary] = useState(false);
+  // 양 앱 lockstep — next-app 의 imageSourceMode ('ai'/'library'/'hybrid') 답습.
+  // BlogFormPanel 이 onChangeImageSourceMode 로 갱신. 'hybrid' 모드 시 aiImageCount 별도.
+  const [imageSourceMode, setImageSourceMode] = useState<ImageSourceMode>('ai');
+  const [aiImageCount, setAiImageCount] = useState(3);
+  // 레거시 호환 — page.tsx 의 기존 4 곳 분기는 useImageLibrary boolean 사용.
+  // imageSourceMode === 'library' 면 true.
+  const useImageLibrary = imageSourceMode === 'library';
   const [imageAspectRatio, setImageAspectRatio] = useState<'4:3' | '16:9' | '1:1'>('4:3');
+
+  // ── 양 앱 lockstep: BlogFormPanel 의 team dropdown props ──
+  // public-app 은 useTeamData() 가 빈 배열 → dropdown 자동 숨김.
+  // state 는 BlogFormPanel call site 시그너처 정합용.
+  const [selectedTeam, setSelectedTeam] = useState<number | null>(null);
+  const [showHospitalDropdown, setShowHospitalDropdown] = useState(false);
+  const [selectedManager, setSelectedManager] = useState('');
 
   // 이미지 수량 자동 추천 (textLength 2000 고정 → 8장 권장)
   const imageCountManualRef = useRef(false);
@@ -2216,8 +2229,12 @@ Output ONLY the prompt. No explanation.`;
         topic={topic} keywords={keywords} keywordDensity={keywordDensity} disease={disease} category={category}
         persona={persona} tone={tone} audienceMode={audienceMode}
         imageCount={imageCount} imageAspectRatio={imageAspectRatio}
-        useImageLibrary={useImageLibrary} onToggleImageLibrary={setUseImageLibrary}
-        hospitalName={hospitalName} hospitalNameFromProfile={hospitalNameFromProfile}
+        imageSourceMode={imageSourceMode} onChangeImageSourceMode={setImageSourceMode}
+        aiImageCount={aiImageCount} setAiImageCount={setAiImageCount}
+        hospitalName={hospitalName}
+        selectedTeam={selectedTeam} setSelectedTeam={setSelectedTeam}
+        showHospitalDropdown={showHospitalDropdown} setShowHospitalDropdown={setShowHospitalDropdown}
+        selectedManager={selectedManager} setSelectedManager={setSelectedManager}
         selectedHospitalAddress={selectedHospitalAddress}
         homepageUrl={homepageUrl} clinicContext={clinicContext}
         isCrawling={isCrawling} crawlProgress={crawlProgress}

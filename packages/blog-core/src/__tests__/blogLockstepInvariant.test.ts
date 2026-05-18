@@ -67,6 +67,15 @@ const LOCKSTEP_FILES: Array<{ label: string; next: string; pub: string }> = [
     next: 'next-app/app/(dashboard)/blog/BlogResultArea.tsx',
     pub: 'public-app/app/(dashboard)/blog/BlogResultArea.tsx',
   },
+  {
+    // 2026-05-19 PR (blog UI full lockstep — 첫 단계) — BlogFormPanel cp.
+    // 의존성: public-app/lib/useTeamData.ts (no-op wrapper) + lib/teamData.ts (빈 TEAM_DATA)
+    //         + lib/keywordAnalysisService.ts 의 SaturationLevel + KeywordStat.saturationLevel?
+    // page.tsx 의 1929 lines diff 는 별도 PR (게이트 hook 정밀 분석 필요).
+    label: 'BlogFormPanel — 입력 폼 (병원 dropdown / 키워드 / 이미지 모드 / 톤)',
+    next: 'next-app/app/(dashboard)/blog/BlogFormPanel.tsx',
+    pub: 'public-app/app/(dashboard)/blog/BlogFormPanel.tsx',
+  },
 ];
 
 for (const { label, next, pub } of LOCKSTEP_FILES) {
