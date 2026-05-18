@@ -260,6 +260,8 @@ function BlogForm() {
   const [faqCount, setFaqCount] = useState(3);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [learnedStyleId, setLearnedStyleId] = useState<string | undefined>(undefined);
+  // 병원 학습 말투 적용 토글 — 기본 ON (backward compat). 양 앱 lockstep.
+  const [useHospitalStyle, setUseHospitalStyle] = useState(true);
 
   // ── 키워드 분석 상태 (old InputForm 동일) ──
   const [keywordStats, setKeywordStats] = useState<KeywordStat[]>([]);
@@ -1060,6 +1062,8 @@ JSON 형식으로 응답해주세요.`;
       hospitalName: hospitalName || undefined,
       hospitalStyleSource: hospitalName ? 'explicit_selected_hospital' : 'generic_default',
       includeHospitalIntro,
+      // 병원 학습 말투 적용 토글 — UI 토글 (next-app lockstep).
+      useHospitalStyle,
       clinicContext: clinicContext ? {
         actualServices: clinicContext.actualServices,
         specialties: clinicContext.specialties,
@@ -1162,6 +1166,7 @@ JSON 형식으로 응답해주세요.`;
           hospitalName: hospitalName || undefined,
           ruleFilterViolations: draftViolations,
           stylePromptText: request.stylePromptText,
+          useHospitalStyle: request.useHospitalStyle,
           userId: creditCtx.userId || null,
         }),
         signal: abortSignal, // BL-A-001: 페이지 이탈 시 Opus 4.7 호출 중단
@@ -2036,6 +2041,7 @@ Output ONLY the prompt. No explanation.`;
         isCrawling={isCrawling} crawlProgress={crawlProgress}
         includeFaq={includeFaq} faqCount={faqCount}
         customSubheadings={customSubheadings} learnedStyleId={learnedStyleId}
+        useHospitalStyle={useHospitalStyle} setUseHospitalStyle={setUseHospitalStyle}
         showAdvanced={showAdvanced} includeHospitalIntro={includeHospitalIntro}
         keywordStats={keywordStats} keywordAiRec={keywordAiRec}
         keywordProgress={keywordProgress} isAnalyzingKeywords={isAnalyzingKeywords}

@@ -46,6 +46,9 @@ export interface BlogFormPanelProps {
   learnedStyleId: string | undefined;
   dbStyleLoaded?: boolean;
   dbStyleName?: string;
+  /** 병원 학습 말투 (DB 프로파일) 적용 여부 — 글 단위 토글. 기본 true. */
+  useHospitalStyle?: boolean;
+  setUseHospitalStyle?: (v: boolean) => void;
   showAdvanced: boolean;
   includeHospitalIntro: boolean;
   // ── 키워드 분석 상태 ──
@@ -140,7 +143,8 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
     hospitalName, selectedTeam, showHospitalDropdown, selectedManager, selectedHospitalAddress,
     homepageUrl, clinicContext, isCrawling, crawlProgress,
     includeFaq, faqCount, customSubheadings,
-    learnedStyleId, dbStyleLoaded, dbStyleName, showAdvanced, includeHospitalIntro,
+    learnedStyleId, dbStyleLoaded, dbStyleName, useHospitalStyle = true, setUseHospitalStyle,
+    showAdvanced, includeHospitalIntro,
     keywordStats, keywordAiRec, keywordProgress, isAnalyzingKeywords, showKeywordPanel,
     keywordSortBy, keywordSearch, keywordMinVolume, isCheckingRanks, rankResults, hideRanked, isLoadingMoreKeywords,
     trendingItems, isLoadingTrends,
@@ -572,11 +576,37 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
                 </div>
               )}
               {/* 이미지 스타일 — UI 단순화 (handoff §12.1): 'photo' 고정으로 UI 제거 (커스텀 프롬프트도 제거) */}
-              {/* 관리자 학습 말투 자동 적용 안내 */}
+              {/* 관리자 학습 말투 자동 적용 안내 + 글 단위 ON/OFF 토글 */}
               {dbStyleLoaded && !learnedStyleId && (
-                <div className="px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-200 text-[12px] text-emerald-700 flex items-center gap-2">
-                  <span>✅</span>
-                  <span><strong>{dbStyleName}</strong> 관리자 학습 말투가 자동 적용됩니다</span>
+                <div className={`px-3 py-2 rounded-lg border text-[12px] flex items-center justify-between gap-2 ${
+                  useHospitalStyle
+                    ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                    : 'bg-slate-50 border-slate-200 text-slate-500'
+                }`}>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span>{useHospitalStyle ? '✅' : '◯'}</span>
+                    <span className="truncate">
+                      <strong>{dbStyleName}</strong> 관리자 학습 말투
+                      {useHospitalStyle ? ' 적용 중' : ' 미적용 (이번 글만)'}
+                    </span>
+                  </div>
+                  {setUseHospitalStyle && (
+                    <button
+                      type="button"
+                      onClick={() => setUseHospitalStyle(!useHospitalStyle)}
+                      aria-pressed={useHospitalStyle}
+                      aria-label="병원 학습 말투 적용 토글"
+                      className={`relative shrink-0 rounded-full transition-colors w-[40px] h-[22px] ${
+                        useHospitalStyle ? 'bg-emerald-500' : 'bg-slate-300'
+                      }`}
+                    >
+                      <span
+                        className={`absolute top-[3px] left-[3px] w-4 h-4 bg-white rounded-full shadow transition-all duration-200 ${
+                          useHospitalStyle ? 'translate-x-[18px]' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
+                  )}
                 </div>
               )}
               {dbStyleLoaded && learnedStyleId && (
