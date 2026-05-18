@@ -65,7 +65,9 @@ export async function POST(request: NextRequest) {
   const hospitalName = body.hospitalName || req.hospitalName;
   // 우선순위 4-A 정책: stylePromptText 가 있으면 빌더에서 hospitalStyleBlock 은 버려지므로,
   // DB/네트워크 왕복 자체를 스킵해 비용 절약. 캐시 키 영향 없음 (조회를 안 함).
-  if (hospitalName && !req.stylePromptText?.trim()) {
+  // useHospitalStyle 토글: 명시적 false 면 lookup 자체 skip (네트워크 절약).
+  //   빌더 단에도 buildLearnedStyleBlock 안에 동일 분기 있어 defense-in-depth.
+  if (hospitalName && !req.stylePromptText?.trim() && req.useHospitalStyle !== false) {
     try {
       hospitalStyleBlock = await getHospitalStylePrompt(hospitalName);
     } catch (err) {

@@ -68,6 +68,16 @@ export interface GenerationRequest {
   includeHospitalIntro?: boolean;
   hospitalName?: string;
   hospitalStyleSource?: 'explicit_selected_hospital' | 'generic_default';
+  /**
+   * 병원 학습 말투 (hospitalStyleBlock) 적용 여부 — 글 단위 토글.
+   * undefined / true: 학습 말투 적용 (backward compat 기본).
+   * false: hospitalStyleBlock 무시, fallback voice 사용.
+   *
+   * stylePromptText (UI 학습 경로) 는 본 토글의 영향 없음 — buildLearnedStyleBlock
+   * 의 우선순위에 따라 stylePromptText 가 있으면 그게 우선.
+   * 본 토글은 _DB 프로파일 자동 적용_ 만 차단.
+   */
+  useHospitalStyle?: boolean;
   clinicContext?: {
     actualServices: string[];
     specialties: string[];
