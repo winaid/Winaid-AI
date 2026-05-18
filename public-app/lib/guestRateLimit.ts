@@ -95,8 +95,8 @@ export function gateGuestRequest(
 // ── 진단 도구 전용 rate limit (Phase 1.2) ─────────────────────
 //
 // 기존 gateGuestRequest 와 차이:
-//  - 로그인 사용자: 쿠키 해시 기반 키로 분당 5회 (기존은 bypass)
-//  - 게스트: IP + User-Agent 해시 조합으로 분당 3회 (NAT 충돌 90% 감소)
+//  - 로그인 사용자: 쿠키 해시 기반 키로 분당 15회 (기존은 bypass)
+//  - 게스트: IP + User-Agent 해시 조합으로 분당 10회 (NAT 충돌 90% 감소)
 //  - 다른 API route 에 영향 0 (이 함수를 호출하는 건 /api/diagnostic 만)
 
 /** 간단한 32bit 해시 — 문자열을 정수로. 암호학적 보안 불필요, rate limit 키 구분용. */
@@ -120,7 +120,7 @@ export function gateDiagnosticRequest(
     const cookies = request.headers.get('cookie') || '';
     const tokenMatch = cookies.match(/sb-[a-z]+-auth-token=([^;]+)/);
     const userKey = tokenMatch ? `auth:${simpleHash(tokenMatch[1])}` : `auth:${ip}`;
-    if (!checkGuestRateLimit(userKey, 5, route)) {
+    if (!checkGuestRateLimit(userKey, 15, route)) {
       return { ok: false, status: 429, error: '진단 요청이 너무 많습니다. 1분 후 다시 시도해주세요.' };
     }
     return { ok: true };
@@ -129,7 +129,7 @@ export function gateDiagnosticRequest(
   // 게스트: IP + User-Agent 해시 → 같은 NAT 이라도 브라우저별 독립 카운트
   const ua = request.headers.get('user-agent') || '';
   const guestKey = `guest:${ip}:${simpleHash(ua)}`;
-  if (!checkGuestRateLimit(guestKey, 3, route)) {
+  if (!checkGuestRateLimit(guestKey, 10, route)) {
     return { ok: false, status: 429, error: '진단 요청이 너무 많습니다. 1분 후 다시 시도해주세요.' };
   }
   return { ok: true };
