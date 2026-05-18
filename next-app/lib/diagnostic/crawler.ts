@@ -131,6 +131,8 @@ async function fetchInsecure(targetUrl: string, timeoutMs: number): Promise<Resp
     for (const [k, v] of Object.entries(headers)) {
       if (v) respHeaders.set(k, v);
     }
+    // SSL 완화 경로로 응답 받았음을 marker — caller (crawlSite) 가 hasSSL 평가 시 false 로 강제.
+    respHeaders.set('x-diagnostic-ssl-relaxed', '1');
     return new Response(body, { status: statusCode, headers: respHeaders });
   }
   throw new Error('Too many redirects');
@@ -304,7 +306,10 @@ export async function crawlSite(targetUrl: string, options: CrawlOptions = {}): 
   const html = await decodeWithCharset(res);
   const finalUrl = res.url || targetUrl;
 
-  const result = parseHtml(html, origin, finalUrl);
+  // SSL 완화 경로 marker — fetchInsecure 가 인증서 검증 우회한 경우만 set.
+  // crawlSite 만 res 에 접근 가능 → 평탄화해서 parseHtml 에 전달.
+  const sslRelaxed = !!res.headers.get('x-diagnostic-ssl-relaxed');
+  const result = parseHtml(html, origin, finalUrl, sslRelaxed);
 
   // HTTP 보안 헤더 + 응답 상태 (Phase 1)
   result.httpStatus = res.status;
@@ -339,7 +344,7 @@ export async function crawlSite(targetUrl: string, options: CrawlOptions = {}): 
 
 // ── HTML 파싱 ──────────────────────────────────────────────
 
-function parseHtml(html: string, origin: string, finalUrl: string): CrawlResult {
+function parseHtml(html: string, origin: string, finalUrl: string, sslRelaxed: boolean = false): CrawlResult {
   const $ = cheerio.load(html);
 
   // Phase 4: HTML 사이즈 + Doctype (cheerio load 전 raw HTML 으로 측정)
@@ -518,8 +523,11 @@ function parseHtml(html: string, origin: string, finalUrl: string): CrawlResult 
   const hasAddress = KOREAN_ADDRESS_PATTERN.test(textContent);
   const hasBusinessHours = HOURS_KEYWORDS.some(k => textContent.includes(k));
 
-  // 기술
-  const hasSSL = finalUrl.startsWith('https://');
+  // 기술 — HTTPS 정확화: protocol https + SSL 완화 경로 미진입.
+  // fetchInsecure 는 cert 만료/자체 서명 인증서로 받은 응답에 x-diagnostic-ssl-relaxed 부착,
+  // crawlSite 가 이 marker 를 sslRelaxed 로 평탄화해서 parseHtml 에 전달.
+  // 브라우저도 "주의 요함" 경고 띄움 → 보안 OK 라 할 수 없음. false 강제.
+  const hasSSL = finalUrl.startsWith('https://') && !sslRelaxed;
 
   // 의료 특화 감지
   const lowerText = textContent.toLowerCase();
