@@ -110,6 +110,7 @@ export function normalizeBlogStructure(html: string, topicFallback: string): { h
     /마크다운\s*\/\s*JSON|코드펜스\s*금지|JSON\s*형식\s*포함/,
     /h3\s*태그로\s*감싸|소제목을?\s*<?h[23]>?\s*태그/,
     /^\s*(소제목을?|소제목으로?|소제목이?)\s*$/,
+    /소제목.{0,30}(어떻게|어떤|어떠한|식으?로|작성|써야|해야|되어야|들어가|포함|구조|구성)/,
     /^\s*로\s*감싸|^\s*감싸\s*구조/,
     /\b(Subheading|Output\s*format|Section\s*(heading|format|label|rule|placeholder))\b/i,
     /\[META\b|\[CRITICAL\b|\[INSTRUCTION\b|\[OUTPUT\b/i,
@@ -145,6 +146,8 @@ export function normalizeBlogStructure(html: string, topicFallback: string): { h
     /\[IMG_[NXnx]\b|IMG\s*마커|이미지\s*마커/,
     /마크다운\s*\/\s*JSON|코드펜스\s*금지|JSON\s*형식\s*포함/,
     /h3\s*태그로\s*감싸|소제목을?\s*<?h[23]>?\s*태그/,
+    /반복\s*표현\s*\d+\s*회로?\s*축약/,
+    /(도입부|본문|결론|마무리).{0,80}류\s*반복\s*표현/,
   ];
   let leakStripped = 0;
   out = out.replace(/<p[^>]*>([\s\S]*?)<\/p>/gi, (full, inner: string) => {

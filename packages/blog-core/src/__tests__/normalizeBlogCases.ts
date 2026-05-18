@@ -67,6 +67,10 @@ export const LEAK_HEADING_CASES: LeakTestCase[] = [
   // ── PR #157 누수 헤딩 추가 (다른 [IMG_N alt 변형) ──
   { id: 'H-L-12', input: '<h3>[IMG_N alt 사용]</h3>', shouldStrip: true, label: '누수: [IMG_N alt 사용] 변형', source: 'PR #157' },
   { id: 'H-L-13', input: '<h3>이미지 마커 안내</h3>', shouldStrip: true, label: '누수: 이미지 마커 메타 헤딩', source: 'PR #157' },
+  // ── 누수 헤딩 추가 (사용자 보고 — "소제목에서는 어떤 식으로 해야 한다" 류 메타 지시문)
+  { id: 'H-L-14', input: '<h3>소제목에서는 어떤 식으로 해야 한다</h3>', shouldStrip: true, label: '누수: "소제목에서는 어떤 식으로 해야 한다" (사용자 보고)', source: 'PR #228' },
+  { id: 'H-L-15', input: '<h3>소제목은 어떻게 작성해야 한다</h3>', shouldStrip: true, label: '누수: "소제목은 어떻게 작성" 변형', source: 'PR #228' },
+  { id: 'H-L-16', input: '<h3>소제목 구조는 다음과 같이</h3>', shouldStrip: true, label: '누수: "소제목 구조" 메타', source: 'PR #228' },
 ];
 
 export const NORMAL_PARAGRAPH_CASES: LeakTestCase[] = [
@@ -93,12 +97,22 @@ export const LEAK_PARAGRAPH_CASES: LeakTestCase[] = [
   { id: 'P-L-08', input: '<p>다음에 [IMG_N\n marker placeholder.</p>', shouldStrip: true, label: '누수: [IMG_N\\n 개행 포함', source: 'PR #157' },
   // ── PR #154 본문 누수 (초기 차단 케이스) ──
   { id: 'P-L-09', input: '<p>소제목을 [태그명] 태그로 감싸 구조와 SEO 가독성을 확보</p>', shouldStrip: true, label: '누수: 사용자 보고 초기 누수 (PR #154)', source: 'PR #154' },
+  // ── 본문 누수 추가 (사용자 보고 — "반복 표현 N회로 축약" 류 프롬프트 룰 본문화)
+  { id: 'P-L-10', input: '<p>도입부 \'상담에서 가장 많이 받는 질문 중 하나가 바로 이 세 가지 재료의 차이\' 류 반복 표현 1회로 축약</p>', shouldStrip: true, label: '누수: "도입부 ... 류 반복 표현 1회로 축약" (사용자 보고)', source: 'PR #228' },
+  { id: 'P-L-11', input: '<p>본문 반복 표현 2회로 축약 가능</p>', shouldStrip: true, label: '누수: "반복 표현 N회로 축약" 단순 변형', source: 'PR #228' },
+];
+
+// 정상 본문 추가 검증 — "1회로 끝남" 같은 정상 의료 표현 보존 (오탐 0 검증)
+export const NORMAL_PARAGRAPH_CASES_R2: LeakTestCase[] = [
+  { id: 'P-N-R2-01', input: '<p>이 시술은 보통 1회로 끝납니다.</p>', shouldStrip: false, label: '정상: 1회 시술 (축약 단어 없음)', source: 'PR #228' },
+  { id: 'P-N-R2-02', input: '<p>약물 복용은 하루 2회로 충분합니다.</p>', shouldStrip: false, label: '정상: 2회 복용 (반복/축약 단어 없음)', source: 'PR #228' },
 ];
 
 export const ALL_CASES: LeakTestCase[] = [
   ...NORMAL_HEADING_CASES,
   ...LEAK_HEADING_CASES,
   ...NORMAL_PARAGRAPH_CASES,
+  ...NORMAL_PARAGRAPH_CASES_R2,
   ...LEAK_PARAGRAPH_CASES,
 ];
 
