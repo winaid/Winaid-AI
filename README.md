@@ -48,6 +48,7 @@ Winaid-AI/
 │   ├── e2e/                 # Playwright 스모크 테스트
 │   └── sql/                 # public-app 전용 Supabase 스키마
 ├── next-app/                # 내부 운영 도구 (admin · influencer · strengths · youtube 등)
+│                            #   - 인플루언서 탐색: 상태·검색 이력 영속 + ★ 즐겨찾기 (2026-05-18)
 ├── crawler-server/          # 네이버 블로그 크롤러 (Express + Puppeteer, Railway)
 ├── video-processor/         # 영상 처리 서버 (Express + FFmpeg + auto-editor, Railway)
 ├── winai-blog-publisher/    # 네이버 블로그 자동 발행 로컬앱 (Playwright, localhost:17580)
