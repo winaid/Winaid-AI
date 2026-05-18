@@ -166,16 +166,16 @@ test('next-app refine-selection: 인증 가드 (checkAuth) 존재', () => {
   assert.ok(/checkAuth\s*\(/.test(src), 'next-app refine-selection: checkAuth 호출 누락');
 });
 
-test('public-app refine-selection: 게스트 차단 (resolveImageOwner === guest → 401)', () => {
-  // refine-selection 은 0.1 credit 차감 대상 — 식별된 user 필요. 게스트 차단 invariant.
+test('public-app refine-selection: 게스트 허용 (401 차단 분기 부재 — PR #231 PO 결정)', () => {
+  // PR #217 도입 시 owner==='guest' → 401 차단 분기가 있었으나, PR #231 (PO 결정) 으로 제거.
+  // 외부 사용자 접근성 우선 — credit 차감은 client-side localStorage counter 가 담당.
+  // 회귀 가드: 다시 401 차단 분기가 추가되면 fail-fast.
   const p = resolve(REPO_ROOT, 'public-app/app/api/refine-selection/route.ts');
   if (!existsSync(p)) return;
   const src = readFileSync(p, 'utf-8');
-  assert.ok(
-    /owner\s*===\s*'guest'/.test(src),
-    'public-app refine-selection: 게스트 차단 분기 누락',
-  );
-  assert.ok(/401/.test(src), 'public-app refine-selection: 401 응답 누락');
+  // 'guest' 비교가 if 분기 + 401 응답으로 묶여 있으면 차단 부활 — 차단 자체 금지.
+  const has401GuestBlock = /owner\s*===\s*['"]guest['"][\s\S]{0,200}status:\s*401/.test(src);
+  assert.ok(!has401GuestBlock, 'public-app refine-selection: 게스트 401 차단 분기 부활 (PR #231 정책 위반)');
 });
 
 test('양 앱 refine-selection: 응답 sanitize chain (stripPromptLeakage + applyContentFilters + sanitizeHtml)', () => {
