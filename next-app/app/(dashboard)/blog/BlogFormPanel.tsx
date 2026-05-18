@@ -182,7 +182,14 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
               과거: `hospitals.length > 0` 필터로 hospitals 가 있는 팀만 표시 →
               DB hospitals 가 비거나 매핑 0건이면 팀 자체가 사라짐 (사용자 보고).
               수정: TEAM_DATA 5개 팀 항상 노출. 팀 선택 후 hospitals=0 이면
-              "등록된 병원이 없습니다" 표시되도록 기존 dropdown 분기에 위임. */}
+              "등록된 병원이 없습니다" 표시되도록 기존 dropdown 분기에 위임.
+
+              2026-05-19 (public-app lockstep): TEAM_DATA.length === 0 일 때 (외부
+              public-app 처럼 개인별 병원이라 team list 미사용) team UI 전체 숨김
+              + 일반 hospital_name input 으로 fallback. 양 앱 동일 코드 — lockstep
+              diff=0 유지하면서 분기로 처리. */}
+          {TEAM_DATA.length > 0 ? (
+            <>
           <div className="flex bg-slate-100 rounded-lg p-0.5">
             {TEAM_DATA.map(team => (
               <button
@@ -282,6 +289,25 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
               </div>
             )}
           </div>
+            </>
+          ) : (
+            /* TEAM_DATA.length === 0 — public-app 외부용 (개인별 병원, team list 미사용).
+               team UI 전체 숨김 + 일반 hospital_name input 으로 fallback.
+               양 앱 동일 코드 — public-app 은 빈 TEAM_DATA 라 본 분기 활성, next-app 은
+               5팀 보유라 상단 분기 활성. lockstep diff=0 유지. */
+            <div>
+              <label className="block text-xs font-bold text-slate-500 mb-1.5">병원명</label>
+              <input
+                type="text"
+                value={hospitalName}
+                onChange={e => setHospitalName(e.target.value)}
+                placeholder="병원명을 입력해주세요"
+                className={inputCls}
+                disabled={isGenerating}
+                aria-label="병원명"
+              />
+            </div>
+          )}
 
           {/* 진료과 */}
           <select
