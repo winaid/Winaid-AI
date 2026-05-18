@@ -135,6 +135,7 @@ export function normalizeBlogStructure(
     /h3\s*태그로\s*감싸|소제목을?\s*<?h[23]>?\s*태그/,
     // 헤딩 전용 추가 패턴
     /^\s*(소제목을?|소제목으로?|소제목이?)\s*$/,           // "소제목을" 단독
+    /소제목.{0,30}(어떻게|어떤|어떠한|식으?로|작성|써야|해야|되어야|들어가|포함|구조|구성)/, // "소제목에서는 어떤 식으로 해야 한다" 류
     /^\s*로\s*감싸|^\s*감싸\s*구조/,                       // "로 감싸 구조 명확화" 단독
     /\b(Subheading|Output\s*format|Section\s*(heading|format|label|rule|placeholder))\b/i, // 영문 메타 단어 (Section/Format 단독은 의료 약어 가능 — compound 만)
     /\[META\b|\[CRITICAL\b|\[INSTRUCTION\b|\[OUTPUT\b/i,   // 대괄호 메타 라벨
@@ -181,6 +182,8 @@ export function normalizeBlogStructure(
     /\[IMG_[NXnx]\b|IMG\s*마커|이미지\s*마커/,
     /마크다운\s*\/\s*JSON|코드펜스\s*금지|JSON\s*형식\s*포함/,
     /h3\s*태그로\s*감싸|소제목을?\s*<?h[23]>?\s*태그/,
+    /반복\s*표현\s*\d+\s*회로?\s*축약/,                    // 프롬프트 룰 본문화: "... 반복 표현 1회로 축약"
+    /(도입부|본문|결론|마무리).{0,80}류\s*반복\s*표현/,     // 프롬프트 룰 본문화: "도입부 '...' 류 반복 표현"
   ];
   let leakStripped = 0;
   out = out.replace(/<p[^>]*>([\s\S]*?)<\/p>/gi, (full, inner: string) => {
