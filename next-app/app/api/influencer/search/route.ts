@@ -24,6 +24,8 @@ export const dynamic = 'force-dynamic';
 // 지역 키워드는 influencerHashtags.ts의 LOCATION_HASHTAGS 사용
 
 interface SearchRequest {
+  /** 검색 이력 저장용 — 누락 시 이력 저장 skip (PR-A 2026-05-18) */
+  hospital_name?: string;
   location: string;
   hashtags: string[];
   follower_min: number;
@@ -341,6 +343,39 @@ export async function POST(request: NextRequest) {
     r.follower_count <= followerMax
   );
   console.info(`[INFLUENCER] 필터 후: ${results.length}명 (${beforeFilter - results.length}명 제외)`);
+
+  // ── 검색 이력 자동 저장 (PR-A 2026-05-18) ──
+  // hospital_name 이 있으면 사이드 패널 "최근 검색 5건" 재실행 위해 저장.
+  // 실패는 silent — 검색 자체는 성공으로 응답.
+  // search_params 에는 클라이언트가 그대로 복원할 수 있는 핵심 필드만 직렬화.
+  if (typeof body.hospital_name === 'string' && body.hospital_name.trim().length > 0) {
+    try {
+      const { supabase, supabaseAdmin } = await import('@winaid/blog-core');
+      const db = supabaseAdmin ?? supabase;
+      if (db) {
+        const searchParams = {
+          location: body.location,
+          hashtags: cleanedUserHashtags,
+          follower_min: followerMin,
+          follower_max: followerMax,
+          categories: safeCategories,
+          min_engagement_rate: body.min_engagement_rate,
+        };
+        // fire-and-forget 패턴이지만 vercel serverless 가 응답 후 즉시 종료해서
+        // 마이크로태스크가 cut 되는 것을 막기 위해 await 사용 (수십 ms 단위).
+        const { error: insertError } = await (db.from('influencer_searches') as ReturnType<typeof db.from>).insert({
+          hospital_name: body.hospital_name.trim().slice(0, 200),
+          search_params: searchParams,
+          result_count: results.length,
+        });
+        if (insertError) {
+          console.warn('[INFLUENCER] 검색 이력 저장 실패:', insertError.message);
+        }
+      }
+    } catch (err) {
+      console.warn('[INFLUENCER] 검색 이력 저장 오류:', err);
+    }
+  }
 
   return NextResponse.json({ results: results.slice(0, 20), total_found: results.length, search_hashtags_used: searchHashtags, source });
 }
