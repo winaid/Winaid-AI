@@ -793,7 +793,6 @@ SEO 점수 기준:
           systemInstruction,
           model: 'gemini-3.1-flash-lite-preview',
           responseType: 'json',
-          googleSearch: true,
           temperature: 0.7,
           maxOutputTokens: 1500,
           schema: responseSchema,

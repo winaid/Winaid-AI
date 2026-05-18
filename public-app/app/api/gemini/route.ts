@@ -251,6 +251,12 @@ export async function POST(request: NextRequest) {
     console.warn('[gemini] googleSearch disabled (guest)');
     body.googleSearch = false;
   }
+  // Gemini API 제약: responseSchema + tools(googleSearch) 동시 사용 불가 → 400 INVALID_ARGUMENT.
+  // 호출자가 둘 다 보낸 경우 googleSearch 를 drop 하고 warn (opaque upstream 400 회피).
+  if (body.googleSearch && body.schema && body.responseType === 'json') {
+    console.warn('[gemini] googleSearch + responseSchema 불호환 — googleSearch 자동 해제');
+    body.googleSearch = false;
+  }
   // inlineImages: 게스트 length <= 2, 각 base64 size <= 1MB / 인증 length <= 4, 5MB
   if (Array.isArray(body.inlineImages)) {
     const maxLen = isGuest ? GUEST_MAX_INLINE_IMAGES : AUTH_MAX_INLINE_IMAGES;

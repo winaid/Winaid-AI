@@ -200,6 +200,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: '[env] GEMINI_API_KEY 누락' }, { status: 500 });
   }
 
+  // Gemini API 제약: responseSchema + tools(googleSearch) 동시 사용 불가 → 400 INVALID_ARGUMENT.
+  // 호출자가 둘 다 보낸 경우 googleSearch 를 drop 하고 warn (opaque upstream 400 회피).
+  if (body.googleSearch && body.schema && body.responseType === 'json') {
+    console.warn('[gemini] googleSearch + responseSchema 불호환 — googleSearch 자동 해제');
+    body.googleSearch = false;
+  }
+
   // ═══ 스트리밍 모드 ═══
   if (body.stream === true) {
     const model = resolveModel(body.model || 'gemini-3.1-pro-preview');
