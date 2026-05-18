@@ -15,6 +15,7 @@ export * from './llm';
 export * from './styleService';
 export * from './blogPrompt';
 export * from './refineSelectionPrompt';
+export * from './dmPrompt';
 export * from './normalize/leakFilter';
 export * from './promptLeakageGuard';
 export * from './promptInjectionGuard';

@@ -199,6 +199,83 @@ test('양 앱 refine-selection: customInstruction injection guard (stripInjectio
   }
 });
 
+// ── generate-dm 라우트 sanitize chain invariant (PR-D 2026-05-18) ────────
+
+test('양 앱 generate-dm: 라우트 존재 + buildDmPrompt 빌더 사용', () => {
+  for (const app of ['next-app', 'public-app']) {
+    const p = resolve(REPO_ROOT, `${app}/app/api/influencer/generate-dm/route.ts`);
+    assert.ok(existsSync(p), `${app}: generate-dm route.ts 부재 — PR-D 회귀`);
+    const src = readFileSync(p, 'utf-8');
+    assert.ok(/buildDmPrompt/.test(src), `${app}: buildDmPrompt 빌더 호출 누락 (7빌더 안전망 외부)`);
+    assert.ok(/task:\s*'instagram_dm'/.test(src), `${app}: callLLM task='instagram_dm' 누락`);
+  }
+});
+
+test('양 앱 generate-dm: 입력 sanitize chain (stripInjectionForUse + sanitizeSourceContent + sanitizePromptInput)', () => {
+  // 외부 IG 텍스트 (recent_posts.text) 가 prompt 에 결합 — 인젝션 vector 차단 필수.
+  for (const app of ['next-app', 'public-app']) {
+    const p = resolve(REPO_ROOT, `${app}/app/api/influencer/generate-dm/route.ts`);
+    if (!existsSync(p)) continue;
+    const src = readFileSync(p, 'utf-8');
+    assert.ok(/stripInjectionForUse/.test(src), `${app}: stripInjectionForUse 누락 (외부 IG 텍스트 인젝션 가드)`);
+    assert.ok(/sanitizeSourceContent/.test(src), `${app}: sanitizeSourceContent 누락 (recent_post_text)`);
+    assert.ok(/sanitizePromptInput/.test(src), `${app}: sanitizePromptInput 누락 (메타 필드 + customInstruction 200자 cap)`);
+  }
+});
+
+test('양 앱 generate-dm: 응답 sanitize chain (stripPromptLeakage + applyContentFilters + filterMedicalLawViolations)', () => {
+  for (const app of ['next-app', 'public-app']) {
+    const p = resolve(REPO_ROOT, `${app}/app/api/influencer/generate-dm/route.ts`);
+    if (!existsSync(p)) continue;
+    const src = readFileSync(p, 'utf-8');
+    assert.ok(/stripPromptLeakage/.test(src), `${app}: stripPromptLeakage 호출 누락`);
+    assert.ok(/applyContentFilters/.test(src), `${app}: applyContentFilters 호출 누락`);
+    assert.ok(/filterMedicalLawViolations/.test(src), `${app}: filterMedicalLawViolations 누락 (autoReplaceMessage 마커)`);
+  }
+});
+
+test('양 앱 generate-dm: parse_failed / sanitize_emptied fail-closed (502)', () => {
+  for (const app of ['next-app', 'public-app']) {
+    const p = resolve(REPO_ROOT, `${app}/app/api/influencer/generate-dm/route.ts`);
+    if (!existsSync(p)) continue;
+    const src = readFileSync(p, 'utf-8');
+    assert.ok(/parse_failed/.test(src), `${app}: parse_failed fail-closed 누락`);
+    assert.ok(/sanitize_emptied/.test(src), `${app}: sanitize_emptied fail-closed 누락`);
+    assert.ok(/status:\s*502/.test(src), `${app}: 502 응답 분기 누락`);
+  }
+});
+
+test('next-app generate-dm: 인증 가드 (checkAuth) 존재', () => {
+  // P-1 invariant — admin_session 자동 통과
+  const p = resolve(REPO_ROOT, 'next-app/app/api/influencer/generate-dm/route.ts');
+  if (!existsSync(p)) return;
+  const src = readFileSync(p, 'utf-8');
+  assert.ok(/checkAuth\s*\(/.test(src), 'next-app generate-dm: checkAuth 호출 누락 (P-1 회귀)');
+});
+
+test('public-app generate-dm: 게스트 차단 (owner === guest → 401) + gateGuestRequest', () => {
+  // DM 생성은 1 credit 차감 대상 — 식별된 user 필요. 게스트 차단 invariant.
+  const p = resolve(REPO_ROOT, 'public-app/app/api/influencer/generate-dm/route.ts');
+  if (!existsSync(p)) return;
+  const src = readFileSync(p, 'utf-8');
+  assert.ok(/owner\s*===\s*'guest'/.test(src), 'public-app generate-dm: 게스트 차단 분기 누락');
+  assert.ok(/401/.test(src), 'public-app generate-dm: 401 응답 누락');
+  assert.ok(/gateGuestRequest/.test(src), 'public-app generate-dm: gateGuestRequest IP rate limit 누락');
+});
+
+test('양 앱 generate-dm: maxDuration ≥ 60 (텍스트 LLM)', () => {
+  // P-2 (이미지 라우트 300s) 무관. 텍스트 LLM 만이라 60s 충분.
+  for (const app of ['next-app', 'public-app']) {
+    const p = resolve(REPO_ROOT, `${app}/app/api/influencer/generate-dm/route.ts`);
+    if (!existsSync(p)) continue;
+    const src = readFileSync(p, 'utf-8');
+    const m = src.match(/export\s+const\s+maxDuration\s*=\s*(\d+)/);
+    assert.ok(m, `${app}: maxDuration 선언 누락`);
+    const val = parseInt(m![1], 10);
+    assert.ok(val >= 60, `${app}: maxDuration=${val} 인데 ≥60 권장`);
+  }
+});
+
 // ── useHospitalStyle 토글 invariant (양 앱 lockstep) ─────────────────
 
 test('GenerationRequest 타입에 useHospitalStyle?: boolean 존재', () => {

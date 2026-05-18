@@ -32,6 +32,8 @@ export type LLMTaskKind =
   | 'refine_chat'
   // ── 인라인 선택 다듬기 (블로그 에디터, 실시간 UX) ──
   | 'refine_selection'
+  // ── 인스타그램 협업 DM (실시간 UX, 7번째 빌더) ──
+  | 'instagram_dm'
   // ── 말투 학습 ──
   | 'style_learn'
   // ── 크롤링 글 채점 ──

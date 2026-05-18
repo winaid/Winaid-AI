@@ -30,6 +30,9 @@ interface DmDraft {
   tone: string;
   message: string;
   warnings: string[];
+  /** PR-D: 의료법 위반 자동 수정 후보 (filterMedicalLawViolations 통과한 안전한 버전). */
+  autoReplaceMessage?: string;
+  replacedCount?: number;
 }
 
 // PR-A: 검색 이력 영속 — GET /api/influencer/status?include_searches=1 응답
@@ -666,7 +669,24 @@ export default function InfluencerPage() {
                   <div className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed bg-white rounded-xl p-4 border border-slate-100">{draft.message}</div>
                   {draft.warnings.length > 0 && (
                     <div className="mt-2 p-2 bg-red-50 rounded-lg">
-                      <p className="text-[10px] font-bold text-red-600">⚠️ 의료광고법 경고</p>
+                      <div className="flex items-center justify-between gap-2 mb-0.5">
+                        <p className="text-[10px] font-bold text-red-600">⚠️ 의료광고법 경고</p>
+                        {/* PR-D: AI 자동 수정 — server 가 filterMedicalLawViolations 통과한 안전한 버전을 미리 보내줌 */}
+                        {draft.autoReplaceMessage && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDmDrafts(prev => prev.map((d, i) => i === idx
+                                ? { ...d, message: d.autoReplaceMessage || d.message, warnings: [], autoReplaceMessage: undefined, replacedCount: undefined }
+                                : d));
+                            }}
+                            className="px-2 py-0.5 bg-red-100 hover:bg-red-200 text-red-700 text-[10px] font-bold rounded transition-colors"
+                            title={`${draft.replacedCount ?? 0}건 자동 치환`}
+                          >
+                            🤖 AI 자동 수정
+                          </button>
+                        )}
+                      </div>
                       {draft.warnings.map((w, wi) => <p key={wi} className="text-[10px] text-red-500 mt-0.5">- {w}</p>)}
                     </div>
                   )}
