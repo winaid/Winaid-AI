@@ -855,12 +855,11 @@ export default function AdminPage() {
         </div>
       </div>
 
-      {/* 통계 카드 — 상단 4열 */}
+      {/* 통계 카드 — 상단 3열 */}
       {stats && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
+        <div className="grid grid-cols-3 gap-3 mb-3">
           {[
             { label: '블로그', value: stats.blogCount, color: 'bg-sky-50 text-sky-600' },
-            { label: '카드뉴스', value: stats.cardNewsCount, color: 'bg-violet-50 text-violet-600' },
             { label: '보도자료', value: stats.pressReleaseCount, color: 'bg-emerald-50 text-emerald-600' },
             { label: '이미지', value: stats.imageCount, color: 'bg-amber-50 text-amber-600' },
           ].map((s, i) => (

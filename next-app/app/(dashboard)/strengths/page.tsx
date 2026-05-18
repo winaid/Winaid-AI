@@ -79,7 +79,7 @@ export default function StrengthsPage() {
           <span className="text-lg">💪</span>
           <h1 className="text-xl font-bold text-slate-800">병원 특장점 관리</h1>
         </div>
-        <p className="text-sm text-slate-400">병원별 강점을 등록하면 AI가 블로그/카드뉴스/보도자료에 자동 반영합니다</p>
+        <p className="text-sm text-slate-400">병원별 강점을 등록하면 AI가 블로그/보도자료에 자동 반영합니다</p>
       </div>
 
       {/* 입력 폼 */}

@@ -44,12 +44,11 @@ function mdToHtml(md: string): string {
   return html.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/on\w+\s*=\s*["'][^"']*["']/gi, '').replace(/javascript\s*:/gi, '');
 }
 
-type FilterTab = 'all' | 'blog' | 'card_news' | 'press_release' | 'image' | 'refine';
+type FilterTab = 'all' | 'blog' | 'press_release' | 'image' | 'refine';
 
 const FILTER_TABS: { value: FilterTab; label: string }[] = [
   { value: 'all', label: '전체' },
   { value: 'blog', label: '블로그' },
-  { value: 'card_news', label: '카드뉴스' },
   { value: 'press_release', label: '보도자료' },
   { value: 'image', label: '이미지' },
   { value: 'refine', label: 'AI 보정' },
@@ -58,7 +57,6 @@ const FILTER_TABS: { value: FilterTab; label: string }[] = [
 const EMPTY_MESSAGES: Record<FilterTab, string> = {
   all: '콘텐츠를 생성하면 여기에 자동으로 저장됩니다.',
   blog: '블로그 글을 생성하면 여기에 표시됩니다.',
-  card_news: '카드뉴스를 생성하면 여기에 표시됩니다.',
   press_release: '보도자료를 생성하면 여기에 표시됩니다.',
   image: '이미지를 생성하면 여기에 표시됩니다.',
   refine: 'AI 보정 결과가 여기에 표시됩니다.',
@@ -68,7 +66,6 @@ function filterPosts(posts: SavedPost[], tab: FilterTab): SavedPost[] {
   switch (tab) {
     case 'all': return posts;
     case 'blog': return posts.filter(p => p.post_type === 'blog' && p.workflow_type !== 'refine');
-    case 'card_news': return posts.filter(p => p.post_type === 'card_news');
     case 'press_release': return posts.filter(p => p.post_type === 'press_release');
     case 'image': return posts.filter(p => p.post_type === 'image');
     case 'refine': return posts.filter(p => p.workflow_type === 'refine');
@@ -119,7 +116,6 @@ export default function HistoryPage() {
   const typeBadge = (post: SavedPost) => {
     const map: Record<string, { label: string; cls: string }> = {
       blog: { label: '블로그', cls: 'bg-blue-50 text-blue-600' },
-      card_news: { label: '카드뉴스', cls: 'bg-pink-50 text-pink-600' },
       press_release: { label: '보도자료', cls: 'bg-amber-50 text-amber-600' },
       image: { label: '이미지', cls: 'bg-emerald-50 text-emerald-600' },
     };
@@ -185,8 +181,6 @@ export default function HistoryPage() {
                   <img src={selectedPost.content} alt={selectedPost.title || '생성된 이미지'} className="max-w-full rounded-xl shadow-md border border-slate-200" />
                   {selectedPost.topic && <p className="text-sm text-slate-500 text-center">프롬프트: {selectedPost.topic}</p>}
                 </div>
-              ) : selectedPost.post_type === 'card_news' && selectedPost.content.includes('<img') ? (
-                <div className="space-y-4" dangerouslySetInnerHTML={{ __html: sanitizeHtml(selectedPost.content) }} />
               ) : (
                 <article
                   className="max-w-none"
@@ -319,11 +313,6 @@ export default function HistoryPage() {
                     {(() => {
                       if (post.post_type === 'image' && (post.content?.startsWith('data:image') || post.content?.startsWith('https://'))) {
                         return <div className="flex-shrink-0"><img src={post.content} alt={post.title} className="w-14 h-14 rounded-lg object-cover border border-slate-200" /></div>;
-                      }
-                      if (post.post_type === 'card_news') {
-                        const imgMatch = post.content?.match(/<img[^>]+src="([^"]+)"/);
-                        if (imgMatch?.[1]) return <div className="flex-shrink-0"><img src={imgMatch[1]} alt={post.title} className="w-14 h-14 rounded-lg object-cover border border-slate-200" /></div>;
-                        return <div className="flex-shrink-0 w-14 h-14 rounded-lg bg-pink-50 border border-pink-100 flex items-center justify-center text-lg">🌸</div>;
                       }
                       return null;
                     })()}

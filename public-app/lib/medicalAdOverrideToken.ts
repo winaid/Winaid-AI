@@ -1,9 +1,8 @@
 /**
  * 의료광고법 위반 override 토큰 — server-side 발급/검증.
  *
- * ADR-2 (docs/decisions/CARDNEWS_HARDBLOCK_UX.md) Option B 채택에 따라
  * 사용자가 위반 가능성 인지 후 "동의하고 다운로드" 클릭 시 server-side 토큰 발급.
- * Shorts API 가 토큰을 검증해 client-only 우회를 차단한다.
+ * API 가 토큰을 검증해 client-only 우회를 차단한다.
  *
  * 구현:
  *   - 무상태 (DB 미사용) — HMAC-SHA256 서명. payload + 서명을 base64url 합쳐 전달.

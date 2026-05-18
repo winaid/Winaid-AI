@@ -109,29 +109,24 @@ function ScoreBar({ scores, postType }: { scores?: ScoreBarData; postType?: stri
       <div className="flex items-center gap-4 relative">
         {hasScores ? (
           <>
-            {/* SEO 점수 (blog만) */}
-            {postType !== 'card_news' && (
-              <>
-                <div className="flex flex-col">
-                  <span className="text-[10px] font-black opacity-50 uppercase tracking-[0.1em] mb-1">📊 SEO 점수</span>
-                  <div className="flex items-center gap-2">
-                    {scores.seoScore != null ? (
-                      <>
-                        <span className={`text-2xl font-black ${scores.seoScore >= 85 ? 'text-emerald-400' : scores.seoScore >= 70 ? 'text-amber-400' : 'text-red-400'}`}>
-                          {scores.seoScore}점
-                        </span>
-                        <span className="text-[10px] opacity-70">
-                          {scores.seoScore >= 85 ? '✅ 최적화' : scores.seoScore >= 70 ? '⚠️ 개선필요' : '🚨 재설계'}
-                        </span>
-                      </>
-                    ) : (
-                      <span className="text-xs text-slate-400">—</span>
-                    )}
-                  </div>
-                </div>
-                <div className="w-px h-10 bg-slate-700" />
-              </>
-            )}
+            <div className="flex flex-col">
+              <span className="text-[10px] font-black opacity-50 uppercase tracking-[0.1em] mb-1">📊 SEO 점수</span>
+              <div className="flex items-center gap-2">
+                {scores.seoScore != null ? (
+                  <>
+                    <span className={`text-2xl font-black ${scores.seoScore >= 85 ? 'text-emerald-400' : scores.seoScore >= 70 ? 'text-amber-400' : 'text-red-400'}`}>
+                      {scores.seoScore}점
+                    </span>
+                    <span className="text-[10px] opacity-70">
+                      {scores.seoScore >= 85 ? '✅ 최적화' : scores.seoScore >= 70 ? '⚠️ 개선필요' : '🚨 재설계'}
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-xs text-slate-400">—</span>
+                )}
+              </div>
+            </div>
+            <div className="w-px h-10 bg-slate-700" />
 
             {/* 의료법 준수 */}
             <div className="flex flex-col">

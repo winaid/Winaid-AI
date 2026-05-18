@@ -4,7 +4,7 @@
  * 배경:
  *   PR #154/#156/#158 로 system prompt 한국어 출력 메타 지시문을 영문 [META] 라벨
  *   로 분리. 1차 방어선. 단 blog 만 클라이언트 normalizeBlogStructure 로 후처리 →
- *   누수 발견 시 자동 strip. 다른 콘텐츠 타입 (clinical / press / cardNews) 은
+ *   누수 발견 시 자동 strip. 다른 콘텐츠 타입 (clinical / press) 은
  *   후처리 단계 부재 — 모델이 영문 라벨을 본문화하면 무방비.
  *
  *   본 모듈은 그 빈 자리를 채우는 server-side 후처리. 동일 LEAK_PATTERNS 를 사용
@@ -14,7 +14,6 @@
  *   next-app/app/api/generate/clinical/route.ts  → sanitizeLeakInHtml
  *   next-app/app/api/generate/press/route.ts     → sanitizeLeakInHtml
  *   public-app/app/api/generate/press/route.ts   → sanitizeLeakInHtml
- *   (cardNews JSON 응답은 normalize/leakFilterJson.ts 사용)
  */
 
 /**
@@ -111,8 +110,7 @@ export function sanitizeLeakInHtml(html: string): {
 /**
  * Plain string (HTML 아님) 안 leak 감지 → 매칭 부분만 제거.
  *
- * 사용처: cardNews 의 SlideData 각 string 필드 (title/subtitle/body/visualKeyword
- * /checkItems[] 등). 의료광고법 필터 (applyContentFilters) 와 비슷한 패턴.
+ * 의료광고법 필터 (applyContentFilters) 와 비슷한 패턴.
  *
  * 전략: leak 패턴 매칭 시 그 부분만 제거. 부분 매칭은 정상 본문일 수 있어
  * 전체 빈 문자열로 치환하지 않음. UI 가 빈 필드 처리 어려우므로 보수적.

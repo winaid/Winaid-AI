@@ -172,226 +172,6 @@ function getKoreanHolidays(year: number, month: number): string[] {
   return result;
 }
 
-// ── 카드뉴스 전용 페르소나 + 프레임/스타일 블록 (OLD cardNewsImageService.ts 동일) ──
-
-const CARD_NEWS_PERSONA = `[ROLE] Korean medical SNS card news designer.
-[GOAL] 1:1 square (1080x1080px) card image. Korean text rendered directly into pixels. Output MUST be exactly square.
-[PRIORITY] Text readability > visual aesthetics. Korean medical ad law compliant.
-[HOSPITAL NAME] 프롬프트에 명시된 병원명만 사용하세요. 명시되지 않은 병원명, 로고, 브랜드를 절대 지어내지 마세요.
-[SERIES CONSISTENCY — MOST IMPORTANT]
-This card is part of a multi-slide series. ALL slides MUST look identical except for text content and illustration subject.
-EXACT same background, text layout zones, font style/size/color, padding, decorative elements.
-Text zones: Top 15% subtitle, Center 40% mainTitle (bold), Bottom 25% description+visual.
-[TEXT RENDERING QUALITY]
-Every Korean character must be perfectly readable. If any character is garbled, the entire card fails.
-Keep titles under 10 characters, subtitles under 20. Shorter text = safer rendering.
-[CRITICAL — DESIGN SYSTEM LOCK]
-If style cues are described in this prompt (background color, gradient, text positions, illustration style, decorative elements), replicate them EXACTLY across all cards in the series.
-Consistency score: If a human cannot instantly tell these cards are from the same series, the generation has FAILED.`;
-
-const CARD_FRAME_RULE = `[LAYOUT RULES]
-- Fill the entire canvas area edge-to-edge
-- NO colored borders, frames, or outlines around the edges
-- Rounded corners on overall image only
-- Clean minimal design
-- Text must be centered horizontally
-- Minimum 40px padding from all edges
-- All text must be legible at mobile phone size`;
-
-function buildCardStyleBlock(imageStyle: string): string {
-  if (imageStyle === 'photo') return `[STYLE - 실사 촬영 (PHOTOREALISTIC)]
-- photorealistic, DSLR, 35mm lens, natural lighting, shallow depth of field, bokeh
-- realistic skin texture, real fabric texture, 4K ultra high resolution
-- 실제 한국인 인물, 실제 병원/의료 환경
-QUALITY REFERENCE: Think Apple product page or Samsung Health app photography — clean, editorial, aspirational. NOT stock photo website or generic hospital brochure.
-[FORBIDDEN] 3D render, illustration, cartoon, anime, vector, clay`;
-
-  if (imageStyle === 'medical') return `[STYLE - 의학 3D (MEDICAL 3D RENDER)]
-- medical 3D illustration, anatomical render, scientific visualization
-- clinical lighting, x-ray style glow, translucent organs
-- 인체 해부학, 장기 단면도, 뼈/근육/혈관 구조
-[FORBIDDEN] cute cartoon, photorealistic human face`;
-
-  if (imageStyle === 'infographic') return `[STYLE - 플랫 아이콘/벡터 (FLAT VECTOR)]
-- flat 2D vector icon style, solid fill colors, no gradients, no shadows
-- geometric shapes only, clean line art, single color background
-- simple and bold, like a mobile app icon or emoji
-- 밝고 깨끗한 단색 배경, 심플한 도형 기반 의료 아이콘
-QUALITY REFERENCE: Think Google Material Icons or Apple SF Symbols — minimal, clean, geometric.
-[FORBIDDEN] 3D render, realistic photo, illustration with shadows, gradients, complex textures`;
-
-  if (imageStyle === 'custom') return ''; // 사용자 지정 스타일 — 추가 규칙 없음
-
-  // default: illustration
-  return `[STYLE - 3D 일러스트 (3D ILLUSTRATION)]
-- 3D rendered illustration, Blender/Cinema4D style, soft 3D render
-- soft studio lighting, ambient occlusion, gentle shadows
-- clean matte 3D surfaces with subtle texture, rounded edges
-- 밝은 파스텔 톤, 파란색/흰색/연한 색상 팔레트
-- cute stylized characters, friendly expressions
-QUALITY REFERENCE: Think 카카오프렌즈/LINE Friends level 3D quality — smooth, polished, professional. NOT cheap mobile game ad or low-poly 3D.
-[FORBIDDEN] photorealistic, real photo, DSLR, realistic texture`;
-}
-
-function buildCardNewsPromptFull(body: ImageRequestBody): string {
-  const style = body.imageStyle || 'illustration';
-  const styleBlock = buildCardStyleBlock(style);
-  const hasRefImage = !!body.referenceImage;
-
-  // 텍스트 필드 파싱
-  const parseField = (text: string, key: string): string => {
-    const match = text.match(new RegExp(`${key}:\\s*"((?:[^"\\\\]|\\\\.)*)"`, 'i'))
-      || text.match(new RegExp(`${key}:\\s*([^\\n,]+)`, 'i'));
-    return match?.[1]?.trim().replace(/^["']|["']$/g, '') || '';
-  };
-
-  const subtitle = parseField(body.prompt, 'subtitle');
-  const mainTitle = parseField(body.prompt, 'mainTitle');
-  const description = parseField(body.prompt, 'description');
-  const visualMatch = body.prompt.match(/비주얼:\s*([^\n]+)/i);
-  const visual = visualMatch?.[1]?.trim() || '';
-
-  // 배경색 추출 (디자인 템플릿에서)
-  const bgMatch = body.prompt.match(/배경색:\s*(#[A-Fa-f0-9]{6}|#[A-Fa-f0-9]{3})/i);
-  const bgColor = bgMatch?.[1] || '#E8F4FD';
-
-  // 디자인 템플릿 블록 추출
-  const tmplMatch = body.prompt.match(/\[디자인 템플릿:[^\]]*\][\s\S]*$/m);
-  const templateBlock = tmplMatch?.[0] || '';
-
-  // 참조 이미지 스타일 복제 지시 (현재 generate 모드는 텍스트 힌트로 변환되므로
-  // "image attached" 가정을 빼고 prompt 내 style cues 기반으로 복제 지시).
-  const refImageRule = hasRefImage ? `
-🔒 [STYLE LOCK — ZERO DEVIATION ALLOWED]
-This card is part of a series. The reference style is described above.
-CLONE these from the reference style: same background color/gradient, same Y-position for subtitle/mainTitle/description, same font weight/color/size, same padding, same decorative elements.
-CHANGE only: the actual text words and the illustration subject.
-The viewer should instantly tell these cards are from the SAME series.` : '';
-
-  const hasText = subtitle || mainTitle;
-
-  if (hasText) {
-    return `${CARD_NEWS_PERSONA}
-${refImageRule}
-
-🚨 RENDER THIS EXACT KOREAN TEXT IN THE IMAGE:
-MAIN TITLE (big, bold, center): "${mainTitle}"
-SUBTITLE (small, above title): "${subtitle}"
-${description ? `DESCRIPTION (small, below title): "${description}"` : ''}
-
-${visual ? `ILLUSTRATION: "${visual}" — draw exactly this!` : ''}
-
-Background: ${bgColor} gradient.
-${CARD_FRAME_RULE}
-${styleBlock}
-
-Text: subtitle(small) → mainTitle(LARGE) → description(small). Clean readable Korean font.
-${templateBlock}
-⛔ No hashtags, watermarks, logos, placeholder text.`.trim();
-  }
-
-  return `${CARD_NEWS_PERSONA}
-${refImageRule}
-
-${CARD_FRAME_RULE}
-${styleBlock}
-
-[CONTENT TO RENDER]
-${body.prompt}
-
-Background: ${bgColor} gradient. Clean readable Korean font.
-⛔ No hashtags, watermarks, logos. Do NOT render instruction labels.`.trim();
-}
-
-/** Stage 1: Flash용 — 일러스트/배경만 (텍스트 없이) */
-function buildCardNewsIllustrationPrompt(body: ImageRequestBody): string {
-  const style = body.imageStyle || 'illustration';
-  const styleBlock = buildCardStyleBlock(style);
-  const hasRefImage = !!body.referenceImage;
-
-  const visualMatch = body.prompt.match(/비주얼:\s*([^\n]+)/i);
-  const visual = visualMatch?.[1]?.trim() || '';
-  const bgMatch = body.prompt.match(/배경색:\s*(#[A-Fa-f0-9]{3,6})/i);
-  const bgColor = bgMatch?.[1] || '#E8F4FD';
-  const tmplMatch = body.prompt.match(/\[디자인 템플릿:[^\]]*\][\s\S]*/m);
-  const templateBlock = tmplMatch?.[0] || '';
-
-  const refImageRule = hasRefImage ? `
-🔒 [STYLE CLONE] A reference image is attached.
-Clone its EXACT design: same background color/gradient, same illustration style, same layout, same decorative elements.
-Change ONLY the illustration subject.` : '';
-
-  return `[ROLE] Korean medical card news BACKGROUND DESIGNER.
-[GOAL] 1:1 square (1080x1080px) card background image.
-[CRITICAL] Generate ONLY the background and illustration. DO NOT render ANY text, letters, words, or characters.
-
-${refImageRule}
-
-🚫 ABSOLUTE RULE: ZERO TEXT IN THIS IMAGE
-- No Korean text, no English text, no numbers, no letters
-- No title, no subtitle, no description, no labels
-- No watermarks, no logos, no brand names
-- The image must be PURE VISUAL — illustration and background ONLY
-
-[LAYOUT ZONES — leave space for text overlay later]
-- Top 15%: clean background (subtitle will be added later)
-- Center 30%: clean background (main title will be added later)
-- Bottom 40%: illustration/visual element here
-- Bottom 15%: clean background (description will be added later)
-
-${visual ? `[ILLUSTRATION] ${visual}` : ''}
-[BACKGROUND] ${bgColor} gradient, clean and minimal
-${CARD_FRAME_RULE}
-${styleBlock}
-${templateBlock}
-
-Generate a beautiful card background. NO TEXT WHATSOEVER.`.trim();
-}
-
-/** Stage 2: Pro용 — 기존 이미지 위에 한글 텍스트만 추가 */
-function buildCardNewsTextOverlayPrompt(body: ImageRequestBody): string {
-  const parseField = (text: string, key: string): string => {
-    const match = text.match(new RegExp(`${key}:\\s*"((?:[^"\\\\]|\\\\.)*)"`, 'i'))
-      || text.match(new RegExp(`${key}:\\s*([^\\n,]+)`, 'i'));
-    return match?.[1]?.trim().replace(/^["']|["']$/g, '') || '';
-  };
-
-  const subtitle = parseField(body.prompt, 'subtitle');
-  const mainTitle = parseField(body.prompt, 'mainTitle');
-  const description = parseField(body.prompt, 'description');
-
-  if (!subtitle && !mainTitle) return '';
-
-  return `[ROLE] Korean typography specialist. You add text to existing images.
-[GOAL] Take the attached image and add ONLY Korean text. Do NOT change the background, illustration, or any visual element.
-
-🔒 [IMAGE PRESERVATION — MOST IMPORTANT]
-The attached image is the final background. You MUST keep it EXACTLY as is:
-- Same background color, gradient, illustration
-- Same layout, decorative elements, everything
-- ONLY ADD text on top. Nothing else changes.
-
-🚨 [RENDER THIS EXACT KOREAN TEXT]
-${subtitle ? `SUBTITLE (small, top area, 14-16pt): "${subtitle}"` : ''}
-MAIN TITLE (large, bold, center area, 28-36pt): "${mainTitle}"
-${description ? `DESCRIPTION (small, below title, 12-14pt): "${description}"` : ''}
-
-[TEXT STYLE]
-- Clean, modern Korean sans-serif font
-- Title: bold, dark color (#1A1A1A or white depending on background)
-- Subtitle: lighter weight, slightly muted color
-- Description: small, muted color
-- All text horizontally centered
-- Ensure maximum readability against the background
-
-[QUALITY]
-- Every Korean character MUST be perfectly readable
-- If any character might be garbled, use fewer/shorter words
-- Text must be crisp and sharp, not blurry
-
-⛔ Do NOT add new visual elements, decorations, or change the background in any way.
-⛔ Do NOT add hashtags, watermarks, or placeholder text.`.trim();
-}
 
 // ── 이미지 카테고리 감지 (default 모드용) ──
 
@@ -454,15 +234,14 @@ const CATEGORY_DESIGN_HINTS: Record<string, string> = {
 interface ImageRequestBody {
   prompt: string;
   aspectRatio?: AspectRatio;
-  mode?: 'blog' | 'card_news' | 'default';
-  imageStyle?: string;       // card_news: illustration | photo | medical
+  mode?: 'blog' | 'default';
   logoInstruction?: string;
   hospitalInfo?: string;
   brandColors?: string;
   logoBase64?: string;
   calendarImage?: string;
-  referenceImage?: string;   // card_news: 참고 이미지 base64
-  quality?: 'fast' | 'premium';  // 기본 'fast' — 'premium'이면 2-Stage (card_news만 의미)
+  referenceImage?: string;
+  quality?: 'fast' | 'premium';
 }
 
 // ── 비임상 행동 감지 + 임상 구문 strip (옵션 A) ────────────────────────
@@ -580,7 +359,6 @@ export async function POST(request: NextRequest) {
   }
 
   const isBlogMode = body.mode === 'blog';
-  const isCardNewsMode = body.mode === 'card_news';
 
   const BLOG_IMAGE_RULE = `[BLOG ILLUSTRATION]
 Pure visual illustration for a blog body image — never a poster, flyer, infographic, or card news layout.
@@ -648,9 +426,7 @@ All people in the scene must have coherent, natural gazes. NO unfocused or empty
 - Avoid the specific failure mode of "doctor points at monitor, patient looks past the camera into empty space" — this looks unnatural and disengaged.
 - A single person alone may look at the camera, an object, or thoughtfully aside — that is fine. The coherence rule applies only when 2+ people share the frame.`;
 
-  const fullPrompt = isCardNewsMode
-    ? buildCardNewsPromptFull(body)
-    : isBlogMode
+  const fullPrompt = isBlogMode
     ? [
         BLOG_IMAGE_RULE,
         processedPrompt,
@@ -693,8 +469,6 @@ All people in the scene must have coherent, natural gazes. NO unfocused or empty
   // gpt-image-2 의 images.edit 는 2026-04-27 부터 SDK v6.34 에서 model validation 으로 거부됨
   // (openai-node 이슈 #1844). 현재는 generate 단일 호출 + 텍스트 힌트로 우회.
   // OpenAI 가 픽스하면 OPENAI_IMAGE_EDIT_ENABLED=1 환경변수 + edit 분기 활성화 가능 (TODO).
-  // (참고: isCardNewsMode/buildCardNewsIllustrationPrompt/buildCardNewsTextOverlayPrompt 함수는
-  //  edit 활성화 시 2-Stage 복원용으로 보존.)
   const editEnabled = process.env.OPENAI_IMAGE_EDIT_ENABLED === '1';
   const hasAttachment = !!body.referenceImage || !!body.logoBase64 || !!body.calendarImage;
   let promptForGenerate = fullPrompt;
@@ -705,7 +479,6 @@ All people in the scene must have coherent, natural gazes. NO unfocused or empty
     if (body.calendarImage) hints.push('Calendar reference image attached — follow the date-weekday placement strictly per the [정확한 달력 데이터] block above.');
     promptForGenerate = `${fullPrompt}\n\n[ATTACHED IMAGE CONTEXT]\n${hints.join('\n')}`;
   }
-  // (isCardNewsMode + premium quality 는 quality='high' 로 자동 매핑 — 기존 2-Stage 우회.)
 
   // ── OpenAI 호출 + 멀티키 로테이션 ──
   // 🛑 INVARIANT — per-key timeout = 120_000 ms. 절대 줄이지 말 것.

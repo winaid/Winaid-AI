@@ -3,7 +3,6 @@
  *
  * 의료광고법 위반 콘텐츠 다운로드 override 토큰 발급.
  *
- * ADR-2 (docs/decisions/CARDNEWS_HARDBLOCK_UX.md) Option B 채택에 따라
  * 사용자가 클라이언트 모달에서 "동의하고 다운로드" 클릭 시 호출.
  *
  * 동작:
@@ -45,7 +44,7 @@ interface RequestBody {
   violation_type: string;
   /** 위반 컨텍스트 텍스트 — 200자 초과 시 server-side 절단 (PII 누설 방지) */
   violation_text?: string;
-  /** 카드뉴스 post id — 있으면 추적 (저장 전 게스트는 NULL) */
+  /** 콘텐츠 post id — 있으면 추적 (저장 전 게스트는 NULL) */
   content_id?: string;
 }
 
