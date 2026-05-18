@@ -137,6 +137,24 @@ interface CrawlOptions {
   subpageLimit?: number; // 기본 3
 }
 
+/**
+ * Error.cause 체인을 따라가며 메시지 합치기.
+ * undici fetch 실패는 message='fetch failed' 만 노출, 진짜 원인 (DNS/SSL/refused)은
+ * .cause 에 들어있음. 분류기가 정확히 매칭하려면 root cause message 까지 필요.
+ */
+function getCauseChainMessage(err: unknown): string {
+  const parts: string[] = [];
+  let current: unknown = err;
+  let depth = 0;
+  while (current && depth < 5) {
+    const m = (current as { message?: string })?.message;
+    if (m) parts.push(m);
+    current = (current as { cause?: unknown })?.cause;
+    depth++;
+  }
+  return parts.join(' / ');
+}
+
 export async function crawlSite(targetUrl: string, options: CrawlOptions = {}): Promise<CrawlResult> {
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const subpageLimit = options.subpageLimit ?? 1;
@@ -144,9 +162,19 @@ export async function crawlSite(targetUrl: string, options: CrawlOptions = {}): 
   const parsedUrl = new URL(targetUrl);
   const origin = parsedUrl.origin;
 
-  // 1) 메인 페이지
-  const res = await fetchWithTimeout(targetUrl, timeoutMs);
+  // 1) 메인 페이지 — fetch 실패를 cause 체인 기반으로 분류 (SSL / DNS / FETCH_FAILED)
+  let res: Response;
+  try {
+    res = await fetchWithTimeout(targetUrl, timeoutMs);
+  } catch (fetchErr) {
+    const msg = getCauseChainMessage(fetchErr);
+    if (/aborted|timeout/i.test(msg)) throw new Error('TIMEOUT');
+    if (/CERT_|SSL|TLS|certificate|self.?signed|unable to verify/i.test(msg)) throw new Error('SSL_ERROR');
+    if (/ENOTFOUND|EAI_AGAIN|getaddrinfo/i.test(msg)) throw new Error('DNS_ERROR');
+    throw new Error(`FETCH_FAILED:${msg.slice(0, 120)}`);
+  }
   if (!res.ok) {
+    if (res.status === 403 || res.status === 429) throw new Error(`BOT_BLOCKED:${res.status}`);
     throw new Error(`UNREACHABLE:${res.status}`);
   }
   // charset 자동 감지 — 한국 사이트 (egowoon 등) 가 EUC-KR / CP949 인 경우
