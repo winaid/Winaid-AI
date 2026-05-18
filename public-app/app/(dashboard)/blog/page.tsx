@@ -19,6 +19,8 @@ import { stripDoctype } from '../../../lib/htmlUtils';
 import { sanitizeHtml } from '../../../lib/sanitize';
 import { downloadWord, downloadPDF } from '../../../lib/blogExport';
 import { ImageActionModal, ImageRegenModal } from '../../../components/ImageRegenModal';
+import ImageReplaceModal from '../../../components/blog/ImageReplaceModal';
+import ImageInsertModal from '../../../components/ImageInsertModal';
 import { analyzeHospitalKeywords, loadMoreKeywords, checkKeywordRankings, MAX_KEYWORDS, type KeywordStat, type KeywordRankResult } from '../../../lib/keywordAnalysisService';
 import { analyzeClinicContent, type ClinicContext } from '../../../lib/clinicContextService';
 import { BLOG_STAGES, BLOG_MESSAGE_POOL, MSG_ROTATION_INTERVAL } from './blogConstants';
@@ -402,6 +404,23 @@ function BlogForm() {
   const [displayStage, setDisplayStage] = useState<number>(0);
   const [rotationIdx, setRotationIdx] = useState(0);
   const rotationTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // ── 양 앱 lockstep (next-app 의 BlogResultArea 가 요구) ──
+  // 생성 시작 시각 / 예상 총 소요 — 진행률 바 / ETA 표시용.
+  // 본 PR 에선 default 0 — BlogResultArea 가 0 이면 ETA UI skip.
+  const [generationStartTime] = useState<number>(0);
+  const [estimatedTotalSeconds] = useState<number>(0);
+
+  // ── 양 앱 lockstep: ImageReplaceModal / ImageInsertModal state ──
+  // 라이브러리 이미지 교체 — 본문 내 img / placeholder 클릭 시 모달 오픈.
+  const [replaceModalOpen, setReplaceModalOpen] = useState(false);
+  const [replaceSlotIndex, setReplaceSlotIndex] = useState<number | null>(null);
+  const [replaceCurrentUrl, setReplaceCurrentUrl] = useState<string | undefined>(undefined);
+  // 단락 hover [+] / placeholder 클릭 — 라이브러리/AI 2탭 모달.
+  const [insertModalOpen, setInsertModalOpen] = useState(false);
+  const [insertTargetElement, setInsertTargetElement] = useState<HTMLElement | null>(null);
+  const [insertMode, setInsertMode] = useState<'after' | 'replace'>('after');
+  const [insertHintText, setInsertHintText] = useState('');
 
   // old GenerateWorkspace.tsx 동일: displayStage 변경 시 로테이션 리셋 + 타이머 순환
   useEffect(() => {
@@ -1735,6 +1754,169 @@ JSON 형식으로 응답해주세요.`;
     }
   };
 
+  // ── 양 앱 lockstep: 결과 영역 클릭 → ImageReplaceModal 오픈 ──
+  // 본문 내 <img data-image-index> 또는 [data-img-slot] 클릭 시 모달 오픈.
+  // next-app 의 imageSourceMode === 'ai' 분기는 public-app 에서 ImageSourceMode
+  // state 부재라 제거 (필요 시 별도 PR 에서 도입).
+  const handleResultClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    const img = target.closest('img[data-image-index]') as HTMLImageElement | null;
+    const placeholder = target.closest('[data-img-slot]') as HTMLElement | null;
+
+    let slotIndex: number | null = null;
+    let currentUrl: string | undefined = undefined;
+    if (img) {
+      slotIndex = Number(img.getAttribute('data-image-index'));
+      currentUrl = img.src;
+    } else if (placeholder) {
+      slotIndex = Number(placeholder.getAttribute('data-img-slot'));
+    }
+
+    if (slotIndex !== null && !Number.isNaN(slotIndex)) {
+      setReplaceSlotIndex(slotIndex);
+      setReplaceCurrentUrl(currentUrl);
+      setReplaceModalOpen(true);
+    }
+  };
+
+  function isSafeImageUrl(url: string): boolean {
+    try {
+      const parsed = new URL(url, window.location.href);
+      if (!['http:', 'https:', 'data:'].includes(parsed.protocol)) return false;
+      if (parsed.protocol === 'data:' && !parsed.pathname.startsWith('image/')) return false;
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  // ImageReplaceModal — 라이브러리 이미지 선택 시 본문 내 해당 슬롯 교체.
+  const handleImageReplace = (selected: HospitalImage) => {
+    if (replaceSlotIndex === null) return;
+    if (!selected.publicUrl || !isSafeImageUrl(selected.publicUrl)) {
+      console.warn('[image] unsafe publicUrl rejected:', selected.publicUrl?.slice(0, 80));
+      return;
+    }
+    const idx = replaceSlotIndex;
+    setGeneratedContent((prev) => {
+      if (!prev) return prev;
+      const safeAlt = (selected.altText || '').replace(/"/g, '&quot;');
+      const newImg = `<img src="${selected.publicUrl}" alt="${safeAlt}" data-image-index="${idx}" style="max-width:100%;height:auto;border-radius:12px;" />`;
+
+      const imgRegex = new RegExp(`<img[^>]*data-image-index="${idx}"[^>]*\\/?>`, 'i');
+      if (imgRegex.test(prev)) {
+        return prev.replace(imgRegex, newImg);
+      }
+
+      // case 1: 라이브러리 미매칭 placeholder — outer wrapper + inner div(data-img-slot)
+      const phRegex1 = new RegExp(
+        `<div[^>]*class="content-image-wrapper"[^>]*>\\s*<div[^>]*data-img-slot="${idx}"[^>]*>[\\s\\S]*?<\\/div>\\s*<\\/div>`
+      );
+      if (phRegex1.test(prev)) {
+        return prev.replace(phRegex1, `<div class="content-image-wrapper">${newImg}</div>`);
+      }
+      // case 2: hybrid AI 생성중 placeholder — outer div 가 class+data-img-slot 을 모두 가짐
+      const phRegex2 = new RegExp(
+        `<div[^>]*class="content-image-wrapper"[^>]*data-img-slot="${idx}"[^>]*>[\\s\\S]*?<\\/div>\\s*<\\/div>`
+      );
+      if (phRegex2.test(prev)) {
+        return prev.replace(phRegex2, `<div class="content-image-wrapper">${newImg}</div>`);
+      }
+
+      return prev;
+    });
+  };
+
+  // 단락 hover [+] / placeholder 클릭 — 모드별 이미지 삽입 모달 오픈
+  const handleRequestImageInsert = useCallback((target: HTMLElement, mode: 'after' | 'replace') => {
+    setInsertTargetElement(target);
+    setInsertMode(mode);
+    const hint = (target.textContent || '').trim().slice(0, 60);
+    setInsertHintText(hint);
+    setInsertModalOpen(true);
+  }, []);
+
+  // 이미지 삽입 실행 — after: 단락 뒤 추가, replace: placeholder wrapper 교체
+  const handleInsertImage = useCallback((imageUrl: string, alt: string, prompt?: string) => {
+    if (!isSafeImageUrl(imageUrl)) {
+      console.warn('[insert] unsafe imageUrl rejected:', imageUrl.slice(0, 80));
+      return;
+    }
+    if (!insertTargetElement) return;
+    const editor = insertTargetElement.closest('article[contenteditable]') as HTMLElement | null;
+    if (!editor) return;
+    const existingIndices = Array.from(editor.querySelectorAll('[data-image-index]'))
+      .map(el => Number(el.getAttribute('data-image-index')))
+      .filter(n => !Number.isNaN(n));
+    const newIdx = existingIndices.length > 0 ? Math.max(...existingIndices) + 1 : 1;
+    const slotAttr = insertMode === 'replace'
+      ? (insertTargetElement.getAttribute('data-img-slot')
+        ?? insertTargetElement.querySelector('[data-img-slot]')?.getAttribute('data-img-slot'))
+      : null;
+    const slotIdx = slotAttr ? Number(slotAttr) : newIdx;
+    const safeAlt = alt.replace(/"/g, '&quot;');
+    const html = `<div class="content-image-wrapper"><img src="${imageUrl}" alt="${safeAlt}" data-image-index="${slotIdx}" style="max-width:100%;border-radius:12px;" /></div>`;
+
+    if (insertMode === 'replace') {
+      insertTargetElement.outerHTML = html;
+    } else {
+      insertTargetElement.insertAdjacentHTML('afterend', html);
+    }
+
+    setGeneratedContent(editor.innerHTML);
+    if (prompt) {
+      setSavedImagePrompts(prev => {
+        const next = [...prev];
+        next[newIdx - 1] = prompt;
+        return next;
+      });
+    }
+    setInsertTargetElement(null);
+    console.info(`[BLOG] 이미지 ${insertMode === 'replace' ? '교체' : '삽입'}: index=${newIdx} ${prompt ? '(AI 생성)' : '(라이브러리)'}`);
+  }, [insertTargetElement, insertMode]);
+
+  // ImageInsertModal AI 탭 프롬프트 추천 — 단락 텍스트 + 전체 블로그 컨텍스트 기반
+  const handleInsertModalRecommend = useCallback(async (paragraphHint: string): Promise<string> => {
+    let bodyText = '';
+    if (insertTargetElement) {
+      const editor = insertTargetElement.closest('article[contenteditable]') as HTMLElement | null;
+      if (editor) bodyText = editor.innerText.slice(0, 2000);
+    }
+    if (!bodyText && generatedContent) {
+      bodyText = generatedContent.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 2000);
+    }
+
+    const imgPromptText = `Write ONE English image prompt (40-80 words) for an image to be inserted in the Korean hospital blog below.
+
+[PARAGRAPH HINT - where the image will be placed]
+${paragraphHint}
+
+Describe in this order: location (where in the clinic) → people (who, Korean, what expression) → action (what they're doing) → props (surrounding objects) → atmosphere (lighting, color tone).
+Camera angle: eye-level, slightly elevated, or over-the-shoulder. No direct eye contact with the camera.
+
+Do NOT include "no text" / "no watermark" rules — those are added by the server.
+
+[BLOG CONTENT]
+${bodyText}
+
+Output ONLY the prompt. No explanation.`;
+
+    const res = await authFetch('/api/llm', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        task: 'blog_image_prompt',
+        prompt: imgPromptText,
+        systemInstruction: 'Medical blog image prompt specialist. Output only the prompt.',
+        temperature: 0.7,
+        maxOutputTokens: 500,
+      }),
+    });
+    if (!res.ok) throw new Error(`LLM ${res.status}`);
+    const data = await res.json() as { text?: string };
+    return (data.text || '').trim();
+  }, [insertTargetElement, generatedContent]);
+
   // ── 인라인 채팅 수정 (결과 화면에서 바로 수정) ──
   const handleChatRefine = useCallback(async () => {
     if (!chatInput.trim() || !generatedContent || isChatRefining) return;
@@ -2081,11 +2263,19 @@ Output ONLY the prompt. No explanation.`;
         settingsToast={settingsToast}
       />
 
-      {/* ── 결과 영역 — BlogResultArea 컴포넌트로 분리 ── */}
+      {/* ── 결과 영역 — BlogResultArea 컴포넌트로 분리 ──
+          BlogResultArea 내부 root div 의 onClick (onResultClick prop) 외에
+          wrapper 도 함께 onClick 을 가져 belt-and-suspenders.
+          React onClick bubble 이 정상이지만, 환경에 따라 회귀 보고 발생 — 양쪽
+          모두 wiring 해 안전망. */}
+      <div onClick={handleResultClick} style={{ display: 'contents' }}>
       <BlogResultArea
+        onResultClick={handleResultClick}
         isGenerating={isGenerating}
         displayStage={displayStage}
         rotationIdx={rotationIdx}
+        generationStartTime={generationStartTime}
+        estimatedTotalSeconds={estimatedTotalSeconds}
         error={error}
         onDismissError={() => setError(null)}
         isRetryable={isRetryable}
@@ -2109,7 +2299,10 @@ Output ONLY the prompt. No explanation.`;
         setChatInput={setChatInput}
         isChatRefining={isChatRefining}
         onChatRefine={handleChatRefine}
+        onContentChange={setGeneratedContent}
+        onRequestImageInsert={handleRequestImageInsert}
       />
+      </div>
 
       {/* ── 블로그 이미지 액션 모달 (다운로드/재생성 선택) ── */}
       <ImageActionModal
@@ -2134,6 +2327,30 @@ Output ONLY the prompt. No explanation.`;
         onRecommend={handleRecommendPrompt}
         imageHistory={imageHistory[selectedImgIndex] || []}
         onSelectHistoryImage={(url) => { handleSelectHistoryImage(selectedImgIndex, url); setImgRegenModalOpen(false); }}
+      />
+
+      {/* ── 라이브러리 이미지 교체 모달 (본문 내 이미지 클릭 시) ── */}
+      <ImageReplaceModal
+        open={replaceModalOpen}
+        onClose={() => {
+          setReplaceModalOpen(false);
+          setReplaceSlotIndex(null);
+          setReplaceCurrentUrl(undefined);
+        }}
+        onSelect={handleImageReplace}
+        currentImageUrl={replaceCurrentUrl}
+      />
+
+      {/* ── 단락 hover [+] / placeholder 클릭 → 이미지 삽입 모달 (라이브러리/AI) ── */}
+      <ImageInsertModal
+        open={insertModalOpen}
+        onClose={() => { setInsertModalOpen(false); setInsertTargetElement(null); }}
+        onInsert={handleInsertImage}
+        category={category || ''}
+        topic={topic}
+        hospitalName={hospitalName}
+        defaultPromptHint={insertHintText}
+        onRecommendPrompt={handleInsertModalRecommend}
       />
     </div>
   );

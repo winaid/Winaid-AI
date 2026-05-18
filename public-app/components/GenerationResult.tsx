@@ -3,7 +3,9 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import type { BlogSection } from '@winaid/blog-core';
 import { sanitizeHtml } from '../lib/sanitize';
+import ImageInsertButton from './ImageInsertButton';
 import SelectionRefineToolbar from './SelectionRefineToolbar';
+import { authFetch } from '../lib/authFetch';
 
 // ── 간이 Markdown → HTML 변환 ──
 
@@ -203,7 +205,10 @@ function BlogSectionPanel({
               : section.title;
         const charLen = section.html.replace(/<[^>]*>/g, '').replace(/\s/g, '').length;
         const isRegenerating = regeneratingSection === section.index;
-        const isDisabled = regeneratingSection !== null && !isRegenerating;
+        // intro 섹션 재생성 임시 비활성화 — replaceSectionHtml 의 빈 title 매칭 + race 로
+        // 본문 일부 손실 회귀. 시연 안정화 후 fix → 본 가드 제거 예정.
+        const isIntroSection = section.type === 'intro';
+        const isDisabled = (regeneratingSection !== null && !isRegenerating) || isIntroSection;
 
         return (
           <div key={section.index} className="p-3 rounded-lg text-sm bg-slate-50 hover:bg-slate-100 transition-colors">
@@ -215,6 +220,7 @@ function BlogSectionPanel({
               <button
                 onClick={() => onRegenerate(section.index)}
                 disabled={isRegenerating || isDisabled}
+                title={isIntroSection ? '도입부 재생성은 일시 비활성화 (회귀 fix 진행 중)' : ''}
                 className={`ml-auto text-xs px-3 py-1 rounded-md font-medium transition-all ${
                   isRegenerating
                     ? 'bg-blue-100 text-blue-600 animate-pulse'
@@ -258,6 +264,10 @@ interface ResultPanelProps {
   onDownloadPDF?: () => void;
   onImageRegenerate?: (imageIndex: number) => void;
   regeneratingImage?: number | null;
+  /** contentEditable 편집 내용을 부모 state 로 동기화 (debounce 500ms) */
+  onContentChange?: (html: string) => void;
+  /** 단락 hover [+] 버튼 / placeholder 클릭 시 호출 — mode 로 삽입 방식 분기 */
+  onRequestImageInsert?: (target: HTMLElement, mode: 'after' | 'replace') => void;
 }
 
 export function ResultPanel({
@@ -275,6 +285,8 @@ export function ResultPanel({
   onDownloadPDF,
   onImageRegenerate,
   regeneratingImage,
+  onContentChange,
+  onRequestImageInsert,
 }: ResultPanelProps) {
   const [copyFeedback, setCopyFeedback] = useState(false);
   const [activeTab, setActiveTab] = useState<'preview' | 'html'>('preview');
@@ -283,10 +295,30 @@ export function ResultPanel({
   const [linkUrl, setLinkUrl] = useState('');
   const editorRef = useRef<HTMLDivElement>(null);
 
+  // ── contentEditable 편집 → 부모 state 동기화 (debounce 500ms) ──
+  const internalChangeRef = useRef(false);
+  const debounceTimerRef = useRef<number | null>(null);
+  const onContentChangeRef = useRef(onContentChange);
+  useEffect(() => { onContentChangeRef.current = onContentChange; }, [onContentChange]);
+
   // ── 서식 명령 ──
   const execFormat = useCallback((command: string, value?: string) => {
     editorRef.current?.focus();
     document.execCommand(command, false, value);
+  }, []);
+
+  const handleContentInput = useCallback(() => {
+    if (debounceTimerRef.current !== null) window.clearTimeout(debounceTimerRef.current);
+    debounceTimerRef.current = window.setTimeout(() => {
+      if (!editorRef.current) return;
+      internalChangeRef.current = true;
+      onContentChangeRef.current?.(editorRef.current.innerHTML);
+    }, 500);
+  }, []);
+
+  // cleanup: unmount 시 debounce timer 제거
+  useEffect(() => () => {
+    if (debounceTimerRef.current !== null) window.clearTimeout(debounceTimerRef.current);
   }, []);
 
   const handleInsertLink = useCallback(() => {
@@ -341,6 +373,17 @@ export function ResultPanel({
     () => sanitizeHtml(isHtml ? content : markdownToHtml(content)),
     [content, isHtml],
   );
+
+  // 외부 content 변경 시에만 innerHTML 설정 — 내부 편집(onInput)은 skip
+  useEffect(() => {
+    if (internalChangeRef.current) {
+      internalChangeRef.current = false;
+      return;
+    }
+    if (!editorRef.current) return;
+    editorRef.current.innerHTML = renderedHtml;
+  }, [renderedHtml]);
+
   const charCount = useMemo(() => content.replace(/<[^>]+>/g, '').replace(/\s/g, '').length, [content]);
 
   const charLabel = charCount < 1500 ? '짧음' : charCount < 4000 ? '적당' : '길음';
@@ -550,7 +593,7 @@ export function ResultPanel({
               .rp-preview h1:not([class]) { font-size: 32px; font-weight: 900; margin: 30px 0 15px; line-height: 1.4; color: #1a1a1a; }
               .rp-preview h2 { font-size: 21px; font-weight: bold; margin: 30px 0 15px 0; padding: 12px 0 12px 16px; border-left: 4px solid #787fff; color: #1e40af; line-height: 1.5; }
               .rp-preview h3 { font-size: 19px; font-weight: bold; margin: 30px 0 15px 0; padding: 12px 0 12px 16px; border-left: 4px solid #787fff; color: #1e40af; line-height: 1.5; }
-              .rp-preview p:not([class]) { font-size: 17px; color: #333; margin-bottom: 25px; line-height: 1.85; }
+              .rp-preview p:not([class]) { font-size: 17px; color: #333; margin-bottom: 8px; line-height: 1.85; }
 
               /* ── content-image-wrapper ── */
               .rp-preview .content-image-wrapper { margin: 30px 0; text-align: center; }
@@ -610,20 +653,46 @@ export function ResultPanel({
               contentEditable
               suppressContentEditableWarning
               className={`rp-preview rp-theme-${cssTheme} max-w-none outline-none`}
-              dangerouslySetInnerHTML={{ __html: renderedHtml }}
+              onInput={handleContentInput}
               onClick={(e) => {
                 const target = e.target as HTMLElement;
+
+                // 1) placeholder 클릭 (라이브러리 매칭 실패 자리) — 이미지 클릭보다 우선
+                const slot = target.closest('[data-img-slot]') as HTMLElement | null;
+                if (slot && onRequestImageInsert) {
+                  e.preventDefault();
+                  // 부모 onClick(handleResultClick) 의 ImageReplaceModal 중복 오픈 차단
+                  e.stopPropagation();
+                  const wrapper = slot.closest('.content-image-wrapper') as HTMLElement | null;
+                  onRequestImageInsert(wrapper || slot, 'replace');
+                  return;
+                }
+
+                // 2) 기존 이미지 클릭 → 재생성
                 if (target.tagName === 'IMG' && onImageRegenerate) {
                   const idx = target.getAttribute('data-image-index');
                   if (idx) {
                     e.preventDefault();
+                    e.stopPropagation();
                     onImageRegenerate(Number(idx));
                   }
                 }
               }}
             />
+            {onRequestImageInsert && (
+              <ImageInsertButton
+                editorRef={editorRef}
+                onInsert={(afterElement) => onRequestImageInsert(afterElement, 'after')}
+              />
+            )}
             {/* 인라인 선택 다듬기 — 드래그 선택 → ✨ 부유 버튼 → 옵션 메뉴 → Preview */}
-            <SelectionRefineToolbar editorRef={editorRef} />
+            <SelectionRefineToolbar
+              editorRef={editorRef}
+              fetchFn={authFetch}
+              onRefined={() => {
+                if (editorRef.current) onContentChangeRef.current?.(editorRef.current.innerHTML);
+              }}
+            />
             {/* 이미지 재생성 오버레이는 useEffect로 해당 이미지 위에 표시 */}
           </div>
         )}
