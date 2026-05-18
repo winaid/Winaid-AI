@@ -8,6 +8,17 @@
 
 import type { ClinicContext } from './clinicContextService';
 
+/**
+ * 키워드 포화도 레벨 — UI 의 SaturationBadge 표시용.
+ *   blue : 파란불 (블로그 발행량 적음 — 노려볼 만함)
+ *   normal : 보통
+ *   red : 빨간불 (포화 — 새 글 노출 어려움)
+ *
+ * 양 앱 lockstep (BlogFormPanel.tsx 가 본 타입 import). next-app 의 동일 export 와
+ * 정합. public-app 의 saturationLevel 계산 로직은 후속 PR — 현재는 type 만.
+ */
+export type SaturationLevel = 'blue' | 'normal' | 'red';
+
 export interface KeywordStat {
   keyword: string;
   monthlySearchVolume: number;
@@ -15,6 +26,12 @@ export interface KeywordStat {
   monthlyMobileVolume: number;
   blogPostCount: number;
   saturation?: number;
+  /**
+   * 포화도 레벨 (UI 배지용) — public-app 은 현재 미계산 (undefined). next-app 은
+   * assessSaturationLevel() 로 채움. BlogFormPanel 의 SaturationBadge 는 undefined
+   * 면 null 렌더 → public-app 에선 배지 자동 숨김.
+   */
+  saturationLevel?: SaturationLevel;
 }
 
 export interface KeywordAnalysisResult {
