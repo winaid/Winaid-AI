@@ -41,6 +41,7 @@ const DEFAULT_ROUTING: Record<LLMTaskKind, RouteDefinition> = {
   press:              { provider: 'claude', model: 'claude-sonnet-4-6',         batchPreferred: true  },
   refine_auto:        { provider: 'claude', model: 'claude-haiku-4-5-20251001', batchPreferred: false },
   refine_chat:        { provider: 'claude', model: 'claude-sonnet-4-6',         batchPreferred: false },
+  refine_selection:   { provider: 'claude', model: 'claude-sonnet-4-6',         batchPreferred: false },
   card_news:          { provider: 'claude', model: 'claude-haiku-4-5-20251001', batchPreferred: false },
   style_learn:        { provider: 'claude', model: 'claude-sonnet-4-6',         batchPreferred: true  },
   score_crawled_post: { provider: 'claude', model: 'claude-haiku-4-5-20251001', batchPreferred: true  },
@@ -71,6 +72,7 @@ const GEMINI_FALLBACK_MODEL: Record<LLMTaskKind, string> = {
   press:              'gemini-3.1-pro-preview',
   refine_auto:        'gemini-3.1-flash-lite-preview',
   refine_chat:        'gemini-3.1-flash-lite-preview',
+  refine_selection:   'gemini-3.1-pro-preview',
   card_news:          'gemini-3.1-flash-lite-preview',
   style_learn:        'gemini-3.1-pro-preview',
   score_crawled_post: 'gemini-3.1-flash-lite-preview',
@@ -105,6 +107,7 @@ function exhaustiveCheck(task: LLMTaskKind): void {
     case 'press':
     case 'refine_auto':
     case 'refine_chat':
+    case 'refine_selection':
     case 'card_news':
     case 'style_learn':
     case 'score_crawled_post':

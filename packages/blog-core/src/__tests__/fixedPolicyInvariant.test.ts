@@ -152,6 +152,63 @@ test('docs/INVARIANTS.md: P-1 / P-2 cross-reference 존재', () => {
   assert.ok(md.includes('P-2'), 'INVARIANTS.md 에 P-2 cross-reference 누락');
 });
 
+// ── refine-selection 신규 라우트 invariant (양 앱 lockstep) ──────────────
+
+test('양 앱 refine-selection route: maxDuration ≥ 60 (텍스트 LLM)', () => {
+  // 본 라우트는 P-2 (이미지 라우트 300s) 직접 대상 아님. 텍스트 LLM 만이라 60s 충분.
+  // 회귀 가드: maxDuration 미선언 또는 < 60 차단.
+  for (const app of ['next-app', 'public-app']) {
+    const p = resolve(REPO_ROOT, `${app}/app/api/refine-selection/route.ts`);
+    if (!existsSync(p)) continue;
+    const src = readFileSync(p, 'utf-8');
+    const m = src.match(/export\s+const\s+maxDuration\s*=\s*(\d+)/);
+    assert.ok(m, `${app}: refine-selection maxDuration 선언 누락`);
+    const val = parseInt(m![1], 10);
+    assert.ok(val >= 60, `${app}: refine-selection maxDuration=${val} 인데 ≥60 권장`);
+  }
+});
+
+test('next-app refine-selection: 인증 가드 (checkAuth) 존재', () => {
+  // P-1 invariant — admin cookie 통과 자동 면제. checkAuth 가 admin_session 보유 시 OK 반환.
+  const p = resolve(REPO_ROOT, 'next-app/app/api/refine-selection/route.ts');
+  if (!existsSync(p)) return;
+  const src = readFileSync(p, 'utf-8');
+  assert.ok(/checkAuth\s*\(/.test(src), 'next-app refine-selection: checkAuth 호출 누락');
+});
+
+test('public-app refine-selection: 게스트 차단 (resolveImageOwner === guest → 401)', () => {
+  // refine-selection 은 0.1 credit 차감 대상 — 식별된 user 필요. 게스트 차단 invariant.
+  const p = resolve(REPO_ROOT, 'public-app/app/api/refine-selection/route.ts');
+  if (!existsSync(p)) return;
+  const src = readFileSync(p, 'utf-8');
+  assert.ok(
+    /owner\s*===\s*'guest'/.test(src),
+    'public-app refine-selection: 게스트 차단 분기 누락',
+  );
+  assert.ok(/401/.test(src), 'public-app refine-selection: 401 응답 누락');
+});
+
+test('양 앱 refine-selection: 응답 sanitize chain (stripPromptLeakage + applyContentFilters + sanitizeHtml)', () => {
+  for (const app of ['next-app', 'public-app']) {
+    const p = resolve(REPO_ROOT, `${app}/app/api/refine-selection/route.ts`);
+    if (!existsSync(p)) continue;
+    const src = readFileSync(p, 'utf-8');
+    assert.ok(/stripPromptLeakage/.test(src), `${app}: stripPromptLeakage 호출 누락`);
+    assert.ok(/applyContentFilters/.test(src), `${app}: applyContentFilters 호출 누락`);
+    assert.ok(/sanitizeHtml/.test(src), `${app}: sanitizeHtml 호출 누락`);
+  }
+});
+
+test('양 앱 refine-selection: customInstruction injection guard (stripInjectionForUse + sanitizePromptInput)', () => {
+  for (const app of ['next-app', 'public-app']) {
+    const p = resolve(REPO_ROOT, `${app}/app/api/refine-selection/route.ts`);
+    if (!existsSync(p)) continue;
+    const src = readFileSync(p, 'utf-8');
+    assert.ok(/stripInjectionForUse/.test(src), `${app}: stripInjectionForUse 누락 (인젝션 가드)`);
+    assert.ok(/sanitizePromptInput/.test(src), `${app}: sanitizePromptInput 누락 (200자 cap)`);
+  }
+});
+
 // eslint-disable-next-line no-console
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) {

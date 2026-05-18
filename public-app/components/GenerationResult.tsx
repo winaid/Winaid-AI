@@ -3,6 +3,7 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import type { BlogSection } from '@winaid/blog-core';
 import { sanitizeHtml } from '../lib/sanitize';
+import SelectionRefineToolbar from './SelectionRefineToolbar';
 
 // ── 간이 Markdown → HTML 변환 ──
 
@@ -626,6 +627,8 @@ export function ResultPanel({
                 }
               }}
             />
+            {/* 인라인 선택 다듬기 — 드래그 선택 → ✨ 부유 버튼 → 옵션 메뉴 → Preview */}
+            <SelectionRefineToolbar editorRef={editorRef} />
             {/* 이미지 재생성 오버레이는 useEffect로 해당 이미지 위에 표시 */}
           </div>
         )}

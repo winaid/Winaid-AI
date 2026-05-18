@@ -15,6 +15,7 @@ import {
   buildBlogSectionPromptV3,
   buildBlogReviewPrompt,
 } from '../blogPrompt';
+import { buildRefineSelectionPrompt } from '../refineSelectionPrompt';
 
 let passed = 0;
 let failed = 0;
@@ -122,6 +123,21 @@ test('review_criteria 에 prose_flow 항목 포함', () => {
   assert.ok(
     prompt.userPrompt.includes('1시간 이상 지혈이 안 될 때'),
     'review_criteria 에 회귀 케이스 인용 누락',
+  );
+});
+
+test('drift-zero: buildRefineSelectionPrompt 가 COMMON_WRITING_STYLE 받음 (6번째 빌더)', () => {
+  // CLAUDE.md "5빌더 안전망" 의 6번째 빌더 — refine-selection 도 prose-flow 룰 본문 전달.
+  // 회귀 차단: 새 빌더가 COMMON_WRITING_STYLE 슬롯 1 에 누락된 채 머지되는 케이스.
+  const prompt = buildRefineSelectionPrompt({
+    selectedText: '시술 후 통증이 길어지면 병원에 연락해 주세요.',
+    surroundingContext: '(현재 단락) 시술 후 통증이 길어지면 병원에 연락해 주세요.',
+    option: 'shorter',
+  });
+  const merged = prompt.systemBlocks.map((b) => b.text).join('\n');
+  assert.ok(
+    merged.includes(REGRESSION_QUOTE),
+    'buildRefineSelectionPrompt 에 prose 룰 미전달 — 회귀 차단 실패',
   );
 });
 
