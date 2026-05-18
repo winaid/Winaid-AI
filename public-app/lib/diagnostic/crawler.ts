@@ -6,8 +6,18 @@
  */
 
 import * as cheerio from 'cheerio';
+import * as nodeHttps from 'node:https';
+import * as nodeHttp from 'node:http';
 // safeFetch 는 server-only (Node 'dns' / 'net') — relative path 직접 import.
 import { safeFetch, SsrfBlockedError } from '../../../packages/blog-core/src/utils/safeFetch';
+
+// node:http IncomingMessage 최소 인터페이스 — @types/node 없이 사용하기 위함
+interface NodeIncomingMessage {
+  statusCode?: number;
+  rawHeaders?: string[];
+  setEncoding(enc: string): void;
+  on(event: string, cb: (...args: unknown[]) => void): this;
+}
 import type { CrawlResult, CrawlImage, CrawlLink, CrawlHeading } from './types';
 import { checkRobotsTxt, checkSitemap, parseAiCrawlerPolicy, checkLlmsTxt } from './robotsSitemap';
 
@@ -15,8 +25,20 @@ import { checkRobotsTxt, checkSitemap, parseAiCrawlerPolicy, checkLlmsTxt } from
 const USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 
+// 만료·자체 서명 SSL 인증서 허용 Agent (한국 의료 도메인에 흔히 발생).
+// fetchInsecure 는 SSRF 우회 위험이 가장 높은 경로 — 본 모듈은 진단 대상 origin
+// (사용자가 명시적으로 입력한 site URL) 에 한정해 사용. redirect 를 manual 로
+// 처리해 hop 마다 사설 IP / 화이트리스트 재검증 (safeFetch HEAD probe).
+const insecureHttpsAgent = new nodeHttps.Agent({ rejectUnauthorized: false });
+
 const DEFAULT_TIMEOUT_MS = 6_000;
 const MAX_HTML_BYTES = 10 * 1024 * 1024;
+
+const BASE_HEADERS = {
+  'User-Agent': USER_AGENT,
+  Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'Accept-Language': 'ko,en-US;q=0.9,en;q=0.8',
+} as const;
 
 // ── 의료/치과 특화 키워드 ──────────────────────────────────
 
@@ -105,25 +127,142 @@ export async function decodeWithCharset(res: Response): Promise<string> {
 }
 
 /**
+ * node:https/http 기반 SSL-완화 fetch — 표준 fetch SSL 에러 후 fallback.
+ * redirect 추적 시 매 hop SSRF 재검증 (safeFetch HEAD probe — DNS / 사설 IP / link-local / IMDS 차단).
+ */
+async function fetchInsecure(targetUrl: string, timeoutMs: number): Promise<Response> {
+  let url = targetUrl;
+  const MAX_REDIRECTS = 3;
+  for (let i = 0; i <= MAX_REDIRECTS; i++) {
+    // hop 마다 SSRF 검증 — safeFetch HEAD probe 로 사설 IP / link-local 차단.
+    // SsrfBlockedError 만 propagate, 그 외 네트워크/SSL 은 통과 (본업: SSL 완화 GET).
+    try {
+      const probe = await safeFetch(url, { timeout: 2_000, method: 'HEAD', maxBytes: 1024, maxRedirects: 0 }).catch((e: unknown) => {
+        if (e instanceof SsrfBlockedError) throw e;
+        return null;
+      });
+      void probe;
+    } catch (e) {
+      if (e instanceof SsrfBlockedError) {
+        throw new Error(`SSRF_BLOCKED:${e.message.slice(0, 100)}`);
+      }
+    }
+
+    const parsed = new URL(url);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      throw new Error(`SSRF_BLOCKED:protocol_not_allowed:${parsed.protocol}`);
+    }
+    const isHttps = parsed.protocol === 'https:';
+
+    const { statusCode, headers, body } = await new Promise<{
+      statusCode: number;
+      headers: Record<string, string>;
+      body: string;
+    }>((resolve, reject) => {
+      const options = {
+        method: 'GET',
+        headers: { ...BASE_HEADERS },
+        ...(isHttps ? { agent: insecureHttpsAgent } : {}),
+      };
+
+      const onResponse = (res: NodeIncomingMessage) => {
+        let bodyStr = '';
+        let totalBytes = 0;
+        res.setEncoding('utf-8');
+        res.on('data', (chunk: unknown) => {
+          const s = String(chunk);
+          totalBytes += s.length;
+          if (totalBytes > MAX_HTML_BYTES) return;
+          bodyStr += s;
+        });
+        res.on('end', () => {
+          const flat: Record<string, string> = {};
+          const raw = res.rawHeaders ?? [];
+          for (let j = 0; j < raw.length; j += 2) {
+            flat[raw[j].toLowerCase()] = raw[j + 1];
+          }
+          resolve({ statusCode: res.statusCode ?? 200, headers: flat, body: bodyStr });
+        });
+        res.on('error', reject);
+      };
+
+      const req = isHttps
+        ? nodeHttps.request(url, options, onResponse)
+        : nodeHttp.request(url, options, onResponse);
+
+      req.setTimeout(timeoutMs, () => { req.destroy(); reject(new Error('Request timeout')); });
+      req.on('error', reject);
+      req.end();
+    });
+
+    if (statusCode >= 300 && statusCode < 400 && headers['location']) {
+      if (i >= MAX_REDIRECTS) throw new Error('SSRF_BLOCKED:max_redirects_exceeded');
+      const loc = headers['location'];
+      url = loc.startsWith('http') ? loc : new URL(loc, url).toString();
+      continue;
+    }
+
+    const respHeaders = new Headers();
+    for (const [k, v] of Object.entries(headers)) {
+      if (v) respHeaders.set(k, v);
+    }
+    return new Response(body, { status: statusCode, headers: respHeaders });
+  }
+  throw new Error('Too many redirects');
+}
+
+/**
  * SSRF-safe fetch wrapper — 사설 IP / IMDS / link-local 차단 + redirect 매 hop 재검증.
- * SsrfBlockedError 는 그대로 propagate (caller 가 401/500 분기 가능).
+ * 3단계 fallback:
+ *   1. safeFetch — 정상 HTTPS (SSRF-safe).
+ *   2. fetchInsecure — SSL 검증 완화 (만료/자체 서명 인증서 회복). hop-wise SSRF 재검증.
+ *   3. HTTP fallback — HTTPS 자체 실패 시 (HTTPS 미설정 사이트).
+ * SsrfBlockedError 는 어느 단계서든 즉시 propagate.
  */
 export async function fetchWithTimeout(
   url: string,
   timeoutMs: number = DEFAULT_TIMEOUT_MS,
   init?: RequestInit,
 ): Promise<Response> {
-  return safeFetch(url, {
+  const safeOptions = {
     ...init,
     timeout: timeoutMs,
     maxBytes: MAX_HTML_BYTES,
-    headers: {
-      'User-Agent': USER_AGENT,
-      Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      'Accept-Language': 'ko,en-US;q=0.9,en;q=0.8',
-      ...(init?.headers ?? {}),
-    },
-  });
+    headers: { ...BASE_HEADERS, ...(init?.headers ?? {}) },
+  };
+
+  // 1차: SSRF-safe fetch
+  try {
+    return await safeFetch(url, safeOptions);
+  } catch (rawErr) {
+    if (rawErr instanceof SsrfBlockedError) throw rawErr;
+    const msg = (rawErr as Error).message || '';
+
+    // 2차: SSL 에러 → node:https 검증 완화 재시도 (만료·자체 서명).
+    if (/CERT_|certificate|SSL|TLS|UNABLE_TO_VERIFY|ERR_TLS|self.?signed/i.test(msg)) {
+      console.warn(`[diagnostic] SSL relaxed retry: ${url} (${msg.slice(0, 80)})`);
+      try {
+        return await fetchInsecure(url, timeoutMs);
+      } catch (insecureErr) {
+        if ((insecureErr as Error).message?.startsWith('SSRF_BLOCKED:')) throw insecureErr;
+        // 완화도 실패 → HTTP fallback 으로 계속
+      }
+    }
+
+    // 3차: HTTPS 실패 → HTTP 재시도 (HTTPS 미설정 사이트).
+    if (url.startsWith('https://')) {
+      const httpUrl = url.replace(/^https:\/\//, 'http://');
+      console.warn(`[diagnostic] HTTPS failed, HTTP fallback: ${httpUrl} (${msg.slice(0, 80)})`);
+      try {
+        return await safeFetch(httpUrl, safeOptions);
+      } catch (httpErr) {
+        if (httpErr instanceof SsrfBlockedError) throw httpErr;
+        /* 원래 에러 throw */
+      }
+    }
+
+    throw rawErr;
+  }
 }
 
 // SsrfBlockedError 를 import 했지만 wrapper 자체 throw 만 하므로 명시적 사용은 caller 측.
