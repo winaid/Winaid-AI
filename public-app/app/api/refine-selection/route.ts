@@ -2,8 +2,8 @@
  * POST /api/refine-selection — 블로그 에디터 _선택 구간 다듬기_ (public-app 외부 출시용)
  *
  * 흐름:
- *   1. gateGuestRequest (IP rate limit, 분당 30회) + resolveImageOwner — 게스트는 401
- *      (refine-selection 은 로그인 후 가능. 0.1 credit 차감 대상이라 게스트 식별 불가능 → 차단)
+ *   1. gateGuestRequest (IP rate limit, 분당 30회) — 게스트 허용 (외부 사용자 접근성 우선).
+ *      credit 차감은 client-side localStorage counter (10회당 1) — 로그인 여부 무관 우회 가능.
  *   2. body 검증 + sanitize (sanitizePromptInput + sanitizeSourceContent + stripInjectionForUse)
  *   3. buildRefineSelectionPrompt → callLLM('refine_selection') — Claude Sonnet 4.6
  *   4. 응답 JSON parse → refined 필드 추출
@@ -77,15 +77,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: gate.error }, { status: gate.status });
   }
 
-  // 게스트 차단 — refine-selection 은 0.1 credit 차감 대상 (client-side counter 가 식별된 user 필요).
+  // 게스트 허용 (외부 사용자 접근성 우선 — PO 결정). credit 차감은 client-side counter 가 담당.
+  // owner='guest' 인 경우 callLLM 텔레메트리에 userId=null 로 전달 (PII 0).
   const owner = await resolveImageOwner(request);
-  if (owner === 'guest') {
-    return NextResponse.json(
-      { error: 'unauthorized', details: '선택 다듬기는 로그인 후 사용 가능합니다.' },
-      { status: 401 },
-    );
-  }
-  const userId = owner;
+  const userId = owner === 'guest' ? null : owner;
 
   let body: Body;
   try { body = (await request.json()) as Body; }
