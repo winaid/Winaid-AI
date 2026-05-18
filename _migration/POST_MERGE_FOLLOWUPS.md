@@ -6,6 +6,42 @@ PR 머지 후 별도 PR 로 다룰 항목들. 메모용 — 각 항목은 개별
 
 ---
 
+## 2026-05-15 — PR #217 머지 (Inline selection refine 신규 기능)
+
+main HEAD: `031f1f01`. squash 머지. 신규 UI 기능 + 백엔드 라우트.
+
+### 머지된 변경 (4 commits)
+- WS-A `1cc8c6c` — refineSelectionPrompt 빌더 + types/router + 양 앱 라우트
+- WS-B `625e631` — SelectionRefineToolbar (양 앱 lockstep) + GenerationResult wiring
+- WS-C `98b1349` — 회귀 가드 (refineSelectionPrompt 13 + invariant 5 + prose 1)
+- fix `6cbfd37` — E_E_A_T 어설션 lowercase XML tag 정합
+
+### 정책 / invariant 영향
+- P-1: next-app checkAuth 가 admin cookie 자동 통과 (별도 분기 0)
+- P-2: maxDuration=60 (이미지 300s 와 무관)
+- 6번째 빌더로 prose-flow + 5빌더 안전망 + 의료법 normalize 모두 통과
+- 양 앱 컴포넌트 diff=0 invariant 신규 추가 — 향후 drift 영구 차단
+
+### 미해결 follow-up (별도 PR / 즉시)
+1. **credit 0.1 실 차감 endpoint** — 현재는 client-side counter (localStorage, 10회당 useCredit 1회). 서버측 atomic 0.1 차감은 useCredit RPC 의 amount param 마이그레이션 + RPC 함수 시그너처 변경 필요. 별도 PR.
+2. **category prop GenerationResult → SelectionRefineToolbar wiring** — 현재 default 'undefined'. CategoryHints 적용 향상 위해 wiring 권장.
+3. **admin hideCounter prop wiring** — 어드민 계정에서 counter UI 자체 숨기기 prop 만들었으나 wiring 누락. 어드민 ux 정합용.
+
+### 보안 chain (참고)
+- 입력: stripInjectionForUse (customInstruction) + sanitizePromptInput(200) + sanitizeSourceContent (본문)
+- 출력: stripPromptLeakage → applyContentFilters → sanitizeHtml — 3중 fail-closed
+
+### 알려진 한계 (manual UI 테스트 미수행)
+- 토글 위치 edge case (모니터 끝, 스크롤 중간)
+- 모바일 long-press 동작
+- 단락 경계 메시지 UX
+- 5 옵션 각각 LLM 결과 품질
+- Preview modal before/after 가독성
+- 수락 후 본문 교체 정확성 + undo
+- prod 출시 후 user 피드백으로 발견 시 hotfix PR
+
+---
+
 ## 2026-05-15 — Blog image prompt audit doc 머지 (PR #216)
 
 main HEAD: `0a0f47f4`. squash 머지. docs-only.
