@@ -27,7 +27,6 @@ const VALID_TASKS: readonly LLMTaskKind[] = [
   'press',
   'refine_auto',
   'refine_chat',
-  'card_news',
   'style_learn',
   'score_crawled_post',
   'landing_chat',

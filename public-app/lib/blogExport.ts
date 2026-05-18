@@ -1,7 +1,6 @@
 /**
  * 블로그 Word / PDF 다운로드
  * root app src/hooks/useDocumentExport.ts + src/components/resultPreviewUtils.ts 기준 이식
- * blog 전용 — card_news 분기 제외
  */
 
 /** 외부 URL 이미지를 base64로 변환 */

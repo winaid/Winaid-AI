@@ -9,8 +9,6 @@ import { test, expect } from '@playwright/test';
 // 빠른 "스모크" 테스트는 각 기능별 파일에 mock 기반으로 분리되어 있음:
 //   - landing.spec.ts / auth.spec.ts / blog.spec.ts
 //   - video-edit.spec.ts / refine.spec.ts / history.spec.ts / api.spec.ts
-//   (card-news 관련 spec 은 C0 (2026-05-08) 시점에 카드뉴스 안쪽 기능 삭제와
-//    함께 제거됨. C2 재구축 후 다시 추가 예정.)
 //
 // 아래 일부 테스트는 실제 외부 의존성 때문에 CI에서 실패할 수 있어 기본 skip.
 // 로컬에서 실행하려면 RUN_INTEGRATION=1 환경변수 설정.

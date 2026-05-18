@@ -160,7 +160,6 @@ export default function AdminContentsTab(props: AdminContentsTabProps) {
                   {([
                     { key: 'all' as PostTypeFilter, label: '전체' },
                     { key: 'blog' as PostTypeFilter, label: '블로그' },
-                    { key: 'card_news' as PostTypeFilter, label: '카드뉴스' },
                     { key: 'press_release' as PostTypeFilter, label: '보도자료' },
                     { key: 'image' as PostTypeFilter, label: '이미지' },
                   ]).map(f => (

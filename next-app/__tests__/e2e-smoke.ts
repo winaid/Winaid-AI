@@ -82,7 +82,6 @@ async function pageLoadTests() {
     { path: '/app' },
     { path: '/blog' },
     { path: '/press' },
-    { path: '/card_news' },
     { path: '/image' },
     { path: '/refine' },
     { path: '/history' },

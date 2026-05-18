@@ -45,15 +45,14 @@ interface UserProfile {
 }
 
 interface UsageStats {
-  totalPosts: number; blogCount: number; cardNewsCount: number; imageCount: number; pressCount: number;
+  totalPosts: number; blogCount: number; imageCount: number; pressCount: number;
 }
 
-type FilterTab = 'all' | 'blog' | 'card_news' | 'press_release' | 'image' | 'refine';
+type FilterTab = 'all' | 'blog' | 'press_release' | 'image' | 'refine';
 
 const FILTER_TABS: { value: FilterTab; label: string }[] = [
   { value: 'all', label: '전체' },
   { value: 'blog', label: '블로그' },
-  { value: 'card_news', label: '카드뉴스' },
   { value: 'press_release', label: '보도자료' },
   { value: 'image', label: '이미지' },
   { value: 'refine', label: 'AI 보정' },
@@ -63,7 +62,6 @@ function filterPosts(posts: SavedPost[], tab: FilterTab): SavedPost[] {
   switch (tab) {
     case 'all': return posts;
     case 'blog': return posts.filter(p => p.post_type === 'blog' && p.workflow_type !== 'refine');
-    case 'card_news': return posts.filter(p => p.post_type === 'card_news');
     case 'press_release': return posts.filter(p => p.post_type === 'press_release');
     case 'image': return posts.filter(p => p.post_type === 'image');
     case 'refine': return posts.filter(p => p.workflow_type === 'refine');
@@ -115,7 +113,6 @@ export default function MyPage() {
             setUsage({
               totalPosts: postData.length,
               blogCount: postData.filter((p: { post_type: string }) => p.post_type === 'blog').length,
-              cardNewsCount: postData.filter((p: { post_type: string }) => p.post_type === 'card_news').length,
               imageCount: postData.filter((p: { post_type: string }) => p.post_type === 'image').length,
               pressCount: postData.filter((p: { post_type: string }) => p.post_type === 'press_release').length,
             });
@@ -188,7 +185,6 @@ export default function MyPage() {
   const typeBadge = (post: SavedPost) => {
     const map: Record<string, { label: string; cls: string }> = {
       blog: { label: '블로그', cls: 'bg-blue-50 text-blue-600' },
-      card_news: { label: '카드뉴스', cls: 'bg-pink-50 text-pink-600' },
       press_release: { label: '보도자료', cls: 'bg-amber-50 text-amber-600' },
       image: { label: '이미지', cls: 'bg-emerald-50 text-emerald-600' },
     };
@@ -251,7 +247,7 @@ export default function MyPage() {
             <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-5 border border-blue-200">
               <p className="text-xs font-semibold text-blue-500 mb-1">생성한 콘텐츠</p>
               <p className="text-3xl font-black text-blue-700">{usage?.totalPosts || 0}</p>
-              <p className="text-[10px] text-blue-400 mt-1">블로그 {usage?.blogCount || 0} · 카드뉴스 {usage?.cardNewsCount || 0} · 이미지 {usage?.imageCount || 0}</p>
+              <p className="text-[10px] text-blue-400 mt-1">블로그 {usage?.blogCount || 0} · 보도자료 {usage?.pressCount || 0} · 이미지 {usage?.imageCount || 0}</p>
             </div>
           </div>
 
@@ -261,7 +257,6 @@ export default function MyPage() {
               <div className="space-y-2">
                 {[
                   { label: '블로그', count: usage.blogCount, color: 'bg-blue-500', icon: '📝' },
-                  { label: '카드뉴스', count: usage.cardNewsCount, color: 'bg-pink-500', icon: '🌸' },
                   { label: '이미지', count: usage.imageCount, color: 'bg-emerald-500', icon: '🖼️' },
                   { label: '보도자료', count: usage.pressCount, color: 'bg-amber-500', icon: '📰' },
                 ].map(item => (
@@ -333,59 +328,6 @@ export default function MyPage() {
                 <div className="px-6 py-6">
                   {selectedPost.post_type === 'image' && (selectedPost.content.startsWith('data:image') || selectedPost.content.startsWith('https://')) ? (
                     <img src={selectedPost.content} alt={selectedPost.title || ''} className="max-w-full rounded-xl shadow-md border border-slate-200" />
-                  ) : selectedPost.post_type === 'card_news' && selectedPost.content.trim().startsWith('[') ? (
-                    <div className="space-y-3">
-                      <p className="text-xs text-slate-400 mb-2">슬라이드 구성</p>
-                      {(() => {
-                        const layoutLabel: Record<string, string> = { cover: '표지', info: '정보', comparison: '비교표', 'icon-grid': '아이콘', steps: '단계', checklist: '체크리스트', 'data-highlight': '수치 강조', closing: '마무리', 'before-after': '전후 비교', qna: 'Q&A', timeline: '타임라인', quote: '인용', 'numbered-list': '번호 리스트', 'pros-cons': '장단점', 'price-table': '가격표', warning: '주의사항' };
-                        try {
-                          const slides = JSON.parse(selectedPost.content) as {
-                            title?: string; layout?: string; subtitle?: string; body?: string;
-                            checkItems?: string[]; steps?: {label:string;desc?:string}[];
-                            icons?: {emoji:string;title:string}[]; columns?: {header:string;items:string[]}[];
-                            dataPoints?: {value:string;label:string}[]; questions?: {q:string;a:string}[];
-                            timelineItems?: {time:string;title:string}[]; pros?: string[]; cons?: string[];
-                            priceItems?: {name:string;price:string}[]; quoteText?: string;
-                            warningItems?: string[]; numberedItems?: {title:string;desc?:string}[];
-                          }[];
-                          return slides.map((s, i) => (
-                            <div key={i} className="p-4 bg-slate-50 rounded-xl border border-slate-200">
-                              <div className="flex items-center gap-2 mb-2">
-                                <span className="w-6 h-6 bg-blue-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">{i + 1}</span>
-                                <span className="text-[10px] bg-blue-50 text-blue-600 font-bold px-2 py-0.5 rounded-full">{layoutLabel[s.layout || 'info'] || s.layout}</span>
-                              </div>
-                              <p className="text-sm font-bold text-slate-800 mb-1">{s.title || '(제목 없음)'}</p>
-                              {s.subtitle && <p className="text-xs text-slate-600 mb-2">{s.subtitle}</p>}
-                              {s.body && <p className="text-xs text-slate-500 mb-2 whitespace-pre-line">{s.body}</p>}
-                              {/* 체크리스트 */}
-                              {Array.isArray(s.checkItems) && <div className="space-y-1 mt-1">{(s.checkItems as string[]).map((item, j) => <div key={j} className="flex items-center gap-1.5 text-xs text-slate-600"><span className="text-emerald-500">✓</span>{item}</div>)}</div>}
-                              {/* 단계 */}
-                              {Array.isArray(s.steps) && <div className="space-y-1 mt-1">{(s.steps as {label:string;desc?:string}[]).map((step, j) => <div key={j} className="text-xs text-slate-600"><span className="font-bold text-blue-600">{j+1}.</span> {step.label}{step.desc ? ` — ${step.desc}` : ''}</div>)}</div>}
-                              {/* 아이콘 그리드 */}
-                              {Array.isArray(s.icons) && <div className="flex flex-wrap gap-2 mt-1">{(s.icons as {emoji:string;title:string}[]).map((ic, j) => <span key={j} className="text-xs bg-white border border-slate-200 rounded-lg px-2 py-1">{ic.emoji} {ic.title}</span>)}</div>}
-                              {/* 비교표 */}
-                              {Array.isArray(s.columns) && <div className="mt-1 text-xs text-slate-600">{(s.columns as {header:string;items:string[]}[]).map((col, j) => <div key={j}><span className="font-bold">{col.header}:</span> {col.items?.join(', ')}</div>)}</div>}
-                              {/* 수치 */}
-                              {Array.isArray(s.dataPoints) && <div className="flex gap-3 mt-1">{(s.dataPoints as {value:string;label:string}[]).map((dp, j) => <div key={j} className="text-center"><div className="text-sm font-black text-blue-600">{dp.value}</div><div className="text-[10px] text-slate-400">{dp.label}</div></div>)}</div>}
-                              {/* QnA */}
-                              {Array.isArray(s.questions) && <div className="space-y-1 mt-1">{(s.questions as {q:string;a:string}[]).map((qa, j) => <div key={j} className="text-xs"><span className="font-bold text-blue-600">Q.</span> {qa.q}<br/><span className="font-bold text-emerald-600">A.</span> {qa.a}</div>)}</div>}
-                              {/* 타임라인 */}
-                              {Array.isArray(s.timelineItems) && <div className="space-y-1 mt-1">{(s.timelineItems as {time:string;title:string}[]).map((t, j) => <div key={j} className="text-xs text-slate-600"><span className="font-bold">{t.time}</span> {t.title}</div>)}</div>}
-                              {/* 장단점 */}
-                              {Array.isArray(s.pros) && <div className="mt-1 text-xs"><div className="text-emerald-600 font-bold">장점: {(s.pros as string[]).join(', ')}</div>{Array.isArray(s.cons) && <div className="text-red-500 font-bold">단점: {(s.cons as string[]).join(', ')}</div>}</div>}
-                              {/* 가격표 */}
-                              {Array.isArray(s.priceItems) && <div className="space-y-1 mt-1">{(s.priceItems as {name:string;price:string}[]).map((p, j) => <div key={j} className="text-xs text-slate-600 flex justify-between"><span>{p.name}</span><span className="font-bold">{p.price}</span></div>)}</div>}
-                              {/* 인용 */}
-                              {s.quoteText && <div className="mt-1 text-xs italic text-slate-500 border-l-2 border-slate-300 pl-2">&ldquo;{s.quoteText as string}&rdquo;</div>}
-                              {/* 주의사항 */}
-                              {Array.isArray(s.warningItems) && <div className="space-y-1 mt-1">{(s.warningItems as string[]).map((w, j) => <div key={j} className="text-xs text-red-600">⚠ {w}</div>)}</div>}
-                            </div>
-                          ));
-                        } catch {
-                          return <p className="text-sm text-slate-500">{selectedPost.content}</p>;
-                        }
-                      })()}
-                    </div>
                   ) : (
                     <article className="max-w-none" style={{ fontFamily: "'Malgun Gothic', sans-serif", lineHeight: 1.9 }}
                       dangerouslySetInnerHTML={{ __html: sanitizeHtml(mdToHtml(selectedPost.content)) }} />

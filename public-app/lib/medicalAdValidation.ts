@@ -1,12 +1,12 @@
 /**
  * 의료광고법 검증 모듈 (의료법 제56조 기반)
  *
- * 블로그, 카드뉴스, 자막 등 모든 콘텐츠 유형에서 재사용 가능.
+ * 블로그, 보도자료, 자막 등 모든 콘텐츠 유형에서 재사용 가능.
  * 기존 medicalLawFilter.ts(자동 치환)와 별개로,
  * "위반 감지 + 대체 표현 제안"에 초점을 맞춘 모듈.
  */
 
-import { normalizeForMedicalAdMatch, type SlideData } from '@winaid/blog-core';
+import { normalizeForMedicalAdMatch } from '@winaid/blog-core';
 
 // ── 타입 ──
 
@@ -260,101 +260,6 @@ export function validateMedicalAd(text: string): ViolationResult[] {
   }
 
   return found;
-}
-
-// ── 슬라이드 전 필드 검증 ──
-
-/** 한 필드의 위반 결과 */
-export interface SlideFieldViolation {
-  /** 접근 경로 (예: "title", "columns[0].items[1]") */
-  field: string;
-  /** UI에 표시할 한국어 라벨 */
-  fieldLabel: string;
-  /** 원본 텍스트 */
-  text: string;
-  /** 해당 필드가 평탄한(단일 문자열) 필드인지 — 원클릭 치환 가능 여부 판단 */
-  isFlat: boolean;
-  /** 해당 필드의 위반 목록 */
-  violations: ViolationResult[];
-}
-
-/**
- * SlideData의 모든 텍스트 필드를 일괄 검증.
- * 이전엔 title/subtitle/body만 검사했지만, 실제로는 visualKeyword(이미지 프롬프트),
- * quoteText, columns, questions, steps 등에도 위반이 들어갈 수 있음.
- */
-export function validateSlideMedicalAd(slide: SlideData | Partial<SlideData>): SlideFieldViolation[] {
-  const results: SlideFieldViolation[] = [];
-
-  const check = (field: string, fieldLabel: string, text: string | undefined, isFlat: boolean) => {
-    if (!text || !text.trim()) return;
-    const violations = validateMedicalAd(text);
-    if (violations.length === 0) return;
-    results.push({ field, fieldLabel, text, isFlat, violations });
-  };
-
-  // ── 평탄한 단일 문자열 필드 (원클릭 치환 가능) ──
-  check('title', '제목', slide.title, true);
-  check('subtitle', '부제', slide.subtitle, true);
-  check('body', '본문', slide.body, true);
-  check('visualKeyword', '이미지 프롬프트', slide.visualKeyword, true);
-  check('quoteText', '인용문', slide.quoteText, true);
-  check('quoteAuthor', '인용 저자', slide.quoteAuthor, true);
-  check('quoteRole', '인용 직함', slide.quoteRole, true);
-  check('warningTitle', '주의 제목', slide.warningTitle, true);
-  check('beforeLabel', 'Before 라벨', slide.beforeLabel, true);
-  check('afterLabel', 'After 라벨', slide.afterLabel, true);
-  check('prosLabel', '장점 라벨', slide.prosLabel, true);
-  check('consLabel', '단점 라벨', slide.consLabel, true);
-  check('badge', '배지', slide.badge, true);
-
-  // ── 문자열 배열 (중첩 — 수동 편집) ──
-  slide.checkItems?.forEach((t, i) => check(`checkItems[${i}]`, `체크 항목 ${i + 1}`, t, false));
-  slide.compareLabels?.forEach((t, i) => check(`compareLabels[${i}]`, `행 라벨 ${i + 1}`, t, false));
-  slide.beforeItems?.forEach((t, i) => check(`beforeItems[${i}]`, `Before 항목 ${i + 1}`, t, false));
-  slide.afterItems?.forEach((t, i) => check(`afterItems[${i}]`, `After 항목 ${i + 1}`, t, false));
-  slide.pros?.forEach((t, i) => check(`pros[${i}]`, `장점 ${i + 1}`, t, false));
-  slide.cons?.forEach((t, i) => check(`cons[${i}]`, `단점 ${i + 1}`, t, false));
-  slide.warningItems?.forEach((t, i) => check(`warningItems[${i}]`, `주의 항목 ${i + 1}`, t, false));
-  slide.hashtags?.forEach((t, i) => check(`hashtags[${i}]`, `해시태그 ${i + 1}`, t, false));
-
-  // ── 객체 배열 (중첩 — 수동 편집) ──
-  slide.columns?.forEach((col, ci) => {
-    check(`columns[${ci}].header`, `열 ${ci + 1} 헤더`, col.header, false);
-    col.items?.forEach((t, i) => check(`columns[${ci}].items[${i}]`, `열 ${ci + 1} 항목 ${i + 1}`, t, false));
-  });
-  slide.icons?.forEach((icon, i) => {
-    check(`icons[${i}].title`, `아이콘 ${i + 1} 제목`, icon.title, false);
-    check(`icons[${i}].desc`, `아이콘 ${i + 1} 설명`, icon.desc, false);
-  });
-  slide.steps?.forEach((step, i) => {
-    check(`steps[${i}].label`, `단계 ${i + 1} 라벨`, step.label, false);
-    check(`steps[${i}].desc`, `단계 ${i + 1} 설명`, step.desc, false);
-  });
-  slide.dataPoints?.forEach((d, i) => {
-    check(`dataPoints[${i}].label`, `데이터 ${i + 1} 라벨`, d.label, false);
-  });
-  slide.questions?.forEach((q, i) => {
-    check(`questions[${i}].q`, `Q&A ${i + 1} 질문`, q.q, false);
-    check(`questions[${i}].a`, `Q&A ${i + 1} 답변`, q.a, false);
-  });
-  slide.timelineItems?.forEach((t, i) => {
-    check(`timelineItems[${i}].time`, `타임라인 ${i + 1} 시점`, t.time, false);
-    check(`timelineItems[${i}].title`, `타임라인 ${i + 1} 제목`, t.title, false);
-    check(`timelineItems[${i}].desc`, `타임라인 ${i + 1} 설명`, t.desc, false);
-  });
-  slide.numberedItems?.forEach((n, i) => {
-    // num 필드 — "최초"/"No.1"/"1위" 등 최상급 금지어가 들어갈 가능성이 가장 높음
-    check(`numberedItems[${i}].num`, `번호 ${i + 1} 라벨`, n.num, false);
-    check(`numberedItems[${i}].title`, `번호 ${i + 1} 제목`, n.title, false);
-    check(`numberedItems[${i}].desc`, `번호 ${i + 1} 설명`, n.desc, false);
-  });
-  slide.priceItems?.forEach((p, i) => {
-    check(`priceItems[${i}].name`, `가격 ${i + 1} 이름`, p.name, false);
-    check(`priceItems[${i}].note`, `가격 ${i + 1} 비고`, p.note, false);
-  });
-
-  return results;
 }
 
 /** 위반 결과에서 severity별 카운트 집계 */

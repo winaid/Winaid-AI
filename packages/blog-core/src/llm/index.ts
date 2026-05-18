@@ -3,7 +3,7 @@
  *
  * Phase 0: callLLM (sync) + queueLLMBatch/pollLLMBatch/listInFlightBatches/cancelLLMBatch.
  *
- * Phase 2+ 에서 기존 /api/gemini 호출부(blog/press/refine/card_news/style_learn)를
+ * Phase 2+ 에서 기존 /api/gemini 호출부(blog/press/refine/style_learn)를
  * callLLM 로 교체 예정. 현재는 토대만.
  */
 

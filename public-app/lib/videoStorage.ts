@@ -52,7 +52,7 @@ function warnOnceMissingBucket(err: { message?: string }) {
   );
 }
 
-export type VideoOutputType = 'pipeline' | 'ai_shorts' | 'card_to_shorts';
+export type VideoOutputType = 'pipeline';
 
 export interface SavedVideo {
   id: string;
@@ -252,8 +252,6 @@ export function generateVideoFileName(type: VideoOutputType, suffix?: string): s
   const date = new Date().toISOString().slice(0, 10); // 2026-04-10
   const prefix = ({
     pipeline: '영상편집',
-    ai_shorts: 'AI쇼츠',
-    card_to_shorts: '카드뉴스쇼츠',
   } as const)[type];
   const suf = suffix ? `_${sanitizeFileName(suffix)}` : '';
   return `${prefix}_${date}${suf}.mp4`;

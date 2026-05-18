@@ -41,7 +41,6 @@ async function callAdminRpc<T = unknown>(
 export interface AdminStats {
   totalPosts: number;
   blogCount: number;
-  cardNewsCount: number;
   pressReleaseCount: number;
   imageCount: number;
   uniqueHospitals: number;
@@ -73,18 +72,16 @@ export interface UserProfile {
 }
 
 export type Tab = 'contents' | 'users' | 'style' | 'feedback' | 'leads';
-export type PostTypeFilter = 'all' | 'blog' | 'card_news' | 'press_release' | 'image';
+export type PostTypeFilter = 'all' | 'blog' | 'press_release' | 'image';
 
 export const POST_TYPE_LABELS: Record<string, string> = {
   blog: '블로그',
-  card_news: '카드뉴스',
   press_release: '보도자료',
   image: '이미지',
 };
 
 export const POST_TYPE_COLORS: Record<string, string> = {
   blog: 'bg-blue-100 text-blue-700',
-  card_news: 'bg-pink-100 text-pink-700',
   press_release: 'bg-amber-100 text-amber-700',
   image: 'bg-emerald-100 text-emerald-700',
 };
@@ -102,7 +99,6 @@ export async function getAdminStats(_token?: string): Promise<AdminStats | null>
   return {
     totalPosts: row.total_posts ?? 0,
     blogCount: row.blog_count ?? 0,
-    cardNewsCount: row.card_news_count ?? 0,
     pressReleaseCount: row.press_release_count ?? 0,
     imageCount: row.image_count ?? 0,
     uniqueHospitals: row.unique_hospitals ?? 0,

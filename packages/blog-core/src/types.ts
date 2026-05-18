@@ -3,8 +3,6 @@
  * 마이그레이션 완료 후 통합 예정
  */
 
-export type CardNewsDesignTemplateId = 'medical-clean' | 'spring-floral' | 'modern-grid' | 'simple-pin' | 'medical-illust' | 'warm-beige' | 'dark-premium' | 'pastel-mint' | 'coral-friendly' | 'navy-trust' | 'lavender-calm' | 'forest-natural' | 'sunrise-energy' | 'mono-minimal' | 'gold-luxury';
-
 export enum ContentCategory {
   DENTAL = '치과',
   DERMATOLOGY = '피부과',
@@ -32,7 +30,7 @@ export type AudienceMode =
 export type ImageStyle = 'photo' | 'illustration' | 'medical' | 'custom';
 /** 블로그 이미지 소스 모드 — ai: 전부 AI 생성 / library: 라이브러리만 (매칭 실패 시 placeholder) / hybrid: 라이브러리 우선 + 부족분 AI 생성 */
 export type ImageSourceMode = 'ai' | 'library' | 'hybrid';
-export type PostType = 'blog' | 'card_news' | 'press_release';
+export type PostType = 'blog' | 'press_release';
 export type WorkflowType = 'generate' | 'refine';
 export type CssTheme = 'modern' | 'premium' | 'minimal' | 'warm' | 'professional';
 export type WritingStyle = 'expert' | 'empathy' | 'conversion';
