@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { INFLUENCER_CATEGORIES, generateInfluencerHashtags } from '../../../lib/influencerHashtags';
 
 // ── 타입 ──
@@ -32,6 +32,21 @@ interface DmDraft {
   warnings: string[];
 }
 
+// PR-A: 검색 이력 영속 — GET /api/influencer/status?include_searches=1 응답
+interface SearchHistoryRow {
+  id: string;
+  search_params: {
+    location?: string;
+    hashtags?: string[];
+    follower_min?: number;
+    follower_max?: number;
+    categories?: string[];
+    min_engagement_rate?: number;
+  };
+  result_count: number;
+  created_at: string;
+}
+
 type OutreachStatus = 'pending' | 'sent' | 'replied' | 'rejected' | 'collaborating';
 
 const STATUS_LABELS: Record<OutreachStatus, { label: string; icon: string; color: string }> = {
@@ -53,6 +68,23 @@ const DM_TONES = [
 const inputCls = 'w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm outline-none focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-500/10 transition-all placeholder:text-slate-300';
 const btnPrimary = 'px-6 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed';
 const btnSecondary = 'px-4 py-2 bg-slate-100 text-slate-700 font-semibold rounded-xl hover:bg-slate-200 transition-all text-sm';
+
+// PR-A: 최근 검색 패널 상대시간 표시 ("3분 전" / "2시간 전" / "어제" / 날짜)
+function relativeTime(iso: string): string {
+  const now = Date.now();
+  const then = new Date(iso).getTime();
+  if (!Number.isFinite(then)) return '';
+  const diffMs = now - then;
+  const min = Math.floor(diffMs / 60_000);
+  if (min < 1) return '방금';
+  if (min < 60) return `${min}분 전`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}시간 전`;
+  const day = Math.floor(hr / 24);
+  if (day === 1) return '어제';
+  if (day < 7) return `${day}일 전`;
+  return new Date(iso).toLocaleDateString('ko-KR');
+}
 
 // 해시태그 생성은 influencerHashtags.ts에서 import
 
@@ -86,6 +118,57 @@ export default function InfluencerPage() {
 
   // ── 상태 추적 ──
   const [outreachStatuses, setOutreachStatuses] = useState<Record<string, OutreachStatus>>({});
+
+  // ── PR-A: 즐겨찾기 + 검색 이력 ──
+  const [starred, setStarred] = useState<Record<string, boolean>>({});
+  const [recentSearches, setRecentSearches] = useState<SearchHistoryRow[]>([]);
+  const lastLoadedHospitalRef = useRef<string>('');
+
+  // ── PR-A: hospitalName 변경 시 outreach + 최근 검색 prefill (GET) ──
+  useEffect(() => {
+    const trimmed = hospitalName.trim();
+    if (!trimmed) {
+      setOutreachStatuses({});
+      setStarred({});
+      setRecentSearches([]);
+      lastLoadedHospitalRef.current = '';
+      return;
+    }
+    if (lastLoadedHospitalRef.current === trimmed) return;
+    lastLoadedHospitalRef.current = trimmed;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const url = `/api/influencer/status?hospital_id=${encodeURIComponent(trimmed)}&include_searches=1`;
+        const res = await fetch(url);
+        if (!res.ok) return;
+        const data = await res.json() as {
+          outreach?: { username: string; status?: string; starred?: boolean }[];
+          searches?: SearchHistoryRow[];
+        };
+        if (cancelled) return;
+
+        // status 매핑 — server enum (declined/collab/archived) ↔ UI enum (rejected/collaborating)
+        // 본 PR-A 범위 외. 일치하지 않는 값은 pending 으로 fallback (안전).
+        const statusMap: Record<string, OutreachStatus> = {};
+        const starMap: Record<string, boolean> = {};
+        for (const row of data.outreach || []) {
+          if (!row.username) continue;
+          if (row.status && ['pending', 'sent', 'replied', 'rejected', 'collaborating'].includes(row.status)) {
+            statusMap[row.username] = row.status as OutreachStatus;
+          }
+          if (row.starred === true) starMap[row.username] = true;
+        }
+        setOutreachStatuses(statusMap);
+        setStarred(starMap);
+        setRecentSearches(Array.isArray(data.searches) ? data.searches : []);
+      } catch {
+        /* 무시 — 페이지는 기존 동작 그대로 */
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [hospitalName]);
 
   // 위치/카테고리 변경 시 해시태그 자동 재생성
   const regenerateHashtags = (loc: string, cats: string[]) => {
@@ -125,6 +208,8 @@ export default function InfluencerPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          // PR-A: hospital_name 동봉 시 백엔드가 검색 이력 자동 저장 (없으면 skip)
+          hospital_name: hospitalName.trim() || undefined,
           location: hospitalLocation.trim(),
           hashtags: hashtagList,
           follower_min: followerMin,
@@ -141,12 +226,60 @@ export default function InfluencerPage() {
         setSearchError(`결과 0명 (소스: ${data.source || '?'}, 해시태그: ${(data.search_hashtags_used || []).slice(0, 3).join(', ')}). 팔로워 범위를 넓히거나 해시태그를 변경해보세요.`);
       }
       setStep(2);
+
+      // PR-A: 검색 성공 시 사이드 패널 재조회 — 방금 저장된 이력을 즉시 반영.
+      const trimmed = hospitalName.trim();
+      if (trimmed) {
+        try {
+          const histRes = await fetch(`/api/influencer/status?hospital_id=${encodeURIComponent(trimmed)}&include_searches=1`);
+          if (histRes.ok) {
+            const histData = await histRes.json() as { searches?: SearchHistoryRow[] };
+            if (Array.isArray(histData.searches)) setRecentSearches(histData.searches);
+          }
+        } catch { /* 사이드 패널 갱신 실패는 silent */ }
+      }
     } catch (err) {
       setSearchError(err instanceof Error ? err.message : '검색 중 오류');
     } finally {
       setIsSearching(false);
     }
-  }, [hospitalLocation, hashtagList, followerMin, followerMax, selectedCategories, minEngagement]);
+  }, [hospitalName, hospitalLocation, hashtagList, followerMin, followerMax, selectedCategories, minEngagement]);
+
+  // ── PR-A: 최근 검색 클릭 시 search_params 복원 + 자동 재실행 ──
+  const handleRestoreSearch = useCallback((row: SearchHistoryRow) => {
+    const p = row.search_params || {};
+    if (typeof p.location === 'string') setHospitalLocation(p.location);
+    if (Array.isArray(p.hashtags)) setHashtagList(p.hashtags);
+    if (typeof p.follower_min === 'number') setFollowerMin(p.follower_min);
+    if (typeof p.follower_max === 'number') setFollowerMax(p.follower_max);
+    if (Array.isArray(p.categories)) setSelectedCategories(p.categories);
+    if (typeof p.min_engagement_rate === 'number') setMinEngagement(p.min_engagement_rate);
+    // state 반영 후 다음 frame 에 검색 — React batching 이후
+    setTimeout(() => { void handleSearch(); }, 0);
+  }, [handleSearch]);
+
+  // ── PR-A: ★ 토글 (낙관적 UI + 실패 시 revert) ──
+  const handleToggleStar = useCallback(async (username: string) => {
+    const trimmed = hospitalName.trim();
+    if (!trimmed) return;
+    const next = !starred[username];
+    setStarred(prev => ({ ...prev, [username]: next }));
+    try {
+      const res = await fetch('/api/influencer/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username,
+          hospital_id: trimmed,
+          starred: next,
+        }),
+      });
+      if (!res.ok) throw new Error('star toggle failed');
+    } catch {
+      // revert
+      setStarred(prev => ({ ...prev, [username]: !next }));
+    }
+  }, [hospitalName, starred]);
 
   // ── DM 생성 ──
   const handleGenerateDm = useCallback(async (influencer: InfluencerProfile) => {
@@ -197,7 +330,11 @@ export default function InfluencerPage() {
   }, [hospitalName]);
 
   // ── 정렬 ──
+  // PR-A: ★ 즐겨찾기는 항상 위로 (sortBy 와 무관). 같은 starred 안에서 기존 정렬.
   const sortedResults = [...results].sort((a, b) => {
+    const aStar = starred[a.username] ? 1 : 0;
+    const bStar = starred[b.username] ? 1 : 0;
+    if (aStar !== bStar) return bStar - aStar;
     if (sortBy === 'followers') return b.follower_count - a.follower_count;
     if (sortBy === 'engagement') return b.engagement_rate - a.engagement_rate;
     const confOrder = { high: 0, medium: 1, low: 2 };
@@ -315,6 +452,35 @@ export default function InfluencerPage() {
             </div>
           </div>
 
+          {/* PR-A: 최근 검색 5건 패널 — hospitalName 보유 + 이력 있을 때만 */}
+          {hospitalName.trim() && recentSearches.length > 0 && (
+            <div className="bg-white rounded-2xl border border-slate-200 p-5">
+              <h2 className="text-sm font-black text-slate-800 mb-3">🕘 최근 검색 ({recentSearches.length})</h2>
+              <div className="space-y-2">
+                {recentSearches.map(row => {
+                  const p = row.search_params || {};
+                  const loc = (p.location || '').slice(0, 30);
+                  const cats = (p.categories || []).slice(0, 2).join(' · ');
+                  const tags = (p.hashtags || []).slice(0, 2).map(h => `#${h}`).join(' ');
+                  const labelParts = [loc, cats, tags].filter(Boolean);
+                  const label = labelParts.length ? labelParts.join(' / ') : '(조건 없음)';
+                  const rel = relativeTime(row.created_at);
+                  return (
+                    <button
+                      key={row.id}
+                      type="button"
+                      onClick={() => handleRestoreSearch(row)}
+                      className="w-full flex items-center justify-between gap-3 px-3 py-2 rounded-xl bg-slate-50 hover:bg-blue-50 hover:border-blue-200 border border-transparent transition-all text-left"
+                    >
+                      <span className="text-xs text-slate-700 truncate flex-1">{label}</span>
+                      <span className="text-[10px] text-slate-400 flex-shrink-0">{row.result_count}명 · {rel}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* 검색 버튼 */}
           {searchError && <p className="text-sm text-red-500 font-semibold">{searchError}</p>}
           <button onClick={handleSearch} disabled={isSearching} className={`${btnPrimary} w-full flex items-center justify-center gap-2`}>
@@ -401,12 +567,30 @@ export default function InfluencerPage() {
 
                 {/* 액션 */}
                 <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                  <button
-                    onClick={() => handleGenerateDm(inf)}
-                    className="px-4 py-2 bg-violet-600 text-white text-xs font-bold rounded-xl hover:bg-violet-700 transition-all"
-                  >
-                    💬 DM 생성
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    {/* PR-A: ★ 즐겨찾기 토글 */}
+                    <button
+                      type="button"
+                      onClick={() => handleToggleStar(inf.username)}
+                      disabled={!hospitalName.trim()}
+                      aria-label={starred[inf.username] ? '즐겨찾기 해제' : '즐겨찾기 추가'}
+                      aria-pressed={!!starred[inf.username]}
+                      title={!hospitalName.trim() ? '병원명 입력 후 사용 가능' : starred[inf.username] ? '즐겨찾기 해제' : '즐겨찾기 추가'}
+                      className={`w-9 h-9 rounded-xl text-lg transition-all ${
+                        starred[inf.username]
+                          ? 'bg-amber-50 text-amber-500 hover:bg-amber-100'
+                          : 'bg-slate-50 text-slate-300 hover:bg-slate-100 hover:text-slate-400'
+                      } disabled:opacity-40 disabled:cursor-not-allowed`}
+                    >
+                      {starred[inf.username] ? '★' : '☆'}
+                    </button>
+                    <button
+                      onClick={() => handleGenerateDm(inf)}
+                      className="px-4 py-2 bg-violet-600 text-white text-xs font-bold rounded-xl hover:bg-violet-700 transition-all"
+                    >
+                      💬 DM 생성
+                    </button>
+                  </div>
                   <select
                     value={status}
                     onChange={e => updateStatus(inf.username, e.target.value as OutreachStatus)}
