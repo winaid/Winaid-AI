@@ -13,9 +13,14 @@ import ScoreRing from './ScoreRing';
 import CategoryCard from './CategoryCard';
 import AIVisibilityCard from './AIVisibilityCard';
 import ActionPlan from './ActionPlan';
-import { authFetch } from '../../lib/authFetch';
 import CompetitorAutoSuggestions from './CompetitorAutoSuggestions';
 import SnippetsPanel from './SnippetsPanel';
+import AIVisibilityKPICards from './AIVisibilityKPICards';
+import ToneRecommendationCards from './ToneRecommendationCards';
+import AnalyzedSubpages from './AnalyzedSubpages';
+import AnalyzedInternalLinks from './AnalyzedInternalLinks';
+import { deriveAIVisibilityKPI } from '../../lib/diagnostic/aiVisibilityKPI';
+import { authFetch } from '../../lib/authFetch';
 
 interface DiagnosticResultProps {
   result: DiagnosticResponse;
@@ -40,7 +45,7 @@ function scoreHeadline(score: number): string {
   return '개선 여지가 큽니다. 기술 기반과 콘텐츠 구조부터 순차 보강이 필요합니다.';
 }
 
-// ── PSI 해석 (규칙 기반) ─────────────────────────────
+// ── PSI 해석 (규칙 기반) ───────────────────────────────────
 type Band = 'good' | 'warn' | 'bad';
 function bandPsi(score: number | null): Band | 'unknown' {
   if (score === null) return 'unknown';
@@ -106,6 +111,8 @@ export default function DiagnosticResult({ result, onResultUpdate }: DiagnosticR
   const [refreshing, setRefreshing] = useState(false);
   const [refreshDone, setRefreshDone] = useState(false);
 
+  // next-app 은 모두 admin 로그인 — 자물쇠 / 리드 폼 / 영업 CTA 무관 (PO 결정).
+
   // 공유 링크
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
@@ -115,9 +122,6 @@ export default function DiagnosticResult({ result, onResultUpdate }: DiagnosticR
     if (shareUrl) { await navigator.clipboard.writeText(shareUrl).catch(() => {}); return; }
     setGenerating(true);
     try {
-      // A1a P4-a (2026-05-08): /api/diagnostic/share 는 next-app proxy 라우트.
-      // server-side 에서 ${NEXT_PUBLIC_PUBLIC_APP_URL}/api/diagnostic/share 로
-      // X-Internal-Secret 첨부해 forward. 토큰은 public-seoul DB 저장.
       const res = await authFetch('/api/diagnostic/share', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -125,12 +129,8 @@ export default function DiagnosticResult({ result, onResultUpdate }: DiagnosticR
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = (await res.json()) as { token: string; publicUrl: string };
-      // 표시 URL 은 winai.kr 도메인 (public-app) 기준으로 구성.
-      // env 미설정 시 server 가 반환한 publicUrl 을 fallback 으로 사용.
-      const base = process.env.NEXT_PUBLIC_PUBLIC_APP_URL;
-      const displayUrl = base && data.token ? `${base}/check/${data.token}` : data.publicUrl;
-      setShareUrl(displayUrl);
-      await navigator.clipboard.writeText(displayUrl).catch(() => {});
+      setShareUrl(data.publicUrl);
+      await navigator.clipboard.writeText(data.publicUrl).catch(() => {});
     } catch (e) {
       console.warn('[share]', e);
     } finally {
@@ -151,7 +151,7 @@ export default function DiagnosticResult({ result, onResultUpdate }: DiagnosticR
     if (refreshing || !onResultUpdate) return;
     setRefreshing(true);
     try {
-      const res = await authFetch('/api/diagnostic/refresh-narrative', {
+      const res = await fetch('/api/diagnostic/refresh-narrative', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ diagnosticResult: result, measurements: measurementResults }),
@@ -192,7 +192,7 @@ export default function DiagnosticResult({ result, onResultUpdate }: DiagnosticR
     setGapLoading(true);
     setGapResult(null);
     try {
-      const res = await authFetch('/api/diagnostic/competitor-gap', {
+      const res = await fetch('/api/diagnostic/competitor-gap', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ selfResult: result, competitorUrl: target }),
@@ -227,6 +227,9 @@ export default function DiagnosticResult({ result, onResultUpdate }: DiagnosticR
     try { return new URL(result.url).hostname.replace(/^www\./, '').toLowerCase(); }
     catch { return ''; }
   })();
+
+  // ChatGPT / Gemini KPI — 실측 우선, 휴리스틱 fallback.
+  const aiKPI = deriveAIVisibilityKPI(result.aiVisibility, measurementResults);
 
   return (
     <div className="w-full max-w-5xl mx-auto space-y-5">
@@ -287,6 +290,12 @@ export default function DiagnosticResult({ result, onResultUpdate }: DiagnosticR
         </div>
       </div>
 
+      {/* AI Visibility KPI — ChatGPT / Gemini 모델별 점수 + Avg Position */}
+      <AIVisibilityKPICards kpi={aiKPI} />
+
+      {/* 카테고리 톤 가이드 — quartet (PR #194-197) ROI 직접 노출 */}
+      <ToneRecommendationCards category={result.detectedCategory} />
+
       {/* 📈 점수 추이 — 히스토리 2건 이상일 때만 표시 */}
       {history.length > 1 && (
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -324,14 +333,28 @@ export default function DiagnosticResult({ result, onResultUpdate }: DiagnosticR
         ))}
       </div>
 
+      {/* 인라인 CTA — overallScore < 80 일 때만 노출. 하단 배너(스크롤 끝)의
+          사각지대(스크롤 미수행 + 카테고리별 작은 링크가 50점 미만에서만 뜨는 한계)를 보강. */}
       {/* 탭 1: 종합 */}
       {tab === 'summary' && (
         <div className="space-y-5">
+          <AnalyzedSubpages
+            subpages={result.crawlMeta.subpagesReached}
+            mainUrl={result.url}
+          />
+
+          <AnalyzedInternalLinks links={result.crawlMeta.internalLinks} />
+
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <h3 className="text-sm font-bold text-slate-700 mb-4">카테고리별 점수</h3>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
               {result.categories.map((c) => (
-                <ScoreRing key={c.id} score={c.score} size={90} label={c.name} />
+                <div key={c.id} className="flex flex-col items-center">
+                  <ScoreRing score={c.score} size={90} label={c.name} />
+                  <span className="mt-1 text-[10px] text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">
+                    가중치 {c.weight}%
+                  </span>
+                </div>
               ))}
             </div>
           </div>
@@ -340,12 +363,12 @@ export default function DiagnosticResult({ result, onResultUpdate }: DiagnosticR
             <h3 className="text-sm font-bold text-slate-700 mb-3">로딩 성능 (Core Web Vitals)</h3>
             {result.performance === null ? (
               <div className="text-sm text-slate-600 bg-slate-50 rounded-xl px-4 py-5 space-y-1.5">
-                <p className="font-semibold">PageSpeed Insights 측정 결과를 받지 못했습니다 (이 사이트만)</p>
+                <p className="font-semibold">PageSpeed Insights 측정 결과를 받지 못했습니다.</p>
                 <p className="text-[12px] text-slate-500 leading-relaxed">
-                  · 서버 환경변수 <code className="px-1 py-0.5 rounded bg-white text-slate-700 text-[11px]">PAGESPEED_API_KEY</code> 가 설정되어 있는지 확인해주세요
-                  (Google 정책상 무키 호출은 일일 쿼터가 0입니다).<br />
-                  · 키가 있는데도 실패하면 Google Cloud Console 에서 <em>PageSpeed Insights API</em> 가
-                  활성화되어 있는지 확인하세요.<br />
+                  · 다른 사이트가 정상 측정된다면 <strong>이 사이트가 PSI 측정 불가 상태</strong>일 수 있습니다
+                  (HTTP 비암호화 사이트, 응답이 너무 느림, robots.txt 차단, 실시간 응답 불가 등 Google 정책 사유).<br />
+                  · 모든 사이트가 안 되면 서버 환경변수 <code className="px-1 py-0.5 rounded bg-white text-slate-700 text-[11px]">PAGESPEED_API_KEY</code> 또는
+                  Google Cloud Console 의 <em>PageSpeed Insights API</em> 활성 여부 확인.<br />
                   · 측정 시간이 40초를 넘어가면 서버 로그(<code className="px-1 py-0.5 rounded bg-white text-slate-700 text-[11px]">[psi]</code>)에 사유가 기록됩니다.
                 </p>
               </div>
@@ -561,10 +584,15 @@ export default function DiagnosticResult({ result, onResultUpdate }: DiagnosticR
       )}
 
       {/* 탭 4: 우선 조치 */}
-      {tab === 'actions' && <ActionPlan actions={result.priorityActions} />}
+      {tab === 'actions' && (
+        <ActionPlan actions={result.priorityActions} />
+      )}
 
       {/* 탭 5: 코드 스니펫 — fail/warning 항목 중 코드로 고칠 수 있는 것 자동 생성 */}
-      {tab === 'snippets' && <SnippetsPanel result={result} />}
+      {tab === 'snippets' && (
+        <SnippetsPanel result={result} />
+      )}
+
     </div>
   );
 }

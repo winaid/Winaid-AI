@@ -164,9 +164,22 @@ export interface AIVisibility {
   platform: AIPlatform;
   likelihood: 'high' | 'medium' | 'low';
   reason: string;
+  /** 0-100 휴리스틱 점수. KPI 카드 표시용 (블로그 7 KPI). */
+  score?: number;
 }
 
-export type ActionExecutor = 'ai' | 'human' | 'hybrid';
+/** 실행 주체. 'hybrid' 는 'both' 와 동의어 — 과거 데이터 호환용. */
+export type ActionExecutor = 'ai' | 'human' | 'hybrid' | 'both';
+
+/** 실행 방식 — 그룹 섹션 분류의 1차 축. 누락 시 UI "미분류" fallback. */
+export type ExecutionType = 'instant' | 'developer' | 'homepage';
+
+/** 비용 축 — 배지 표시. 누락 시 chip 미렌더. */
+export type ActionCost = 'free' | 'time_only' | 'external';
+
+export const EXECUTION_TYPES: ExecutionType[] = ['instant', 'developer', 'homepage'];
+export const ACTION_COSTS: ActionCost[] = ['free', 'time_only', 'external'];
+export const ACTION_EXECUTORS: ActionExecutor[] = ['ai', 'human', 'hybrid', 'both'];
 
 export interface ActionItem {
   action: string;
@@ -176,6 +189,10 @@ export interface ActionItem {
   category: string;
   /** 단계 5-B: Sonnet 이 분류하는 실행 주체. 규칙 기반 fallback 은 undefined. */
   executor?: ActionExecutor;
+  /** 실행 방식 — 텍스트/메타 수정(instant) / 코드·스키마(developer) / 페이지 구조·디자인(homepage). */
+  executionType?: ExecutionType;
+  /** 무료 / 시간만 소요 / 외부 비용 발생. */
+  cost?: ActionCost;
   /** 60대 원장님이 직접 제작사에 요청할 수 있도록 한 상세 가이드 (이게 뭐예요? / 어떻게 하나요? / 팁). */
   detailedGuide?: string;
 }
@@ -186,6 +203,11 @@ export interface CrawlMeta {
   totalImages: number;
   schemaTypesFound: string[];
   detectedServices: string[];
+  /** 실제 fetch 성공한 서브페이지 URL list. UI 투명성용 (진단 dashboard 노출). */
+  subpagesReached?: string[];
+  /** 크롤러가 감지한 internal link list. 사용자 자기 디버깅용 — 진료/가격 등 미감지 시
+   *  footer dynamic 렌더링 / origin 분리 / fragment-only href 등 원인 추적 가능. */
+  internalLinks?: Array<{ href: string; text: string }>;
 }
 
 export interface DiagnosticResponse {
