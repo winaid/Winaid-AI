@@ -111,13 +111,22 @@ export async function POST(request: NextRequest) {
     );
 
     if (error) {
-      console.error('[INFLUENCER] 상태 저장 실패:', error.message);
-      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+      // 인프라성 오류 (fetch failed / network / supabase unreachable) → local fallback.
+      // 프론트는 낙관적 UI + 로컬 ref 보관으로 사용자 경험 보존.
+      // RLS / 권한 / constraint 위반 등 의미 있는 오류만 500 으로 surface.
+      const msg = String(error.message || '');
+      const isInfra = /fetch failed|network|timeout|ECONNREFUSED|ENOTFOUND/i.test(msg);
+      if (isInfra) {
+        console.warn('[INFLUENCER] 상태 저장 인프라 오류 → local fallback:', msg);
+        return NextResponse.json({ success: true, storage: 'local', soft_error: msg });
+      }
+      console.error('[INFLUENCER] 상태 저장 실패:', msg);
+      return NextResponse.json({ success: false, error: msg }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, storage: 'supabase' });
   } catch (err) {
-    console.error('[INFLUENCER] 상태 저장 오류:', err);
+    console.warn('[INFLUENCER] 상태 저장 오류 → local fallback:', err);
     return NextResponse.json({ success: true, storage: 'local' });
   }
 }
