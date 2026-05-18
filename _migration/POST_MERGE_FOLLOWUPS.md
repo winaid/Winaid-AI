@@ -6,6 +6,34 @@ PR 머지 후 별도 PR 로 다룰 항목들. 메모용 — 각 항목은 개별
 
 ---
 
+## 2026-05-15 — Blog image prompt audit doc 머지 (PR #216)
+
+main HEAD: `0a0f47f4`. squash 머지. docs-only.
+
+### 산출물
+- `docs/blog-image-prompt-audit-2026-05-15.md` (29 findings)
+- 코드 0줄 변경 (audit-only)
+- Critical 0 / High 8 / Medium 13 / Low 8
+- 인프라 audit (`ai-image-pipeline-audit.md`) + 텍스트 audit (`blog-prompt-audit-2026-05-15.md`) cross-reference
+
+### 다음 라운드 후보 (이미지 룰 보강 PR)
+- Top 3 즉시 보강:
+  - 축 7.A.1+7.A.2 — buildImagePrompt 호출지 sanitize drift (blog/page.tsx 자동 흐름 → ImageInsertModal 패턴 복제 + promptInjectionGuard. 코드 < 20 lines)
+  - 축 2.C.1 — 효과 단정 시각화 차단 (BLOG_IMAGE_RULE FORBIDDEN 에 "guaranteed treatment outcome" 명시. 텍스트 audit 1.E.1 의 이미지 layer 대응)
+  - 축 1.B.1 — AI 생성 prompt negative/exclude layer 부재 도입 (라이브러리 매칭 excludeKeywords 와 등가)
+- High 잔여 5건 + Medium 13 + Low 8 — audit doc 참조
+
+### 정책 결정 대기 (3건)
+- 축 6.D.1 — quality='medium' 고정 vs 'premium' 분기 (비용 4배)
+- 축 3.D.1 — hospitalStyleBlock imageHints 필드 도입 (인프라 작업)
+- 축 1.D.1 — AI생성↔라이브러리 매칭 의미 공간 브릿지 (PoC 필요)
+
+### 다음 세션 컨텍스트 복원
+- audit doc 1독 → Top 3 권고 정확도 검증
+- 이미지 룰 보강 PR 은 텍스트 audit Round 4 (의료법 보강) 와 동시 또는 직후 진행 권장 — root cause 가 일부 공유됨 (가상 시술명·효과 단정·인증마크 등)
+
+---
+
 ## 2026-05-15 — Blog prompt audit doc 머지 (PR #215)
 
 main HEAD: `ff20fb73`. squash 머지. docs-only.
