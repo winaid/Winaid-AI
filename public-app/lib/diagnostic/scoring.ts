@@ -232,9 +232,14 @@ function scoreSecurityTech(crawl: CrawlResult, psi: PsiResult | null, hasRobotsT
     ? makeItem(LABELS.https, 25, 25, 'pass', 'HTTPS 로 제공 중.')
     : makeItem(LABELS.https, 25, 0, 'fail', 'HTTP 프로토콜 — 보안 불충분.'));
 
-  items.push(crawl.viewport
+  // viewport 정확화: 단순 존재가 아니라 width=device-width 명시 검증.
+  // `<meta viewport content="width=1024">` 같은 데스크탑 고정 width 는 모바일 친화 X.
+  const hasMobileViewport = /width\s*=\s*device-width/i.test(crawl.viewport || '');
+  items.push(hasMobileViewport
     ? makeItem(LABELS.viewport, 20, 20, 'pass', `viewport: ${crawl.viewport}`, crawl.viewport)
-    : makeItem(LABELS.viewport, 20, 0, 'fail', 'viewport 메타 태그 없음 — 모바일 렌더링 불리.'));
+    : makeItem(LABELS.viewport, 20, 0, 'fail', crawl.viewport
+        ? `viewport: "${crawl.viewport}" — width=device-width 누락 (데스크탑 고정 추정).`
+        : 'viewport 메타 태그 없음 — 모바일 렌더링 불리.'));
 
   items.push(hasRobotsTxt
     ? makeItem(LABELS.robots, 15, 15, 'pass', 'robots.txt 접근 가능.')
