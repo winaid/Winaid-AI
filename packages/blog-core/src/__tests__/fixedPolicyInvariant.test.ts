@@ -209,6 +209,57 @@ test('양 앱 refine-selection: customInstruction injection guard (stripInjectio
   }
 });
 
+// ── useHospitalStyle 토글 invariant (양 앱 lockstep) ─────────────────
+
+test('GenerationRequest 타입에 useHospitalStyle?: boolean 존재', () => {
+  // types.ts 의 GenerationRequest interface 본문 검사 — 필드 부재 시 양 앱
+  // route 가 컴파일 통과해도 토글 자체가 무시되는 회귀.
+  const p = resolve(REPO_ROOT, 'packages/blog-core/src/types.ts');
+  if (!existsSync(p)) return;
+  const src = readFileSync(p, 'utf-8');
+  assert.ok(/useHospitalStyle\?\s*:\s*boolean/.test(src), 'GenerationRequest.useHospitalStyle 필드 누락');
+});
+
+test('양 앱 generate/blog route: useHospitalStyle 토글 wiring 존재', () => {
+  // 라우트가 토글을 받아 빌더에 전달하는 분기가 존재해야 함. 미존재 시
+  // 빌더 단의 분기는 작동하나 lookup 자체는 skip 안 됨 (네트워크 낭비).
+  for (const app of ['next-app', 'public-app']) {
+    const p = resolve(REPO_ROOT, `${app}/app/api/generate/blog/route.ts`);
+    if (!existsSync(p)) continue;
+    const src = readFileSync(p, 'utf-8');
+    assert.ok(
+      /useHospitalStyle\s*!==\s*false/.test(src),
+      `${app}: useHospitalStyle 분기 누락 — DB 프로파일 lookup skip 작동 안 함`,
+    );
+  }
+});
+
+test('양 앱 generate/blog/review route: useHospitalStyle 토글 wiring 존재', () => {
+  for (const app of ['next-app', 'public-app']) {
+    const p = resolve(REPO_ROOT, `${app}/app/api/generate/blog/review/route.ts`);
+    if (!existsSync(p)) continue;
+    const src = readFileSync(p, 'utf-8');
+    assert.ok(
+      /useHospitalStyle\s*!==\s*false/.test(src),
+      `${app}: review 라우트 useHospitalStyle 분기 누락`,
+    );
+    assert.ok(
+      /useHospitalStyle:\s*body\.useHospitalStyle/.test(src),
+      `${app}: buildBlogReviewPrompt ctx 에 useHospitalStyle forward 누락`,
+    );
+  }
+});
+
+test('buildLearnedStyleBlock 본문에 useHospitalStyle === false 분기 존재', () => {
+  const p = resolve(REPO_ROOT, 'packages/blog-core/src/blogPrompt.ts');
+  if (!existsSync(p)) return;
+  const src = readFileSync(p, 'utf-8');
+  assert.ok(
+    /req\.useHospitalStyle\s*===\s*false/.test(src),
+    'buildLearnedStyleBlock 또는 buildBlogReviewPrompt 에 useHospitalStyle === false 분기 누락',
+  );
+});
+
 // eslint-disable-next-line no-console
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) {
