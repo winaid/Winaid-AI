@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { BLOG_STAGES, BLOG_MESSAGE_POOL } from './blogConstants';
 import { ErrorPanel, ResultPanel, type ScoreBarData } from '../../../components/GenerationResult';
 import ContentAnalysisPanel from '../../../components/ContentAnalysisPanel';
@@ -11,10 +12,9 @@ export interface BlogResultAreaProps {
   isGenerating: boolean;
   displayStage: number;
   rotationIdx: number;
-  /** @deprecated 정직한 progress UI 도입 후 미사용. 시그니처 호환 위해 유지. */
-  generationStartTime?: number;
-  /** @deprecated 정직한 progress UI 도입 후 미사용. 시그니처 호환 위해 유지. */
-  estimatedTotalSeconds?: number;
+  generationStartTime: number;
+  estimatedTotalSeconds: number;
+  stageInfo?: { name: string; completed?: number; total?: number } | null;
   // 에러
   error: string | null;
   onDismissError: () => void;
@@ -46,11 +46,24 @@ export interface BlogResultAreaProps {
   setChatInput?: (v: string) => void;
   isChatRefining?: boolean;
   onChatRefine?: () => void;
+  // contentEditable 편집 → 부모 state 동기화
+  onContentChange?: (html: string) => void;
+  // 단락 hover [+] 버튼 / placeholder 클릭 → 이미지 삽입 모달
+  onRequestImageInsert?: (target: HTMLElement, mode: 'after' | 'replace') => void;
+  /**
+   * 결과 영역 루트 div 의 onClick 핸들러.
+   * library/hybrid 모드에서 본문 안 <img data-image-index> 또는 [data-img-slot]
+   * 클릭 시 ImageReplaceModal 트리거용. parent 가 wrapper 에 onClick 을 걸어도
+   * 작동하지만 (display:contents wrapper), 환경에 따라 회귀가 보고된 적이 있어
+   * 본 prop 으로 root 에 직접 wiring (belt-and-suspenders).
+   */
+  onResultClick?: (e: React.MouseEvent<HTMLDivElement>) => void;
 }
 
 /** 블로그 결과 영역 — 생성 중 / 에러 / 결과 / 빈 상태 4가지 렌더링 */
 export default function BlogResultArea({
-  isGenerating, displayStage, rotationIdx,
+  isGenerating, displayStage, rotationIdx, generationStartTime, estimatedTotalSeconds,
+  stageInfo = null,
   error, onDismissError, isRetryable, onRetry,
   generatedContent, saveStatus, scores, cssTheme,
   blogSections, regeneratingSection, sectionProgress,
@@ -59,21 +72,73 @@ export default function BlogResultArea({
   seoReport, isSeoLoading,
   topic,
   chatInput = '', setChatInput, isChatRefining = false, onChatRefine,
+  onContentChange,
+  onRequestImageInsert,
+  onResultClick,
 }: BlogResultAreaProps) {
 
+  // ── 카운트다운 타이머 (생성 중에만 동작) ──
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  useEffect(() => {
+    if (!isGenerating || !generationStartTime) { setElapsedSeconds(0); return; }
+    const timer = setInterval(() => {
+      setElapsedSeconds(Math.floor((Date.now() - generationStartTime) / 1000));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [isGenerating, generationStartTime]);
+
   // ── (1) 생성 중 ──
-  // 정직한 progress UI: 가짜 ETA / 가짜 percentage 제거.
-  // 무한 스피너 + 현재 단계 라벨 + 로테이팅 메시지만 표시.
-  // (estimated < elapsed 시 "거의 완료..." 무한 표시되던 안티패턴 제거 — 2026-05)
   if (isGenerating) {
-    const stage = BLOG_STAGES[displayStage] || BLOG_STAGES[1];
+    // stageInfo.name 이 있으면 그걸 기준으로 라벨 stage 결정 (라벨/메시지 단일 source 통일)
+    let stageForLabel = displayStage;
+    let displayMsg: string;
+    let progressPct: number;
     const pool = BLOG_MESSAGE_POOL[displayStage] || BLOG_MESSAGE_POOL[1];
-    const displayMsg = pool[rotationIdx % pool.length];
+
+    if (stageInfo) {
+      const { name, completed, total } = stageInfo;
+      if (name === 'outline_start') {
+        stageForLabel = 0;
+        displayMsg = '글 구조를 짜고 있어요...';
+        progressPct = 8;
+      } else if (name === 'outline_done') {
+        stageForLabel = 0;
+        displayMsg = '구조 완성! 본문 작성 시작합니다...';
+        progressPct = 15;
+      } else if (name === 'sections_start') {
+        stageForLabel = 1;
+        displayMsg = '도입부와 본문을 채우고 있어요...';
+        progressPct = 22;
+      } else if ((name === 'section_done' || name === 'section_failed') && total) {
+        stageForLabel = 1;
+        const pct = (completed ?? 0) / total;
+        displayMsg = `본문 작성 중... (${completed}/${total})`;
+        progressPct = 22 + pct * 55;
+      } else if (name === 'fallback_1pass') {
+        stageForLabel = 0;
+        displayMsg = '글을 작성하고 있어요...';
+        progressPct = 30;
+      } else {
+        displayMsg = pool[rotationIdx % pool.length];
+        progressPct = 50;
+      }
+    } else {
+      displayMsg = pool[rotationIdx % pool.length];
+      progressPct = 0;
+    }
+
+    // 시간 경과 기반 최소 진행률 — stage 매칭 안 돼도 뒤로 안 가고 시간만큼 전진
+    const timeBasedPct = estimatedTotalSeconds > 0
+      ? Math.min(90, (elapsedSeconds / estimatedTotalSeconds) * 100)
+      : 0;
+    progressPct = Math.max(progressPct, timeBasedPct);
+
+    const stage = BLOG_STAGES[stageForLabel] || BLOG_STAGES[1];
 
     return (
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0" onClick={onResultClick}>
         <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-12 flex flex-col items-center justify-center text-center min-h-[480px]">
-          {/* 상단: 현재 단계 배지 */}
+          {/* 상단: 현재 단계 배지 (stageForLabel 기준 — 메시지와 항상 일치) */}
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold mb-6 bg-blue-50 text-blue-600 border border-blue-100">
             <span>{stage.icon}</span>
             <span>{stage.label}</span>
@@ -87,16 +152,50 @@ export default function BlogResultArea({
               </div>
             </div>
           </div>
-          {/* 진행 메시지 (단계별 로테이션) */}
+          {/* 프로그레스 바 */}
+          <div className="w-full max-w-xs mb-4">
+            <div className="h-1 bg-slate-100 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-blue-500 rounded-full transition-all duration-1000"
+                style={{ width: `${progressPct}%` }}
+              />
+            </div>
+          </div>
+          {/* 진행 메시지 */}
           <p className="text-sm font-medium text-slate-700 mb-2 min-h-[20px] transition-opacity duration-500">
             {displayMsg}
           </p>
-          {/* 안내 문구 (정직 — 추정 시간 표시 안 함) */}
+          {/* 카운트다운 */}
+          <p className="text-xs text-blue-400 mb-1">
+            {(() => {
+              // 1) sections 진행률 80% 이상 + elapsed > 10s 일 때만 "거의 다 됐어요!" 허용
+              if (stageInfo && stageInfo.total && stageInfo.completed !== undefined) {
+                const progress = stageInfo.completed / stageInfo.total;
+                if (progress >= 0.8 && elapsedSeconds > 10 && stageInfo.completed > 0) {
+                  const avgPerSection = elapsedSeconds / stageInfo.completed;
+                  const remaining = Math.max(0, Math.round(avgPerSection * (stageInfo.total - stageInfo.completed)));
+                  return remaining > 5 ? `약 ${remaining}초 남음` : '거의 다 됐어요!';
+                }
+                // 섹션 진행 중 (1개 이상 완료): 최소 5초 floor
+                if (stageInfo.completed > 0 && elapsedSeconds > 0) {
+                  const avgPerSection = elapsedSeconds / stageInfo.completed;
+                  const remaining = Math.max(5, Math.round(avgPerSection * (stageInfo.total - stageInfo.completed)));
+                  return `약 ${remaining}초 남음`;
+                }
+              }
+              // 2) progressPct 기반 역산 (시간 경과가 쌓이면서 자연 감소 보장)
+              if (progressPct > 10 && progressPct < 95) {
+                const remaining = Math.max(5, Math.round(elapsedSeconds * (100 - progressPct) / progressPct));
+                return `약 ${remaining}초 남음`;
+              }
+              // 3) 극초기 (progressPct ≤ 10) — estimated fallback
+              const remaining = estimatedTotalSeconds - elapsedSeconds;
+              if (remaining > 5) return `약 ${remaining}초 남음`;
+              return '조금만 더 기다려주세요...';
+            })()}
+          </p>
           <p className="text-xs text-slate-400 max-w-xs">
             {stage.hint}
-          </p>
-          <p className="text-[11px] text-slate-300 mt-3 max-w-xs">
-            완료될 때까지 잠시만 기다려주세요. 평소보다 시간이 걸릴 수 있습니다.
           </p>
         </div>
       </div>
@@ -106,7 +205,7 @@ export default function BlogResultArea({
   // ── (2) 에러 ──
   if (error) {
     return (
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0" onClick={onResultClick}>
         <ErrorPanel error={error} onDismiss={onDismissError} onRetry={isRetryable ? onRetry : undefined} />
       </div>
     );
@@ -115,7 +214,7 @@ export default function BlogResultArea({
   // ── (3) 결과 표시 ──
   if (generatedContent) {
     return (
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0" onClick={onResultClick}>
         <ContentAnalysisPanel html={generatedContent} keyword={topic?.split(',')[0]?.trim()} />
         {seoReport ? (
           <SeoDetailPanel report={seoReport} />
@@ -139,6 +238,8 @@ export default function BlogResultArea({
           onDownloadPDF={onDownloadPDF}
           onImageRegenerate={onImageRegenerate}
           regeneratingImage={regeneratingImage}
+          onContentChange={onContentChange}
+          onRequestImageInsert={onRequestImageInsert}
         />
 
         {/* 인라인 수정 채팅 */}
@@ -183,7 +284,7 @@ export default function BlogResultArea({
 
   // ── (4) 빈 상태 (empty) ──
   return (
-    <div className="flex-1 min-w-0">
+    <div className="flex-1 min-w-0" onClick={onResultClick}>
       <div className="rounded-2xl border border-slate-200 bg-white shadow-[0_2px_16px_rgba(0,0,0,0.06)] flex-1 min-h-[520px] overflow-hidden flex flex-col">
         <div className="flex items-center gap-1 px-4 py-2.5 border-b border-slate-100 bg-slate-50/80">
           {['B', 'I', 'U'].map(t => (
