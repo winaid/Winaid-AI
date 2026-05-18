@@ -190,6 +190,9 @@ function BlogForm() {
   const [faqCount, setFaqCount] = useState(3);
   const [showAdvanced, setShowAdvanced] = useState(true);
   const [learnedStyleId, setLearnedStyleId] = useState<string | undefined>(undefined);
+  // 병원 학습 말투 적용 토글 — 기본 ON (backward compat). 사용자가 글 단위로 OFF 가능.
+  // dbStyleLoaded && !learnedStyleId 일 때만 UI 표시 (BlogFormPanel 안에서 분기).
+  const [useHospitalStyle, setUseHospitalStyle] = useState(true);
 
   // 관리자 학습 말투 DB 프로파일 확인
   const [dbStyleLoaded, setDbStyleLoaded] = useState(false);
@@ -1049,6 +1052,9 @@ JSON 형식으로 응답해주세요.`;
       customSubheadings: customSubheadings.trim() || undefined,
       // UI 단순화: imageStyle='photo' 고정 → custom 분기 영구 false (customImagePrompt 미전송)
       hospitalName: hospitalName || undefined,
+      // 병원 학습 말투 적용 토글 — UI 토글이 OFF 일 때 false 명시.
+      // stylePromptText 와 무관 (사용자 명시 학습 경로는 토글 영향 없음).
+      useHospitalStyle,
       hospitalStyleSource: hospitalName ? 'explicit_selected_hospital' : 'generic_default',
       includeHospitalIntro,
       clinicContext: clinicContext ? {
@@ -1256,6 +1262,7 @@ JSON 형식으로 응답해주세요.`;
           hospitalName: hospitalName || undefined,
           ruleFilterViolations: draftViolations,
           stylePromptText: request.stylePromptText,
+          useHospitalStyle: request.useHospitalStyle,
           userId: creditCtx.userId || null,
         }),
       }).then(r => r.json()).catch((err: unknown) => ({
@@ -2564,6 +2571,7 @@ Output ONLY the prompt. No explanation.`;
         includeFaq={includeFaq} faqCount={faqCount}
         customSubheadings={customSubheadings} learnedStyleId={learnedStyleId}
         dbStyleLoaded={dbStyleLoaded} dbStyleName={dbStyleName}
+        useHospitalStyle={useHospitalStyle} setUseHospitalStyle={setUseHospitalStyle}
         showAdvanced={showAdvanced} includeHospitalIntro={includeHospitalIntro}
         keywordStats={keywordStats} keywordAiRec={keywordAiRec}
         keywordProgress={keywordProgress} isAnalyzingKeywords={isAnalyzingKeywords}

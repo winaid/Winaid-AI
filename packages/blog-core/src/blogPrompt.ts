@@ -2418,7 +2418,12 @@ case_narrative · anti_marketing · emoji_policy · vocabulary 등 voice 외 항
 </medical_blog_voice>`;
 }
 
-/** <learned_style> 블록 — stylePromptText 또는 hospitalStyleBlock 있을 때만 */
+/** <learned_style> 블록 — stylePromptText 또는 hospitalStyleBlock 있을 때만.
+ *
+ * `req.useHospitalStyle === false` 면 _DB 프로파일 자동 적용_ 차단 — hospitalStyleBlock
+ * 무시. stylePromptText (UI 학습 명시 경로) 는 본 토글 영향 없음 (사용자가
+ * 명시적으로 학습한 말투는 토글과 무관하게 적용).
+ */
 function buildLearnedStyleBlock(
   req: GenerationRequest,
   hospitalStyleBlock?: string | { systemBlock: string; fewShotBlock?: string } | null,
@@ -2442,6 +2447,9 @@ ${req.stylePromptText}
 </override_rules>
 </learned_style>`;
   }
+  // useHospitalStyle 토글 — 명시적 false 일 때만 DB 프로파일 차단.
+  // undefined / true 는 기존 동작 (backward compat).
+  if (req.useHospitalStyle === false) return '';
   if (hospitalStyleBlock) {
     const block = typeof hospitalStyleBlock === 'string'
       ? hospitalStyleBlock
@@ -2970,10 +2978,21 @@ export function buildBlogReviewPrompt(
     ruleFilterViolations?: string[];
     stylePromptText?: string;
     hospitalStyleBlock?: string;
+    /**
+     * 병원 학습 말투 적용 여부 토글 — 글 단위 opt-out.
+     * undefined / true: 기존 동작 (학습 적용). false: hospitalStyleBlock 무시.
+     * stylePromptText (UI 학습 경로) 는 영향 없음 — 본 토글은 _DB 프로파일 자동 적용_ 만 차단.
+     * GenerationRequest.useHospitalStyle 과 정합 (라우트에서 동일 body 필드 forward).
+     */
+    useHospitalStyle?: boolean;
   } = {},
 ): BlogPromptV3 {
   const systemBlocks: CacheableBlock[] = [];
   const SEP = '\n\n---\n\n';
+
+  // useHospitalStyle 토글 — 명시적 false 일 때 DB 프로파일 무효화.
+  // stylePromptText 는 그대로 (사용자 명시 학습은 토글 영향 없음).
+  const effectiveHospitalBlock = ctx.useHospitalStyle === false ? undefined : ctx.hospitalStyleBlock;
 
   // slot 1: REVIEWER_PERSONA + REVIEWER_E_E_A_T_GUIDE
   // REVIEWER_PERSONA 의 추상 기준 "13) E-E-A-T: 신호 중 2개 이상" 만으로는 판정 일관성 약함.
@@ -2992,7 +3011,7 @@ export function buildBlogReviewPrompt(
     if (toneBlock) systemBlocks.push({ type: 'text', text: toneBlock, cacheable: true, cacheTtl: '1h' });
   }
 
-  const hasLearnedStyle = !!(ctx.stylePromptText?.trim() || ctx.hospitalStyleBlock?.trim());
+  const hasLearnedStyle = !!(ctx.stylePromptText?.trim() || effectiveHospitalBlock?.trim());
 
   // user prompt
   const safeHospital = sanitizePromptInput(ctx.hospitalName, 100) || '(미지정)';

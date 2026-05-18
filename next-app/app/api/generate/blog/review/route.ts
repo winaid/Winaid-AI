@@ -37,6 +37,11 @@ interface Body {
   hospitalName?: string;
   ruleFilterViolations?: string[];
   stylePromptText?: string;
+  /**
+   * 병원 학습 말투 적용 토글 — 글 단위 opt-out (메인 /api/generate/blog 와 정합).
+   * undefined / true: 기존 동작. false: hospitalStyleBlock lookup skip + ctx 무효화.
+   */
+  useHospitalStyle?: boolean;
   // userId 는 client 입력 신뢰 안 함. Bearer 토큰에서 도출.
 }
 
@@ -78,8 +83,9 @@ export async function POST(request: NextRequest) {
 
   // 관리자 학습 경로(DB 프로파일) 의 hospitalStyleBlock 을 계산해 styleOverride 트리거에 반영.
   // 4-A 정책: stylePromptText(UI 학습) 가 있으면 DB 프로파일은 어차피 V3 메인에서 버려지므로 review 에서도 조회 스킵.
+  // useHospitalStyle 토글: 명시적 false 면 DB 프로파일 lookup 자체 skip + ctx 에도 false 전달 (defense-in-depth).
   let hospitalStyleBlock: string | null = null;
-  if (body.hospitalName && !body.stylePromptText?.trim()) {
+  if (body.hospitalName && !body.stylePromptText?.trim() && body.useHospitalStyle !== false) {
     try {
       hospitalStyleBlock = await getHospitalStylePrompt(body.hospitalName);
     } catch (err) {
@@ -93,6 +99,7 @@ export async function POST(request: NextRequest) {
     ruleFilterViolations: body.ruleFilterViolations,
     stylePromptText: body.stylePromptText,
     hospitalStyleBlock: hospitalStyleBlock ?? undefined,
+    useHospitalStyle: body.useHospitalStyle,
   });
 
   let rawText = '';
