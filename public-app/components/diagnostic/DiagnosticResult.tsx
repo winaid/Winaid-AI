@@ -21,6 +21,7 @@ import AIVisibilityKPICards from './AIVisibilityKPICards';
 import ToneRecommendationCards from './ToneRecommendationCards';
 import AnalyzedSubpages from './AnalyzedSubpages';
 import AnalyzedInternalLinks from './AnalyzedInternalLinks';
+import GeoCitationsSection from './GeoCitationsSection';
 import { deriveAIVisibilityKPI } from '../../lib/diagnostic/aiVisibilityKPI';
 import { authFetch } from '../../lib/authFetch';
 import { getSupabaseClient, isSupabaseConfigured } from '@winaid/blog-core';
@@ -382,6 +383,11 @@ export default function DiagnosticResult({ result, onResultUpdate }: DiagnosticR
           />
 
           <AnalyzedInternalLinks links={result.crawlMeta.internalLinks} />
+
+          <GeoCitationsSection
+            diagnosticUrl={result.url}
+            hospitalName={result.siteName || result.url}
+          />
 
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <h3 className="text-sm font-bold text-slate-700 mb-4">카테고리별 점수</h3>
