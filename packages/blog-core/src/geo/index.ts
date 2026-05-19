@@ -14,3 +14,4 @@ export * from './types';
 export * from './citationExtractor';
 export { queryChatGptWithCitations } from './chatgptClient';
 export { queryGeminiWithCitations } from './geminiClient';
+export { classifyUrlPattern, classifyHtmlPattern } from './contentPatternClassifier';
