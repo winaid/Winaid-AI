@@ -91,3 +91,15 @@ export {
   type NaverChannelCount,
   type NaverChannelSummary,
 } from './naverChannelClassifier';
+export {
+  buildPrefillFromEEATWeakness,
+  buildPrefillFromSentimentWeakness,
+  buildPrefillFromMissingNaverChannel,
+  buildPrefillFromCompetitorContent,
+  serializeToQueryParams,
+  buildPrefillDeeplink,
+  parseCampaignPrefill,
+  type CampaignPrefill,
+  type CampaignSourceKind,
+  type CompetitorContentSeed,
+} from './campaignPrefillBuilder';

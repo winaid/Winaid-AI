@@ -16,6 +16,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   aggregateSentiment,
+  buildPrefillFromSentimentWeakness,
+  buildPrefillDeeplink,
   type CitationRow,
   type MentionAnalysis,
   type Polarity,
@@ -273,16 +275,27 @@ export default function SentimentDrilldownSection({
                 </div>
               )}
 
-              {/* 약점 signal + 권고 */}
+              {/* 약점 signal — GEO-12: 클릭 시 콘텐츠 초안 prefill */}
               {summary.weaknesses.length > 0 && (
                 <div>
-                  <h4 className="text-[12px] font-bold text-rose-700 mb-2">⚠ 약점 signal ({summary.weaknesses.length})</h4>
+                  <h4 className="text-[12px] font-bold text-rose-700 mb-2">⚠ 약점 signal ({summary.weaknesses.length}) — 클릭 시 콘텐츠 초안</h4>
                   <div className="flex flex-wrap gap-1.5 mb-2">
-                    {summary.weaknesses.map(w => (
-                      <span key={w.keyword} className="text-[10px] px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
-                        {w.label} ({w.count}회)
-                      </span>
-                    ))}
+                    {summary.weaknesses.map(w => {
+                      const prefill = buildPrefillFromSentimentWeakness(w.label, summary.recommendations, undefined, w.keyword);
+                      const href = buildPrefillDeeplink(prefill);
+                      return (
+                        <a
+                          key={w.keyword}
+                          href={href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[10px] px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 hover:border-rose-300 cursor-pointer no-underline"
+                          title="클릭 시 blog 빌더 새 창 + 보강 콘텐츠 prefill (GEO-12)"
+                        >
+                          {w.label} ({w.count}회) ✨
+                        </a>
+                      );
+                    })}
                   </div>
                 </div>
               )}

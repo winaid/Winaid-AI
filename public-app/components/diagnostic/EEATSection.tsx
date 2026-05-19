@@ -15,8 +15,15 @@
  * 는 정상 평가. 후속 PR 에서 textContent 노출 시 자동 보강.
  */
 
-import { useMemo, useState } from 'react';
-import { scoreEEAT, type EEATInput, type EEATResult, type EEATAxis } from '@winaid/blog-core';
+import { useCallback, useMemo, useState } from 'react';
+import {
+  scoreEEAT,
+  buildPrefillFromEEATWeakness,
+  buildPrefillDeeplink,
+  type EEATInput,
+  type EEATResult,
+  type EEATAxis,
+} from '@winaid/blog-core';
 
 export interface EEATSectionProps {
   /** 진단 URL — HTTPS 검출용. */
@@ -196,17 +203,32 @@ export default function EEATSection({ url, crawlMeta, categories }: EEATSectionP
             </div>
           )}
 
-          {/* 약점 + 권고 */}
+          {/* 약점 + 권고 — GEO-12: 클릭 시 콘텐츠 초안 prefill */}
           {result.weaknesses.length > 0 && (
             <div>
               <div className="text-[11px] font-bold text-rose-700 mb-1.5">⚠ 약점 + 권고 ({result.weaknesses.length})</div>
               <ul className="space-y-1.5">
-                {result.weaknesses.slice(0, 10).map((w, i) => (
-                  <li key={i} className="text-[11px] bg-rose-50 border border-rose-200 rounded-lg p-2">
-                    <div className="font-medium text-rose-700">{w.label}</div>
-                    <div className="text-rose-600 mt-0.5">→ {w.recommendation}</div>
-                  </li>
-                ))}
+                {result.weaknesses.slice(0, 10).map((w, i) => {
+                  const prefill = buildPrefillFromEEATWeakness(w.label, [w.recommendation], undefined, w.label);
+                  const href = buildPrefillDeeplink(prefill);
+                  return (
+                    <li key={i}>
+                      <a
+                        href={href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block text-[11px] bg-rose-50 border border-rose-200 rounded-lg p-2 hover:bg-rose-100 hover:border-rose-300 cursor-pointer no-underline"
+                        title="클릭 시 blog 빌더 새 창 + 보강 콘텐츠 prefill (GEO-12)"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="font-medium text-rose-700">{w.label}</div>
+                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-indigo-600 text-white whitespace-nowrap">✨ 콘텐츠 초안</span>
+                        </div>
+                        <div className="text-rose-600 mt-0.5">→ {w.recommendation}</div>
+                      </a>
+                    </li>
+                  );
+                })}
                 {result.weaknesses.length > 10 && (
                   <li className="text-[10px] text-slate-500">… 외 {result.weaknesses.length - 10}건 (각 축 상세 토글로 확인)</li>
                 )}
