@@ -20,6 +20,7 @@ export * from './normalize/leakFilter';
 export * from './promptLeakageGuard';
 export * from './promptInjectionGuard';
 export * from './imageMatcher';
+export * from './geo';
 
 // safeFetch 는 server-only (Node 'dns' / 'net' 의존). barrel 에서 제외 —
 // caller 가 deep import 로만 사용:
