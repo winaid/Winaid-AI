@@ -28,6 +28,8 @@ import SentimentDrilldownSection from './SentimentDrilldownSection';
 import NaverChannelSection from './NaverChannelSection';
 import GeoActionDashboard from './GeoActionDashboard';
 import GeoOnboardingBanner from './GeoOnboardingBanner';
+import GeoFirstTimeWizard from './GeoFirstTimeWizard';
+import { useGeoSectionsData } from '../../hooks/useGeoSectionsData';
 import { deriveAIVisibilityKPI } from '../../lib/diagnostic/aiVisibilityKPI';
 import { authFetch } from '../../lib/authFetch';
 
@@ -106,6 +108,9 @@ function formatDate(iso: string): string {
 export default function DiagnosticResult({ result, onResultUpdate }: DiagnosticResultProps) {
   const [tab, setTab] = useState<Tab>('summary');
   const [history, setHistory] = useState<HistoryEntry[]>([]);
+
+  // GEO-UX-2 lift up: 8 GEO 섹션 데이터 통합 fetch → Dashboard + 각 섹션 props 전달
+  const geoData = useGeoSectionsData(result.siteName || result.url);
 
   useEffect(() => {
     if (!result?.url) return;
@@ -348,10 +353,17 @@ export default function DiagnosticResult({ result, onResultUpdate }: DiagnosticR
       {tab === 'summary' && (
         <div className="space-y-5">
           {/* GEO-UX-1: 첫 진입 안내 + 우선 액션 대시보드 (8 GEO 섹션 위) */}
+          <GeoFirstTimeWizard />
           <GeoOnboardingBanner />
           <GeoActionDashboard
             inputs={{
-              // 데이터는 각 섹션이 자체 fetch — Dashboard 는 일단 빈 입력 (후속 PR 에서 prop 연동)
+              // GEO-UX-2: lift up — DiagnosticResult 가 통합 fetch 후 props 전달
+              competitorRecent: geoData.competitorContents.map(c => ({
+                id: c.id,
+                title: c.title,
+                pattern_type: (c as { pattern_type?: string }).pattern_type,
+                competitor_domain: c.competitor_domain,
+              })),
             }}
           />
 
