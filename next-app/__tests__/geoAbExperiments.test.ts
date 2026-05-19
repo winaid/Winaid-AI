@@ -21,6 +21,7 @@ import {
   createExperiment,
   collectMetrics,
   analyzeResult,
+  ContentCategory,
   type CreateExperimentInput,
 } from '@winaid/blog-core';
 
@@ -187,7 +188,7 @@ function makeMockDb(): unknown {
 }
 
 const baseReq = {
-  category: '치과',
+  category: ContentCategory.DENTAL,
   keywords: '임플란트 비용',
   tone: '친절',
   audienceMode: '환자용(친절/공감)' as const,
