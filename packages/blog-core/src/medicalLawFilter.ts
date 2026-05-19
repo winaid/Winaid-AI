@@ -226,29 +226,14 @@ export function filterOutputArtifacts(text: string): string {
     result = result.replace(pattern, replacement);
   }
 
-  // 3) 같은 어미 3회 연속 감지 + 3번째를 교체
-  // ⚠️ '~거든요' 는 자동 교체 후보에서 제외 (의료 콘텐츠 신뢰감 위해 절제).
-  //    LLM 이 학습된 말투(learned_style)에 따라 자연 출력하는 것만 허용,
-  //    필터가 인위적으로 추가하지 않는다. 프롬프트 규칙: 글 전체 최대 1회.
-  const endingPatterns: Array<[RegExp, string[]]> = [
-    [/좋습니다/g, ['바람직합니다', '낫습니다', '권장됩니다']],
-    [/있습니다/g, ['있어요', '있는 편입니다']],
-    [/됩니다/g, ['돼요', '되는 편입니다']],
-    [/합니다/g, ['해요', '하는 편입니다']],
-  ];
-
-  for (const [pattern, alts] of endingPatterns) {
-    const matches = result.match(pattern);
-    if (matches && matches.length >= 3) {
-      let count = 0;
-      result = result.replace(pattern, (match) => {
-        count++;
-        // 3번째, 6번째, 9번째... 를 교체
-        if (count % 3 === 0) return alts[Math.floor(Math.random() * alts.length)];
-        return match;
-      });
-    }
-  }
+  // 3) 어미 무작위 치환 — 폐기 (blog-quality-1, 2026-05-19).
+  // 과거에는 "좋습니다 → 낫습니다 / 있습니다 → 있는 편입니다" 같은 문맥 무시 치환을
+  // 3회 연속 감지 시 수행했으나, 단어만 바꾸고 문장 구조는 그대로라 오히려 어색해지는
+  // 부작용 보고됨 (예: "정보가 좋습니다" → "정보가 낫습니다", "치료가 됩니다" → "치료가
+  // 되는 편입니다"). 어미 다양화는 LLM 출력 단계 (COMMON_WRITING_STYLE 의
+  // <natural_sentence_structure> 가이드 + buildBlogReviewPrompt 자동 감지) 가 담당.
+  // 의료광고법 본 규칙 (filterMedicalLawViolations) 은 무영향 — 별도 함수.
+  // signature 보존: filterOutputArtifacts(text: string): string — 호출자 양 앱 라우트 무영향.
 
   // 4) 공백 정리
   result = result.replace(/[ \t]{2,}/g, ' ');
