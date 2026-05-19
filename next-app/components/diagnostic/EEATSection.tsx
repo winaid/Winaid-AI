@@ -16,6 +16,7 @@
  */
 
 import { useCallback, useMemo, useState } from 'react';
+import GeoSectionTooltip from './GeoSectionTooltip';
 import {
   scoreEEAT,
   buildPrefillFromEEATWeakness,
@@ -125,8 +126,9 @@ export default function EEATSection({ url, crawlMeta, categories }: EEATSectionP
         aria-expanded={open}
       >
         <div>
-          <h3 className="text-sm font-bold text-slate-700">
+          <h3 className="text-sm font-bold text-slate-700 flex items-center gap-1">
             ⭐ AI 가 본 우리 신뢰도
+            <GeoSectionTooltip description="AI 가 신뢰할 만한 콘텐츠인지 4 가지 (경험·전문성·권위·신뢰) 측면 점수. Google + ChatGPT + Gemini 가 모두 중시하는 신호." />
           </h3>
           <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
             Experience · Expertise · Authority · Trust 4축으로 의료 사이트 신뢰도 자동 채점.

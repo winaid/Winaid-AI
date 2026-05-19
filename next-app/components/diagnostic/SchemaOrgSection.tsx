@@ -14,6 +14,7 @@
  */
 
 import { useCallback, useMemo, useState } from 'react';
+import GeoSectionTooltip from './GeoSectionTooltip';
 import {
   buildAllSchemas,
   serializeSchema,
@@ -177,8 +178,9 @@ export default function SchemaOrgSection({
         aria-expanded={open}
       >
         <div>
-          <h3 className="text-sm font-bold text-slate-700">
+          <h3 className="text-sm font-bold text-slate-700 flex items-center gap-1">
             🏷️ AI 가 우리 정보를 이해하게 만들기
+            <GeoSectionTooltip description="구조화 데이터 (schema.org) 를 홈페이지에 넣으면 AI 가 우리 병원 정보를 정확히 이해해 인용률 ↑. 코드를 복사해 홈페이지 head 에 paste." />
           </h3>
           <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
             아래 코드를 홈페이지 <code className="bg-slate-100 px-1 rounded">{'<head>'}</code> 에

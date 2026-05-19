@@ -11,6 +11,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import GeoSectionTooltip from './GeoSectionTooltip';
 
 export interface CompetitorContentSectionProps {
   /** 진단 결과 siteName — hospital_name (조회 키). */
@@ -243,8 +244,9 @@ export default function CompetitorContentSection({ hospitalName }: CompetitorCon
         aria-expanded={open}
       >
         <div>
-          <h3 className="text-sm font-bold text-slate-700">
+          <h3 className="text-sm font-bold text-slate-700 flex items-center gap-1">
             🚨 경쟁 병원 새 글
+            <GeoSectionTooltip description="경쟁 병원 새 콘텐츠 자동 감지 (RSS·네이버 검색) + 패턴 분류 (FAQ/비교표 등) + 우리 대응 콘텐츠 초안 1-click 생성." />
           </h3>
           <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
             경쟁사 도메인의 RSS / 네이버 블로그·카페에서 신규 콘텐츠 자동 발견 + 패턴 분류 + 대응 초안 trigger.

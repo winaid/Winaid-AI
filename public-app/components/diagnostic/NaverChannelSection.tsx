@@ -15,6 +15,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import GeoSectionTooltip from './GeoSectionTooltip';
 import {
   aggregateNaverChannels,
   formatNaverRecommendations,
@@ -138,8 +139,9 @@ export default function NaverChannelSection({
         aria-expanded={open}
       >
         <div>
-          <h3 className="text-sm font-bold text-slate-700">
+          <h3 className="text-sm font-bold text-slate-700 flex items-center gap-1">
             🇰🇷 네이버에서의 노출
+            <GeoSectionTooltip description="AI 가 네이버 블로그·카페·지식인·플레이스 중 어디서 우리 정보를 가져오는지. 한국 의료 검색의 80%+ 가 네이버 경유." />
           </h3>
           <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
             ChatGPT / Gemini 답변 인용 URL 중 네이버 8 채널 (블로그/카페/지식인/플레이스/뉴스/포스트/스마트스토어/me) 분류 + 우리 vs 경쟁사 매트릭스 + 부재 채널 권고.
