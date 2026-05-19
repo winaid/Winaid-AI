@@ -27,6 +27,7 @@ import CompetitorContentSection from './CompetitorContentSection';
 import SentimentDrilldownSection from './SentimentDrilldownSection';
 import NaverChannelSection from './NaverChannelSection';
 import GeoActionDashboard from './GeoActionDashboard';
+import GeoAbExperimentsSection from './GeoAbExperimentsSection';
 import GeoOnboardingBanner from './GeoOnboardingBanner';
 import GeoFirstTimeWizard from './GeoFirstTimeWizard';
 import { useGeoSectionsData } from '../../hooks/useGeoSectionsData';
@@ -411,6 +412,11 @@ export default function DiagnosticResult({ result, onResultUpdate }: DiagnosticR
           />
 
           <NaverChannelSection
+            diagnosticUrl={result.url}
+            hospitalName={result.siteName || result.url}
+          />
+
+          <GeoAbExperimentsSection
             diagnosticUrl={result.url}
             hospitalName={result.siteName || result.url}
           />

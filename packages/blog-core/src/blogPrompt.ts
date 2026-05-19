@@ -3006,6 +3006,29 @@ ${safeSubheadings}
     );
   }
 
+  // GEO-13: A/B 실험 variant hint — user prompt 끝 직전에 주입. slot 1 STATIC_PRELUDE
+  // (PRIORITY + COMMON_WRITING_STYLE + E_E_A_T) 무영향. variant 차이는 본 블록에만 표현.
+  if (req.abVariantHint && Object.keys(req.abVariantHint).length > 0) {
+    const hintJson = JSON.stringify(req.abVariantHint);
+    parts.push(
+      '',
+      `<ab_variant_hint>
+본 글은 A/B 실험 variant 입니다. 아래 format_config 의 항목들은 common_writing_style
+가이드를 위반하지 않는 범위 내에서 본 variant 만의 특징으로 반영하세요.
+
+format_config: ${hintJson}
+
+- hook_type: question / scene / statistic / number_question / mystery 중 하나
+  — common_writing_style ## C-1 의 매핑된 패턴 사용 (의료법 차단 유지)
+- faq_block: true 면 본문 끝에 FAQ 3~5개 추가 (faq_section 블록 가이드 따름)
+- list_style: prose (단락 서술 — 기본) / light_list (3+ 나열만 ul) / numbered (단계 절차만 ol)
+
+⚠️ 본 hint 는 variant 차이만 표현. 의료광고법 / prose_flow / 마크다운 금지 룰은
+   common_writing_style 가 우선. hint 가 룰과 충돌하면 룰을 따르세요.
+</ab_variant_hint>`,
+    );
+  }
+
   const targetLength = req.textLength || 1500;
   const imageCount = req.imageCount ?? 0;
   parts.push(

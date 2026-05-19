@@ -110,3 +110,82 @@ export interface CitationRow {
   created_at?: string;
   created_by?: string;
 }
+
+// ── GEO-13: A/B 실험 인프라 ─────────────────────────────────────────
+
+/**
+ * variant 별 콘텐츠 형식 설정. JSONB 컬럼으로 저장됨.
+ * hook_type / faq_block / list_style 는 known dimension — UI 마법사가 선택.
+ * 그 외 자유 키 (string => unknown) 도 허용 — 향후 확장.
+ */
+export interface AbVariantFormatConfig {
+  hook_type?: 'question' | 'scene' | 'statistic' | 'number_question' | 'mystery';
+  faq_block?: boolean;
+  list_style?: 'prose' | 'light_list' | 'numbered';
+  [key: string]: unknown;
+}
+
+export interface AbVariantInput {
+  variant_name: string;
+  format_config: AbVariantFormatConfig;
+}
+
+export interface AbExperimentRow {
+  id: string;
+  hospital_name: string;
+  topic: string;
+  hypothesis: string | null;
+  hypothesis_dimension: string | null;
+  status: 'draft' | 'running' | 'completed' | 'cancelled';
+  queries: string[];
+  our_domains: string[];
+  started_at: string | null;
+  ended_at: string | null;
+  created_at: string;
+  created_by: string | null;
+}
+
+export interface AbVariantRow {
+  id: string;
+  experiment_id: string;
+  variant_name: string;
+  format_config: AbVariantFormatConfig;
+  post_id: string | null;
+  post_url: string | null;
+  created_at: string;
+}
+
+export type AbMetricSource = 'chatgpt' | 'gemini' | 'naver' | 'organic';
+
+export interface AbMetricRow {
+  id: string;
+  variant_id: string;
+  measured_at: string;
+  source: AbMetricSource;
+  queries_run: number;
+  citation_count: number;
+  citation_rate: number | null;
+  naver_rank: number | null;
+  visit_count: number | null;
+  raw_payload: Record<string, unknown> | null;
+}
+
+/** analyzeResult 의 variant 별 요약 통계. */
+export interface AbVariantSummary {
+  variant_id: string;
+  variant_name: string;
+  format_config: AbVariantFormatConfig;
+  metric_summary: {
+    total_samples: number;
+    chatgpt_citation_rate: number;
+    gemini_citation_rate: number;
+    avg_naver_rank: number | null;
+  };
+}
+
+export interface AbAnalysisResult {
+  experiment: AbExperimentRow;
+  variants: AbVariantSummary[];
+  winner?: { variant_id: string; reason: string; confidence: 'low' | 'medium' | 'high' };
+  notes: string[];
+}
