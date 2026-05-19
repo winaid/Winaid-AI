@@ -110,3 +110,14 @@ export {
   type ActionSourceKind,
   type AggregateInputs,
 } from './actionAggregator';
+
+// ── GEO-13: A/B 실험 인프라 ─────────────────────────────────────────
+export {
+  createExperiment,
+  collectMetrics,
+  analyzeResult,
+  type CreateExperimentInput,
+  type CreateExperimentResult,
+  type CollectMetricsInput,
+  type CollectMetricsResult,
+} from './abExperimentEngine';

@@ -4,6 +4,10 @@
     {
       "path": "/api/cron/crawl-all",
       "schedule": "0 1 * * *"
+    },
+    {
+      "path": "/api/geo/ab/collect",
+      "schedule": "0 */6 * * *"
     }
   ]
 }

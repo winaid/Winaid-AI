@@ -76,6 +76,18 @@ export interface GenerationRequest {
    * 본 토글은 _DB 프로파일 자동 적용_ 만 차단.
    */
   useHospitalStyle?: boolean;
+  /**
+   * GEO-13 A/B 실험 variant hint — buildBlogPromptV3 의 user prompt 끝에
+   * `<ab_variant_hint>` 블록으로만 주입. slot 1 STATIC_PRELUDE 무영향
+   * (PRIORITY + COMMON_WRITING_STYLE + E_E_A_T invariant 보존).
+   * undefined / 빈 객체: 무영향 (정상 generation 흐름).
+   */
+  abVariantHint?: {
+    hook_type?: 'question' | 'scene' | 'statistic' | 'number_question' | 'mystery';
+    faq_block?: boolean;
+    list_style?: 'prose' | 'light_list' | 'numbered';
+    [key: string]: unknown;
+  };
   clinicContext?: {
     actualServices: string[];
     specialties: string[];
