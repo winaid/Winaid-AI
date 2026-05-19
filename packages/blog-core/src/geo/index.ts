@@ -81,3 +81,13 @@ export {
   type MentionAnalysis,
   type SentimentSummary,
 } from './sentimentAnalyzer';
+export {
+  classifyNaverChannel,
+  isNaverDomain,
+  aggregateNaverChannels,
+  formatNaverRecommendations,
+  getNaverChannelLabel,
+  type NaverChannel,
+  type NaverChannelCount,
+  type NaverChannelSummary,
+} from './naverChannelClassifier';
