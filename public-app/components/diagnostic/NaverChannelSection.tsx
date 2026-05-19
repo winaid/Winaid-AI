@@ -19,6 +19,8 @@ import {
   aggregateNaverChannels,
   formatNaverRecommendations,
   getNaverChannelLabel,
+  buildPrefillFromMissingNaverChannel,
+  buildPrefillDeeplink,
   type CitationRow,
   type NaverChannel,
   type NaverChannelSummary,
@@ -229,22 +231,36 @@ export default function NaverChannelSection({
                     {summary.missingChannels.map(c => {
                       const link = REGISTRATION_LINK[c];
                       const rec = recommendations.find(r => r.startsWith(`[${getNaverChannelLabel(c)}]`));
+                      // GEO-12: 콘텐츠 초안 deeplink (등록 link 와 별도)
+                      const draftPrefill = buildPrefillFromMissingNaverChannel(c);
+                      const draftHref = buildPrefillDeeplink(draftPrefill);
                       return (
                         <li key={c} className="text-[11px] bg-indigo-50 border border-indigo-200 rounded p-2">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex-1 text-indigo-800">
+                          <div className="flex items-start justify-between gap-2 flex-wrap">
+                            <div className="flex-1 min-w-0 text-indigo-800">
                               {rec || `[${getNaverChannelLabel(c)}] 권고 누락`}
                             </div>
-                            {link && (
+                            <div className="flex items-center gap-1 shrink-0">
                               <a
-                                href={link.url}
+                                href={draftHref}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="shrink-0 text-[10px] px-2 py-0.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded cursor-pointer font-medium whitespace-nowrap"
+                                className="text-[10px] px-2 py-0.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded cursor-pointer font-medium whitespace-nowrap no-underline"
+                                title="이 채널용 콘텐츠 초안 — blog 빌더 새 창 (GEO-12)"
                               >
-                                {link.label} →
+                                ✨ 초안
                               </a>
-                            )}
+                              {link && (
+                                <a
+                                  href={link.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-[10px] px-2 py-0.5 bg-white hover:bg-slate-50 text-indigo-700 border border-indigo-300 rounded cursor-pointer font-medium whitespace-nowrap no-underline"
+                                >
+                                  {link.label} →
+                                </a>
+                              )}
+                            </div>
                           </div>
                         </li>
                       );
