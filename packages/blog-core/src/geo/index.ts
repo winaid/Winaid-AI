@@ -70,3 +70,14 @@ export {
   type ExtractCompetitorsOpts,
   type DetectNewContentResult,
 } from './competitorWatcher';
+export {
+  extractMentionsAroundHospital,
+  analyzeSentiment,
+  aggregateSentiment,
+  formatRecommendations,
+  type Polarity,
+  type SentimentSignal,
+  type MentionContext,
+  type MentionAnalysis,
+  type SentimentSummary,
+} from './sentimentAnalyzer';
