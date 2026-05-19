@@ -17,6 +17,51 @@ export interface Citation {
   paragraph_index?: number;
   /** ourDomains 와 hostname suffix 매칭되면 true. */
   is_ours?: boolean;
+  /** GEO-1.2 (decompose) 가 분류한 primary 패턴. MVP 는 API 응답만, DB 영속은 별도 PR. */
+  pattern_type?: PatternType;
+}
+
+// ── GEO-1.2: 콘텐츠 패턴 분류기 (decompose) ───────────────
+
+/**
+ * 패턴 6종 + 메타 상태.
+ * - 'unknown': 분류 임계값 미달
+ * - 'fetch_failed' / 'parse_failed': 분류 시도조차 못 함 (URL fetch 실패 / HTML 파싱 실패)
+ */
+export type PatternType =
+  | 'faq'
+  | 'comparison_table'
+  | 'list'
+  | 'doctor_interview'
+  | 'pricing'
+  | 'case_study'
+  | 'unknown'
+  | 'fetch_failed';
+
+export interface PatternMeta {
+  paragraph_count: number;
+  heading_count: number;
+  table_count: number;
+  list_count: number;
+  image_count: number;
+}
+
+/** classifyUrlPattern 의 단일 URL 결과 — UI 칩 + 카드 종합 통계의 source-of-truth. */
+export interface PatternResult {
+  url: string;
+  status: 'ok' | 'fetch_failed' | 'parse_failed';
+  /** scores 의 최고점이 임계값 ≥ 40 일 때만 set. */
+  primary_pattern?: PatternType;
+  /** primary 외 30~39 점 패턴 (있으면). */
+  secondary_pattern?: PatternType;
+  /**
+   * 6 패턴 각 점수 (0~100). 임계값 미달도 점수는 채워서 운영자 디버깅에 도움.
+   * status='fetch_failed' / 'parse_failed' 시 omit.
+   */
+  scores?: Partial<Record<Exclude<PatternType, 'unknown' | 'fetch_failed'>, number>>;
+  meta?: PatternMeta;
+  /** fetch / parse 실패 사유 — UI tooltip 노출용. */
+  error?: string;
 }
 
 /** AI 모델 별 citations 쿼리 결과 — DB row 1건의 핵심 payload. */
