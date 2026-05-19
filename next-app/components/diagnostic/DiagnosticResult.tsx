@@ -22,6 +22,7 @@ import AnalyzedInternalLinks from './AnalyzedInternalLinks';
 import GeoCitationsSection from './GeoCitationsSection';
 import SchemaOrgSection from './SchemaOrgSection';
 import AlertSubscriptionSection from './AlertSubscriptionSection';
+import EEATSection from './EEATSection';
 import { deriveAIVisibilityKPI } from '../../lib/diagnostic/aiVisibilityKPI';
 import { authFetch } from '../../lib/authFetch';
 
@@ -363,6 +364,16 @@ export default function DiagnosticResult({ result, onResultUpdate }: DiagnosticR
           <AlertSubscriptionSection
             diagnosticUrl={result.url}
             hospitalName={result.siteName || result.url}
+          />
+
+          <EEATSection
+            url={result.url}
+            crawlMeta={{
+              internalLinks: result.crawlMeta.internalLinks,
+              schemaTypesFound: result.crawlMeta.schemaTypesFound,
+              detectedServices: result.crawlMeta.detectedServices,
+            }}
+            categories={result.categories}
           />
 
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
