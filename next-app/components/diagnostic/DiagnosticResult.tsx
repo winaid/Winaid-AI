@@ -25,6 +25,7 @@ import AlertSubscriptionSection from './AlertSubscriptionSection';
 import EEATSection from './EEATSection';
 import CompetitorContentSection from './CompetitorContentSection';
 import SentimentDrilldownSection from './SentimentDrilldownSection';
+import NaverChannelSection from './NaverChannelSection';
 import { deriveAIVisibilityKPI } from '../../lib/diagnostic/aiVisibilityKPI';
 import { authFetch } from '../../lib/authFetch';
 
@@ -383,6 +384,11 @@ export default function DiagnosticResult({ result, onResultUpdate }: DiagnosticR
           />
 
           <SentimentDrilldownSection
+            diagnosticUrl={result.url}
+            hospitalName={result.siteName || result.url}
+          />
+
+          <NaverChannelSection
             diagnosticUrl={result.url}
             hospitalName={result.siteName || result.url}
           />
