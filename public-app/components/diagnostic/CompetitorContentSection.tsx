@@ -244,7 +244,7 @@ export default function CompetitorContentSection({ hospitalName }: CompetitorCon
       >
         <div>
           <h3 className="text-sm font-bold text-slate-700">
-            🚨 경쟁 콘텐츠 자동 감지 — 새 글 놓치지 마세요
+            🚨 경쟁 병원 새 글
           </h3>
           <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
             경쟁사 도메인의 RSS / 네이버 블로그·카페에서 신규 콘텐츠 자동 발견 + 패턴 분류 + 대응 초안 trigger.

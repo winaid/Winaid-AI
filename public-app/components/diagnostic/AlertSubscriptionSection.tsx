@@ -242,7 +242,7 @@ export default function AlertSubscriptionSection({
       >
         <div>
           <h3 className="text-sm font-bold text-slate-700">
-            🔔 인용률 변동 알림 — 매일 안 들여다봐도 됩니다
+            🔔 변동 알림 받기
           </h3>
           <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
             우리 사이트 인용률이 임계값 이상 변동하거나 새 경쟁사가 등장하면 Slack / Email / 카카오톡으로 자동 알림.
