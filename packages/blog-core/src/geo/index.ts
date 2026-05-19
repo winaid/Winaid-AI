@@ -103,3 +103,10 @@ export {
   type CampaignSourceKind,
   type CompetitorContentSeed,
 } from './campaignPrefillBuilder';
+export {
+  aggregateTop3Actions,
+  type PriorityAction,
+  type ActionImpact,
+  type ActionSourceKind,
+  type AggregateInputs,
+} from './actionAggregator';
