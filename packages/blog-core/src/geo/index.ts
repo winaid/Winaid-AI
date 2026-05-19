@@ -15,3 +15,15 @@ export * from './citationExtractor';
 export { queryChatGptWithCitations } from './chatgptClient';
 export { queryGeminiWithCitations } from './geminiClient';
 export { classifyUrlPattern, classifyHtmlPattern } from './contentPatternClassifier';
+export {
+  buildMedicalOrganizationSchema,
+  buildPhysicianSchema,
+  buildFAQPageSchema,
+  buildLocalBusinessSchema,
+  buildAllSchemas,
+  serializeSchema,
+  wrapAsScript,
+  type SchemaBuilderInput,
+  type SchemaObject,
+  type BuildAllSchemasResult,
+} from './schemaOrgBuilder';
