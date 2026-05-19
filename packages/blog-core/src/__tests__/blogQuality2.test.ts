@@ -5,16 +5,23 @@
  *  - Fix 1: 접속부사 (또한/더불어/아울러/나아가/뿐만 아니라) 줄 시작 보존
  *  - Fix 2: 정보문 "하는 것이 중요합니다" 강제 명령조 변환 폐기
  *  - Fix 3: "보장합니다" 조사 일치 변환 (목적격/주격/fallback)
- *  - Fix 4: "무조건" 광고 컨텍스트 한정 (응급 권고 보존)
+ *  - Fix 4 (revert + hotfix, 2026-05-19): "무조건" 무차별 차단 복원
+ *    + BLOG_PERSONA <natural_compliance> 에 "무조건" 사용 금지 가이드
  *  - Fix 5: "가장 좋은/뛰어난/우수한" 격하 폐기 (정보문 보존)
  *  - 의료광고법 본 95 규칙 무영향 (최고/유일/완벽/100% 등 차단 그대로)
  *  - PR #248 invariant 유지 (어미 무작위 치환 폐기)
  */
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   filterOutputArtifacts,
   filterMedicalLawViolations,
 } from '../medicalLawFilter';
+import { BLOG_PERSONA } from '../blogPrompt';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 let passed = 0;
 let failed = 0;
@@ -132,47 +139,74 @@ test('Fix 3: 의료광고법 의도 유지 — "보장" 단정 표현 차단', (
 });
 
 // ─────────────────────────────────────────────────────────────────────
-// Fix 4 — "무조건" 광고 컨텍스트 한정
+// Fix 4 hotfix (2026-05-19) — "무조건" 무차별 차단 복원
+// PR #249 의 광고 컨텍스트 한정은 false negative risk 가 더 컸음 — revert.
+// 응급 권고는 prompt 단 (BLOG_PERSONA natural_compliance) 가 회피 유도.
 // ─────────────────────────────────────────────────────────────────────
 
-test('Fix 4: "응급실에 무조건 즉시 가세요" 응급 권고 보존', () => {
-  const r = filterMedicalLawViolations('응급실에 무조건 즉시 가세요').filtered;
-  assert.ok(r.includes('무조건'), `응급 권고 약화 회귀: "${r}"`);
+test('Fix 4 hotfix: "무조건" 단독 무차별 차단 (대부분의 경우 치환)', () => {
+  const r = filterMedicalLawViolations('이 약은 무조건 효과가 있습니다').filtered;
+  assert.ok(r.includes('대부분의 경우'), `차단 실패: "${r}"`);
+  assert.ok(!r.includes('무조건'), `회귀: "무조건" 잔존 — "${r}"`);
 });
 
-test('Fix 4: "무조건 진찰을 받으세요" 필수 권고 보존', () => {
-  const r = filterMedicalLawViolations('통증이 있으면 무조건 진찰을 받으세요').filtered;
-  assert.ok(r.includes('무조건'), '필수 권고 약화 회귀');
+test('Fix 4 hotfix: "무조건 안전합니다" 단정 차단 (PR #249 미커버)', () => {
+  const r = filterMedicalLawViolations('이 시술은 무조건 안전합니다').filtered;
+  assert.ok(!r.includes('무조건'), `회귀: "무조건 안전" 미차단 — "${r}"`);
+  assert.ok(r.includes('대부분의 경우'), '차단 변환 실패');
 });
 
-test('Fix 4: 자기 병원 찬양 "무조건 우리 병원" 차단', () => {
-  const r = filterMedicalLawViolations('무조건 우리 병원으로 오세요').filtered;
-  assert.ok(!/무조건\s*우리\s*병원/.test(r), `자기 병원 찬양 차단 실패: "${r}"`);
+test('Fix 4 hotfix: "무조건 빠른 회복" 단정 차단 (PR #249 미커버)', () => {
+  const r = filterMedicalLawViolations('무조건 빠른 회복을 경험합니다').filtered;
+  assert.ok(!r.includes('무조건'), `회귀: 미차단 — "${r}"`);
 });
 
-test('Fix 4: 자기 병원 찬양 변형 (저희/당사/본 의원) 차단', () => {
-  const cases = [
-    ['무조건 저희 클리닉이 답입니다', /무조건\s*저희/],
-    ['무조건 본 병원이 최고', /무조건\s*본\s*병원/],
-    ['무조건 본 의원에서', /무조건\s*본\s*의원/],
-  ];
-  for (const [input, pat] of cases as Array<[string, RegExp]>) {
-    const r = filterMedicalLawViolations(input).filtered;
-    assert.ok(!pat.test(r), `자기 병원 찬양 변형 회귀: "${input}" → "${r}"`);
-  }
+test('Fix 4 hotfix: "무조건 후회 없습니다" 단정 차단 (PR #249 미커버)', () => {
+  const r = filterMedicalLawViolations('무조건 후회 없습니다').filtered;
+  assert.ok(!r.includes('무조건'), `회귀: 미차단 — "${r}"`);
 });
 
-test('Fix 4: 단정 효과 "무조건 효과/성공/완치/만족" 차단', () => {
-  const cases = [
-    '이 약은 무조건 효과가 있습니다',
-    '시술은 무조건 성공합니다',
-    '치료는 무조건 완치됩니다',
-    '환자는 무조건 만족합니다',
-  ];
-  for (const input of cases) {
-    const r = filterMedicalLawViolations(input).filtered;
-    assert.ok(r.includes('대부분의 경우'), `단정 효과 차단 실패: "${input}" → "${r}"`);
-  }
+test('Fix 4 hotfix: 응급 권고도 무차별 변환 (prompt 단에서 회피 유도)', () => {
+  // 후처리는 무차별 차단. 자연 응급 표현 ("즉시·지체 없이") 은 LLM 이
+  // 처음부터 사용하도록 BLOG_PERSONA natural_compliance 가 가이드.
+  const r = filterMedicalLawViolations('응급실에 무조건 가세요').filtered;
+  assert.ok(!r.includes('무조건'), `무차별 차단 회귀: "${r}"`);
+  assert.ok(r.includes('대부분의 경우'), '치환 실패');
+});
+
+test('Fix 4 hotfix: PR #249 광고 컨텍스트 한정 패턴 부재 (revert invariant)', () => {
+  // 옛 패턴 (자기 병원 + 단정 효과 분리) 잔재 0 — 소스 코드 직접 검증
+  const code = readFileSync(
+    resolve(__dirname, '../medicalLawFilter.ts'),
+    'utf-8',
+  );
+  assert.ok(
+    !/무조건\\s\*\(우리\|저희\|당사/.test(code),
+    'PR #249 자기 병원 찬양 패턴 잔존',
+  );
+  assert.ok(
+    !/무조건\\s\*\(효과\|성공/.test(code),
+    'PR #249 단정 효과 패턴 잔존',
+  );
+  assert.ok(
+    /\[\/무조건\/g,\s*'대부분의 경우'\]/.test(code),
+    '무차별 차단 패턴 미복원',
+  );
+});
+
+test('Fix 4 hotfix: BLOG_PERSONA natural_compliance 에 "무조건" 금지 가이드', () => {
+  assert.ok(
+    BLOG_PERSONA.includes('"무조건" 사용 금지'),
+    'BLOG_PERSONA 에 "무조건" 금지 가이드 누락',
+  );
+  assert.ok(
+    /대부분의 경우 도움이 됩니다|많은 분들이 효과/.test(BLOG_PERSONA),
+    '대안 표현 가이드 누락',
+  );
+  assert.ok(
+    /즉시 가셔야 합니다|지체 없이 진찰/.test(BLOG_PERSONA),
+    '응급 권고 자연 표현 가이드 누락',
+  );
 });
 
 // ─────────────────────────────────────────────────────────────────────
