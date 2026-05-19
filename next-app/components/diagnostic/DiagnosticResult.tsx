@@ -26,6 +26,8 @@ import EEATSection from './EEATSection';
 import CompetitorContentSection from './CompetitorContentSection';
 import SentimentDrilldownSection from './SentimentDrilldownSection';
 import NaverChannelSection from './NaverChannelSection';
+import GeoActionDashboard from './GeoActionDashboard';
+import GeoOnboardingBanner from './GeoOnboardingBanner';
 import { deriveAIVisibilityKPI } from '../../lib/diagnostic/aiVisibilityKPI';
 import { authFetch } from '../../lib/authFetch';
 
@@ -345,6 +347,14 @@ export default function DiagnosticResult({ result, onResultUpdate }: DiagnosticR
       {/* 탭 1: 종합 */}
       {tab === 'summary' && (
         <div className="space-y-5">
+          {/* GEO-UX-1: 첫 진입 안내 + 우선 액션 대시보드 (8 GEO 섹션 위) */}
+          <GeoOnboardingBanner />
+          <GeoActionDashboard
+            inputs={{
+              // 데이터는 각 섹션이 자체 fetch — Dashboard 는 일단 빈 입력 (후속 PR 에서 prop 연동)
+            }}
+          />
+
           <AnalyzedSubpages
             subpages={result.crawlMeta.subpagesReached}
             mainUrl={result.url}
