@@ -28,6 +28,7 @@ import {
   sanitizePromptInput,
   sanitizeSourceContent,
   stripInjectionForUse,
+  tryParseRefinedFromLLM,
   type RefineSelectionOption,
 } from '@winaid/blog-core';
 import { sanitizeHtml } from '../../../lib/sanitize';
@@ -51,24 +52,9 @@ interface Body {
   category?: string;
 }
 
-interface RefinedJson {
-  refined?: string;
-}
-
-function tryParseJson(raw: string): RefinedJson | null {
-  if (!raw) return null;
-  try { return JSON.parse(raw) as RefinedJson; } catch { /* pass */ }
-  const fence = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (fence) {
-    try { return JSON.parse(fence[1]) as RefinedJson; } catch { /* pass */ }
-  }
-  const firstBrace = raw.indexOf('{');
-  const lastBrace = raw.lastIndexOf('}');
-  if (firstBrace >= 0 && lastBrace > firstBrace) {
-    try { return JSON.parse(raw.slice(firstBrace, lastBrace + 1)) as RefinedJson; } catch { /* pass */ }
-  }
-  return null;
-}
+// LLM 응답 → refined 본문 추출 — blog-core/refineSelectionPrompt.ts 의
+// tryParseRefinedFromLLM 사용 (XML 태그 우선 + JSON fallback).
+// GEO-fix: 옛 tryParseJson 단독 사용 시 따옴표 escape 누락으로 502 발생 (shorter/longer/professional/custom 옵션).
 
 export async function POST(request: NextRequest) {
   // IP 기반 분당 30회 — 자연스러운 다듬기 빈도 (10초당 5회) 안에 안전.
@@ -161,10 +147,10 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const parsed = tryParseJson(rawText);
-  const refinedRaw = (parsed?.refined || '').trim();
+  // GEO-fix: XML 태그 우선 + JSON fallback (4 전략) — 502 회귀 차단
+  const refinedRaw = tryParseRefinedFromLLM(rawText);
   if (!refinedRaw) {
-    console.warn(`[refine-selection] parse_failed or empty refined: ${rawText.slice(0, 200)}`);
+    console.warn(`[refine-selection] parse_failed or empty refined (model=${model}, option=${option}, raw=${rawText.slice(0, 300)})`);
     return NextResponse.json(
       { error: 'parse_failed', details: '응답 파싱 실패. 다시 시도해 주세요.' },
       { status: 502 },

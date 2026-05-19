@@ -12,7 +12,7 @@
  *    medical_law_priority / sentence_boundary) 모두 도달
  */
 import assert from 'node:assert/strict';
-import { buildRefineSelectionPrompt } from '../refineSelectionPrompt';
+import { buildRefineSelectionPrompt, tryParseRefinedFromLLM } from '../refineSelectionPrompt';
 
 let passed = 0;
 let failed = 0;
@@ -170,6 +170,53 @@ test('5개 option 모두 빌드 가능 (smoke)', () => {
     assert.ok(p.systemBlocks.length > 0, `option=${opt} systemBlocks 비어 있음`);
     assert.ok(p.userPrompt.includes(`<option>${opt}</option>`), `option=${opt} 보간 실패`);
   }
+});
+
+// ── refine-selection 502 hotfix — tryParseRefinedFromLLM ──
+
+test('prompt: task 블록이 XML 태그 형식 명시 (JSON 단독 사용 금지 — 502 회귀 차단)', () => {
+  const p = buildRefineSelectionPrompt({ ...baseInput, option: 'shorter' });
+  assert.ok(/&lt;refined&gt;|<refined>/.test(p.userPrompt), 'XML 태그 명시 누락');
+});
+
+test('parser: <refined>...</refined> XML 태그 추출 (신규 형식, 따옴표/줄바꿈 자유)', () => {
+  const r = tryParseRefinedFromLLM('<refined>본문에 "따옴표" 와 줄바꿈\n이 들어감</refined>');
+  assert.equal(r, '본문에 "따옴표" 와 줄바꿈\n이 들어감');
+});
+
+test('parser: legacy JSON fallback 1 — 직접 JSON', () => {
+  const r = tryParseRefinedFromLLM('{"refined":"옛 형식"}');
+  assert.equal(r, '옛 형식');
+});
+
+test('parser: legacy JSON fallback 2 — ```json fence', () => {
+  const r = tryParseRefinedFromLLM('Here:\n```json\n{"refined":"fence 안"}\n```\nDone');
+  assert.equal(r, 'fence 안');
+});
+
+test('parser: legacy JSON fallback 3 — 첫 { ~ 마지막 } 추출', () => {
+  const r = tryParseRefinedFromLLM('explanation\n{"refined":"brace 추출"}\nmore');
+  assert.equal(r, 'brace 추출');
+});
+
+test('parser: 빈 입력 / 잘못된 JSON / 매칭 0 → null', () => {
+  assert.equal(tryParseRefinedFromLLM(''), null);
+  assert.equal(tryParseRefinedFromLLM('   '), null);
+  assert.equal(tryParseRefinedFromLLM('완전 자유 텍스트'), null);
+  assert.equal(tryParseRefinedFromLLM('{"other": "field"}'), null);
+});
+
+test('parser: XML 우선 (XML + JSON 둘 다 있으면 XML)', () => {
+  const r = tryParseRefinedFromLLM('<refined>XML 본문</refined>\n{"refined":"JSON 본문"}');
+  assert.equal(r, 'XML 본문');
+});
+
+test('parser: 따옴표 escape 누락된 JSON (502 회귀 원인) → JSON 실패 + null (XML 강제)', () => {
+  // production 에서 발견된 패턴 — Claude 가 refined 안에 escape 안 된 " 포함
+  const broken = '{"refined": "압축된 "본문" 내용"}';
+  const r = tryParseRefinedFromLLM(broken);
+  // JSON parse 실패 + XML 없음 → null. UI 가 "다시 시도" 안내 (502 가 아닌 의미 있는 응답)
+  assert.equal(r, null);
 });
 
 // eslint-disable-next-line no-console
