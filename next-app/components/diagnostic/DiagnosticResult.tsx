@@ -24,6 +24,7 @@ import SchemaOrgSection from './SchemaOrgSection';
 import AlertSubscriptionSection from './AlertSubscriptionSection';
 import EEATSection from './EEATSection';
 import CompetitorContentSection from './CompetitorContentSection';
+import SentimentDrilldownSection from './SentimentDrilldownSection';
 import { deriveAIVisibilityKPI } from '../../lib/diagnostic/aiVisibilityKPI';
 import { authFetch } from '../../lib/authFetch';
 
@@ -378,6 +379,11 @@ export default function DiagnosticResult({ result, onResultUpdate }: DiagnosticR
           />
 
           <CompetitorContentSection
+            hospitalName={result.siteName || result.url}
+          />
+
+          <SentimentDrilldownSection
+            diagnosticUrl={result.url}
             hospitalName={result.siteName || result.url}
           />
 
