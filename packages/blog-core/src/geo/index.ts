@@ -60,3 +60,13 @@ export {
   type EEATSignal,
   type EEATCategoryItemMin,
 } from './eeatScorer';
+export {
+  extractCompetitorsFromCitations,
+  fetchCompetitorNewContent,
+  searchNaverCompetitorPosts,
+  detectNewContent,
+  type CompetitorDomain,
+  type CompetitorContentItem,
+  type ExtractCompetitorsOpts,
+  type DetectNewContentResult,
+} from './competitorWatcher';

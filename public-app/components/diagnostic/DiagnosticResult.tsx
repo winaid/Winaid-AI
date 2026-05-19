@@ -25,6 +25,7 @@ import GeoCitationsSection from './GeoCitationsSection';
 import SchemaOrgSection from './SchemaOrgSection';
 import AlertSubscriptionSection from './AlertSubscriptionSection';
 import EEATSection from './EEATSection';
+import CompetitorContentSection from './CompetitorContentSection';
 import { deriveAIVisibilityKPI } from '../../lib/diagnostic/aiVisibilityKPI';
 import { authFetch } from '../../lib/authFetch';
 import { getSupabaseClient, isSupabaseConfigured } from '@winaid/blog-core';
@@ -412,6 +413,10 @@ export default function DiagnosticResult({ result, onResultUpdate }: DiagnosticR
               detectedServices: result.crawlMeta.detectedServices,
             }}
             categories={result.categories}
+          />
+
+          <CompetitorContentSection
+            hospitalName={result.siteName || result.url}
           />
 
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
