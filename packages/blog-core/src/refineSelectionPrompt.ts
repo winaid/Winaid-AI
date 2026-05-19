@@ -216,14 +216,69 @@ export function buildRefineSelectionPrompt(input: RefineSelectionInput): RefineS
   parts.push(
     '',
     `<task>
-selected_text 를 option 의 의미에 맞게 다듬어 JSON 으로만 출력하세요.
+selected_text 를 option 의 의미에 맞게 다듬어 XML 태그로만 출력하세요.
 - 단락 경계·블록 태그 변경 금지 (scope_constraint)
 - 분량 ±20% (length_constraint)
 - 의료법 절대 우선 (medical_law_priority)
 - 첫·끝 문장 경계 보존 (sentence_boundary)
-- 출력은 {"refined": "..."} JSON 한 객체만, 그 외 텍스트 0
+- 출력은 <refined>...</refined> 한 태그만, 그 외 텍스트 / markdown / explanation 0
+- 본문 내부에 따옴표·줄바꿈 자유 — 이스케이프 불필요 (XML 태그가 boundary)
 </task>`,
   );
 
   return { systemBlocks, userPrompt: parts.join('\n') };
+}
+
+/**
+ * LLM 응답에서 refined 본문 추출 — XML 태그 우선 + JSON fallback (legacy 호환).
+ *
+ * 호환 우선순위:
+ *   1. <refined>...</refined> XML 태그 (신규 — 안정적, 따옴표/줄바꿈 이스케이프 불필요)
+ *   2. {"refined": "..."} JSON (legacy — Claude 가 cached prompt 기반으로 옛 형식 반환 시)
+ *   3. ```json fence 블록 안의 JSON
+ *   4. 첫 { 부터 마지막 } 까지 JSON 파싱
+ *   5. 모두 실패 → null
+ *
+ * GEO-fix (refine-selection 502): JSON 만 시도하면 LLM 이 따옴표 escape 빠뜨릴 때
+ * (특히 shorter / longer / professional / custom 옵션) JSON.parse 실패 → 502.
+ * XML 태그로 1차 시도하면 99%+ 안정 (escape 불필요).
+ */
+export function tryParseRefinedFromLLM(raw: string): string | null {
+  if (!raw) return null;
+  const text = raw.trim();
+  // 1) XML 태그 — 신규 prompt 형식
+  const xmlMatch = text.match(/<refined>([\s\S]*?)<\/refined>/i);
+  if (xmlMatch && xmlMatch[1].trim()) return xmlMatch[1].trim();
+  // 2) JSON 직접 파싱
+  try {
+    const parsed = JSON.parse(text);
+    if (parsed && typeof parsed === 'object' && typeof (parsed as { refined?: string }).refined === 'string') {
+      const refined = (parsed as { refined: string }).refined.trim();
+      if (refined) return refined;
+    }
+  } catch { /* pass */ }
+  // 3) ```json fence
+  const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (fence) {
+    try {
+      const parsed = JSON.parse(fence[1]);
+      if (parsed && typeof parsed === 'object' && typeof (parsed as { refined?: string }).refined === 'string') {
+        const refined = (parsed as { refined: string }).refined.trim();
+        if (refined) return refined;
+      }
+    } catch { /* pass */ }
+  }
+  // 4) 첫 { ~ 마지막 } JSON
+  const firstBrace = text.indexOf('{');
+  const lastBrace = text.lastIndexOf('}');
+  if (firstBrace >= 0 && lastBrace > firstBrace) {
+    try {
+      const parsed = JSON.parse(text.slice(firstBrace, lastBrace + 1));
+      if (parsed && typeof parsed === 'object' && typeof (parsed as { refined?: string }).refined === 'string') {
+        const refined = (parsed as { refined: string }).refined.trim();
+        if (refined) return refined;
+      }
+    } catch { /* pass */ }
+  }
+  return null;
 }
