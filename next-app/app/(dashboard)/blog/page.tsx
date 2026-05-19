@@ -11,6 +11,7 @@ import { savePost } from '../../../lib/postStorage';
 import { getSessionSafe, supabase } from '@winaid/blog-core';
 import { getHospitalStylePrompt } from '@winaid/blog-core';
 import { buildImagePrompt } from '@winaid/blog-core';
+import { parseCampaignPrefill } from '@winaid/blog-core';
 import { type ScoreBarData } from '../../../components/GenerationResult';
 import { getStyleById, getStylePromptForGeneration } from '../../../components/WritingStyleLearner';
 import type { BlogSection } from '@winaid/blog-core';
@@ -128,6 +129,8 @@ function BlogForm() {
   const { teamData: TEAM_DATA } = useTeamData();
 
   // ── 폼 상태 ──
+  // GEO-12: from=geo_funnel 시 추가 prefill (title/category/tone/outline_hint) — 다른 state 초기화 전에 parse
+  const geoPrefill = parseCampaignPrefill(searchParams);
   const topicParam = searchParams.get('topic');
   const titleParam = searchParams.get('title');
   const keywordsParam = searchParams.get('keywords');
@@ -136,22 +139,33 @@ function BlogForm() {
   const [topic, setTopic] = useState(topicParam || '');
   const [referenceResult, setReferenceResult] = useState<{ facts: string; sources: string[] } | null>(null);
   const [isLoadingReference, setIsLoadingReference] = useState(false);
-  const [blogTitle, setBlogTitle] = useState(titleParam || '');
+  // GEO-12: title prefill 우선순위 — geoPrefill > titleParam (raw) > 빈값
+  const [blogTitle, setBlogTitle] = useState(geoPrefill.title || titleParam || '');
   const [youtubeTranscript] = useState(youtubeTranscriptParam ? decodeURIComponent(youtubeTranscriptParam) : '');
   const [clinicalContext] = useState(clinicalContextParam ? decodeURIComponent(clinicalContextParam) : '');
   const [keywords, setKeywords] = useState(keywordsParam || '');
   const [keywordDensity, setKeywordDensity] = useState<number | 'auto'>('auto');
   const [disease, setDisease] = useState('');
-  const [customSubheadings, setCustomSubheadings] = useState('');
+  // GEO-12: outline_hint → customSubheadings prefill (\n joined)
+  const initialCustomSubheadings = (geoPrefill.outline_hint && geoPrefill.outline_hint.length > 0)
+    ? geoPrefill.outline_hint.join('\n')
+    : '';
+  const [customSubheadings, setCustomSubheadings] = useState(initialCustomSubheadings);
   // 진단 funnel: ?category=X&source=diagnostic 으로 초기 카테고리 prefill (XSS 가드: 화이트리스트)
+  // GEO-12: geoPrefill.category 우선
   const categoryParam = searchParams.get('category');
+  const initialCategoryRaw = geoPrefill.category || categoryParam || '';
   const initialCategory: ContentCategory =
-    categoryParam && VALID_CONTENT_CATEGORIES.has(categoryParam)
-      ? (categoryParam as ContentCategory)
+    initialCategoryRaw && VALID_CONTENT_CATEGORIES.has(initialCategoryRaw)
+      ? (initialCategoryRaw as ContentCategory)
       : ContentCategory.DENTAL;
   const [category, setCategory] = useState<ContentCategory>(initialCategory);
   const [persona, setPersona] = useState('director_1st');
-  const [tone, setTone] = useState(TONES[0].value);
+  // GEO-12: tone prefill — whitelist 검증 (TONES values 만 허용)
+  const initialTone = (geoPrefill.tone && TONES.some(t => t.value === geoPrefill.tone))
+    ? geoPrefill.tone
+    : TONES[0].value;
+  const [tone, setTone] = useState(initialTone);
   const [audienceMode, setAudienceMode] = useState<AudienceMode>('환자용(친절/공감)');
   const [writingStyle, setWritingStyle] = useState<WritingStyle>('empathy');
   const [cssTheme, setCssTheme] = useState<CssTheme>('modern');
