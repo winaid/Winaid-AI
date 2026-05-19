@@ -47,3 +47,16 @@ export {
   type SendResult,
   type ChannelsConfig,
 } from './alertSenders';
+export {
+  scoreExperience,
+  scoreExpertise,
+  scoreAuthority,
+  scoreTrust,
+  scoreEEAT,
+  type EEATInput,
+  type EEATResult,
+  type EEATAxisResult,
+  type EEATAxis,
+  type EEATSignal,
+  type EEATCategoryItemMin,
+} from './eeatScorer';
