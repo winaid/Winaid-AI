@@ -23,6 +23,7 @@ import AnalyzedSubpages from './AnalyzedSubpages';
 import AnalyzedInternalLinks from './AnalyzedInternalLinks';
 import GeoCitationsSection from './GeoCitationsSection';
 import SchemaOrgSection from './SchemaOrgSection';
+import AlertSubscriptionSection from './AlertSubscriptionSection';
 import { deriveAIVisibilityKPI } from '../../lib/diagnostic/aiVisibilityKPI';
 import { authFetch } from '../../lib/authFetch';
 import { getSupabaseClient, isSupabaseConfigured } from '@winaid/blog-core';
@@ -395,6 +396,11 @@ export default function DiagnosticResult({ result, onResultUpdate }: DiagnosticR
             hospitalName={result.siteName || result.url}
             region={result.detectedRegion}
             specialties={result.crawlMeta.detectedServices}
+          />
+
+          <AlertSubscriptionSection
+            diagnosticUrl={result.url}
+            hospitalName={result.siteName || result.url}
           />
 
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
