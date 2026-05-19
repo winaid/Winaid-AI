@@ -139,7 +139,7 @@ export default function NaverChannelSection({
       >
         <div>
           <h3 className="text-sm font-bold text-slate-700">
-            🇰🇷 네이버 채널 인용 측정 — 한국 AI 검색 핵심
+            🇰🇷 네이버에서의 노출
           </h3>
           <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
             ChatGPT / Gemini 답변 인용 URL 중 네이버 8 채널 (블로그/카페/지식인/플레이스/뉴스/포스트/스마트스토어/me) 분류 + 우리 vs 경쟁사 매트릭스 + 부재 채널 권고.

@@ -126,7 +126,7 @@ export default function EEATSection({ url, crawlMeta, categories }: EEATSectionP
       >
         <div>
           <h3 className="text-sm font-bold text-slate-700">
-            ⭐ E-E-A-T 신뢰도 점수 — AI 인용률에 직접 영향
+            ⭐ AI 가 본 우리 신뢰도
           </h3>
           <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
             Experience · Expertise · Authority · Trust 4축으로 의료 사이트 신뢰도 자동 채점.

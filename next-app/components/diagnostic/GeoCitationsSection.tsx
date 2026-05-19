@@ -444,7 +444,7 @@ export default function GeoCitationsSection({
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
       <div className="flex items-start justify-between mb-3">
         <div>
-          <h3 className="text-sm font-bold text-slate-700">🔍 AI 인용 출처 — ChatGPT + Gemini</h3>
+          <h3 className="text-sm font-bold text-slate-700">🔍 AI 가 우리를 어디서 인용하나</h3>
           <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
             "어떤 게시물을 써야 AI 검색에서 인용되는지" 직접 확인. 쿼리를 넣으면 두 모델이 실제로
             인용하는 URL list 를 가져옵니다. <span className="text-indigo-600 font-medium">우리 사이트</span>는 강조 표시.

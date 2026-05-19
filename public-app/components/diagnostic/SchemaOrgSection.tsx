@@ -178,7 +178,7 @@ export default function SchemaOrgSection({
       >
         <div>
           <h3 className="text-sm font-bold text-slate-700">
-            🏷️ schema.org 구조화 데이터 — AI 인식률 ↑
+            🏷️ AI 가 우리 정보를 이해하게 만들기
           </h3>
           <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
             아래 코드를 홈페이지 <code className="bg-slate-100 px-1 rounded">{'<head>'}</code> 에

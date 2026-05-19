@@ -220,7 +220,7 @@ export default function SentimentDrilldownSection({
       >
         <div>
           <h3 className="text-sm font-bold text-slate-700">
-            💭 Sentiment 드릴다운 — AI 평판 점수 원인 분석
+            💭 AI 가 우리를 어떻게 말하나
           </h3>
           <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
             ChatGPT / Gemini 답변에서 우리 병원 언급 단락을 추출 → 부정/긍정/중립 자동 분류 + 약점 signal 별 권고.
