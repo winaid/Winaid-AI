@@ -12,6 +12,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import GeoSectionTooltip from './GeoSectionTooltip';
 
 export interface AlertSubscriptionSectionProps {
   /** 진단 결과 finalUrl — our_domains prefill. */
@@ -241,8 +242,9 @@ export default function AlertSubscriptionSection({
         aria-expanded={open}
       >
         <div>
-          <h3 className="text-sm font-bold text-slate-700">
+          <h3 className="text-sm font-bold text-slate-700 flex items-center gap-1">
             🔔 변동 알림 받기
+            <GeoSectionTooltip description="AI 인용 비율 변하면 슬랙·이메일·카톡으로 자동 알림. 매일 안 들여다봐도 되고, 임계 변동 시점에만 알림." />
           </h3>
           <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
             우리 사이트 인용률이 임계값 이상 변동하거나 새 경쟁사가 등장하면 Slack / Email / 카카오톡으로 자동 알림.

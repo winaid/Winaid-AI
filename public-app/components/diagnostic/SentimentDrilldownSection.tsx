@@ -14,6 +14,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import GeoSectionTooltip from './GeoSectionTooltip';
 import {
   aggregateSentiment,
   buildPrefillFromSentimentWeakness,
@@ -219,8 +220,9 @@ export default function SentimentDrilldownSection({
         aria-expanded={open}
       >
         <div>
-          <h3 className="text-sm font-bold text-slate-700">
+          <h3 className="text-sm font-bold text-slate-700 flex items-center gap-1">
             💭 AI 가 우리를 어떻게 말하나
+            <GeoSectionTooltip description="AI 답변에서 우리 병원 언급 부분의 부정·긍정 표현 자동 분석. 약점 신호 클릭 시 보강 콘텐츠 초안 자동 생성." />
           </h3>
           <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
             ChatGPT / Gemini 답변에서 우리 병원 언급 단락을 추출 → 부정/긍정/중립 자동 분류 + 약점 signal 별 권고.
